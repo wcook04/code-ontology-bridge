@@ -6,6 +6,9 @@ equivalent: the same rows after normalising each value. A symbol id
             same value; strings compare case-insensitively; numbers compare after rounding to
             1 decimal place. Rows are compared as a multiset of value tuples, ignoring column
             names, column order and row order.
+items:      not equivalent, but the same number of rows and each row's values are
+            contained in the reference row at the same position: the right items in
+            the right order with a value column (usually a count) left out.
 
 Usage: python score_answers.py ASK_DIR EVALUATION_JSON
 Prints a table and writes ASK_DIR/score.json.
@@ -46,6 +49,20 @@ def _canon(rows: list[Any]) -> Counter:
     )
 
 
+def _subset_rows(got: list[dict[str, Any]], want: list[Any]) -> bool:
+    """Same row count, and each agent row's values are contained in the reference row
+    at the same position: the right items in the right order, with a value column
+    (usually a count) left out."""
+    if not got or len(got) != len(want):
+        return False
+    for g, w in zip(got, want):
+        have = Counter(repr(_value(v)) for v in g.values())
+        need = Counter(repr(_value(v)) for v in (w.values() if isinstance(w, dict) else w))
+        if have - need:
+            return False
+    return True
+
+
 def main() -> int:
     ask_dir, evaluation = Path(sys.argv[1]), Path(sys.argv[2])
     gold = {int(q["question_id"]): q for q in json.loads(evaluation.read_text(encoding="utf-8"))}
@@ -65,14 +82,18 @@ def main() -> int:
                 "gold_rows": len(want),
                 "exact": bool(got) and [list(r.values()) for r in got] == want,
                 "equivalent": bool(got) and _canon(got) == _canon(want),
+                "items_without_values": _subset_rows(got, want),
                 "question": gold[qid]["question"],
             }
         )
     (ask_dir / "score.json").write_text(json.dumps(out, indent=2) + "\n", encoding="utf-8")
     for r in out:
-        print(f"Q{r['question_id']:>2} {r['difficulty']:<11} exact={r['exact']!s:<5} equivalent={r['equivalent']!s:<5} rows {r['agent_rows']}/{r['gold_rows']} {r['seconds']}s")
+        verdict = "equivalent" if r["equivalent"] else "items, no values" if r["items_without_values"] else "wrong or empty"
+        print(f"Q{r['question_id']:>2} {r['difficulty']:<11} {verdict:<17} exact={r['exact']!s:<5} rows {r['agent_rows']}/{r['gold_rows']} {r['seconds']}s")
     n = len(out)
-    print(f"exact {sum(r['exact'] for r in out)}/{n}; equivalent {sum(r['equivalent'] for r in out)}/{n}")
+    eq = sum(r["equivalent"] for r in out)
+    items = sum(r["items_without_values"] and not r["equivalent"] for r in out)
+    print(f"exact {sum(r['exact'] for r in out)}/{n}; equivalent {eq}/{n}; right items without a value column {items}/{n}")
     return 0
 
 

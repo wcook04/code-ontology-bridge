@@ -15,6 +15,7 @@ Sends no credential: the model key lives only in the backend's environment.
 from __future__ import annotations
 
 import json
+import os
 import sys
 import time
 import urllib.error
@@ -66,6 +67,9 @@ def ask(base_url: str, question: str, evidence: str | None, timeout: float) -> d
     body: dict[str, Any] = {"question": question}
     if evidence:
         body["evidence"] = evidence
+    if os.environ.get("AO_CALCULATION_ONLY") == "1":
+        # Needs the patched Auto Ontology in upstream-fix/; skips their metadata route.
+        body["calculation_only"] = True
     req = urllib.request.Request(
         base_url.rstrip("/") + "/api/chat/completions",
         data=json.dumps(body).encode("utf-8"),

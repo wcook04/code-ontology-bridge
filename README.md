@@ -5,7 +5,7 @@ An ontology of a codebase for [NVIDIA Auto Ontology](https://github.com/NVIDIA/a
 > What would be affected if `resolve_semantic_fks` changed?
 > `_run_semantic_compilation` calls it (depth 1); `run_semantic_compilation` calls that (depth 2); `main` calls that, and `SemanticScheduler._run_once` hands it to `asyncio.to_thread` (depth 3).
 
-That answer comes from one SQL query over the tables in this repository, and it matches the source.
+Auto Ontology's own agent gave that answer, writing a recursive SQL query over the code map in this repository, and it matches the source. Asked 22 such questions about its own code, it gave the right content for 21 ([results](examples/auto-ontology/live/RESULTS.md)).
 
 ## What it adds
 
@@ -99,9 +99,11 @@ What ran:
 - Certification requests set Auto Ontology's flags through its own PATCH routes, and a failed check is withheld.
 - With an NVIDIA API key, embeddings, import with embeddings and semantic compilation complete on the code ontology.
 
-Running the question-answering agent through NVIDIA's public API surfaced three issues on Auto Ontology's side, recorded as G12 to G14 in [`GAPS.md`](GAPS.md): the default chat model in `.env.example` is no longer served, the default structured-output request is rejected by the current hosted model, and compilation reports success when its model calls fail. Their documented tested route (Claude models on NVIDIA's inference gateway) was not available here.
+Getting their question-answering agent to work through public model APIs surfaced four issues on Auto Ontology's side, recorded as G12 to G15 in [`GAPS.md`](GAPS.md): the default chat model in `.env.example` is no longer served, the current Nemotron model's reasoning outlasts the structured-output timeout, compilation reports success when its model calls fail, and questions about code are routed to the metadata agent. [`upstream-fix/`](examples/auto-ontology/live/upstream-fix/README.md) is a 9-file patch for the first, second and fourth, with tests, that passes their lint, format and test checks.
 
-Not yet run: their benchmark end to end.
+With that patch and DeepSeek V4.1 Flash through OpenRouter, their agent answered all 22 benchmark questions about its own source: 13 fully right, 8 with the right items but a count column left out, and 1 wrong. The questions, its SQL, its answers and three-way scores are in [`RESULTS.md`](examples/auto-ontology/live/RESULTS.md). The whole run cost $0.54.
+
+Not yet run: their benchmark harness (`NVIDIA/auto-ontology-eval`) end to end, and their tested configuration (Claude models on NVIDIA's inference gateway), which needs NVIDIA access.
 
 ## Limits
 

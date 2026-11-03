@@ -1,0 +1,193 @@
+{
+  "request": {
+    "question": "What share of direct call sites could the static analysis resolve, by resolution kind?",
+    "evidence": "Direct call sites have call_kind 'direct'; callback rows are references passed as arguments and are not call sites."
+  },
+  "status": 200,
+  "elapsed_s": 69.2,
+  "events": [
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "question_intent",
+      "thought": null,
+      "label": "Classifying the question"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "question_intent",
+      "thought": null,
+      "label": "Classifying the question"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "question_extraction",
+      "thought": null,
+      "label": "Understanding the question"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "question_extraction",
+      "thought": null,
+      "label": "Understanding the question"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "retrieve_candidates",
+      "thought": null,
+      "label": "Retrieving candidates"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "retrieve_candidates",
+      "thought": null,
+      "label": "Retrieving candidates"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "prepare_candidates",
+      "thought": null,
+      "label": "Preparing candidates"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "prepare_candidates",
+      "thought": "The question asks for the share of direct call sites that static analysis could resolve, broken down by resolution kind. The key attribute for resolution status/kind is `code.calls.resolution`; `call_kind` only filters to direct call sites.",
+      "label": "Preparing candidates"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "refine_evidence",
+      "thought": null,
+      "label": "Refining evidence"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "refine_evidence",
+      "thought": "No certain correction needed: 'direct' matches the verified stored call_kind value and the equality operator is appropriate for the stated filter.",
+      "label": "Refining evidence"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "construct_sql_from_candidates",
+      "thought": null,
+      "label": "Constructing SQL"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "construct_sql_from_candidates",
+      "thought": "The evidence states that direct call sites are rows where call_kind is 'direct' and callback rows are not call sites, so the query filters call_kind = 'direct' in both the grouped query and the total-count subquery. Because the question asks for a share by resolution kind, every resolution kind present among direct calls is included rather than only internal-resolution kinds, because the resolution column's own descriptions classify all outcomes and the question asks for a breakdown by resolution kind. The denominator is the total number of direct call sites across all kinds, not the count within each resolution kind, because the wording asks for the share of direct call sites. Division is guarded with NULLIF so a zero total cannot cause a division error. No time window was requested, so none is applied. No superlative or single-item ranking was requested, so no LIMIT is used; ordering is by percentage descending for readability.",
+      "label": "Constructing SQL"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "validate_sql_query",
+      "thought": null,
+      "label": "Validating SQL and intent"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "validate_sql_query",
+      "thought": "The SQL correctly restricts to direct call sites with call_kind = 'direct', matching the authoritative evidence that direct call sites have call_kind 'direct' and callbacks are not call sites. It groups by resolution and computes each resolution kind's percentage of all direct call sites using COUNT(*). No joins are used, so there are no join issues. The aggregation approach is reasonable for a share-by-category question. Including 'unresolved' as one resolution category is not a critical error, since resolution is the requested grouping dimension and the query still reports the share by resolution kind.",
+      "label": "Validating SQL and intent"
+    },
+    {
+      "type": "sql",
+      "node": "validate_sql_query",
+      "sql": "SELECT resolution, CAST(COUNT(*) AS REAL) * 100 / NULLIF((SELECT COUNT(*) FROM code.calls WHERE call_kind = 'direct'), 0) AS percentage FROM code.calls WHERE call_kind = 'direct' GROUP BY resolution ORDER BY percentage DESC"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "execute_sql_query",
+      "thought": null,
+      "label": "Executing SQL"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "execute_sql_query",
+      "thought": null,
+      "label": "Executing SQL"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "check_empty_like_result",
+      "thought": null,
+      "label": "Checking results"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "check_empty_like_result",
+      "thought": null,
+      "label": "Checking results"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "check_value_repair",
+      "thought": null,
+      "label": "Checking values"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "check_value_repair",
+      "thought": null,
+      "label": "Checking values"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "format_and_respond",
+      "thought": null,
+      "label": "Formatting response"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "format_and_respond",
+      "thought": null,
+      "label": "Formatting response"
+    },
+    {
+      "type": "result",
+      "answer": {
+        "response": "This calculates, for each resolution kind, the percentage of direct call sites that fall into that kind. It counts rows in the calls table where call kind is direct, groups them by resolution, and divides each group count by the total number of direct call sites. Results are ordered from the highest to the lowest share.",
+        "sql_code": "SELECT resolution, CAST(COUNT(*) AS REAL) * 100 / NULLIF((SELECT COUNT(*) FROM code.calls WHERE call_kind = 'direct'), 0) AS percentage FROM code.calls WHERE call_kind = 'direct' GROUP BY resolution ORDER BY percentage DESC",
+        "sql_columns": [
+          "e8e59343-16df-4538-ab71-76b96384346a",
+          "ea0eb625-569e-4c59-b2a5-feec8febab7e"
+        ],
+        "custom_analyses_used": [],
+        "sql_response_from_db": [
+          "[{\"resolution\":\"dynamic_attribute\",\"percentage\":37.8279571533},{\"resolution\":\"external\",\"percentage\":17.4161262512},{\"resolution\":\"imported\",\"percentage\":15.5494260788},{\"resolution\":\"same_file\",\"percentage\":13.9585609436},{\"resolution\":\"builtin\",\"percentage\":13.3523635864},{\"resolution\":\"unresolved\",\"percentage\":1.1193790436},{\"resolution\":\"method_on_self\",\"percentage\":0.776188314}]"
+        ],
+        "thoughts": "- Preparing candidates: The question asks for the share of direct call sites that static analysis could resolve, broken down by resolution kind. The key attribute for resolution status/kind is `code.calls.resolution`; `call_kind` only filters to direct call sites.\n- Refining evidence: The evidence defines direct call sites via call_kind 'direct', so the question phrase 'direct call sites' is grounded to the physical call_kind column with value 'direct'. The evidence also explicitly references call_kind, so that evidence token is replaced by the exact quoted column. 'resolution kind' is not described by the evidence and is left unchanged.\n- Refining evidence: No certain correction needed: 'direct' matches the verified stored call_kind value and the equality operator is appropriate for the stated filter.\n- Constructing SQL: The evidence states that direct call sites are rows where call_kind is 'direct' and callback rows are not call sites, so the query filters call_kind = 'direct' in both the grouped query and the total-count subquery. Because the question asks for a share by resolution kind, every resolution kind present among direct calls is included rather than only internal-resolution kinds, because the resolution column's own descriptions classify all outcomes and the question asks for a breakdown by resolution kind. The denominator is the total number of direct call sites across all kinds, not the count within each resolution kind, because the wording asks for the share of direct call sites. Division is guarded with NULLIF so a zero total cannot cause a division error. No time window was requested, so none is applied. No superlative or single-item ranking was requested, so no LIMIT is used; ordering is by percentage descending for readability.\n- Validating SQL and intent: The SQL correctly restricts to direct call sites with call_kind = 'direct', matching the authoritative evidence that direct call sites have call_kind 'direct' and callbacks are not call sites. It groups by resolution and computes each resolution kind's percentage of all direct call sites using COUNT(*). No joins are used, so there are no join issues. The aggregation approach is reasonable for a share-by-category question. Including 'unresolved' as one resolution category is not a critical error, since resolution is the requested grouping dimension and the query still reports the share by resolution kind."
+      }
+    }
+  ],
+  "question_id": 14,
+  "gold_sql": "SELECT resolution, COUNT(*) AS calls,\n       ROUND(100.0 * COUNT(*) / (SELECT COUNT(*) FROM code.calls WHERE call_kind = 'direct'), 1) AS pct\nFROM code.calls\nWHERE call_kind = 'direct'\nGROUP BY resolution\nORDER BY calls DESC, resolution;",
+  "gold_row_count": 7,
+  "agent_sql": "SELECT resolution, CAST(COUNT(*) AS REAL) * 100 / NULLIF((SELECT COUNT(*) FROM code.calls WHERE call_kind = 'direct'), 0) AS percentage FROM code.calls WHERE call_kind = 'direct' GROUP BY resolution ORDER BY percentage DESC",
+  "agent_answer": "This calculates, for each resolution kind, the percentage of direct call sites that fall into that kind. It counts rows in the calls table where call kind is direct, groups them by resolution, and divides each group count by the total number of direct call sites. Results are ordered from the highest to the lowest share.",
+  "agent_row_count": 7,
+  "correct_rows": false,
+  "error": null
+}

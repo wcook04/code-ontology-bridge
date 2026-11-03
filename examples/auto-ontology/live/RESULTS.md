@@ -70,6 +70,28 @@ A possible fix on their side, untested here: select `method="json_mode"` or `"fu
 
 Not run: their benchmark (`NVIDIA/auto-ontology-eval`).
 
+## Their agent on its own code (3 Nov)
+
+Auto Ontology's text-to-SQL agent, asked all 22 questions in `../auto_ontology_code/evaluation.json` about Auto Ontology's own source, gave the right content for 21. Setup: the patch in [`upstream-fix/`](upstream-fix/README.md) applied to `cdaf61e`; chat on `deepseek/deepseek-v4.1-flash-1017` through OpenRouter (`AO_CHAT_ENDPOINT`, `AO_CHAT_KEY_VAR`, `AO_CHAT_MODEL`); embeddings and reranking on NVIDIA's API. Both keys were read by name from an env file into their processes only. The OpenRouter cost for the trial, the 22 questions and the 5 reruns together was $0.54.
+
+`score_answers.py` scores each answer three ways and reports all three: **exact** (same values in the same order), **equivalent** (the same rows after normalising symbol ids, case and rounding), and **items** (the right items in the right order with a value column, usually a count, left out).
+
+| Run | Equivalent | Items, no value column | Wrong or empty | Evidence |
+|---|---|---|---|---|
+| 22 questions, default routing | 10 | 7 | 5 (all routed to the information agent) | `evidence/deepseek_22q_default_routing/` (also `responses/10i_ask_with_key/`) |
+| The 5 routed away, rerun with `calculation_only` | 1 (Q10) | 1 (Q2) | 3 by the scorer | `evidence/deepseek_5q_calculation_only/` |
+
+Of the three the scorer marks wrong in the rerun, two are right in another form, checked by comparing sets: Q15 returns module names (`auto_ontology.connectors.base`) for the same 12 files, and Q17 returns function, file and lines for the same 7 functions. Q4 is a real miss: it looked for the docstring in `code.headings` (the fixed-heading table, empty for this repository) instead of `code.symbols.summary`.
+
+Overall: 13 fully right, 8 right items without a count, 1 wrong.
+
+Answers worth showing:
+- Q11, "What would be affected if `resolve_semantic_fks` changed?": a recursive query over the call graph returns `_run_semantic_compilation` (1), `run_semantic_compilation` (2), `main` (3) and `SemanticScheduler._run_once` (3). The last is reached only through `asyncio.to_thread(run_semantic_compilation, …)`, a callback edge in the code map.
+- Q19, "Which pairs of packages call into each other in both directions?": all 14 pairs.
+- Q22, "Which public classes in `auto_ontology/connectors` are used only as base classes?": `SQLDatabase` with its 10 subclasses, from the `class_bases` table.
+
+Earlier runs on the same setup, recorded for comparison: `evidence/after_fix_thinking_off/` (Nemotron 3.5 Lightning with the reasoning switch; compilation in 32 s, answers finish but 0 of 5 right, 3 routed to the information agent), `evidence/after_fix_thinking_on_partial/` (reasoning on; back to timeouts, Q1 in 856 s), and `evidence/deepseek_trial_3q/` (3 of 3 equivalent).
+
 ## What this changes in GAPS.md
 
 - Header line "No row has been run against a live Auto Ontology server": G1, G2, G9, G10 and G11 have now been run, and G3, G4 in part. The run needed no Docker; it used Homebrew PostgreSQL 17.
