@@ -73,7 +73,7 @@ sh examples/auto-ontology/reproduce.sh "$AUTO_ONTOLOGY_CLONE"   # build and all 
 uv run pytest -q
 ```
 
-With `AUTO_ONTOLOGY_CLONE` set, all 62 tests run. Without it, the tests that load Auto Ontology's code are skipped.
+With `AUTO_ONTOLOGY_CLONE` set and `reproduce.sh` run, all 64 tests run. Without the clone, the 15 tests that load Auto Ontology's code are skipped; without `reproduce.sh`, the one test that reads the built DuckDB file is skipped.
 
 Rebuilding the same commit gives the same rows. The JSON, CSV, SQL and YAML outputs are byte-identical; the DuckDB file holds identical rows.
 
