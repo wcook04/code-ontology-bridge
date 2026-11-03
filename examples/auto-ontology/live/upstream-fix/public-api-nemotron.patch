@@ -1,0 +1,156 @@
+diff --git a/.env.example b/.env.example
+index c292a73..96517f5 100644
+--- a/.env.example
++++ b/.env.example
+@@ -30,18 +30,18 @@ PGADMIN_PASSWORD=change-me
+ # (https://build.nvidia.com). Get an nvapi- key there.
+ DEFAULT_MODELS_API_KEY=nvapi-your-api-key-here
+ DEFAULT_MODELS_ENDPOINT=https://integrate.api.nvidia.com/v1
+-DEFAULT_MODELS_MODEL=nvidia/nemotron-3-nano-30b-a3b
++DEFAULT_MODELS_MODEL=nvidia/nemotron-3.5-lightning-30b-a3b
+ 
+ # Main (reasoning) model.
+ REASONING_API_KEY=nvapi-your-api-key-here
+ REASONING_ENDPOINT=https://integrate.api.nvidia.com/v1
+-REASONING_MODEL=nvidia/nemotron-3-nano-30b-a3b
++REASONING_MODEL=nvidia/nemotron-3.5-lightning-30b-a3b
+ 
+ # Non-reasoning model, e.g. for entity extraction. Can point at a different
+ # endpoint than the main model.
+ NON_REASONING_API_KEY=nvapi-your-api-key-here
+ NON_REASONING_ENDPOINT=https://integrate.api.nvidia.com/v1
+-NON_REASONING_MODEL=nvidia/nemotron-3-nano-30b-a3b
++NON_REASONING_MODEL=nvidia/nemotron-3.5-lightning-30b-a3b
+ 
+ # Embedding model. Set explicitly: unset fields would fall back to the
+ # DEFAULT_MODELS_ chat model above. Ingest and query must use the same one.
+diff --git a/auto_ontology/utils/llm_invoke.py b/auto_ontology/utils/llm_invoke.py
+index bc1694f..a5c13fd 100644
+--- a/auto_ontology/utils/llm_invoke.py
++++ b/auto_ontology/utils/llm_invoke.py
+@@ -211,6 +211,30 @@ _NON_REASONING_MODEL_NAME = resolve("NON_REASONING", "MODEL")
+ _NON_REASONING_API_KEY = resolve("NON_REASONING", "API_KEY")
+ 
+ 
++def _env_flag(name: str, default: bool) -> bool:
++    value = os.environ.get(name)
++    return (
++        default
++        if value is None
++        else value.strip().lower() in {"1", "true", "yes", "on"}
++    )
++
++
++def _nemotron_thinking_kwargs(model: str, thinking: bool) -> dict:
++    """Request fields that switch Nemotron reasoning on or off.
++
++    Nemotron 3.5 models reason before answering by default. Under
++    ``response_format`` a long reasoning trace can outlast
++    ``LLM_INVOKE_TIMEOUT_S``; ChatNVIDIA then falls back to ``guided_json``,
++    which the hosted API rejects ("unknown field `guided_json`"). Turning
++    reasoning off returns the structured answer directly. Other models get no
++    extra fields.
++    """
++    if not model.startswith("nvidia/nemotron"):
++        return {}
++    return {"chat_template_kwargs": {"enable_thinking": thinking}}
++
++
+ def _build_client(
+     *,
+     model: str,
+@@ -218,6 +242,7 @@ def _build_client(
+     base_url: str,
+     temperature: float,
+     max_tokens: int,
++    thinking: bool = True,
+ ) -> BaseChatModel:
+     """Build a chat client for the given model/endpoint.
+ 
+@@ -249,6 +274,7 @@ def _build_client(
+         base_url=base_url,
+         temperature=temperature,
+         max_tokens=max_tokens,
++        model_kwargs=_nemotron_thinking_kwargs(model, thinking),
+     )
+     client._client.get_session_fn = lambda: _TimeoutSession(LLM_INVOKE_TIMEOUT_S)
+     return client
+@@ -276,6 +302,7 @@ def get_llm_client(
+         base_url=_BASE_URL,
+         temperature=temperature,
+         max_tokens=max_tokens,
++        thinking=_env_flag("REASONING_ENABLE_THINKING", False),
+     )
+ 
+ 
+@@ -305,6 +332,7 @@ def get_non_reasoning_llm_client(
+         base_url=_NON_REASONING_BASE_URL,
+         temperature=temperature,
+         max_tokens=max_tokens,
++        thinking=_env_flag("NON_REASONING_ENABLE_THINKING", False),
+     )
+     _remember_non_reasoning(client)
+     return client
+diff --git a/auto_ontology/utils/model_config.py b/auto_ontology/utils/model_config.py
+index 2bfd8e4..07b2c4e 100644
+--- a/auto_ontology/utils/model_config.py
++++ b/auto_ontology/utils/model_config.py
+@@ -41,9 +41,9 @@ _DEFAULTS_BY_KEY_PREFIX: dict[str, dict[str, str]] = {
+     # integrate.api.nvidia.com / build.nvidia.com (nvapi-... keys).
+     "nvapi-": {
+         "REASONING_ENDPOINT": "https://integrate.api.nvidia.com/v1",
+-        "REASONING_MODEL": "nvidia/nemotron-3-nano-30b-a3b",
++        "REASONING_MODEL": "nvidia/nemotron-3.5-lightning-30b-a3b",
+         "NON_REASONING_ENDPOINT": "https://integrate.api.nvidia.com/v1",
+-        "NON_REASONING_MODEL": "nvidia/nemotron-3-nano-30b-a3b",
++        "NON_REASONING_MODEL": "nvidia/nemotron-3.5-lightning-30b-a3b",
+         "EMBED_ENDPOINT": "https://integrate.api.nvidia.com/v1",
+         "EMBED_MODEL": "nvidia/nemotron-3-embed-1b",
+         "RERANK_ENDPOINT": (
+diff --git a/auto_ontology/utils/tests/test_llm_invoke.py b/auto_ontology/utils/tests/test_llm_invoke.py
+index 40be8f6..1519783 100644
+--- a/auto_ontology/utils/tests/test_llm_invoke.py
++++ b/auto_ontology/utils/tests/test_llm_invoke.py
+@@ -495,3 +495,42 @@ def test_missing_reasoning_client_keeps_the_original_failure(monkeypatch: Any) -
+     monkeypatch.setattr(llm_invoke, "get_llm_client", unavailable)
+ 
+     assert llm_invoke.invoke_with_structured_output(primary, [], _Schema) is None
++
++
++def test_nemotron_thinking_kwargs_only_for_nemotron():
++    assert llm_invoke._nemotron_thinking_kwargs(
++        "nvidia/nemotron-3.5-lightning-30b-a3b", False
++    ) == {"chat_template_kwargs": {"enable_thinking": False}}
++    assert llm_invoke._nemotron_thinking_kwargs(
++        "nvidia/nemotron-3.5-lightning-30b-a3b", True
++    ) == {"chat_template_kwargs": {"enable_thinking": True}}
++    assert (
++        llm_invoke._nemotron_thinking_kwargs(
++            "aws/anthropic/bedrock-claude-opus-4-8", False
++        )
++        == {}
++    )
++
++
++@pytest.mark.parametrize(
++    ("value", "expected"),
++    [(None, False), ("true", True), ("1", True), ("off", False), ("FALSE", False)],
++)
++def test_env_flag(monkeypatch, value, expected):
++    monkeypatch.delenv("X_ENABLE_THINKING", raising=False)
++    if value is not None:
++        monkeypatch.setenv("X_ENABLE_THINKING", value)
++    assert llm_invoke._env_flag("X_ENABLE_THINKING", False) is expected
++
++
++def test_chat_nvidia_client_sends_thinking_switch(monkeypatch):
++    monkeypatch.delenv("NON_REASONING_ENABLE_THINKING", raising=False)
++    client = llm_invoke._build_client(
++        model="nvidia/nemotron-3.5-lightning-30b-a3b",
++        api_key="nvapi-test",
++        base_url="https://integrate.api.nvidia.com/v1",
++        temperature=0.0,
++        max_tokens=16,
++        thinking=False,
++    )
++    assert client.model_kwargs == {"chat_template_kwargs": {"enable_thinking": False}}

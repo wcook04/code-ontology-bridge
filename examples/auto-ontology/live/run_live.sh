@@ -75,6 +75,17 @@ key_env() {
   RERANK_ENDPOINT=https://ai.api.nvidia.com/v1/retrieval/nvidia/llama-nemotron-rerank-vl-1b-v2/reranking
   RERANK_MODEL=nvidia/llama-nemotron-rerank-vl-1b-v2
   export NVIDIA_API_KEY DEFAULT_MODELS_ENDPOINT DEFAULT_MODELS_MODEL EMBED_ENDPOINT EMBED_MODEL RERANK_ENDPOINT RERANK_MODEL
+  # Optional: send chat (reasoning and non-reasoning roles) to another
+  # OpenAI-compatible endpoint, keeping NVIDIA embeddings and reranking.
+  # AO_CHAT_KEY_VAR names the variable in KEY_FILE that holds that endpoint's key.
+  if [ -n "${AO_CHAT_ENDPOINT:-}" ]; then
+    REASONING_API_KEY="$(grep -E "^${AO_CHAT_KEY_VAR:?set AO_CHAT_KEY_VAR}=" "$KEY_FILE" | head -1 | cut -d= -f2- | tr -d "\"'")"
+    NON_REASONING_API_KEY="$REASONING_API_KEY"
+    REASONING_ENDPOINT="$AO_CHAT_ENDPOINT"; NON_REASONING_ENDPOINT="$AO_CHAT_ENDPOINT"
+    REASONING_MODEL="$AO_CHAT_MODEL"; NON_REASONING_MODEL="$AO_CHAT_MODEL"
+    REASONING_CLIENT=openai; NON_REASONING_CLIENT=openai
+    export REASONING_API_KEY NON_REASONING_API_KEY REASONING_ENDPOINT NON_REASONING_ENDPOINT REASONING_MODEL NON_REASONING_MODEL REASONING_CLIENT NON_REASONING_CLIENT
+  fi
 }
 
 start_backend() { # db port log [connection_string] ; uses the key when USE_KEY=1
@@ -117,6 +128,7 @@ for db in $DB1 $DB2; do
 done
 
 # ---------------------------------------------------------------------------
+if [ -z "${KEYED_ONLY:-}" ]; then  # KEYED_ONLY=1 with --with-key runs only step 10
 say "1. health (store $DB1)"
 start_backend $DB1 3001 "$LOGS/backend_db1.log"
 cap "$RESP/01_health.json" GET "$B1/api/health"
@@ -216,6 +228,7 @@ grep -E "REASONING_API_KEY|EMBED_API_KEY|semantic FK removed|Semantic FK edges c
 psql_db $DB2 -f "$HERE/sql/store_counts.sql" > "$RESP/09d_postgres_after_compile_no_key.txt"
 
 # ---------------------------------------------------------------------------
+fi  # KEYED_ONLY
 if [ -n "$KEY_FILE" ]; then
   say "10. WITH KEY (fresh store $DB3): ingest with embeddings, import, compile, ask"
   [ -f "$KEY_FILE" ] && grep -q '^NVIDIA_API_KEY=' "$KEY_FILE" || { echo "no NVIDIA_API_KEY line in $KEY_FILE"; exit 4; }
@@ -239,7 +252,7 @@ if [ -n "$KEY_FILE" ]; then
   cap "$RESP/10f_terms_after_compile.json" GET "$B2/api/terms"
   psql_db $DB3 -f "$HERE/sql/store_counts.sql" > "$RESP/10g_postgres_after_compile.txt"
   cap "$RESP/10h_check_answerable.json" POST "$B2/api/question-entity-coverage" --json '{"question":"Which functions call upsert_table_term?"}'
-  "$PY" "$HERE/ask_questions.py" "$B2" "$EX/auto_ontology_code/evaluation.json" "$RESP/10i_ask_with_key" 1 5 11 15 22 || true
+  "$PY" "$HERE/ask_questions.py" "$B2" "$EX/auto_ontology_code/evaluation.json" "$RESP/10i_ask_with_key" ${AO_QIDS:-1 5 11 15 22} || true
   stop_started
 fi
 
@@ -249,7 +262,7 @@ for f in $(grep -rlF -e "$CLONE" -e "$REPO" -e "$HOME" "$RESP" "$LOGS" "$CERT" "
 done
 
 say "secret scan of everything written (counts only)"
-grep -rc "nvapi-" "$RESP" "$LOGS" "$CERT" 2>/dev/null | awk -F: '$2>0' > "$HERE/responses/99_secret_scan.txt" || true
-[ -s "$HERE/responses/99_secret_scan.txt" ] && { echo "nvapi- string found in outputs; see responses/99_secret_scan.txt"; exit 3; }
+grep -rcE "nvapi-[A-Za-z0-9_-]{20}|sk-or-v1-[A-Za-z0-9]{20}" "$RESP" "$LOGS" "$CERT" 2>/dev/null | awk -F: '$2>0' > "$HERE/responses/99_secret_scan.txt" || true
+[ -s "$HERE/responses/99_secret_scan.txt" ] && { echo "API key string found in outputs; see responses/99_secret_scan.txt"; exit 3; }
 echo "secret scan: 0 files in responses/, logs/ or cert/ contain the NVIDIA key prefix" > "$HERE/responses/99_secret_scan.txt"
 say "done; evidence in $RESP"

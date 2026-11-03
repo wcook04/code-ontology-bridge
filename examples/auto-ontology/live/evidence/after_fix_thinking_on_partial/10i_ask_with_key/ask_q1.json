@@ -1,0 +1,240 @@
+{
+  "request": {
+    "question": "Which functions call upsert_table_term?",
+    "evidence": "A call's callee_symbol_id is set only when the callee was resolved; call_kind 'callback' rows are places where the function is passed by reference to another call. The function is defined in auto_ontology/dal/terms.py."
+  },
+  "status": 200,
+  "elapsed_s": 856.4,
+  "events": [
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "question_intent",
+      "thought": null,
+      "label": "Classifying the question"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "question_intent",
+      "thought": null,
+      "label": "Classifying the question"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "question_extraction",
+      "thought": null,
+      "label": "Understanding the question"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "question_extraction",
+      "thought": null,
+      "label": "Understanding the question"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "retrieve_candidates",
+      "thought": null,
+      "label": "Retrieving candidates"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "retrieve_candidates",
+      "thought": null,
+      "label": "Retrieving candidates"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "prepare_candidates",
+      "thought": null,
+      "label": "Preparing candidates"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "prepare_candidates",
+      "thought": "The question asks which functions call `upsert_table_term`. The `calls` table directly records call events with `caller_symbol_id` and `callee_name`/`callee_symbol_id`, making it essential for identifying callers. The `imports` table deals with module import statements and has no role in function-call relationships. The `inbound_call_counts` table provides aggregate inbound call counts and element metadata but does not list individual calling functions; the granular caller information is already in `calls`.",
+      "label": "Preparing candidates"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "refine_evidence",
+      "thought": null,
+      "label": "Refining evidence"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "refine_evidence",
+      "thought": null,
+      "label": "Refining evidence"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "construct_sql_from_candidates",
+      "thought": null,
+      "label": "Constructing SQL"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "construct_sql_from_candidates",
+      "thought": "The question asks which functions call `upsert_table_term`. Based on the authoritative evidence, a call's `callee_symbol_id` is set only when the callee was resolved, and I need to find calls where the callee is `upsert_table_term`. The `calls` table contains `caller_symbol_id` (the calling function's stable ID) and `callee_name` (the callee as written at the call site). Since `callee_name` is NOT NULL and stores the callee name as written (e.g., 'pd.read_csv'), I can filter by `callee_name = 'upsert_table_term'` to find all calls to this function. The `caller_symbol_id` identifies the calling functions. No joins are needed since all required columns are in the `calls` table. I'll use DISTINCT to return unique functions, as the question asks 'which functions' (the set of functions, not call events). The `callee_name` column will not appear in SELECT since filtering by a single constant value means every result row has the same value, per the projection rule.",
+      "label": "Constructing SQL"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "validate_sql_query",
+      "thought": null,
+      "label": "Validating SQL and intent"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "validate_sql_query",
+      "thought": "The generated SQL query is:\n```sql\nSELECT DISTINCT caller_symbol_id FROM calls WHERE callee_name = 'upsert_table_term';\n```\n\n**1. Join analysis** – The query contains no JOIN clauses. There are no joins that could be nonsensical or broken, so this check passes with no issues.\n\n**2. Aggregation analysis** – The query uses only a SELECT DISTINCT, no aggregate functions (COUNT, SUM, etc.). There is no aggregation to evaluate, so this check passes.\n\n**3. Evidence compliance** – The authoritative evidence lists the following used SQL objects:\n- Table: `auto_ontology_code.code.calls` (matches the FROM clause).\n- Columns: `callee_name` (VARCHAR) and `caller_symbol_id` (VARCHAR) are both present in the `USED SQL OBJECTS` metadata and are exactly the columns referenced in the query (WHERE `callee_name = 'upsert_table_term'` and SELECT `caller_symbol_id`).\n\nThe question asks \"Which functions call upsert_table_term?\" The filter `callee_name = 'upsert_table_term'` directly targets the callee name as written at the call site, which is the natural way to identify the function being called. The evidence mentions `callee_symbol_id` as a stable identifier, but it does not mandate its use; the available column `callee_name` is appropriate and listed in the metadata. No value or column is substituted or missing relative to the provided evidence.\n\nThe query also follows the semantic hint (starting table `auto_ontology_code.code.calls`) and does not add any unjustified joins. There are no domain‑specific custom analyses that would flag the query as invalid.\n\n**Conclusion**: The SQL has no critical issues. It could reasonably answer the user's question. The query is valid.\n\n**VALID**",
+      "label": "Validating SQL and intent"
+    },
+    {
+      "type": "sql",
+      "node": "validate_sql_query",
+      "sql": "SELECT DISTINCT caller_symbol_id FROM calls WHERE callee_name = 'upsert_table_term';"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "execute_sql_query",
+      "thought": null,
+      "label": "Executing SQL"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "execute_sql_query",
+      "thought": "Query failed, rewriting it: Catalog Error: Table with name calls does not exist! Did you mean \"code.calls\"? LINE 1: SELECT DISTINCT caller_symbol_id FROM calls WHERE callee_name = 'upsert_table_term'; ^",
+      "label": "Executing SQL"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "reconstruct_sql",
+      "thought": null,
+      "label": "Reconstructing SQL"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "reconstruct_sql",
+      "thought": "The error indicates the table must be referenced as `code.calls` rather than just `calls`. The question asks which functions call `upsert_table_term`. The `code.calls` table has `caller_symbol_id` identifying the calling function and `callee_name` storing the callee as written at the call site (NOT NULL). Filtering by `callee_name = 'upsert_table_term'` finds all calls to that function. Using DISTINCT on `caller_symbol_id` returns unique calling functions. The `callee_name` column is not included in SELECT since the question filters by a single constant value (projection rule). Assumptions remaining valid: caller_symbol_id identifies the calling function, callee_name stores the callee as written at call site and is NOT NULL, DISTINCT is appropriate to return the set of functions, callee_name should not be in SELECT per the single-constant filter rule. Assumption changed: table name must be `code.calls` not `calls`, per validation error.",
+      "label": "Reconstructing SQL"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "validate_sql_query",
+      "thought": null,
+      "label": "Validating SQL and intent"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "validate_sql_query",
+      "thought": "The generated SQL query is a simple SELECT DISTINCT on `caller_symbol_id` from `code.calls` with a filter `callee_name = 'upsert_table_term'`. \n\n- **Joins**: The query contains no joins, so there is no risk of seriously wrong joins. \n- **Aggregations**: There are no aggregations; the query only selects distinct symbol IDs, so aggregation correctness is not an issue. \n- **Evidence compliance**: The authoritative evidence describes general domain concepts (callee_symbol_id, call_kind 'callback') but does not prescribe a specific column, filter value, or formula that must appear in the SQL. The query uses `callee_name`, which is a listed column in the `USED SQL OBJECTS` metadata, and the filter value `upsert_table_term` matches the user's question. No instruction in the evidence is violated or substituted. \n- **Authoritative join paths**: Not applicable; the query has no joins. \n\nBecause the query could reasonably answer the question ('Which functions call upsert_table_term?') and has no critical errors, it is considered valid.",
+      "label": "Validating SQL and intent"
+    },
+    {
+      "type": "sql",
+      "node": "validate_sql_query",
+      "sql": "SELECT DISTINCT caller_symbol_id FROM code.calls WHERE callee_name = 'upsert_table_term';"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "execute_sql_query",
+      "thought": null,
+      "label": "Executing SQL"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "execute_sql_query",
+      "thought": null,
+      "label": "Executing SQL"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "check_empty_like_result",
+      "thought": null,
+      "label": "Checking results"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "check_empty_like_result",
+      "thought": null,
+      "label": "Checking results"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "check_value_repair",
+      "thought": null,
+      "label": "Checking values"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "check_value_repair",
+      "thought": null,
+      "label": "Checking values"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "format_and_respond",
+      "thought": null,
+      "label": "Formatting response"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "format_and_respond",
+      "thought": null,
+      "label": "Formatting response"
+    },
+    {
+      "type": "result",
+      "answer": {
+        "response": "This calculates the set of unique functions that call upsert_table_term by filtering call records where the callee name matches 'upsert_table_term' and attributing each call to its caller. It uses the code.calls table, specifically the caller_symbol_id column to identify calling functions, with a filter on callee_name. The results return distinct caller symbols, producing the set of functions that invoke upsert_table_term.",
+        "sql_code": "SELECT DISTINCT caller_symbol_id FROM code.calls WHERE callee_name = 'upsert_table_term';",
+        "sql_columns": [
+          "97d388fa-3c08-4cd9-b797-1969c8ae5168",
+          "281b1391-8587-4702-b5ed-1bd608f55244"
+        ],
+        "custom_analyses_used": [],
+        "sql_response_from_db": [
+          "[{\"caller_symbol_id\":\"dev_tools\\/fixtures\\/seed_graph_fixture.py::seed_terms\"},{\"caller_symbol_id\":\"auto_ontology\\/semantic\\/visit_enter.py::_commit_terms\"}]"
+        ],
+        "thoughts": "- Preparing candidates: The question asks which functions call `upsert_table_term`, which centers on function call relationships. Among the provided column attributes, `code.calls.call_kind` is the only physical column directly related to calls (direct vs. callback). Two IDs map to this column, but the first (`4a980d45-921c-4cb3-b4e2-05080c74a170`) provides the detailed evidence concept matching the question's focus on call invocation and callback mechanisms. The other attributes (`code.imports.module_name`, `code.imports.is_internal`) relate to module imports, not function calls.\n- Preparing candidates: The question asks which functions call `upsert_table_term`. The `calls` table directly records call events with `caller_symbol_id` and `callee_name`/`callee_symbol_id`, making it essential for identifying callers. The `imports` table deals with module import statements and has no role in function-call relationships. The `inbound_call_counts` table provides aggregate inbound call counts and element metadata but does not list individual calling functions; the granular caller information is already in `calls`.\n- Constructing SQL: The question asks which functions call `upsert_table_term`. Based on the authoritative evidence, a call's `callee_symbol_id` is set only when the callee was resolved, and I need to find calls where the callee is `upsert_table_term`. The `calls` table contains `caller_symbol_id` (the calling function's stable ID) and `callee_name` (the callee as written at the call site). Since `callee_name` is NOT NULL and stores the callee name as written (e.g., 'pd.read_csv'), I can filter by `callee_name = 'upsert_table_term'` to find all calls to this function. The `caller_symbol_id` identifies the calling functions. No joins are needed since all required columns are in the `calls` table. I'll use DISTINCT to return unique functions, as the question asks 'which functions' (the set of functions, not call events). The `callee_name` column will not appear in SELECT since filtering by a single constant value means every result row has the same value, per the projection rule.\n- Validating SQL and intent: The generated SQL query is:\n```sql\nSELECT DISTINCT caller_symbol_id FROM calls WHERE callee_name = 'upsert_table_term';\n```\n\n**1. Join analysis** – The query contains no JOIN clauses. There are no joins that could be nonsensical or broken, so this check passes with no issues.\n\n**2. Aggregation analysis** – The query uses only a SELECT DISTINCT, no aggregate functions (COUNT, SUM, etc.). There is no aggregation to evaluate, so this check passes.\n\n**3. Evidence compliance** – The authoritative evidence lists the following used SQL objects:\n- Table: `auto_ontology_code.code.calls` (matches the FROM clause).\n- Columns: `callee_name` (VARCHAR) and `caller_symbol_id` (VARCHAR) are both present in the `USED SQL OBJECTS` metadata and are exactly the columns referenced in the query (WHERE `callee_name = 'upsert_table_term'` and SELECT `caller_symbol_id`).\n\nThe question asks \"Which functions call upsert_table_term?\" The filter `callee_name = 'upsert_table_term'` directly targets the callee name as written at the call site, which is the natural way to identify the function being called. The evidence mentions `callee_symbol_id` as a stable identifier, but it does not mandate its use; the available column `callee_name` is appropriate and listed in the metadata. No value or column is substituted or missing relative to the provided evidence.\n\nThe query also follows the semantic hint (starting table `auto_ontology_code.code.calls`) and does not add any unjustified joins. There are no domain‑specific custom analyses that would flag the query as invalid.\n\n**Conclusion**: The SQL has no critical issues. It could reasonably answer the user's question. The query is valid.\n\n**VALID**\n- Executing SQL: Query failed, rewriting it: Catalog Error: Table with name calls does not exist! Did you mean \"code.calls\"? LINE 1: SELECT DISTINCT caller_symbol_id FROM calls WHERE callee_name = 'upsert_table_term'; ^\n- Reconstructing SQL: The error indicates the table must be referenced as `code.calls` rather than just `calls`. The question asks which functions call `upsert_table_term`. The `code.calls` table has `caller_symbol_id` identifying the calling function and `callee_name` storing the callee as written at the call site (NOT NULL). Filtering by `callee_name = 'upsert_table_term'` finds all calls to that function. Using DISTINCT on `caller_symbol_id` returns unique calling functions. The `callee_name` column is not included in SELECT since the question filters by a single constant value (projection rule). Assumptions remaining valid: caller_symbol_id identifies the calling function, callee_name stores the callee as written at call site and is NOT NULL, DISTINCT is appropriate to return the set of functions, callee_name should not be in SELECT per the single-constant filter rule. Assumption changed: table name must be `code.calls` not `calls`, per validation error.\n- Validating SQL and intent: The generated SQL query is a simple SELECT DISTINCT on `caller_symbol_id` from `code.calls` with a filter `callee_name = 'upsert_table_term'`. \n\n- **Joins**: The query contains no joins, so there is no risk of seriously wrong joins. \n- **Aggregations**: There are no aggregations; the query only selects distinct symbol IDs, so aggregation correctness is not an issue. \n- **Evidence compliance**: The authoritative evidence describes general domain concepts (callee_symbol_id, call_kind 'callback') but does not prescribe a specific column, filter value, or formula that must appear in the SQL. The query uses `callee_name`, which is a listed column in the `USED SQL OBJECTS` metadata, and the filter value `upsert_table_term` matches the user's question. No instruction in the evidence is violated or substituted. \n- **Authoritative join paths**: Not applicable; the query has no joins. \n\nBecause the query could reasonably answer the question ('Which functions call upsert_table_term?') and has no critical errors, it is considered valid."
+      }
+    }
+  ],
+  "question_id": 1,
+  "gold_sql": "SELECT DISTINCT c.caller_symbol_id\nFROM code.calls c\nJOIN code.symbols s ON s.symbol_id = c.callee_symbol_id\nWHERE s.name = 'upsert_table_term'\nORDER BY c.caller_symbol_id;",
+  "gold_row_count": 5,
+  "agent_sql": "SELECT DISTINCT caller_symbol_id FROM code.calls WHERE callee_name = 'upsert_table_term';",
+  "agent_answer": "This calculates the set of unique functions that call upsert_table_term by filtering call records where the callee name matches 'upsert_table_term' and attributing each call to its caller. It uses the code.calls table, specifically the caller_symbol_id column to identify calling functions, with a filter on callee_name. The results return distinct caller symbols, producing the set of functions that invoke upsert_table_term.",
+  "agent_row_count": 2,
+  "correct_rows": false,
+  "error": null
+}
