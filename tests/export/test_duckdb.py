@@ -1,3 +1,7 @@
+import json
+import shutil
+import subprocess
+
 import duckdb
 import pytest
 
@@ -96,3 +100,27 @@ def test_rebuild_gives_identical_rows(worked_example, tmp_path):
     committed = EXAMPLE / "auto_ontology_code.duckdb"
     if committed.is_file():
         assert _table_rows(committed) == first
+
+
+THEIR_DUCKDB = "1.5.5"  # the minimum Auto Ontology pins (pyproject: duckdb>=1.5.5)
+
+
+@needs_clone
+@pytest.mark.skipif(shutil.which("uv") is None, reason="needs uv to run their DuckDB version")
+def test_their_pinned_duckdb_opens_the_file(worked_example):
+    probe = (
+        "import duckdb, json, sys; c = duckdb.connect(sys.argv[1], read_only=True); "
+        "print(json.dumps([duckdb.__version__, c.sql(\"select count(*) from duckdb_tables() where schema_name='code'\").fetchone()[0], "
+        "c.sql(\"select count(*) from duckdb_constraints() where schema_name='code' and constraint_type in ('PRIMARY KEY','FOREIGN KEY')\").fetchone()[0]]))"
+    )
+    out = subprocess.run(
+        ["uv", "run", "--no-project", "--with", f"duckdb=={THEIR_DUCKDB}", "python", "-c", probe, str(worked_example.duckdb)],
+        capture_output=True, text=True, timeout=300,
+    )
+    if out.returncode != 0 and "Failed to fetch" in out.stderr:
+        pytest.skip("uv could not download duckdb (offline)")
+    assert out.returncode == 0, out.stderr
+    version, tables, keys = json.loads(out.stdout.strip().splitlines()[-1])
+    assert version == THEIR_DUCKDB
+    assert tables == len(TABLES)
+    assert keys == len(TABLES) + sum(len(t.foreign_keys) for t in TABLES)

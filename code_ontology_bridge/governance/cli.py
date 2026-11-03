@@ -79,7 +79,9 @@ def cmd_cert_status(args: argparse.Namespace) -> int:
                 print("--apply needs --base-url", file=sys.stderr)
                 return 2
             try:
-                payload["applied"] = cert.apply_patches(plan, args.base_url)
+                payload["applied"] = cert.apply_patches(
+                    plan, args.base_url, internal=args.internal, user_id=args.user_id
+                )
             except RuntimeError as exc:
                 print(str(exc), file=sys.stderr)
                 return 2
@@ -134,6 +136,8 @@ def register(subparsers: argparse._SubParsersAction) -> None:
     p.add_argument("--unset-stale", action="store_true", help="also plan certified=false for stale and failed targets")
     p.add_argument("--apply", action="store_true", help="send ready requests (token from AUTO_ONTOLOGY_API_TOKEN)")
     p.add_argument("--base-url", help="Auto Ontology server, e.g. http://localhost:3001")
+    p.add_argument("--internal", action="store_true", help="send to the internal FastAPI service without a token (trusted network only)")
+    p.add_argument("--user-id", help="with --internal: an existing Auto Ontology user id, sent as x-auto-ontology-user-id")
     p.add_argument("--out")
     p.set_defaults(func=cmd_cert_status)
 

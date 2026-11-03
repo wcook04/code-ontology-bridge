@@ -249,6 +249,28 @@ def test_apply_sends_only_ready_requests_and_never_returns_the_token(monkeypatch
         server.shutdown()
 
 
+def test_internal_apply_sends_no_token_and_forwards_the_user(monkeypatch):
+    class _UserRecorder(_Recorder):
+        def do_PATCH(self):  # noqa: N802
+            self.rfile.read(int(self.headers["content-length"]))
+            _UserRecorder.seen.append((self.headers.get("x-api-key"), self.headers.get("x-auto-ontology-user-id")))
+            self.send_response(200)
+            self.end_headers()
+
+    _UserRecorder.seen = []
+    server = HTTPServer(("127.0.0.1", 0), _UserRecorder)
+    threading.Thread(target=server.serve_forever, daemon=True).start()
+    try:
+        plan = {"requests": [{"method": "PATCH", "path": "/api/terms/t1", "json": {"name_certified": True}, "ready": True}]}
+        monkeypatch.setenv(cert.TOKEN_ENV, "auto_ontology_test_token")
+        url = f"http://127.0.0.1:{server.server_port}"
+        assert cert.apply_patches(plan, url, internal=True)[0]["status"] == 200
+        cert.apply_patches(plan, url, internal=True, user_id="user-1")
+        assert _UserRecorder.seen == [(None, None), (None, "user-1")]
+    finally:
+        server.shutdown()
+
+
 REPO = Path(__file__).resolve().parents[2]
 CLONE = Path(os.environ["AUTO_ONTOLOGY_CLONE"]) if os.environ.get("AUTO_ONTOLOGY_CLONE") else None
 

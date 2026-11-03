@@ -17,6 +17,9 @@ from ..codemap.builder import CodeMap
 from ..codemap.schema import SCHEMA, TABLES, VIEWS, create_table_sql, create_view_sql
 from .csvio import csv_name, write_table_csv
 
+# Oldest DuckDB storage format to write: Auto Ontology pins duckdb>=1.5.5.
+STORAGE_COMPATIBILITY = "v1.5.0"
+
 
 def copy_sql(qualified_table: str, csv_path: Path) -> str:
     path = str(csv_path).replace("'", "''")
@@ -43,7 +46,9 @@ def export_duckdb(code_map: CodeMap, out_path: str | Path) -> Path:
     for stale in (out, out.with_name(out.name + ".wal")):
         if stale.exists():
             stale.unlink()
-    con = duckdb.connect(str(out))
+    # Auto Ontology pins duckdb 1.5.x, which cannot read the storage format that
+    # duckdb 2.x writes by default; write the older format so their connector opens it.
+    con = duckdb.connect(str(out), config={"storage_compatibility_version": STORAGE_COMPATIBILITY})
     try:
         statements = ddl_statements()
         con.execute(f"CREATE SCHEMA IF NOT EXISTS {SCHEMA};")

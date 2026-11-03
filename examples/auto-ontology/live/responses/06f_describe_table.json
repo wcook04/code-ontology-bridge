@@ -1,0 +1,53 @@
+{
+  "request": {
+    "method": "GET",
+    "url": "http://127.0.0.1:3001/api/exploration/tables/2ddcbb67-6ab1-4808-85fb-2f99a0793250/details",
+    "headers": {},
+    "body": null
+  },
+  "status": 200,
+  "content_type": "application/json",
+  "elapsed_s": 0.031,
+  "response": {
+    "data": {
+      "queries": [
+        {
+          "id": "40e8404f-02d5-4f61-8940-7651b1daf3ce",
+          "sql": "SELECT package,\n       COUNT(*) AS files,\n       SUM(CASE WHEN description_source <> 'none' THEN 1 ELSE 0 END) AS described,\n       ROUND(100.0 * SUM(CASE WHEN description_source <> 'none' THEN 1 ELSE 0 END) / COUNT(*), 1) AS pct_described\nFROM code.files\nWHERE NOT is_test\nGROUP BY package\nORDER BY package"
+        },
+        {
+          "id": "427e2deb-656c-4df1-a0d1-c96fa45905cf",
+          "sql": "SELECT i.imported_file_id AS file_id, COUNT(DISTINCT i.file_id) AS importers\nFROM code.imports i\nJOIN code.files f ON f.file_id = i.imported_file_id\nWHERE NOT f.is_test AND i.file_id <> i.imported_file_id\nGROUP BY i.imported_file_id\nORDER BY importers DESC, file_id\nLIMIT 50"
+        },
+        {
+          "id": "50e39cc1-297c-4b72-b057-636deb5c5504",
+          "sql": "SELECT c.callee_name, COUNT(*) AS call_sites\nFROM code.calls c\nJOIN code.symbols s ON s.symbol_id = c.caller_symbol_id\nJOIN code.files f ON f.file_id = s.file_id\nWHERE c.resolution = 'unresolved' AND NOT f.is_test\nGROUP BY c.callee_name\nORDER BY call_sites DESC, c.callee_name\nLIMIT 50"
+        },
+        {
+          "id": "567c4cb5-92bb-478f-8eaf-1898067d6ea2",
+          "sql": "SELECT file_id, module, line_count\nFROM code.files\nWHERE description_source = 'none' AND NOT is_test\nORDER BY line_count DESC, file_id"
+        },
+        {
+          "id": "d9023226-aafa-4d60-b1f9-00090fbb01ad",
+          "sql": "WITH RECURSIVE impact(symbol_id, depth) AS (\n  SELECT c.caller_symbol_id, 1\n  FROM code.calls c\n  JOIN code.symbols t ON t.symbol_id = c.callee_symbol_id\n  WHERE t.name = 'resolve_semantic_fks'\n  UNION\n  SELECT c.caller_symbol_id, i.depth + 1\n  FROM code.calls c\n  JOIN impact i ON c.callee_symbol_id = i.symbol_id\n  WHERE i.depth < 6\n)\nSELECT i.symbol_id, s.file_id, f.is_test, MIN(i.depth) AS depth\nFROM impact i\nJOIN code.symbols s ON s.symbol_id = i.symbol_id\nJOIN code.files f ON f.file_id = s.file_id\nGROUP BY i.symbol_id, s.file_id, f.is_test\nORDER BY depth, i.symbol_id"
+        },
+        {
+          "id": "fed6fe14-06f3-405c-968b-7556ef5cb08e",
+          "sql": "SELECT v.symbol_id, v.kind, v.inbound_calls, v.callback_references, v.distinct_callers\nFROM code.inbound_call_counts v\nJOIN code.files f ON f.file_id = v.file_id\nWHERE NOT f.is_test AND v.inbound_calls > 0\nORDER BY v.inbound_calls DESC, v.symbol_id\nLIMIT 50"
+        }
+      ],
+      "terms": [
+        {
+          "id": "75a609d5-eea8-4c79-8f35-086735a2b37f",
+          "name": "Source file",
+          "description": "One row per analysed Python source file.",
+          "relationship_types": [
+            "HAS_ATTRIBUTE",
+            "REPRESENTS"
+          ]
+        }
+      ],
+      "terms_total": 1
+    }
+  }
+}

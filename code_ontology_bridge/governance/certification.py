@@ -581,14 +581,27 @@ def apply_patches(
     base_url: str,
     *,
     token: str | None = None,
+    internal: bool = False,
+    user_id: str | None = None,
     timeout: float = 30.0,
 ) -> list[dict[str, Any]]:
-    """Send ready requests. The token comes from ``AUTO_ONTOLOGY_API_TOKEN``
-    unless passed; it goes only into the ``x-api-key`` header (their documented
-    ApiToken scheme) and never into a result or log line."""
-    token = token if token is not None else os.environ.get(TOKEN_ENV)
-    if not token:
-        raise RuntimeError(f"set {TOKEN_ENV} to apply; nothing was sent")
+    """Send ready requests. Through the public gateway the token comes from
+    ``AUTO_ONTOLOGY_API_TOKEN`` unless passed; it goes only into the ``x-api-key``
+    header (their documented ApiToken scheme) and never into a result or log line.
+
+    ``internal=True`` targets the FastAPI service directly, which Auto Ontology
+    treats as a trusted internal boundary and does not authenticate; no token is
+    sent. ``user_id`` is forwarded as ``x-auto-ontology-user-id`` so their
+    ``modified_by`` records the actor; it must be an existing Auto Ontology user."""
+    headers = {"content-type": "application/json"}
+    if internal:
+        if user_id:
+            headers["x-auto-ontology-user-id"] = user_id
+    else:
+        token = token if token is not None else os.environ.get(TOKEN_ENV)
+        if not token:
+            raise RuntimeError(f"set {TOKEN_ENV} to apply through the gateway, or pass internal=True; nothing was sent")
+        headers["x-api-key"] = token
     results = []
     for req in plan["requests"]:
         if not req["ready"]:
@@ -598,7 +611,7 @@ def apply_patches(
             base_url.rstrip("/") + req["path"],
             data=json.dumps(req["json"]).encode("utf-8"),
             method="PATCH",
-            headers={"content-type": "application/json", "x-api-key": token},
+            headers=headers,
         )
         try:
             with urllib.request.urlopen(http_req, timeout=timeout) as resp:

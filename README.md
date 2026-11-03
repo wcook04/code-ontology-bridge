@@ -30,7 +30,7 @@ No change to Auto Ontology is needed for any of these.
 | DuckDB connector, their reference `SQLDatabase` | `auto_ontology_code.duckdb`, schema `code` | `CONNECTION_STRINGS=duckdb:///abs/path/auto_ontology_code.duckdb` |
 | Benchmark datasets in [`NVIDIA/auto-ontology-eval`](https://github.com/NVIDIA/auto-ontology-eval) | `auto_ontology_code/` with `ddl/`, `data/`, `evaluation.json`, `custom_analyses.json` | copy into `datasets/`, then their seed script with `--database-name auto_ontology_code` and their benchmark |
 | Model import, `POST /api/model/import` | `auto_ontology_code.model.yaml` | import with `replace=false` on a store where this database is not already connected |
-| Certification routes (`PATCH /api/terms/{id}`, `/api/terms/{id}/column-attributes/{attr_id}`, `/api/sql-attributes/{id}`) | requests planned from passing checks | `cob cert-status --plan-patches` (dry run unless `--apply`) |
+| Certification routes (`PATCH /api/terms/{id}`, `/api/terms/{id}/column-attributes/{attr_id}`, `/api/sql-attributes/{id}`) | requests planned from passing checks | `cob cert-status --plan-patches`; `--apply` sends through the gateway with a token, or with `--internal` to the FastAPI service |
 | MCP `ask_question` result | evidence-carrying answer | `cob enrich-answer` |
 
 ## The worked example
@@ -88,7 +88,20 @@ Rebuilding the same commit gives the same rows. The JSON, CSV, SQL and YAML outp
 
 The tests also check that every reference query reproduces its recorded answer, and that `--apply` never writes the API token to its output.
 
-Not yet run: an import into a live Auto Ontology server and their benchmark end to end. Both need Docker and an NVIDIA API key.
+## Run against a live Auto Ontology
+
+[`examples/auto-ontology/live/`](examples/auto-ontology/live/RESULTS.md) runs Auto Ontology's FastAPI backend and ingestion service natively (no Docker) on PostgreSQL 17 with pgvector, and loads this repository's outputs through their routes. `run_live.sh` reproduces every step; the evidence (requests, responses, logs) is committed.
+
+What ran:
+
+- The model import creates every table, column, key, term, attribute and analysis from the YAML. Their term, attribute, graph and table routes return them, and so do the read-only routes behind their MCP tools.
+- Ingestion of the DuckDB file through their connector catalogues all 10 tables and views.
+- Certification requests set Auto Ontology's flags through its own PATCH routes, and a failed check is withheld.
+- With an NVIDIA API key, embeddings, import with embeddings and semantic compilation complete on the code ontology.
+
+Running the question-answering agent through NVIDIA's public API surfaced three issues on Auto Ontology's side, recorded as G12 to G14 in [`GAPS.md`](GAPS.md): the default chat model in `.env.example` is no longer served, the default structured-output request is rejected by the current hosted model, and compilation reports success when its model calls fail. Their documented tested route (Claude models on NVIDIA's inference gateway) was not available here.
+
+Not yet run: their benchmark end to end.
 
 ## Limits
 
