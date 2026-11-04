@@ -25,6 +25,7 @@ REQUIRED = {
     'code_ontology_bridge/inspection/models.py', 'code_ontology_bridge/inspection/publication.py',
     'examples/auto-ontology/live/caller-chain-case.json',
     'code_ontology_bridge/cli.py', 'tools/check_repository.py',
+    'site/README.md', 'site/package.json', 'site/package-lock.json', 'site/index.html', 'tools/stage_site.py',
     'tools/build_paper.sh', 'tools/build_paper.py', '.github/workflows/checks.yml',
     'examples/auto-ontology/live/RESULTS.md',
     'examples/auto-ontology/live/current/manifest.json',
@@ -55,6 +56,19 @@ def allowed(name: str) -> bool:
         if p.parts[1] == 'figures':
             return len(p.parts) == 3 and p.suffix in {'.md', '.png'}
         return p.suffix in {'.md', '.pdf'}
+    if owner == 'site':
+        # The reading website: Vite/React source, its lockfile, tests and static assets.
+        # Built output (site/dist) and installed packages (site/node_modules) stay ignored.
+        if len(p.parts) == 2:
+            return p.name in {'README.md', 'package.json', 'package-lock.json', 'tsconfig.json',
+                              'vite.config.ts', 'index.html', '.gitignore'}
+        if p.parts[1] == 'src':
+            return p.suffix in {'.ts', '.tsx', '.css', '.json'}
+        if p.parts[1] == 'tests':
+            return p.suffix == '.ts'
+        if p.parts[1] == 'public':
+            return p.suffix == '.svg'
+        return False
     if owner == 'tools':
         return len(p.parts) == 2 and p.suffix in {'.py', '.sh'}
     if owner == 'tests':
