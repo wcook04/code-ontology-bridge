@@ -2,6 +2,12 @@
 
 **21/22 matching result tables; 20/22 with both matching tables and substantive prose.** The written response is the agent's explanation of its query, which Auto Ontology writes together with the SQL before the query runs; the rows are returned beside it, so the prose describes the calculation rather than the values. This is one complete run of all 22 questions under protocol `explicit-output-v3`. No answer was replaced by a selected rerun.
 
+**How the SQL was reached.** In 15 of the 22 requests the first SQL Auto Ontology ran gave the recorded rows. In six (Q3, Q5, Q11, Q18, Q21, Q22) the first query named a table without its `code.` schema, failed with a DuckDB catalog error, and was fixed by Auto Ontology's rewrite step; Q2 was rewritten twice after its own checks and ran twice. 29 queries ran in all.
+
+**What the instructions asked for.** The shared output instructions ([answer_contracts.json](../../../eval/answer_contracts.json)) ask the agent, after executing SQL, to describe the returned rows. At `cdaf61e` the explanation is written before execution, so no response could follow that part; the rows are returned beside it.
+
+**Known reference defects.** Q11's reference query stops at depth 6 (`depth < 6`); every caller here is within depth 3, so the score is unaffected, but it is not a correct reference for deeper call chains. Q20 groups by the first two path parts, so a script directly under `dev_tools/` counts as its own area; the agent's SQL and the reference both do this. Both references stay unchanged for this run and should be fixed before a new evaluation.
+
 The [original automatic score](current/score.json) reports 21 passes. [Review of every response](current/review.json) reduces the combined count to 20 because Q14's prose is just “thought”. The original score and responses remain unchanged.
 
 ## What was run

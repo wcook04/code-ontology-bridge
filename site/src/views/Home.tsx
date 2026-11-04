@@ -2,7 +2,7 @@
 // followed in five steps from a line of Python to the rows Auto Ontology
 // returned. Prose uses plain names; the exact identifiers are in glossary cards.
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { AnswerStep, ModelStep, Outcomes, RecordsStep, RequestStep, SourceStep, SqlStep, Term as ModelTerm, Walkthrough } from "../data/types";
 import { useRoute } from "../data/useRoute";
 import { CallerGraph, type Selection } from "../components/CallerGraph";
@@ -14,6 +14,7 @@ import { AnswerProse, AssessmentBlock, RequestBlock, Results, SqlPair } from "..
 import { entryState, href, onLinkClick, replaceView } from "../app/router";
 import { ROLES, roleOf } from "../app/roles";
 import { termForSymbol } from "../app/glossary";
+import { CORRECTIONS_URL } from "../app/findings";
 
 const WALKTHROUGH = "/api/v1/walkthroughs/caller-chain-q11";
 const OUTCOMES = "/api/v1/outcomes?limit=100";
@@ -63,8 +64,8 @@ function Hero() {
         <Stages />
         <p className="headline-result">
           In the recorded example, following direct calls finds three of the four functions that reach{" "}
-          <Term id="resolver">resolve_semantic_fks</Term>. The fourth, <Term id="scheduler">a scheduler</Term>, never calls into that chain: it hands one
-          of its functions to <Term id="to_thread">asyncio.to_thread</Term> instead. The extractor records that hand-over, and Auto Ontology’s SQL
+          <Term id="resolver">resolve_semantic_fks</Term>. The fourth, <Term id="scheduler">a scheduler</Term>, does not call the wrapper directly: at line
+          203 it passes it to <Term id="to_thread">asyncio.to_thread</Term>. The extractor records that hand-over, and Auto Ontology’s SQL
           found all four.
         </p>
         <div className="actions">
@@ -87,10 +88,11 @@ function Hero() {
           <div>
             <h3>Built here</h3>
             <ul className="facts">
-              <li>An extractor that parses every Python file and records files, functions, methods, classes, calls, imports, base classes, docstrings and links between tests and source files, in eight tables.</li>
+              <li>An extractor that parses every Python file git tracks in the repository and records files, functions, methods, classes, calls, imports, base classes, docstrings and links between tests and source files, in eight tables.</li>
               <li>Each call is classified: resolved to a function in the repository, or labelled as a built-in, an external library, a dynamic attribute or unresolved. A call the extractor cannot follow keeps no target rather than a guessed one. Linked calls follow plain names only; the published limits list the patterns, such as a local variable shadowing a module-level name, that can still link the wrong definition.</li>
               <li>Functions passed as arguments, as in <Term id="to_thread">asyncio.to_thread</Term>(f), are recorded as <Term id="callback">callback references</Term>, kept apart from direct calls.</li>
-              <li>A <Term id="duckdb">DuckDB</Term> export of the tables and a semantic-model export in Auto Ontology’s own YAML format, both stamped with the source commit and file hashes.</li>
+              <li>A <Term id="duckdb">DuckDB</Term> export of the tables and a semantic-model export in Auto Ontology’s own YAML format, both stamped with the source commit. The database keeps each file’s SHA-256; the YAML records a fingerprint of all of them.</li>
+              <li>The table keys and joins. At this revision Auto Ontology’s DuckDB connector reports no primary or foreign keys (its get_pks and get_fks return empty tables), so the semantic model is where Auto Ontology learns them: it declares a key for each of the 10 tables and 10 joins, such as <code>code.calls.callee_symbol_id</code> → <code>code.symbols.symbol_id</code>.</li>
             </ul>
           </div>
           <div>
@@ -155,12 +157,19 @@ function Example({ w, stepTarget }: { w: Walkthrough; stepTarget?: string }) {
   const sql = step<SqlStep>(w, "sql");
   const answer = step<AnswerStep>(w, "answer");
 
+  const mounted = useRef(false);
   useEffect(() => {
-    const saved = entryState().scrollY;
-    if (saved !== undefined) window.scrollTo(0, saved);
-    else if (stepTarget) document.getElementById(`step-${ALIASES[stepTarget] ?? stepTarget}`)?.scrollIntoView({ block: "start" });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+    if (!mounted.current) {
+      mounted.current = true;
+      const saved = entryState().scrollY;
+      if (saved !== undefined) {
+        window.scrollTo(0, saved);
+        return;
+      }
+    }
+    // Also when a link changes the step while this page is already open (the header's "Caller example").
+    if (stepTarget) document.getElementById(`step-${ALIASES[stepTarget] ?? stepTarget}`)?.scrollIntoView({ block: "start" });
+  }, [stepTarget]);
 
   return (
     <>
@@ -582,6 +591,7 @@ function Limits({ model }: { model: ModelStep }) {
             <li>How much the semantic model helps: no agent was given the same database without it.</li>
             <li>Accuracy on new questions: the author wrote all 22 while developing the project, named the columns to return and gave hints for 18.</li>
             <li>Speed in general: in this run a request took a median of 146 seconds, with three running at a time.</li>
+            <li>That every recorded link is right. After the run, two extractor defects were found and fixed: an import inside one function could link a call in another function to the wrong definition, and calls inside a nested function were credited to the enclosing function even when it never ran the nested one. Rebuilding Auto Ontology with the fix removes 21 of the 9,442 linked calls and adds 7; the four question 11 callers are unchanged. <a href={CORRECTIONS_URL} target="_blank" rel="noreferrer">Every changed row&nbsp;↗</a></li>
             <li>What happens at run time: the extractor reads source text, so a recorded call is not proof the code runs, and a missing one is not proof it never happens.</li>
           </ul>
         </div>

@@ -138,8 +138,8 @@ function Footer({ pub }: { pub: Publication | null }) {
             <a href="./data/index.json">data/index.json</a>
             {pub ? (
               <>
-                , publication <code>{pub.manifest.publication_sha256.slice(0, 12)}</code>, built from source commit{" "}
-                <code>{pub.entry.source_commit.slice(0, 12)}</code>
+                , data publication <code>{pub.manifest.publication_sha256.slice(0, 12)}</code>, built from source commit{" "}
+                <code>{pub.entry.source_commit.slice(0, 12)}</code>; these pages built from <code>{COMMIT.slice(0, 12)}</code>
               </>
             ) : null}
             . <Out href={PAPER}>Paper (PDF)</Out>, <Out href={CODE}>source code</Out>, <Out href={`${REPO}/blob/main/docs/inspection-api.md`}>API and local server</Out>

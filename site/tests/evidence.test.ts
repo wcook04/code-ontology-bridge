@@ -66,6 +66,6 @@ describe("editorial summaries", () => {
   });
   it("separate a one-word response from an explanation of the query", () => {
     expect(proseReading("thought").tone).toBe("fail");
-    expect(proseReading("This query counts the files in the repository.").tone).toBe("ok");
+    expect(proseReading("This query counts the files in the repository.").tone).toBe("neutral");
   });
 });

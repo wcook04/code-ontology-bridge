@@ -100,6 +100,13 @@ function OutcomeTable({ o, params }: { o: OutcomeList; params: URLSearchParams }
         that explanation together with the SQL, before the query runs, so it describes the calculation rather than the result. Question 2
         returned an extra row; question 14’s explanation is the single word “thought”.
       </p>
+      <p className="measure">
+        The shared instructions sent with every question asked the agent, after executing the SQL, to describe the returned rows. Auto
+        Ontology’s explanation is written before execution, so no response could follow that instruction; the rows are always returned
+        beside it. In 15 of the 22 requests the first SQL ran and gave the recorded rows. In six, the first query named a table without its
+        “code.” schema and failed with a catalog error, and Auto Ontology’s rewrite step fixed it. Question 2, the one whose final rows were wrong, was
+        rewritten twice after Auto Ontology’s own checks and ran twice.
+      </p>
       <RunConfig />
       <div className="filters" role="search">
         <label className="field">

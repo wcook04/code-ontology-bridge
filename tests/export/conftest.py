@@ -27,6 +27,10 @@ NAME = "auto_ontology_code"
 QUESTIONS = json.loads((REPO / "eval" / "auto_ontology_questions.json").read_text())
 ANALYSES = json.loads((REPO / "eval" / "custom_analyses.json").read_text())
 EXAMPLE = REPO / "examples" / "auto-ontology"
+# The committed example is the recorded run's input and stays frozen; every way the
+# current extractor's output differs from it is listed here (tools/record_extractor_corrections.py).
+CORRECTIONS_PATH = EXAMPLE / NAME / "extractor-corrections.json"
+CORRECTIONS = json.loads(CORRECTIONS_PATH.read_text()) if CORRECTIONS_PATH.is_file() else {"tables": {}, "evaluation_changes": {}, "summary_changes": {}}
 
 
 def _clone_at_pin() -> bool:

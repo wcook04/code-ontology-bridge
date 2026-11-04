@@ -123,7 +123,7 @@ export const FINDINGS: Record<number, Finding> = {
     view: "graph",
     says: (rows) => `${count(rows, "function")} reach it through calls. One, the scheduler, reaches it only because the extractor recorded a function passed to asyncio.to_thread.`,
     limit: STATIC_CALLS,
-    sqlNote: "The SQL removes test files from the final list; it can still pass through a test function while searching. The graph on the front page leaves test functions out of the search itself. Both give the same four callers here.",
+    sqlNote: "The SQL removes test files from the final list; it can still pass through a test function while searching. The graph on the front page leaves test functions out of the search itself. Both give the same four callers here. The reference query stops at depth 6 (depth < 6), so it is not a correct reference for a deeper caller; every caller here is within depth 3.",
   },
   12: {
     title: "Which five packages have the most lines in non-test files?",
@@ -190,6 +190,7 @@ export const FINDINGS: Record<number, Finding> = {
     kind: "Imports, recursively",
     view: "ranking",
     rank: { label: "area", value: "files", unit: "files" },
+    limit: "The question groups by the first two parts of each path, so a script directly under dev_tools appears as its own area rather than as part of a package. The agent’s SQL and the reference SQL both do this.",
     says: (rows) => {
       const total = rows.reduce((s, r) => s + Number(r.files), 0);
       return rows[0] ? `${n(total)} non-test files import it directly or through other files; ${rows[0].area} has the most, ${n(rows[0].files)}.` : "";
@@ -248,10 +249,39 @@ export const COLUMN_WORDS: Record<string, string> = {
  * and ordering (auto_ontology/retrieval/text_to_sql/models.py, SQLGenerationModel).
  * The executed rows are returned beside it, not written into it.
  */
-export function proseReading(answer: string): { label: string; tone: "fail" | "ok" } {
+export function proseReading(answer: string): { label: string; tone: "fail" | "neutral" } {
   if (answer.trim().split(/\s+/).length < 3) return { label: "No explanation of the query: the response is one word", tone: "fail" };
-  return { label: "Explains the query, as Auto Ontology’s response is designed to", tone: "ok" };
+  return { label: "A written explanation of the query", tone: "neutral" };
 }
+
+/** The author's recorded review of the written explanation (review.json), in words. */
+export const PROSE_REVIEW_WORDS: Record<string, string> = {
+  substantive: "The author’s review judged it an adequate explanation of the query.",
+  fail: "The author’s review judged it not an explanation of the query.",
+  unknown: "The author’s review did not classify it.",
+};
+
+/**
+ * How many times the SQL ran, from the execute_sql_query events in each saved response.
+ * Six first attempts failed because the SQL named a table without its "code." schema; the agent rewrote it.
+ */
+export const ATTEMPTS: Record<number, { runs: number; schemaError: boolean; rewrites: number }> = {
+  1: { runs: 1, schemaError: false, rewrites: 0 }, 2: { runs: 2, schemaError: false, rewrites: 2 }, 3: { runs: 2, schemaError: true, rewrites: 1 },
+  4: { runs: 1, schemaError: false, rewrites: 0 }, 5: { runs: 2, schemaError: true, rewrites: 1 }, 6: { runs: 1, schemaError: false, rewrites: 0 },
+  7: { runs: 1, schemaError: false, rewrites: 0 }, 8: { runs: 1, schemaError: false, rewrites: 0 }, 9: { runs: 1, schemaError: false, rewrites: 0 },
+  10: { runs: 1, schemaError: false, rewrites: 0 }, 11: { runs: 2, schemaError: true, rewrites: 2 }, 12: { runs: 1, schemaError: false, rewrites: 0 },
+  13: { runs: 1, schemaError: false, rewrites: 0 }, 14: { runs: 1, schemaError: false, rewrites: 0 }, 15: { runs: 1, schemaError: false, rewrites: 0 },
+  16: { runs: 1, schemaError: false, rewrites: 0 }, 17: { runs: 1, schemaError: false, rewrites: 0 }, 18: { runs: 2, schemaError: true, rewrites: 1 },
+  19: { runs: 1, schemaError: false, rewrites: 0 }, 20: { runs: 1, schemaError: false, rewrites: 0 }, 21: { runs: 2, schemaError: true, rewrites: 1 },
+  22: { runs: 2, schemaError: true, rewrites: 1 },
+};
+
+/** Where a rebuild with the corrected extractor gives a different reference answer (extractor-corrections.json). */
+export const CORRECTED: Record<number, string> = {
+  8: "Rebuilt with the corrected extractor, store is called from 311 places rather than 312; the ranking is otherwise unchanged.",
+  14: "Rebuilt with the corrected extractor, 9,428 of 30,949 direct calls (30.5%) are linked; the categories keep their order.",
+};
+export const CORRECTIONS_URL = "https://github.com/wcook04/code-ontology-bridge/blob/codex/paper-and-diagrams/examples/auto-ontology/auto_ontology_code/extractor-corrections.json";
 
 /** Seconds each recorded request took, from the elapsed_s field of its saved response (three requests ran at a time). */
 export const ELAPSED: Record<number, number> = {

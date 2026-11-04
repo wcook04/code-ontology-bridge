@@ -15,7 +15,7 @@ The final run is retained as collected. Its score is not raised by selecting ear
 
 ## Source-analysis limits
 
-The extractor is static. It misses dynamic calls, omits module-level calls from the call table, and records callback references without proving they execute. Only 9,442 of 31,178 direct call sites in the example resolve to an internal symbol. The 349 rows labelled `unresolved` are a residual category, not all unresolved behavior: 11,794 more are dynamic attribute calls. Test links are associations based on imports and filenames, not coverage. Missing descriptions stay empty.
+The extractor is static. Imports bind only in the function, method or class that contains them, and calls inside a nested function count for the enclosing function only when it runs that nested function; both were corrected after the recorded run ([corrections](examples/auto-ontology/auto_ontology_code/extractor-corrections.json)). It misses dynamic calls, omits module-level calls from the call table, and records callback references without proving they execute. Only 9,442 of 31,178 direct call sites in the example resolve to an internal symbol. The 349 rows labelled `unresolved` are a residual category, not all unresolved behavior: 11,794 more are dynamic attribute calls. Test links are associations based on imports and filenames, not coverage. Missing descriptions stay empty.
 
 Repeated qualified definitions now receive line-qualified IDs, preserving property getter/setter ownership; ambiguous targets remain unresolved. See the [extractor](code_ontology_bridge/codemap/) and [tests](tests/codemap/). This repair does not make static resolution complete for arbitrary Python programs.
 
