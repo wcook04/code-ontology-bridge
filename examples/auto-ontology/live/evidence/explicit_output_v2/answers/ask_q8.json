@@ -1,0 +1,247 @@
+{
+  "request": {
+    "question": "Which ten non-test functions or methods are called from the most call sites in non-test code?\n\nRequested output columns: symbol_id (string), call_sites (integer).\nReturn every requested field using exactly its specified column alias. Preserve complete case-sensitive repository-relative paths and symbol IDs; do not substitute display names. Include all requested counts and provenance fields. Explain the query result in ordinary prose; do not emit placeholder text. These questions concern a static map of open-source Python code. After executing SQL, describe the returned rows and query assumptions. Questions asking which files, modules or symbols mean distinct identities, not one repeated row per matching import or call occurrence; preserve occurrence counts only when requested. Caller/callee graph questions include methods as well as standalone functions unless a symbol kind is explicitly restricted. Use files.is_test for test-file classification; test_links describe associations, not the complete set of test files. Use DOUBLE or DECIMAL, rather than single-precision REAL, for percentage calculations.\nReturn both the symbol ID and its direct call-site count. Order by call_sites descending, then symbol_id ascending.",
+    "evidence": "Count resolved direct call sites (call_kind 'direct') whose caller and callee are both outside test files. Ties are broken by symbol id.",
+    "calculation_only": true
+  },
+  "status": 200,
+  "elapsed_s": 155.3,
+  "events": [
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "question_intent",
+      "thought": null,
+      "label": "Classifying the question"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "question_intent",
+      "thought": null,
+      "label": "Classifying the question"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "question_extraction",
+      "thought": null,
+      "label": "Understanding the question"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "question_extraction",
+      "thought": null,
+      "label": "Understanding the question"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "retrieve_candidates",
+      "thought": null,
+      "label": "Retrieving candidates"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "retrieve_candidates",
+      "thought": null,
+      "label": "Retrieving candidates"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "prepare_candidates",
+      "thought": null,
+      "label": "Preparing candidates"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "prepare_candidates",
+      "thought": "The query needs call-level direct-call rows from `calls`, symbol metadata/kind from `symbols`, and test/non-test filtering from `files` for both callers and callees. The join chain `calls <-> symbols <-> files` must therefore be kept; `inbound_call_counts` lacks caller/test and `call_kind` filtering, so it cannot correctly compute direct call sites in non-test code.",
+      "label": "Preparing candidates"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "refine_evidence",
+      "thought": null,
+      "label": "Refining evidence"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "refine_evidence",
+      "thought": "No certain string, constant, or predicate-operator repair is warranted. The values 'direct' and false match the supplied schema descriptions, and the evidence operator is equality as required by the grounded question.",
+      "label": "Refining evidence"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "construct_sql_from_candidates",
+      "thought": null,
+      "label": "Constructing SQL"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "construct_sql_from_candidates",
+      "thought": "The evidence requires counting calls where call_kind is 'direct' and both caller_symbol_id and callee_symbol_id belong to non-test files. I interpret a resolved call site as one whose callee_symbol_id can be joined to symbols, so the inner join removes unresolved/null callee references. I restrict the callee symbol kind to function or method because the question asks for non-test functions or methods, not classes. Each matching call record is counted as one call site; no DISTINCT is used because repeated calls are the requested occurrence count. Ties are broken by symbol_id ascending, and LIMIT 10 returns the requested ten results.",
+      "label": "Constructing SQL"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "validate_sql_query",
+      "thought": null,
+      "label": "Validating SQL and intent"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "validate_sql_query",
+      "thought": "The SQL counts direct call sites per callee symbol, restricts both callee and caller to non-test files, restricts callee kind to function/method (matching 'functions or methods'), returns symbol_id and call_sites ordered correctly with LIMIT 10. Joins follow the verified paths (calls.callee_symbol_id = symbols.symbol_id, symbols.file_id = files.file_id), and the caller-side join uses the same verified FK chain.",
+      "label": "Validating SQL and intent"
+    },
+    {
+      "type": "sql",
+      "node": "validate_sql_query",
+      "sql": "SELECT callee.symbol_id AS symbol_id, CAST(COUNT(*) AS INTEGER) AS call_sites FROM calls AS c JOIN symbols AS callee ON c.callee_symbol_id = callee.symbol_id JOIN files AS callee_file ON callee.file_id = callee_file.file_id JOIN symbols AS caller ON c.caller_symbol_id = caller.symbol_id JOIN files AS caller_file ON caller.file_id = caller_file.file_id WHERE c.call_kind = 'direct' AND callee_file.is_test = false AND caller_file.is_test = false AND callee.kind IN ('function', 'method') GROUP BY callee.symbol_id ORDER BY call_sites DESC, callee.symbol_id ASC LIMIT 10;"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "execute_sql_query",
+      "thought": null,
+      "label": "Executing SQL"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "execute_sql_query",
+      "thought": "Query failed, rewriting it: Catalog Error: Table with name calls does not exist! Did you mean \"code.calls\"? LINE 1: ... AS symbol_id, CAST(COUNT(*) AS INTEGER) AS call_sites FROM calls AS c JOIN symbols AS callee ON c.callee_symbol_id... ^",
+      "label": "Executing SQL"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "reconstruct_sql",
+      "thought": null,
+      "label": "Reconstructing SQL"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "reconstruct_sql",
+      "thought": "The validation error showed that the physical catalog requires qualified names, so tables are referenced as code.calls, code.symbols, and code.files. Retained assumptions: a resolved call site is one whose callee_symbol_id joins to an actual symbol, so the inner join to symbols removes unresolved or null callee references; resolved callers likewise join through symbols and files. The callee kind is restricted to 'function' or 'method' because the question asks specifically for non-test functions or methods, excluding classes. Both the caller and callee files must satisfy is_test = false per the evidence. Only call_kind = 'direct' rows count; callback rows are excluded. Each matching call row is counted individually as one call site, with no DISTINCT, because repeated calls are the requested occurrence count. Zero-call symbols simply never appear, since the count is derived from matching call rows and inner joins drop non-matches. Ties are broken by symbol_id ascending, and LIMIT 10 returns exactly ten rows. No percentage calculation is needed, so the REAL-vs-DOUBLE guidance does not apply.",
+      "label": "Reconstructing SQL"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "validate_sql_query",
+      "thought": null,
+      "label": "Validating SQL and intent"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "validate_sql_query",
+      "thought": "The SQL correctly counts direct call sites to non-test callee functions/methods from non-test caller files, joins the verified call-to-symbol and symbol-to-file paths, and returns the requested top 10 ordered fields.",
+      "label": "Validating SQL and intent"
+    },
+    {
+      "type": "sql",
+      "node": "validate_sql_query",
+      "sql": "SELECT callee.symbol_id AS symbol_id, CAST(COUNT(*) AS INTEGER) AS call_sites FROM code.calls AS c JOIN code.symbols AS callee ON c.callee_symbol_id = callee.symbol_id JOIN code.files AS callee_file ON callee.file_id = callee_file.file_id JOIN code.symbols AS caller ON c.caller_symbol_id = caller.symbol_id JOIN code.files AS caller_file ON caller.file_id = caller_file.file_id WHERE c.call_kind = 'direct' AND callee_file.is_test = false AND caller_file.is_test = false AND callee.kind IN ('function', 'method') GROUP BY callee.symbol_id ORDER BY call_sites DESC, callee.symbol_id ASC LIMIT 10;"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "execute_sql_query",
+      "thought": null,
+      "label": "Executing SQL"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "execute_sql_query",
+      "thought": null,
+      "label": "Executing SQL"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "check_empty_like_result",
+      "thought": null,
+      "label": "Checking results"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "check_empty_like_result",
+      "thought": null,
+      "label": "Checking results"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "check_value_repair",
+      "thought": null,
+      "label": "Checking values"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "check_value_repair",
+      "thought": null,
+      "label": "Checking values"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "format_and_respond",
+      "thought": null,
+      "label": "Formatting response"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "format_and_respond",
+      "thought": null,
+      "label": "Formatting response"
+    },
+    {
+      "type": "result",
+      "answer": {
+        "response": "This query lists the ten non-test functions or methods that receive direct calls from the greatest number of non-test call sites. It counts each direct call record whose callee resolves to a function or method defined in a non-test file and whose caller also lives in a non-test file, grouping the calls by callee symbol ID. The results are ordered by descending call-site count, with symbol ID used to break ties, and limited to ten rows.",
+        "sql_code": "SELECT callee.symbol_id AS symbol_id, CAST(COUNT(*) AS INTEGER) AS call_sites FROM code.calls AS c JOIN code.symbols AS callee ON c.callee_symbol_id = callee.symbol_id JOIN code.files AS callee_file ON callee.file_id = callee_file.file_id JOIN code.symbols AS caller ON c.caller_symbol_id = caller.symbol_id JOIN code.files AS caller_file ON caller.file_id = caller_file.file_id WHERE c.call_kind = 'direct' AND callee_file.is_test = false AND caller_file.is_test = false AND callee.kind IN ('function', 'method') GROUP BY callee.symbol_id ORDER BY call_sites DESC, callee.symbol_id ASC LIMIT 10;",
+        "sql_columns": [
+          "2b5c3ef7-97a5-4a8a-8695-966b6b7a6614",
+          "d2cf2bee-e6d9-41ca-8b63-50bc5eb2aabb",
+          "6dadddd1-2647-4112-aefa-8ed5b72c332c",
+          "efa6a4e0-6e0c-4786-89d0-1926e5506018",
+          "f003538b-f507-4d02-a3ea-fcd1cff49867",
+          "ec5938e4-df32-49ee-a9cd-d91c1c01c459",
+          "c7fc63dd-dfe1-416d-baaa-3ab56430af58",
+          "4d791fdc-39d2-4c4d-9776-78d8d5036863"
+        ],
+        "custom_analyses_used": [],
+        "sql_response_from_db": [
+          "[{\"symbol_id\":\"auto_ontology\\/dal\\/session.py::store\",\"call_sites\":312},{\"symbol_id\":\"auto_ontology\\/connectors\\/connection_string_factory.py::_enc\",\"call_sites\":38},{\"symbol_id\":\"auto_ontology\\/dal\\/session.py::write_transaction\",\"call_sites\":32},{\"symbol_id\":\"auto_ontology\\/retrieval\\/text_to_sql\\/agents\\/information_tools.py::_error\",\"call_sites\":32},{\"symbol_id\":\"auto_ontology\\/connectors\\/connection_string_factory.py::_require\",\"call_sites\":30},{\"symbol_id\":\"auto_ontology\\/utils\\/llm_invoke.py::invoke_with_structured_output\",\"call_sites\":29},{\"symbol_id\":\"auto_ontology\\/retrieval\\/kumo\\/graph_cache.py::_term\",\"call_sites\":25},{\"symbol_id\":\"auto_ontology\\/dal\\/users.py::resolve_accessible_catalog_ids\",\"call_sites\":24},{\"symbol_id\":\"auto_ontology\\/retrieval\\/text_to_sql\\/base.py::agent_wrapper\",\"call_sites\":21},{\"symbol_id\":\"auto_ontology\\/retrieval\\/text_to_sql\\/text_to_sql_graph.py::_make_node\",\"call_sites\":18}]"
+        ],
+        "thoughts": "- Preparing candidates: The ranking is by direct call sites, defined by code.calls.call_kind = 'direct'.\n- Preparing candidates: The query needs call-level direct-call rows from `calls`, symbol metadata/kind from `symbols`, and test/non-test filtering from `files` for both callers and callees. The join chain `calls <-> symbols <-> files` must therefore be kept; `inbound_call_counts` lacks caller/test and `call_kind` filtering, so it cannot correctly compute direct call sites in non-test code.\n- Refining evidence: The question and evidence both contain field concepts mapped by the evidence: direct call sites -> calls.call_kind = 'direct'; caller -> calls.caller_symbol_id; callee -> calls.callee_symbol_id; non-test/test-file classification -> files.is_test = false; symbol id -> symbols.symbol_id; symbol kind -> symbols.kind. The computed alias call_sites is not a physical column and remains unchanged. test_links has no allowed mapping target in the supplied columns, so it is left as-is.\n- Refining evidence: No certain string, constant, or predicate-operator repair is warranted. The values 'direct' and false match the supplied schema descriptions, and the evidence operator is equality as required by the grounded question.\n- Constructing SQL: The evidence requires counting calls where call_kind is 'direct' and both caller_symbol_id and callee_symbol_id belong to non-test files. I interpret a resolved call site as one whose callee_symbol_id can be joined to symbols, so the inner join removes unresolved/null callee references. I restrict the callee symbol kind to function or method because the question asks for non-test functions or methods, not classes. Each matching call record is counted as one call site; no DISTINCT is used because repeated calls are the requested occurrence count. Ties are broken by symbol_id ascending, and LIMIT 10 returns the requested ten results.\n- Validating SQL and intent: The SQL counts direct call sites per callee symbol, restricts both callee and caller to non-test files, restricts callee kind to function/method (matching 'functions or methods'), returns symbol_id and call_sites ordered correctly with LIMIT 10. Joins follow the verified paths (calls.callee_symbol_id = symbols.symbol_id, symbols.file_id = files.file_id), and the caller-side join uses the same verified FK chain.\n- Executing SQL: Query failed, rewriting it: Catalog Error: Table with name calls does not exist! Did you mean \"code.calls\"? LINE 1: ... AS symbol_id, CAST(COUNT(*) AS INTEGER) AS call_sites FROM calls AS c JOIN symbols AS callee ON c.callee_symbol_id... ^\n- Reconstructing SQL: The tables exist, but the query references them without the required schema qualification. The error itself indicates the table is available as code.calls. Qualifying calls, symbols, and files as code.calls, code.symbols, and code.files should resolve the failure. This is a SQL correction, not missing data.\n- Reconstructing SQL: The validation error showed that the physical catalog requires qualified names, so tables are referenced as code.calls, code.symbols, and code.files. Retained assumptions: a resolved call site is one whose callee_symbol_id joins to an actual symbol, so the inner join to symbols removes unresolved or null callee references; resolved callers likewise join through symbols and files. The callee kind is restricted to 'function' or 'method' because the question asks specifically for non-test functions or methods, excluding classes. Both the caller and callee files must satisfy is_test = false per the evidence. Only call_kind = 'direct' rows count; callback rows are excluded. Each matching call row is counted individually as one call site, with no DISTINCT, because repeated calls are the requested occurrence count. Zero-call symbols simply never appear, since the count is derived from matching call rows and inner joins drop non-matches. Ties are broken by symbol_id ascending, and LIMIT 10 returns exactly ten rows. No percentage calculation is needed, so the REAL-vs-DOUBLE guidance does not apply.\n- Validating SQL and intent: The SQL correctly counts direct call sites to non-test callee functions/methods from non-test caller files, joins the verified call-to-symbol and symbol-to-file paths, and returns the requested top 10 ordered fields."
+      }
+    }
+  ],
+  "question_id": 8,
+  "gold_sql": "SELECT s.symbol_id, COUNT(*) AS call_sites\nFROM code.calls c\nJOIN code.symbols s ON s.symbol_id = c.callee_symbol_id\nJOIN code.files f ON f.file_id = s.file_id\nJOIN code.symbols cs ON cs.symbol_id = c.caller_symbol_id\nJOIN code.files cf ON cf.file_id = cs.file_id\nWHERE c.call_kind = 'direct'\n  AND s.kind IN ('function', 'method')\n  AND NOT f.is_test AND NOT cf.is_test\nGROUP BY s.symbol_id\nORDER BY call_sites DESC, s.symbol_id\nLIMIT 10;",
+  "gold_row_count": 10,
+  "agent_sql": "SELECT callee.symbol_id AS symbol_id, CAST(COUNT(*) AS INTEGER) AS call_sites FROM code.calls AS c JOIN code.symbols AS callee ON c.callee_symbol_id = callee.symbol_id JOIN code.files AS callee_file ON callee.file_id = callee_file.file_id JOIN code.symbols AS caller ON c.caller_symbol_id = caller.symbol_id JOIN code.files AS caller_file ON caller.file_id = caller_file.file_id WHERE c.call_kind = 'direct' AND callee_file.is_test = false AND caller_file.is_test = false AND callee.kind IN ('function', 'method') GROUP BY callee.symbol_id ORDER BY call_sites DESC, callee.symbol_id ASC LIMIT 10;",
+  "agent_answer": "This query lists the ten non-test functions or methods that receive direct calls from the greatest number of non-test call sites. It counts each direct call record whose callee resolves to a function or method defined in a non-test file and whose caller also lives in a non-test file, grouping the calls by callee symbol ID. The results are ordered by descending call-site count, with symbol ID used to break ties, and limited to ten rows.",
+  "agent_row_count": 10,
+  "correct_rows": true,
+  "error": null
+}

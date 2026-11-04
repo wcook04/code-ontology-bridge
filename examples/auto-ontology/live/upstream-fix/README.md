@@ -4,9 +4,11 @@ This patch enabled the recorded Auto Ontology run through public model APIs. It 
 
 The bridge's DuckDB data and imported semantic model use Auto Ontology's existing interfaces. This patch changes the model-client and chat configuration used for the recorded question-answering run. No code-specific connector, query planner or SQL engine is added.
 
+The current patch also extends the existing SQL-generation placeholder validator to reject literal stubs such as `test`, `TODO` and `PLACEHOLDER`. Validation failures use the existing bounded structured-output retry mechanism; no reference answer is supplied to that retry. This addition follows review of the fresh code-question runs.
+
 ## Changes for review
 
-[`public-api-nemotron.patch`](public-api-nemotron.patch) contains nine file diffs, including tests and the generated backend OpenAPI schema.
+[`public-api-nemotron.patch`](public-api-nemotron.patch) contains twelve file diffs, including tests and the generated backend OpenAPI schema.
 
 | Change | Behavior | Scope |
 |---|---|---|

@@ -64,6 +64,7 @@ def score_record(record, reference, contract):
     prose = answer.get('response')
     prose_valid = isinstance(prose, str) and bool(prose.strip()) and not re.search(
         r'\b(PLACEHOLDER|TODO|TBD)\b|I[’\']?m sorry,? but I (?:can[’\']?t|cannot) help', prose, re.I)
+    prose_valid = prose_valid and not re.fullmatch(r"\s*(test|n/a)\s*[.!]?\s*", prose or "", re.I)
     completed = event is not None and record.get('status') == 200 and not record.get('error')
     return {'question_id': int(reference['question_id']), 'completed': completed,
             'schema_complete': schema, 'values_match': values, 'order_matches': order,

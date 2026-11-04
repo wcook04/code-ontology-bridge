@@ -68,3 +68,9 @@ def test_correct_rows_with_unrelated_refusal_need_review():
     gold = {'question_id': 1, 'answer_raw': '[["a",2]]'}
     result = score_record(record([{'symbol_id': 'a', 'count': 2}], "I’m sorry, but I can’t help with that."), gold, contract())
     assert result['strict_rows_pass'] and not result['pass']
+
+
+def test_literal_test_prose_is_not_an_explanation():
+    gold = {'question_id': 1, 'answer_raw': '[["a",2]]'}
+    result = score_record(record([{'symbol_id': 'a', 'count': 2}], 'test'), gold, contract())
+    assert result['strict_rows_pass'] and not result['pass']

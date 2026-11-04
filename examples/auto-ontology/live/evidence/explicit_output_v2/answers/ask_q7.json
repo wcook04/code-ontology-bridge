@@ -1,0 +1,243 @@
+{
+  "request": {
+    "question": "Which public functions in auto_ontology/semantic have no test linking to their file?\n\nRequested output columns: symbol_id (string).\nReturn every requested field using exactly its specified column alias. Preserve complete case-sensitive repository-relative paths and symbol IDs; do not substitute display names. Include all requested counts and provenance fields. Explain the query result in ordinary prose; do not emit placeholder text. These questions concern a static map of open-source Python code. After executing SQL, describe the returned rows and query assumptions. Questions asking which files, modules or symbols mean distinct identities, not one repeated row per matching import or call occurrence; preserve occurrence counts only when requested. Caller/callee graph questions include methods as well as standalone functions unless a symbol kind is explicitly restricted. Use files.is_test for test-file classification; test_links describe associations, not the complete set of test files. Use DOUBLE or DECIMAL, rather than single-precision REAL, for percentage calculations.",
+    "evidence": "Test links connect a test file to the source files it imports or whose name it matches. Public means the name does not start with an underscore.",
+    "calculation_only": true
+  },
+  "status": 200,
+  "elapsed_s": 154.8,
+  "events": [
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "question_intent",
+      "thought": null,
+      "label": "Classifying the question"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "question_intent",
+      "thought": null,
+      "label": "Classifying the question"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "question_extraction",
+      "thought": null,
+      "label": "Understanding the question"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "question_extraction",
+      "thought": null,
+      "label": "Understanding the question"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "retrieve_candidates",
+      "thought": null,
+      "label": "Retrieving candidates"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "retrieve_candidates",
+      "thought": null,
+      "label": "Retrieving candidates"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "prepare_candidates",
+      "thought": null,
+      "label": "Preparing candidates"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "prepare_candidates",
+      "thought": "The question maps directly to the precomputed table `untested_public_symbols`: it already denotes public symbols with no test link to their file, and it exposes `symbol_id`, `file_id`, and `kind`. Filtering `kind = 'function'` and `file_id` under `auto_ontology/semantic` answers the question, so no other table is needed for columns or row scoping.",
+      "label": "Preparing candidates"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "refine_evidence",
+      "thought": null,
+      "label": "Refining evidence"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "refine_evidence",
+      "thought": "No certain repair is supported by the supplied question, value anchors, or column samples. The question already matches the described schema: symbol_id is VARCHAR, public is defined by name not starting with underscore, and the table concerns untested public symbols.",
+      "label": "Refining evidence"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "construct_sql_from_candidates",
+      "thought": null,
+      "label": "Constructing SQL"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "construct_sql_from_candidates",
+      "thought": "The precomputed table untested_public_symbols already denotes public symbols whose file has no test link, so it is the backbone. I filter kind = 'function' to restrict to functions (excluding methods/classes), and restrict file_id to the auto_ontology/semantic package. Assumption: 'in auto_ontology/semantic' means the package directory, so I match file_id LIKE 'auto_ontology/semantic/%' (files directly inside that directory or its subpackages) and exclude a sibling module named auto_ontology/semantic.py, because the request names a package path. I also re-assert the evidence's definition of public (name not starting with an underscore) as a guard, using an escaped LIKE pattern. No aggregation, so no zero/division concerns; no ranking, so no tie-breaking needed. Rows are distinct symbols, so no DISTINCT is applied.",
+      "label": "Constructing SQL"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "validate_sql_query",
+      "thought": null,
+      "label": "Validating SQL and intent"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "validate_sql_query",
+      "thought": "The SQL uses the precomputed untested_public_symbols table, filters for function symbols under the auto_ontology/semantic path, excludes underscore-prefixed names to enforce public visibility, and returns only symbol_id. This reasonably answers the requested question without critical join or aggregation problems.",
+      "label": "Validating SQL and intent"
+    },
+    {
+      "type": "sql",
+      "node": "validate_sql_query",
+      "sql": "SELECT symbol_id\nFROM untested_public_symbols\nWHERE kind = 'function'\n  AND file_id LIKE 'auto_ontology/semantic/%'\n  AND name NOT LIKE '!_%' ESCAPE '!'\nORDER BY symbol_id;"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "execute_sql_query",
+      "thought": null,
+      "label": "Executing SQL"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "execute_sql_query",
+      "thought": "Query failed, rewriting it: Catalog Error: Table with name untested_public_symbols does not exist! Did you mean \"code.untested_public_symbols\"? LINE 2: FROM untested_public_symbols ^",
+      "label": "Executing SQL"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "reconstruct_sql",
+      "thought": null,
+      "label": "Reconstructing SQL"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "reconstruct_sql",
+      "thought": "The validation error shows the table must be referenced by its catalog-qualified name, so I use auto_ontology_code.code.untested_public_symbols; this is the only change forced by the error. Remaining assumptions stay valid: the precomputed untested_public_symbols table already denotes public symbols whose file has no test link, so it is the backbone; kind = 'function' restricts to standalone functions (excluding methods and classes); 'in auto_ontology/semantic' means the package directory, so file_id LIKE 'auto_ontology/semantic/%' matches files directly inside it and in subpackages, excluding a sibling module auto_ontology/semantic.py because the request names a package path; the evidence's definition of public (name not starting with an underscore) is re-asserted as a guard with an escaped LIKE pattern. No aggregation, so no zero/division concerns; no ranking, so no tie-breaking; rows are distinct symbols, so no DISTINCT is applied.",
+      "label": "Reconstructing SQL"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "validate_sql_query",
+      "thought": null,
+      "label": "Validating SQL and intent"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "validate_sql_query",
+      "thought": "The SQL returns symbol_id from the untested_public_symbols table, restricts to function symbols under auto_ontology/semantic, and applies the evidence-defined public-name filter. No joins or aggregations are needed, and the projection matches the requested output exactly.",
+      "label": "Validating SQL and intent"
+    },
+    {
+      "type": "sql",
+      "node": "validate_sql_query",
+      "sql": "SELECT symbol_id\nFROM auto_ontology_code.code.untested_public_symbols\nWHERE kind = 'function'\n  AND file_id LIKE 'auto_ontology/semantic/%'\n  AND name NOT LIKE '!_%' ESCAPE '!'\nORDER BY symbol_id;"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "execute_sql_query",
+      "thought": null,
+      "label": "Executing SQL"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "execute_sql_query",
+      "thought": null,
+      "label": "Executing SQL"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "check_empty_like_result",
+      "thought": null,
+      "label": "Checking results"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "check_empty_like_result",
+      "thought": null,
+      "label": "Checking results"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "check_value_repair",
+      "thought": null,
+      "label": "Checking values"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "check_value_repair",
+      "thought": null,
+      "label": "Checking values"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "format_and_respond",
+      "thought": null,
+      "label": "Formatting response"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "format_and_respond",
+      "thought": null,
+      "label": "Formatting response"
+    },
+    {
+      "type": "result",
+      "answer": {
+        "response": "This lists the identifiers of public functions defined in the auto_ontology/semantic package whose source file has no test linked to it. It draws on the precomputed untested public symbols table, keeping only rows whose symbol kind is function, whose file path falls under the auto_ontology/semantic directory, and whose name does not begin with an underscore. Results are ordered alphabetically by symbol identifier.",
+        "sql_code": "SELECT symbol_id\nFROM auto_ontology_code.code.untested_public_symbols\nWHERE kind = 'function'\n  AND file_id LIKE 'auto_ontology/semantic/%'\n  AND name NOT LIKE '!_%' ESCAPE '!'\nORDER BY symbol_id;",
+        "sql_columns": [
+          "bb08c0e1-4a5e-447b-8eef-d19cc2d4f94d",
+          "1d1924b4-e984-4155-bf40-ce6f7f5d3002",
+          "69a65c57-67e2-404f-b1f7-10a3515319b1",
+          "72a2b174-2de9-4883-9a08-523cc4b41518"
+        ],
+        "custom_analyses_used": [],
+        "sql_response_from_db": [
+          "[{\"symbol_id\":\"auto_ontology\\/semantic\\/__main__.py::main\"},{\"symbol_id\":\"auto_ontology\\/semantic\\/compile.py::run_semantic_compilation\"},{\"symbol_id\":\"auto_ontology\\/semantic\\/domain.py::load_domain_summary\"},{\"symbol_id\":\"auto_ontology\\/semantic\\/domain.py::load_system_prompt\"},{\"symbol_id\":\"auto_ontology\\/semantic\\/loaders.py::build_tables_index\"}]"
+        ],
+        "thoughts": "- Preparing candidates: The question asks for symbol_id values of public functions with no test links, which is represented by code.untested_public_symbols.symbol_id; this is the primary returned attribute.\n- Preparing candidates: The question maps directly to the precomputed table `untested_public_symbols`: it already denotes public symbols with no test link to their file, and it exposes `symbol_id`, `file_id`, and `kind`. Filtering `kind = 'function'` and `file_id` under `auto_ontology/semantic` answers the question, so no other table is needed for columns or row scoping.\n- Refining evidence: No certain repair is supported by the supplied question, value anchors, or column samples. The question already matches the described schema: symbol_id is VARCHAR, public is defined by name not starting with underscore, and the table concerns untested public symbols.\n- Constructing SQL: The precomputed table untested_public_symbols already denotes public symbols whose file has no test link, so it is the backbone. I filter kind = 'function' to restrict to functions (excluding methods/classes), and restrict file_id to the auto_ontology/semantic package. Assumption: 'in auto_ontology/semantic' means the package directory, so I match file_id LIKE 'auto_ontology/semantic/%' (files directly inside that directory or its subpackages) and exclude a sibling module named auto_ontology/semantic.py, because the request names a package path. I also re-assert the evidence's definition of public (name not starting with an underscore) as a guard, using an escaped LIKE pattern. No aggregation, so no zero/division concerns; no ranking, so no tie-breaking needed. Rows are distinct symbols, so no DISTINCT is applied.\n- Validating SQL and intent: The SQL uses the precomputed untested_public_symbols table, filters for function symbols under the auto_ontology/semantic path, excludes underscore-prefixed names to enforce public visibility, and returns only symbol_id. This reasonably answers the requested question without critical join or aggregation problems.\n- Executing SQL: Query failed, rewriting it: Catalog Error: Table with name untested_public_symbols does not exist! Did you mean \"code.untested_public_symbols\"? LINE 2: FROM untested_public_symbols ^\n- Reconstructing SQL: The query failed only because the table was referenced without its schema qualifier. The catalog error indicates the table exists as `code.untested_public_symbols`, so the SQL can be corrected using the same underlying table/data by qualifying it as `code.untested_public_symbols`. This is not a missing-data problem.\n- Reconstructing SQL: The validation error shows the table must be referenced by its catalog-qualified name, so I use auto_ontology_code.code.untested_public_symbols; this is the only change forced by the error. Remaining assumptions stay valid: the precomputed untested_public_symbols table already denotes public symbols whose file has no test link, so it is the backbone; kind = 'function' restricts to standalone functions (excluding methods and classes); 'in auto_ontology/semantic' means the package directory, so file_id LIKE 'auto_ontology/semantic/%' matches files directly inside it and in subpackages, excluding a sibling module auto_ontology/semantic.py because the request names a package path; the evidence's definition of public (name not starting with an underscore) is re-asserted as a guard with an escaped LIKE pattern. No aggregation, so no zero/division concerns; no ranking, so no tie-breaking; rows are distinct symbols, so no DISTINCT is applied.\n- Validating SQL and intent: The SQL returns symbol_id from the untested_public_symbols table, restricts to function symbols under auto_ontology/semantic, and applies the evidence-defined public-name filter. No joins or aggregations are needed, and the projection matches the requested output exactly."
+      }
+    }
+  ],
+  "question_id": 7,
+  "gold_sql": "SELECT s.symbol_id\nFROM code.symbols s\nJOIN code.files f ON f.file_id = s.file_id\nWHERE f.file_id LIKE 'auto_ontology/semantic/%'\n  AND NOT f.is_test\n  AND s.is_public\n  AND s.kind = 'function'\n  AND NOT EXISTS (SELECT 1 FROM code.test_links t WHERE t.target_file_id = f.file_id)\nORDER BY s.symbol_id;",
+  "gold_row_count": 5,
+  "agent_sql": "SELECT symbol_id\nFROM auto_ontology_code.code.untested_public_symbols\nWHERE kind = 'function'\n  AND file_id LIKE 'auto_ontology/semantic/%'\n  AND name NOT LIKE '!_%' ESCAPE '!'\nORDER BY symbol_id;",
+  "agent_answer": "This lists the identifiers of public functions defined in the auto_ontology/semantic package whose source file has no test linked to it. It draws on the precomputed untested public symbols table, keeping only rows whose symbol kind is function, whose file path falls under the auto_ontology/semantic directory, and whose name does not begin with an underscore. Results are ordered alphabetically by symbol identifier.",
+  "agent_row_count": 5,
+  "correct_rows": true,
+  "error": null
+}

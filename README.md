@@ -39,7 +39,7 @@ The exports have complementary jobs:
 | Model YAML | Table descriptions, terms, attributes, joins and example analyses, through model import. |
 | Evaluation dataset | DDL, CSV data and reference questions in NVIDIA's evaluation format. The full upstream benchmark harness has not been run. |
 
-The data and model interfaces already existed upstream. The successful public-model question run also used a [nine-file compatibility patch](examples/auto-ontology/live/upstream-fix/README.md) for model configuration and routing. Importing the YAML alone does not connect a queryable database.
+The data and model interfaces already existed upstream. The successful public-model question run also used a [compatibility patch](examples/auto-ontology/live/upstream-fix/README.md) for model configuration and routing. Importing the YAML alone does not connect a queryable database.
 
 Separate [governance commands](docs/governance.md) record certification checks, annotate returned SQL and reconcile competing definitions. They are local additions; they do not make Auto Ontology enforce certified-only querying.
 
