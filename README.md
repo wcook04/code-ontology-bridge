@@ -14,6 +14,15 @@ Auto Ontology generated recursive SQL and returned the four callers below. The a
 
 ![The scheduler and main are three edges from resolve_semantic_fks; run_semantic_compilation is two edges away and _run_semantic_compilation is one. The scheduler edge is a callback reference; the other edges are direct calls.](docs/figures/caller-chain.png)
 
+[Open the diagram at full size](docs/figures/caller-chain.png). The returned rows, with paths shortened for reading, are:
+
+| Caller | Depth |
+| --- | ---: |
+| `_run_semantic_compilation` | 1 |
+| `run_semantic_compilation` | 2 |
+| `SemanticScheduler.`<br>`_run_once` | 3 |
+| `main` | 3 |
+
 `SemanticScheduler._run_once` passes `run_semantic_compilation` to `asyncio.to_thread`. Recording that callback reference lets the query reach the scheduler as well as ordinary callers. The [saved response](examples/auto-ontology/live/current/responses/10i_ask_with_key/ask_q11.json) contains the question, generated SQL, complete symbol IDs and returned depths.
 
 The request included a hint about reverse traversal and callbacks. These are relationships in a static source map; the diagram does not show observed execution or establish complete runtime impact analysis.
@@ -29,6 +38,8 @@ The request included a hint about reverse traversal and callbacks. These are rel
 The source-map approach comes from **CodeMap**, Will Cook's earlier source-navigation tool. This package adapts it into a standalone extractor. It reads existing docstrings, preserves missing descriptions as empty values and requires no private CodeMap service.
 
 ![The bridge exports DuckDB rows and model YAML separately. Auto Ontology imports the model for semantic context and queries the rows through its existing DuckDB connector.](docs/figures/architecture.png)
+
+[Open the architecture diagram at full size](docs/figures/architecture.png).
 
 The two exports have different jobs: **DuckDB supplies data; model YAML explains it**. Importing YAML alone does not connect a database. A third export supplies DDL, CSV data and reference questions in NVIDIA's evaluation format; the full upstream benchmark harness has not been run.
 
