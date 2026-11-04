@@ -56,7 +56,7 @@ This is a development-set demonstration: the questions, hints and output require
 Extraction and export use no model API. Install [uv](https://docs.astral.sh/uv/) and use Python 3.12:
 
 ```sh
-git clone --branch codex/clarify-repository https://github.com/wcook04/code-ontology-bridge.git
+git clone https://github.com/wcook04/code-ontology-bridge.git
 cd code-ontology-bridge
 uv sync --locked
 mkdir -p build

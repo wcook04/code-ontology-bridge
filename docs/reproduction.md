@@ -9,7 +9,7 @@ Use Python 3.12 and uv. The repository pins Python 3.12 because its optional Pos
 Run this in a disposable checkout: `reproduce.sh` writes the tracked example exports. It uses the upstream checkout's actual contents and revision; it does not enforce the revision below for you.
 
 ```sh
-git clone --branch codex/clarify-repository https://github.com/wcook04/code-ontology-bridge.git
+git clone https://github.com/wcook04/code-ontology-bridge.git
 git clone https://github.com/NVIDIA/auto-ontology.git auto-ontology-source
 git -C auto-ontology-source checkout --detach cdaf61e1bd0cf3820d11d72b43bb460816aebbd3
 cd code-ontology-bridge
@@ -82,4 +82,4 @@ The closeout checks on 4 November 2026 passed:
 - Source/wheel package inspection, working-tree and staged layout checks, local Markdown links, captured-artifact hashes, and credential/private-path scans.
 - Visual inspection of all three PDF pages and the published GitHub README at desktop and phone widths.
 
-[Hosted CI passed for the closeout commit](https://github.com/wcook04/code-ontology-bridge/actions/runs/41825926632). It runs the default suite, staged layout check and package build; optional integration coverage is supplied by the local run above. The current documentation is published on `codex/clarify-repository`; the clone commands select that branch explicitly.
+[Hosted CI passed for the closeout commit](https://github.com/wcook04/code-ontology-bridge/actions/runs/41825926632). It runs the default suite, staged layout check and package build; optional integration coverage is supplied by the local run above. The clone commands use the default `main` branch.
