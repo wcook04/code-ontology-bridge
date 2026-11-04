@@ -1,5 +1,5 @@
-// A reading layout for captured SQL. It only inserts line breaks before
-// top-level clause keywords outside quoted text, so removing the inserted
+// A reading layout for captured SQL. It only inserts line breaks before clause
+// keywords, and an indented break before AND, ON and OR, outside quoted text, so removing the inserted
 // breaks gives back the captured statement exactly (tests/sql.test.ts).
 
 const CLAUSES = [
@@ -41,6 +41,8 @@ export function readableSql(sql: string): string {
       const hit = CLAUSES.find((k) => rest.startsWith(k) && !/[A-Za-z0-9_]/.test(rest.charAt(k.length)));
       if (hit) {
         out = out.slice(0, -1) + BREAK;
+      } else if (/^(AND|ON|OR)\b/.test(rest)) {
+        out = out.slice(0, -1) + BREAK + "  ";
       }
     }
     out += ch;
@@ -50,5 +52,5 @@ export function readableSql(sql: string): string {
 
 /** Inverse of readableSql for a single-line capture: put the replaced spaces back. */
 export function capturedFrom(readable: string): string {
-  return readable.split(BREAK).join(" ");
+  return readable.replace(/\n(?:  )?/g, " ");
 }

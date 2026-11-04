@@ -1,21 +1,41 @@
-// All 22 recorded outcomes. Filtering happens in the browser over the published
-// list; the run’s totals always describe the complete run, never the filtered view.
+// All 22 recorded questions: each one's result in a sentence, and how Auto
+// Ontology did. Totals always describe the whole run, never the filtered view.
 
 import { useEffect, useRef, useState } from "react";
-import type { Outcomes as OutcomeList } from "../data/types";
+import type { Outcomes as OutcomeList, QuestionDetail } from "../data/types";
 import { useRoute } from "../data/useRoute";
-import { Gate, ProseStatus, TableStatus } from "../components/parts";
+import { readRoute } from "../data/client";
+import { Gate } from "../components/parts";
 import { entryState, href, onLinkClick, replaceView } from "../app/router";
+import { FINDINGS, proseReading } from "../app/findings";
 
 const OUTCOMES = "/api/v1/outcomes?limit=100";
-type TableFilter = "" | "pass" | "fail";
-type ProseFilter = "" | "substantive" | "fail" | "unknown";
+type RowsFilter = "" | "pass" | "fail";
+
+function useDetails(ids: number[]): Record<number, QuestionDetail> {
+  const [details, setDetails] = useState<Record<number, QuestionDetail>>({});
+  const key = ids.join(",");
+  useEffect(() => {
+    let live = true;
+    for (const id of ids) {
+      readRoute<QuestionDetail>(`/api/v1/questions/${id}`).then(
+        (d) => live && setDetails((all) => ({ ...all, [id]: d })),
+        () => undefined,
+      );
+    }
+    return () => {
+      live = false;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [key]);
+  return details;
+}
 
 export function Outcomes({ params }: { params: URLSearchParams }) {
   const outcomes = useRoute<OutcomeList>(OUTCOMES);
   return (
     <section className="band page" aria-labelledby="outcomes-title">
-      <h1 id="outcomes-title">All 22 recorded questions</h1>
+      <h1 id="outcomes-title">The 22 recorded questions</h1>
       <Gate loaded={outcomes} what="the outcome list">
         {(o) => <OutcomeTable o={o} params={params} />}
       </Gate>
@@ -25,17 +45,16 @@ export function Outcomes({ params }: { params: URLSearchParams }) {
 
 function OutcomeTable({ o, params }: { o: OutcomeList; params: URLSearchParams }) {
   const [q, setQ] = useState(params.get("q") ?? "");
-  const [table, setTable] = useState<TableFilter>((params.get("table") as TableFilter) ?? "");
-  const [prose, setProse] = useState<ProseFilter>((params.get("prose") as ProseFilter) ?? "");
+  const [rowsFilter, setRowsFilter] = useState<RowsFilter>((params.get("rows") as RowsFilter) ?? "");
   const restored = useRef(false);
+  const details = useDetails(o.items.map((i) => i.question_id));
 
   useEffect(() => {
     const next = new URLSearchParams();
     if (q) next.set("q", q);
-    if (table) next.set("table", table);
-    if (prose) next.set("prose", prose);
+    if (rowsFilter) next.set("rows", rowsFilter);
     replaceView({}, href({ view: "outcomes", params: next }));
-  }, [q, table, prose]);
+  }, [q, rowsFilter]);
 
   useEffect(() => {
     if (restored.current) return;
@@ -45,117 +64,97 @@ function OutcomeTable({ o, params }: { o: OutcomeList; params: URLSearchParams }
   }, []);
 
   const needle = q.trim().toLowerCase();
-  const items = o.items.filter(
-    (i) =>
-      (!table || i.assessment.table_match === table) &&
-      (!prose || i.assessment.prose_review === prose) &&
-      (!needle || String(i.question_id) === needle.replace(/^q/, "") || i.question.toLowerCase().includes(needle)),
-  );
-  const pc = o.population_counts;
+  const items = o.items.filter((i) => {
+    const f = FINDINGS[i.question_id];
+    const text = `${i.question} ${f?.title ?? ""} ${f?.kind ?? ""}`.toLowerCase();
+    return (!rowsFilter || i.assessment.table_match === rowsFilter) && (!needle || String(i.question_id) === needle.replace(/^q/, "") || text.includes(needle));
+  });
+  const pass = o.population_counts.table_match.pass ?? 0;
 
   return (
     <>
       <p className="lede-2">
-        Each question was asked of Auto Ontology over the bridge’s export of its own repository. Two judgments are recorded separately: a
-        program checked whether the returned rows matched the reference rows, and the author read the written answer.
+        The author wrote these questions while building the project and asked each one of Auto Ontology over the extracted database of
+        Auto Ontology’s own code. Each request named the columns to return, and most came with a hint on how to answer.
       </p>
       <dl className="totals">
         <div>
-          <dt>Rows matched the reference</dt>
+          <dt>The SQL returned exactly the expected rows</dt>
           <dd>
-            {pc.table_match.pass ?? 0} of {o.population_total}
+            {pass} of {o.population_total}
           </dd>
         </div>
         <div>
-          <dt>Written answer judged substantive</dt>
-          <dd>
-            {pc.prose_review.substantive ?? 0} of {o.population_total}
-            <span className="small muted">
-              {" "}
-              ({pc.prose_review.fail ?? 0} failed, {pc.prose_review.unknown ?? 0} not classified)
-            </span>
-          </dd>
+          <dt>The written answer states the result</dt>
+          <dd>0 of {o.population_total}</dd>
         </div>
       </dl>
-      <p className="small muted measure">{o.scope} The author’s prose review was not blinded.</p>
+      <p className="measure">
+        Question 14’s written answer is the single word “thought”. The other 21 describe the query Auto Ontology ran rather than what it
+        found. The author’s recorded review counted 20 of those as substantive explanations of the SQL. The one-line results below were written for
+        this website from the returned rows.
+      </p>
+      <p className="small muted measure">
+        One run, on questions written during development, with no held-out questions and no comparison against an agent given the database
+        without the semantic model.
+      </p>
 
       <div className="filters" role="search">
         <label className="field">
-          <span>Search questions</span>
-          <input type="search" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Words or a number, e.g. caller or 14" />
+          <span>Search</span>
+          <input type="search" value={q} onChange={(e) => setQ(e.target.value)} placeholder="e.g. imports, callers or 14" />
         </label>
         <label className="field">
-          <span>Table check</span>
-          <select value={table} onChange={(e) => setTable(e.target.value as TableFilter)}>
-            <option value="">Any</option>
-            <option value="pass">Rows matched</option>
-            <option value="fail">Rows did not match</option>
-          </select>
-        </label>
-        <label className="field">
-          <span>Prose review</span>
-          <select value={prose} onChange={(e) => setProse(e.target.value as ProseFilter)}>
-            <option value="">Any</option>
-            <option value="substantive">Substantive</option>
-            <option value="fail">Prose failed</option>
-            <option value="unknown">Not classified</option>
+          <span>Rows</span>
+          <select value={rowsFilter} onChange={(e) => setRowsFilter(e.target.value as RowsFilter)}>
+            <option value="">All questions</option>
+            <option value="pass">Exactly the expected rows</option>
+            <option value="fail">Wrong rows</option>
           </select>
         </label>
       </div>
       <p className="showing" role="status">
-        Showing {items.length} of {o.population_total} questions
-        {table || prose || needle ? ". Totals above still describe the whole run." : "."}
-        {table || prose || needle ? (
+        Showing {items.length} of {o.population_total}.
+        {q || rowsFilter ? (
           <>
             {" "}
-            <button type="button" className="link-button" onClick={() => { setQ(""); setTable(""); setProse(""); }}>
-              Clear filters
+            <button type="button" className="link-button" onClick={() => { setQ(""); setRowsFilter(""); }}>
+              Show all
             </button>
           </>
         ) : null}
       </p>
-      <div className="table-wrap">
-        <table className="rows outcomes">
-          <caption className="visually-hidden">Recorded questions with their two assessments</caption>
-          <thead>
-            <tr>
-              <th scope="col" className="num">
-                No.
-              </th>
-              <th scope="col">Question</th>
-              <th scope="col">Table check</th>
-              <th scope="col">Prose review</th>
-            </tr>
-          </thead>
-          <tbody>
-            {items.map((i) => (
-              <tr key={i.question_id}>
-                <td className="num">{i.question_id}</td>
-                <td>
-                  <a href={href({ view: "question", id: i.question_id })} onClick={onLinkClick}>
-                    {i.question}
-                  </a>
-                  {i.question_id === 11 ? <span className="tag">, the example on the front page</span> : null}
-                  {i.review_finding ? <span className="small muted outcomes__finding">{i.review_finding.reason}</span> : null}
-                </td>
-                <td>
-                  <TableStatus value={i.assessment.table_match} />
-                </td>
-                <td>
-                  <ProseStatus value={i.assessment.prose_review} />
-                </td>
-              </tr>
-            ))}
-            {items.length === 0 ? (
-              <tr>
-                <td colSpan={4} className="rows__empty">
-                  No question matches these filters.
-                </td>
-              </tr>
-            ) : null}
-          </tbody>
-        </table>
-      </div>
+      <ol className="qlist">
+        {items.map((i) => {
+          const f = FINDINGS[i.question_id];
+          const d = details[i.question_id];
+          const rows = d?.result_tables[0] ?? [];
+          const prose = d ? proseReading(d.answer) : null;
+          return (
+            <li key={i.question_id} className="qlist__item">
+              <span className="qlist__n">{i.question_id}</span>
+              <div className="qlist__body">
+                <a className="qlist__title" href={href({ view: "question", id: i.question_id })} onClick={onLinkClick}>
+                  {f?.title ?? i.question}
+                </a>
+                <p className="qlist__says">{d && f ? f.says(rows) : " "}</p>
+                <p className="qlist__status">
+                  <span className={i.assessment.table_match === "pass" ? "ok" : "bad"}>
+                    {i.assessment.table_match === "pass" ? "✓ Expected rows" : "✕ Wrong rows"}
+                  </span>
+                  {prose?.tone === "fail" ? <span className="bad">✕ Written answer is one word</span> : null}
+                  {i.question_id === 11 ? (
+                    <a href="#/walkthrough/source" onClick={onLinkClick}>
+                      Followed step by step on the front page
+                    </a>
+                  ) : null}
+                </p>
+              </div>
+            </li>
+          );
+        })}
+        {items.length === 0 ? <li className="qlist__empty">No question matches.</li> : null}
+      </ol>
     </>
   );
 }

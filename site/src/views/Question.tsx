@@ -1,11 +1,15 @@
-// One recorded question: the same inspection for a success or a failure.
+// One recorded question, in the order a reader needs it: the question, what
+// the returned rows show, how Auto Ontology did, then the evidence on demand.
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import type { QuestionDetail } from "../data/types";
 import { useRoute } from "../data/useRoute";
-import { Captured, Gate, Out } from "../components/parts";
-import { AnswerProse, AssessmentBlock, RequestBlock, Results, SqlPair } from "../components/Evidence";
-import { back, entryState, href, onLinkClick } from "../app/router";
+import { Captured, Gate, Out, RowsTable } from "../components/parts";
+import { ResultView } from "../components/ResultView";
+import { RequestBlock, Results } from "../components/Evidence";
+import { entryState, href, onLinkClick } from "../app/router";
+import { FINDINGS, proseReading } from "../app/findings";
+import { readableSql } from "../app/sql";
 
 const REPO = "https://github.com/wcook04/code-ontology-bridge/blob/main/examples/auto-ontology/live/current/";
 
@@ -13,78 +17,134 @@ export function Question({ id, total }: { id: number; total: number }) {
   const loaded = useRoute<QuestionDetail>(`/api/v1/questions/${id}`);
   useEffect(() => {
     if (loaded.state !== "ready") return;
-    const y = entryState().scrollY;
-    window.scrollTo(0, y ?? 0);
+    window.scrollTo(0, entryState().scrollY ?? 0);
   }, [loaded.state, id]);
   return (
-    <article className="band page" aria-labelledby="q-title">
-      <nav className="crumbs" aria-label="Back">
-        <button type="button" className="link-button" onClick={() => back("#/outcomes")}>
-          ← Back
-        </button>
+    <article className="band page question" aria-labelledby="q-title">
+      <nav className="crumbs" aria-label="Breadcrumb">
         <a href="#/outcomes" onClick={onLinkClick}>
-          All 22 questions
+          ← All 22 questions
         </a>
       </nav>
       <Gate loaded={loaded} what={`question ${id}`}>
-        {(q) => (
-          <>
-            <p className="kicker">Question {q.question_id} of {total}</p>
-            <h1 id="q-title">{q.question}</h1>
-            {q.question_id === 11 ? (
-              <p className="small">
-                This is the question the <a href="#/" onClick={onLinkClick}>caller example</a> walks through.
-              </p>
-            ) : null}
-            <AssessmentBlock assessment={q.assessment} score={q.score} finding={q.review_finding} />
-            <h2>Request</h2>
-            <RequestBlock request={q.request} contract={q.output_contract} />
-            <h2>SQL</h2>
-            <SqlPair sql={q.sql} reference={q.reference_sql} />
-            <h2>Rows</h2>
-            <Results tables={q.result_tables} referenceText={q.reference_rows} contract={q.output_contract} score={q.score} />
-            <h2>Written answer</h2>
-            <AnswerProse text={q.answer} />
-            {q.display_annotations.links.length ? (
-              <>
-                <h3>Source links for returned identifiers</h3>
-                <p className="small muted">{q.display_annotations.note}</p>
-                <ul className="links-list">
-                  {q.display_annotations.links.map((l) => (
-                    <li key={`${l.table_index}-${l.row_index}-${l.column}`}>
-                      <Out href={l.source_url}>
-                        <code className="wrap-id">{l.identity}</code>
-                      </Out>
-                    </li>
-                  ))}
-                </ul>
-              </>
-            ) : null}
-            <h2>Recorded file</h2>
-            <p className="small">
-              <Out href={REPO + q.artifact}>{q.artifact}</Out>, SHA-256 <code className="wrap-id">{q.sha256}</code>
-            </p>
-            <details className="fold">
-              <summary>Show the complete score record</summary>
-              <Captured text={JSON.stringify(q.score, null, 2)} />
-            </details>
-            <nav className="pager" aria-label="Other questions">
-              {q.question_id > 1 ? (
-                <a href={href({ view: "question", id: q.question_id - 1 })} onClick={onLinkClick}>
-                  ← Question {q.question_id - 1}
-                </a>
-              ) : (
-                <span />
-              )}
-              {q.question_id < total ? (
-                <a href={href({ view: "question", id: q.question_id + 1 })} onClick={onLinkClick}>
-                  Question {q.question_id + 1} →
-                </a>
-              ) : null}
-            </nav>
-          </>
-        )}
+        {(q) => <Body q={q} total={total} />}
       </Gate>
     </article>
+  );
+}
+
+function Body({ q, total }: { q: QuestionDetail; total: number }) {
+  const f = FINDINGS[q.question_id];
+  const rows = q.result_tables[0] ?? [];
+  const prose = proseReading(q.answer);
+  const rowsOk = q.assessment.table_match === "pass";
+  return (
+    <>
+      <p className="kicker">
+        Question {q.question_id} of {total}
+        {f ? `, ${f.kind.toLowerCase()}` : ""}
+      </p>
+      <h1 id="q-title">{f?.title ?? q.question}</h1>
+      {f && f.title !== q.question ? <p className="asked">Asked as: “{q.question}”</p> : null}
+
+      <section className="finding" aria-labelledby="finding-title">
+        <h2 id="finding-title" className="visually-hidden">What the returned rows show</h2>
+        {f ? <p className="finding__says">{f.says(rows)}</p> : null}
+        {f ? <ResultView finding={f} rows={rows} contract={q.output_contract} referenceText={q.reference_rows} /> : null}
+        {f?.limit ? <p className="finding__limit">{f.limit}</p> : null}
+        <p className="finding__source">This summary was written for this website from the {rows.length} recorded {rows.length === 1 ? "row" : "rows"}. It is not Auto Ontology’s answer.</p>
+      </section>
+
+      <section className="verdict" aria-labelledby="verdict-title">
+        <h2 id="verdict-title">How Auto Ontology did</h2>
+        <div className="verdict__grid">
+          <div className={`verdict__item ${rowsOk ? "is-pass" : "is-fail"}`}>
+            <p className="verdict__head">{rowsOk ? "✓ The SQL returned exactly the expected rows" : "✕ The SQL returned the wrong rows"}</p>
+            <p className="small">
+              {q.score.agent_rows} returned, {q.score.reference_rows} expected
+              {q.output_contract.ordered ? (q.score.order_matches ? ", in the expected order" : ", in a different order") : ""}. A program compared them with
+              rows from a reference query the author wrote.
+            </p>
+            {q.review_finding && !rowsOk ? <p className="small">{q.review_finding.reason}</p> : null}
+          </div>
+          <div className={`verdict__item is-${prose.tone}`}>
+            <p className="verdict__head">{prose.tone === "fail" ? "✕ " : "– "}{prose.label}</p>
+            <blockquote className="verdict__quote">{q.answer}</blockquote>
+            <p className="small muted">Auto Ontology’s written answer, verbatim.</p>
+          </div>
+        </div>
+        {f?.sqlNote ? <p className="small measure">{f.sqlNote}</p> : null}
+      </section>
+
+      <section className="evidence" aria-labelledby="evidence-title">
+        <h2 id="evidence-title">The recorded evidence</h2>
+        <Fold title="The SQL Auto Ontology wrote" open>
+          <SqlBlock sql={q.sql} />
+        </Fold>
+        <Fold title={rowsOk ? "Returned rows next to the reference rows" : "Returned rows next to the reference rows (they differ)"} open={!rowsOk}>
+          <Results tables={q.result_tables} referenceText={q.reference_rows} contract={q.output_contract} score={q.score} />
+        </Fold>
+        <Fold title="The reference SQL used for scoring">
+          <Captured className="sql" text={q.reference_sql} label="Reference SQL" />
+          <p className="small muted">Written by the author with the question. It was not part of the request.</p>
+        </Fold>
+        <Fold title="The question exactly as submitted, with its hint">
+          <RequestBlock request={q.request} contract={q.output_contract} />
+        </Fold>
+        <Fold title="Recorded file and score">
+          <p className="small">
+            <Out href={REPO + q.artifact}>{q.artifact}</Out>
+          </p>
+          <p className="small muted">SHA-256 {q.sha256}</p>
+          <RowsTable
+            rows={[q.score as unknown as Record<string, unknown>]}
+            columns={["agent_rows", "reference_rows", "strict_rows_pass", "values_match", "order_matches", "schema_complete"]}
+            caption="Automatic score"
+          />
+        </Fold>
+      </section>
+
+      <nav className="pager" aria-label="Other questions">
+        {q.question_id > 1 ? (
+          <a href={href({ view: "question", id: q.question_id - 1 })} onClick={onLinkClick}>
+            ← Question {q.question_id - 1}
+          </a>
+        ) : (
+          <span />
+        )}
+        {q.question_id < total ? (
+          <a href={href({ view: "question", id: q.question_id + 1 })} onClick={onLinkClick}>
+            Question {q.question_id + 1} →
+          </a>
+        ) : null}
+      </nav>
+    </>
+  );
+}
+
+function Fold({ title, open, children }: { title: string; open?: boolean; children: React.ReactNode }) {
+  return (
+    <details className="evidence__fold" open={open}>
+      <summary>{title}</summary>
+      <div className="evidence__body">{children}</div>
+    </details>
+  );
+}
+
+export function SqlBlock({ sql }: { sql: string }) {
+  const [exact, setExact] = useState(false);
+  const single = !sql.includes("\n");
+  return (
+    <div className="sqlblock">
+      <Captured className="sql sql--wide" text={exact ? sql : readableSql(sql)} label="Generated SQL" />
+      {single ? (
+        <p className="small muted">
+          {exact ? "Shown exactly as captured, on one line." : "Line breaks added before each clause for reading; nothing else changed."}{" "}
+          <button type="button" className="btn-quiet" onClick={() => setExact(!exact)}>
+            {exact ? "Add line breaks" : "Show exactly as captured"}
+          </button>
+        </p>
+      ) : null}
+    </div>
   );
 }

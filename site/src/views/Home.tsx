@@ -48,23 +48,81 @@ export function Home({ stepTarget }: { stepTarget?: string }) {
 
 function Hero() {
   return (
-    <section className="hero band" aria-labelledby="hero-title">
-      <h1 id="hero-title">Ask NVIDIA’s database agent questions about Python code</h1>
-      <p className="lede">
-        <Term id="auto-ontology">NVIDIA Auto Ontology</Term> lets you ask a database questions in English: its agent writes SQL, runs it and
-        answers. This project turns a Python repository into the two inputs Auto Ontology already accepts, a database of the code’s files,
-        functions and calls, and a <Term id="semantic-model">semantic model</Term> that says what each table means.
-      </p>
-      <SystemDiagram onOpen={jump} />
-      <div className="actions">
-        <a className="btn" href={href({ view: "home", step: "source" })} onClick={(e) => { e.preventDefault(); jump("source"); }}>
-          Follow one question from code to answer
-        </a>
-        <a className="btn-ghost" href="#/outcomes" onClick={onLinkClick}>
-          See all 22 recorded questions
-        </a>
-      </div>
-    </section>
+    <>
+      <section className="hero band" aria-labelledby="hero-title">
+        <h1 id="hero-title">Make a Python repository queryable by a SQL agent</h1>
+        <p className="lede">
+          code-ontology-bridge reads a Python repository and writes two files: a database of its files, functions, calls and imports, and a{" "}
+          <Term id="semantic-model">semantic model</Term> describing those tables. Both are in formats{" "}
+          <Term id="auto-ontology">NVIDIA Auto Ontology</Term> already imports, so its SQL agent can answer questions about the code.
+        </p>
+        <p className="recorded">
+          This website shows one recorded run: Auto Ontology was asked 22 questions about its own source code. Nothing here runs live.
+        </p>
+        <Stages />
+        <div className="actions">
+          <a className="btn" href={href({ view: "home", step: "source" })} onClick={(e) => { e.preventDefault(); jump("source"); }}>
+            Follow one question from code to answer
+          </a>
+          <a className="btn-ghost" href="#/outcomes" onClick={onLinkClick}>
+            See the 22 recorded questions
+          </a>
+        </div>
+      </section>
+      <section className="band" aria-labelledby="split-title">
+        <h2 id="split-title">What this project adds, and what NVIDIA supplies</h2>
+        <SystemDiagram onOpen={jump} />
+        <div className="split-cols">
+          <div>
+            <h3>Built here</h3>
+            <ul className="facts">
+              <li>An extractor that parses every Python file and records files, functions, methods, classes, calls, imports, base classes, docstrings and links between tests and source files, in eight tables.</li>
+              <li>Each call is classified: resolved to a function in the repository, or labelled as a built-in, an external library, a dynamic attribute or unresolved. Nothing is guessed; an unlinked call keeps no target.</li>
+              <li>Functions passed as arguments, as in <Term id="to_thread">asyncio.to_thread</Term>(f), are recorded as <Term id="callback">callback references</Term>.</li>
+              <li>A <Term id="duckdb">DuckDB</Term> export of the tables and a semantic-model export in Auto Ontology’s own YAML format, both stamped with the source commit and file hashes.</li>
+            </ul>
+          </div>
+          <div>
+            <h3>Supplied by Auto Ontology</h3>
+            <ul className="facts">
+              <li>Importing the semantic model into its catalog.</li>
+              <li>The SQL agent that reads the table descriptions, writes SQL and explains it.</li>
+              <li>The DuckDB connector that runs the SQL.</li>
+            </ul>
+            <h3>What the run needed</h3>
+            <p className="small">
+              Auto Ontology at commit <code>cdaf61e</code> with a twelve-file patch: it lets the service use public model APIs and exposes its
+              existing SQL-only route through the chat API. The extractor and both exports need no patch and no model.{" "}
+              <Out href={`${REPO}/blob/main/examples/auto-ontology/live/upstream-fix/README.md`}>Read what the patch changes</Out>
+            </p>
+          </div>
+        </div>
+      </section>
+    </>
+  );
+}
+
+const REPO = "https://github.com/wcook04/code-ontology-bridge";
+
+/** The three stages, before any detail. */
+function Stages() {
+  return (
+    <ol className="stages3" aria-label="How a question about code gets answered">
+      <li>
+        <span className="stages3__name">Python repository</span>
+        <span className="stages3__what">Any Python source; here, Auto Ontology’s own 473 files</span>
+      </li>
+      <li className="is-ours">
+        <span className="stages3__owner">This project</span>
+        <span className="stages3__name">Code database and semantic model</span>
+        <span className="stages3__what">Tables of functions, calls and imports, described in English</span>
+      </li>
+      <li>
+        <span className="stages3__owner">NVIDIA Auto Ontology</span>
+        <span className="stages3__name">SQL answers</span>
+        <span className="stages3__what">Its agent turns a question into SQL and runs it</span>
+      </li>
+    </ol>
   );
 }
 
@@ -95,17 +153,15 @@ function Example({ w, stepTarget }: { w: Walkthrough; stepTarget?: string }) {
   return (
     <>
       <section className="band walk-intro" aria-labelledby="walk-title">
-        <h2 id="walk-title">The test: Auto Ontology’s own code</h2>
+        <h2 id="walk-title">One question, followed from the code to the answer</h2>
         <p className="lede-2">
-          The extractor was run on Auto Ontology’s own repository, {w.snapshot.file_count} Python files, and Auto Ontology was then asked 22
-          questions about that code. Question {w.question_id} asked: if the function <Term id="resolver">resolve_semantic_fks</Term> changed,
-          which other functions would be affected? Auto Ontology found four. One of them, <Sym id={SCHEDULER} lower />, never calls any of the
-          others. The five steps below show how it was found anyway.
+          Question {w.question_id} asked: if <Term id="resolver">resolve_semantic_fks</Term> changed, which other functions would be
+          affected? Auto Ontology returned four. One of them, <Sym id={SCHEDULER} lower />, never calls any of the others directly.
         </p>
-        <p className="small muted measure">
-          Everything on this page was recorded during one run of Auto Ontology at a fixed revision; the website itself runs no model and no SQL.
-          That run needed a small compatibility patch to Auto Ontology, described in the{" "}
-          <Out href="https://github.com/wcook04/code-ontology-bridge/blob/main/docs/reproduction.md">reproduction guide</Out>.
+        <p className="measure">
+          The request told the agent how to search: follow calls backwards, and include callback references. The agent did not have to work out that
+          method itself. What made the answer possible is that the extractor had recorded the line where the scheduler hands a function over, as a row
+          the agent could query. The five steps below follow that row from the source to the returned rows.
         </p>
       </section>
 
@@ -121,8 +177,8 @@ function Example({ w, stepTarget }: { w: Walkthrough; stepTarget?: string }) {
         <RequestBlock request={request.request} contract={request.output_contract} />
         <p className="measure sql-intro">
           From that, Auto Ontology’s agent wrote one SQL query. It starts at the resolver, repeatedly looks up who calls the current function,
-          accepts callback references as calls, skips test files and keeps each caller’s smallest <Term id="depth">depth</Term>. That summary
-          was written for this website; the query below is exactly as recorded.
+          accepts callback references as calls, keeps each caller’s smallest <Term id="depth">depth</Term>, and removes test files from the
+          final list. That summary was written for this website; the query below is exactly as recorded.
         </p>
         <SqlPair sql={sql.sql} reference={sql.reference_sql} />
       </section>
@@ -443,9 +499,8 @@ function OutcomesTeaser() {
             <>
               <p className="measure">
                 Question 11 is one of {o.population_total}. For {o.population_counts.table_match.pass ?? 0} of them, the rows Auto Ontology
-                returned were exactly the expected rows. The author read every written answer and judged{" "}
-                {o.population_counts.prose_review.substantive ?? 0} of them adequate. The author wrote the questions while developing the project,
-                so this is not an independent benchmark. Two answers fell short in different ways:
+                returned were exactly the expected rows. None of the written answers states the result: they describe the query instead. The author wrote the questions while
+                developing the project, so this is not an independent benchmark. Two answers fell short in other ways:
               </p>
               <ul className="cases">
                 {picks.map((q) =>
@@ -476,7 +531,7 @@ function OutcomesTeaser() {
 }
 
 const STAGE_WORDS: Record<string, { name: string; recorded: string }> = {
-  compiled_terms: { name: "Auto Ontology’s list of table descriptions after import", recorded: "Recorded, partly: names and descriptions only" },
+  compiled_terms: { name: "Auto Ontology’s list of table descriptions after import", recorded: "Saved in part: names and descriptions only" },
   submitted_import: { name: "The exact data Auto Ontology received on import", recorded: "" },
   catalog_id_mapping: { name: "How exported names were mapped to Auto Ontology’s internal IDs", recorded: "" },
   compiled_model: { name: "Auto Ontology’s full compiled model", recorded: "" },
@@ -486,15 +541,31 @@ const STAGE_WORDS: Record<string, { name: string; recorded: string }> = {
 function Limits({ model }: { model: ModelStep }) {
   return (
     <section className="band band--plain" id="step-limits" tabIndex={-1} aria-labelledby="h-limits">
-      <h2 id="h-limits">What the recording contains</h2>
-      <p className="measure">
-        The run saved the semantic model the extractor wrote, every question, the SQL and the rows. Some of Auto Ontology’s internal steps were
-        not saved, so this website does not show or animate them.
-      </p>
+      <h2 id="h-limits">What this run shows, and what it does not</h2>
+      <div className="split-cols">
+        <div>
+          <h3>It shows</h3>
+          <ul className="facts">
+            <li>Auto Ontology can import the extractor’s semantic model and query its database through the existing DuckDB connector.</li>
+            <li>For 21 of 22 questions, the SQL its agent wrote returned exactly the rows of a reference query the author wrote.</li>
+            <li>Every request, SQL statement, returned row and written answer is recorded and published unchanged.</li>
+          </ul>
+        </div>
+        <div>
+          <h3>It does not show</h3>
+          <ul className="facts">
+            <li>How much the semantic model helps: no agent was given the same database without it.</li>
+            <li>Accuracy on new questions: the author wrote all 22 while developing the project, named the columns to return and gave hints for 18.</li>
+            <li>That the written answers are useful: none states its result; question 14’s is the word “thought”.</li>
+            <li>What happens at run time: the extractor reads source text, so a recorded call is not proof the code runs, and a missing one is not proof it never happens.</li>
+          </ul>
+        </div>
+      </div>
+      <h3>Which stages of the run were saved</h3>
       <ul className="stages">
         <li>
           <span>The semantic model the extractor wrote</span>
-          <span className="status status--pass">{model.exported_input.status === "recorded" ? "Recorded" : model.exported_input.status}</span>
+          <span className="status status--pass">{model.exported_input.status === "recorded" ? "Saved" : model.exported_input.status}</span>
         </li>
         {Object.entries(model.stages).map(([key, stage]) => {
           const words = STAGE_WORDS[key];
@@ -502,7 +573,7 @@ function Limits({ model }: { model: ModelStep }) {
           return (
             <li key={key}>
               <span>{words?.name ?? key}</span>
-              <span className={`status ${recorded ? "status--partial" : "status--unknown"}`}>{recorded ? words?.recorded || "Recorded" : "Not recorded"}</span>
+              <span className={`status ${recorded ? "status--partial" : "status--unknown"}`}>{recorded ? words?.recorded || "Saved" : "Not saved"}</span>
             </li>
           );
         })}

@@ -12,6 +12,8 @@ import { TermProvider } from "../components/Term";
 
 const REPO = "https://github.com/wcook04/code-ontology-bridge";
 const PAPER = `${REPO}/blob/main/docs/case-study.pdf`;
+// The website source is on this branch until pull request 2 is merged.
+const CODE = `${REPO}/tree/codex/paper-and-diagrams`;
 
 export function App() {
   const hash = useHash();
@@ -35,8 +37,8 @@ export function App() {
 
   useEffect(() => {
     const titles: Record<string, string> = {
-      home: "Code Ontology Bridge: from Python source to a recorded SQL answer",
-      outcomes: "All 22 recorded questions | Code Ontology Bridge",
+      home: "Code Ontology Bridge: make a Python repository queryable by a SQL agent",
+      outcomes: "The 22 recorded questions | Code Ontology Bridge",
       question: route.view === "question" ? `Question ${route.id} | Code Ontology Bridge` : "",
       source: "Source excerpt | Code Ontology Bridge",
       missing: "Page not found | Code Ontology Bridge",
@@ -100,7 +102,7 @@ function Header({ current }: { current: string }) {
             22 questions
           </a>
           <Out href={PAPER}>Paper</Out>
-          <Out href={REPO}>Code</Out>
+          <Out href={CODE}>Code</Out>
           <button
             type="button"
             className="scheme"
@@ -139,7 +141,7 @@ function Footer({ pub }: { pub: Publication | null }) {
                 <code>{pub.entry.source_commit.slice(0, 12)}</code>
               </>
             ) : null}
-            . <Out href={PAPER}>Paper (PDF)</Out>, <Out href={REPO}>source code</Out>, <Out href={`${REPO}/blob/main/docs/inspection-api.md`}>API and local server</Out>
+            . <Out href={PAPER}>Paper (PDF)</Out>, <Out href={CODE}>source code</Out>, <Out href={`${REPO}/blob/main/docs/inspection-api.md`}>API and local server</Out>
           </p>
         </div>
         <nav className="fam-sites" aria-label={`${FAMILY.owner.name}'s websites`}>
