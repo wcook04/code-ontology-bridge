@@ -12,21 +12,28 @@ import tempfile
 from urllib.parse import urlsplit
 
 ROOT = Path(__file__).resolve().parents[1]
+PUBLIC_ROOT = 'https://github.com/wcook04/code-ontology-bridge/blob/main/'
+
+
+def prepare_source(source: str) -> str:
+    """Resolve local images for Pandoc and give PDF links a durable public home."""
+    source = re.sub(r'^# Querying a Codebase with NVIDIA Auto Ontology\n', '', source, count=1, flags=re.M)
+
+    def resolve_link(match: re.Match) -> str:
+        label, target = match.groups()
+        if urlsplit(target).scheme or target.startswith('#'):
+            return match[0]
+        if label.startswith('!'):
+            # The temporary Markdown lives outside docs; images must stay local.
+            return f'{label}({(ROOT / "docs" / target).resolve().as_posix()})'
+        path = posixpath.normpath('docs/' + target)
+        return f'{label}({PUBLIC_ROOT}{path})'
+
+    return re.sub(r'(!?\[[^\]\n]*\])\(([^)\n]+)\)', resolve_link, source)
 
 
 def main() -> None:
-    source = (ROOT / 'docs/case-study.md').read_text()
-    # Metadata supplies the PDF title; retain the heading for GitHub readers.
-    source = re.sub(r'^# Querying a Codebase with NVIDIA Auto Ontology\n', '', source, count=1, flags=re.M)
-
-    def public_link(match: re.Match) -> str:
-        target = match[1]
-        if urlsplit(target).scheme or target.startswith('#'):
-            return match[0]
-        path = posixpath.normpath('docs/' + target)
-        return '](https://github.com/wcook04/code-ontology-bridge/blob/codex/clarify-repository/' + path + ')'
-
-    source = re.sub(r'\]\(([^)]+)\)', public_link, source)
+    source = prepare_source((ROOT / 'docs/case-study.md').read_text())
     with tempfile.TemporaryDirectory(prefix='cob-paper-') as tmp:
         folder = Path(tmp)
         md = folder / 'paper.md'
@@ -35,6 +42,11 @@ def main() -> None:
         header.write_text(r'''\usepackage{microtype}
 \usepackage{needspace}
 \usepackage{etoolbox}
+\usepackage{float}
+\usepackage{caption}
+\captionsetup{font=small}
+\floatplacement{figure}{H}
+\pretocmd{\subsubsection}{\Needspace{10\baselineskip}}{}{}
 \BeforeBeginEnvironment{longtable}{\Needspace{8\baselineskip}}
 \setlength{\parindent}{1em}
 \setlength{\parskip}{0.15em}

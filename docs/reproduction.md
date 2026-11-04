@@ -83,3 +83,7 @@ The closeout checks on 4 November 2026 passed:
 - Visual inspection of all three PDF pages and the published GitHub README at desktop and phone widths.
 
 [Hosted CI passed for the closeout commit](https://github.com/wcook04/code-ontology-bridge/actions/runs/41825926632). It runs the default suite, staged layout check and package build; optional integration coverage is supplied by the local run above. The clone commands use the default `main` branch.
+
+### Illustrated paper revision
+
+The subsequent paper/README revision passed **82 tests** with the same pinned upstream checkout available, plus the working-tree and staged layout/link checks. The local extraction and both export commands in the README were exercised again. The paper builder embeds four shared figures in a six-page PDF and uses public `main` links instead of the deleted development branch. Every PDF page was visually inspected, including the corrected caller/callee arrowheads. These editorial checks do not add model runs or change the retained evaluation score.

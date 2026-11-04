@@ -1,12 +1,17 @@
 # Documentation
 
-Start with the [repository overview](../README.md) for what the bridge does and a local example.
+Choose a starting point by what you want to check or do.
 
-- [Case study](case-study.md) ([PDF](case-study.pdf)): the two starting systems, the adapter, the experiment and what its results establish.
-- [Reproduction](reproduction.md): build the pinned dataset, check compatibility and locate the live-run instructions.
-- [Governance](governance.md): certification history, SQL-derived answer annotations and definition reconciliation.
-- [Detailed results](../examples/auto-ontology/live/RESULTS.md): all 22 answers from the fresh complete run, scoring rules and saved evidence.
-- [Capabilities and remaining work](../GAPS.md): what is implemented, what was observed and known defects.
-- [Interface specification](../SPEC.md): table definitions and export contracts.
+| Task | Start here |
+| --- | --- |
+| Understand the contribution | [Paper](case-study.md) or [PDF](case-study.pdf): source-to-SQL integration, the callback example, results and limits. |
+| Inspect what the model returned | [Detailed results](../examples/auto-ontology/live/RESULTS.md): all 22 answers, scoring rules and review. |
+| Run the software | [Local example](../README.md#try-it-locally), then [pinned reproduction](reproduction.md) for the NVIDIA experiment. |
+| Review the adapter | [Interface specification](../SPEC.md) and [compatibility patch](../examples/auto-ontology/live/upstream-fix/README.md). |
+| Understand the additional commands | [Governance](governance.md): certification history, SQL-derived annotations and reconciliation. |
+| Change a figure or the paper | [Figure sources and briefs](figures/README.md) and [contributing](../CONTRIBUTING.md). |
+| Find known limits | [Capabilities and remaining work](../GAPS.md). |
 
-The case study's Markdown is the maintained source. `sh tools/build_paper.sh` generates its PDF. The experiment's recorded JSON, SQL, CSV and logs remain under `examples/auto-ontology/`; editorial corrections do not rewrite those observations.
+`case-study.md` is the maintained paper source. `sh tools/build_paper.sh` generates its PDF using the images in `figures/`. The README reuses those same images. Keep image briefs and attribution beside the assets; keep generated page previews in ignored `build/`.
+
+The recorded JSON, SQL, CSV and logs stay under `examples/auto-ontology/`. Editorial changes do not rewrite those observations. Authored evaluation inputs live under `eval/`; copies inside the retained run describe what that run used.

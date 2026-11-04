@@ -74,3 +74,17 @@ def test_superseded_capture_directory_rejected(repository):
     p.parent.mkdir(parents=True)
     p.write_text('superseded evidence')
     assert any('no directory role' in problem for problem in checker.check(repository))
+
+
+def test_shared_figure_assets_have_a_specific_home(repository):
+    p = repository / 'docs/figures/architecture.png'
+    p.parent.mkdir(parents=True)
+    p.write_bytes(b'figure')
+    (repository / 'docs/README.md').write_text('![Diagram](figures/architecture.png)')
+    assert checker.check(repository) == []
+    git(repository, 'add', '.')
+    assert checker.check(repository, True) == []
+    p.unlink()
+    assert any('broken link' in problem for problem in checker.check(repository))
+    (repository / 'docs/loose-image.png').write_bytes(b'misplaced')
+    assert any('no directory role' in problem for problem in checker.check(repository))

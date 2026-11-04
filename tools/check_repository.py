@@ -45,6 +45,8 @@ def allowed(name: str) -> bool:
         return name in ROOT_FILES
     owner = p.parts[0]
     if owner == 'docs':
+        if p.parts[1] == 'figures':
+            return len(p.parts) == 3 and p.suffix in {'.md', '.png'}
         return p.suffix in {'.md', '.pdf'}
     if owner == 'tools':
         return len(p.parts) == 2 and p.suffix in {'.py', '.sh'}
