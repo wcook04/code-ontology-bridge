@@ -34,12 +34,27 @@ The tests cover extraction, exports and governance. Some load classes or schemas
 
 To check only the local user journey, use the [README example](../README.md#try-it-locally). It needs no NVIDIA checkout.
 
-## Run the live service
+## Run a fresh 22-question evaluation
 
-The [live results and replay instructions](../examples/auto-ontology/live/RESULTS.md#reproduction) describe the native PostgreSQL 17/pgvector service, environment variables and request sequence. Read the [upstream patch instructions](../examples/auto-ontology/live/upstream-fix/README.md) before starting.
+Apply the [upstream patch](../examples/auto-ontology/live/upstream-fix/README.md) to a separate Auto Ontology checkout and install its environment with `uv sync --frozen`. Keep the clean source checkout for rebuilding the dataset.
 
-Build the map from a clean pinned source checkout, then run the patched service from a separate checkout. The map describes the original source; the patch enables the public-model configuration used to query it.
+The fresh-run driver requires PostgreSQL 17 with pgvector and `pg_trgm`. Its default PostgreSQL binaries are at Homebrew's `/opt/homebrew/opt/postgresql@17/bin`; set `PG_BIN` for another installation. Store `NVIDIA_API_KEY` and `OPENROUTER_API_KEY` in an environment file outside the repository.
 
-The live script recreates its local databases and replaces capture directories. Use a disposable bridge checkout and preserve each new run separately. Keep model credentials outside the repository. Later model availability and stochastic outputs can differ from the recorded experiment.
+From the bridge root:
 
-The historical procedure consists of a three-question trial, an initial 22-question run and five selected reruns with forced SQL routing. A fresh 22-question SQL-only run would be a new experiment. The upstream schema-only versus semantic-layer benchmark remains unrun.
+```sh
+uv run python examples/auto-ontology/live/fresh_run.py \
+  "$PWD/build/fresh-evaluation" \
+  /absolute/path/to/patched-auto-ontology \
+  /absolute/path/to/models.env
+```
+
+The output directory must not already exist. The driver snapshots the evaluation, [output contracts](../eval/answer_contracts.json), model YAML and upstream patch before starting. It runs all 22 questions once, with SQL routing enabled and three concurrent requests. The model is `deepseek/deepseek-v4.1-flash-1017` through OpenRouter, with NVIDIA embeddings and reranking. Later model availability and outputs may differ.
+
+The model YAML built by the current reproduction script does not preload the seven example analyses. They remain available in the exported dataset as examples. Requests include the authored question, its existing hint and the explicitly requested column names/types; reference SQL and answers are used only after the response for scoring.
+
+The driver uses isolated local ports 54339 (PostgreSQL), 3111 (backend), 3101 (keyless backend) and 3102 (ingestion). Ensure they are free. The lower-level `run_live.sh` accepts `PG_PORT`, `AO_BACKEND_PORT`, `AO_KEYLESS_PORT` and `AO_INGEST_PORT` overrides, and requires a new absolute `AO_RUN_DIR`. It creates its own cluster, ingests and imports the model, then compiles it before issuing questions. Cleanup stops only that run's services.
+
+The job directory contains `manifest.json`, `status.json`, `score.json`, frozen inputs and the service captures under `run/`. `status.json` records completion or failure. `score.json` separates requested-column completeness, typed value equality, ordering and non-placeholder prose. It does not automatically judge the semantic quality of prose. A failed answer remains part of the run; a new protocol requires a new complete run and directory.
+
+The [historical results](../examples/auto-ontology/live/RESULTS.md) describe the earlier development experiment while the replacement run is being validated. The upstream schema-only versus semantic-layer benchmark remains a separate, unrun experiment.

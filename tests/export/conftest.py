@@ -41,7 +41,7 @@ needs_clone = pytest.mark.skipif(not _clone_at_pin(), reason=f"needs a clone of 
 
 @pytest.fixture(scope="session")
 def worked_example(tmp_path_factory):
-    """Build the worked example exactly as examples/auto-ontology/reproduce.sh does."""
+    """Build the worked example and exercise optional named-analysis export."""
     if not _clone_at_pin():
         pytest.skip("no auto-ontology clone at the pinned commit")
     epoch = subprocess.run(["git", "-C", str(CLONE), "log", "-1", "--format=%ct", "HEAD"], capture_output=True, text=True).stdout.strip()
