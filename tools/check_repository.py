@@ -10,7 +10,7 @@ import subprocess
 from urllib.parse import unquote, urlsplit
 
 ROOT_FILES = {
-    '.gitignore', '.python-version', 'README.md', 'CONTRIBUTING.md', 'GAPS.md',
+    '.gitignore', '.gitattributes', '.python-version', 'README.md', 'CONTRIBUTING.md', 'GAPS.md',
     'SPEC.md', 'LICENSE', 'pyproject.toml', 'uv.lock',
 }
 REQUIRED = {
