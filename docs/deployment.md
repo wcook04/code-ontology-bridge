@@ -73,6 +73,20 @@ releases intact for readers already using them.
 The root website is reserved for that frontend; the data deployment itself adds
 no page design.
 
+## Deploy the website
+
+The reading website in [site/](../site/README.md) is built separately and copied beside `data/`:
+
+```sh
+(cd site && npm ci && npm test && npm run build)
+uv run python tools/stage_site.py --dist site/dist --site build/pages
+git -C build/pages add -A .
+git -C build/pages commit -m "Deploy the reading website"
+git -C build/pages push origin gh-pages
+```
+
+`stage_site.py` refuses a build that contains `data/` or a checkout that lacks `data/index.json`, replaces only the earlier website files, and keeps every published release.
+
 ## Initial rollout record — 4 November 2026
 
 Source commit `a4021fb544fb401c7183b9e239b36dba0ed3832c` and Pages commit
