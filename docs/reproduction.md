@@ -21,7 +21,7 @@ uv run pytest -q -ra
 
 The script creates a map and summary, DuckDB database, model YAML, and evaluation dataset under `examples/auto-ontology/`. It fixes the build timestamp to the source commit time. With the same source and dependencies, text exports are intended to match byte for byte; DuckDB rows should match even when the database file bytes differ.
 
-The original bridge revision was `b8ed6f201bc6c2c2e402ba39169b71e0acb99250`. To replay that exact implementation, check it out before installing. The current documentation corrects the interpretation of the saved experiment; it does not replace its captured outputs.
+The recorded fresh run used bridge revision `34285a2ed7440bc07bbe5e17f16452e6c48b50f0`. Its [manifest](../examples/auto-ontology/live/current/manifest.json) binds the exact patch, model, questions, contracts and runner files. Later documentation changes do not change those frozen inputs.
 
 ## Check without a model service
 
@@ -57,4 +57,15 @@ The driver uses isolated local ports 54339 (PostgreSQL), 3111 (backend), 3101 (k
 
 The job directory contains `manifest.json`, `status.json`, `score.json`, frozen inputs and the service captures under `run/`. `status.json` records completion or failure. `score.json` separates requested-column completeness, typed value equality, ordering and non-placeholder prose. It does not automatically judge the semantic quality of prose. A failed answer remains part of the run; a new protocol requires a new complete run and directory.
 
-The [historical results](../examples/auto-ontology/live/RESULTS.md) describe the earlier development experiment while the replacement run is being validated. The upstream schema-only versus semantic-layer benchmark remains a separate, unrun experiment.
+The [recorded run](../examples/auto-ontology/live/RESULTS.md) has 21/22 matching tables and 20/22 with substantive prose. To re-score its saved responses without a model call or modifying retained evidence:
+
+```sh
+mkdir -p build/rescore
+cp examples/auto-ontology/live/current/responses/10i_ask_with_key/ask_q*.json build/rescore/
+uv run python examples/auto-ontology/live/evaluate_run.py \
+  build/rescore \
+  examples/auto-ontology/live/current/inputs/evaluation.json \
+  examples/auto-ontology/live/current/inputs/contracts.json
+```
+
+This reproduces the original automatic 21/22 score. The separate review records Q14's prose failure. The upstream schema-only versus semantic-layer benchmark remains a separate, unrun experiment.

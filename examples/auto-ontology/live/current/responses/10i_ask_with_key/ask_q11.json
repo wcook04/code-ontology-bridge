@@ -1,0 +1,276 @@
+{
+  "request": {
+    "question": "What would be affected if resolve_semantic_fks changed? List every resolved caller symbol, including standalone functions, methods and class-scope callers, reached directly or indirectly, with the shortest call depth, outside the tests.\n\nRequested output columns: symbol_id (string), depth (integer).\nReturn every requested field using exactly its specified column alias. Preserve complete case-sensitive repository-relative paths and symbol IDs; do not substitute display names. Include all requested counts and provenance fields. Explain the query result in ordinary prose; do not emit placeholder text. These questions concern a static map of open-source Python code. After executing SQL, describe the returned rows and query assumptions. Questions asking which files, modules or symbols mean distinct identities, not one repeated row per matching import or call occurrence; preserve occurrence counts only when requested. Caller/callee graph questions include methods as well as standalone functions unless a symbol kind is explicitly restricted. Use files.is_test for test-file classification; test_links describe associations, not the complete set of test files. Use DOUBLE or DECIMAL, rather than single-precision REAL, for percentage calculations.",
+    "evidence": "Follow resolved calls backwards from the callee to its callers, recursively. Calls include callback references (call_kind 'callback'), where a function is passed to another call such as asyncio.to_thread(f, x). Overridden methods called through a base class (self._run_once() in a base class) are not followed to the subclass.",
+    "calculation_only": true
+  },
+  "status": 200,
+  "elapsed_s": 246.2,
+  "events": [
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "question_intent",
+      "thought": null,
+      "label": "Classifying the question"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "question_intent",
+      "thought": null,
+      "label": "Classifying the question"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "question_extraction",
+      "thought": null,
+      "label": "Understanding the question"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "question_extraction",
+      "thought": null,
+      "label": "Understanding the question"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "retrieve_candidates",
+      "thought": null,
+      "label": "Retrieving candidates"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "retrieve_candidates",
+      "thought": null,
+      "label": "Retrieving candidates"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "prepare_candidates",
+      "thought": null,
+      "label": "Preparing candidates"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "prepare_candidates",
+      "thought": "Keep `calls` for the call graph and shortest-depth traversal, `symbols` to identify `resolve_semantic_fks` and connect callers to file/symbol metadata, and `test_links` because excluding tests requires identifying test files. No other table is needed for the requested output or row filtering.",
+      "label": "Preparing candidates"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "refine_evidence",
+      "thought": null,
+      "label": "Refining evidence"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "refine_evidence",
+      "thought": "No certain repair applies: no value anchor or sample value contradicts a string, constant, or predicate operator, and the sanitized question is already grounded.",
+      "label": "Refining evidence"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "construct_sql_from_candidates",
+      "thought": null,
+      "label": "Constructing SQL"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "construct_sql_from_candidates",
+      "thought": "I identify the target by the bare symbol name `resolve_semantic_fks` so methods with that name are also included. I traverse the resolved internal call graph backwards through `calls` using `callee_symbol_id` to find callers, including both direct and callback edges, and require a resolved callee (`callee_symbol_id IS NOT NULL`). A recursive path list prevents cycles, and the final `MIN(depth)` gives each caller’s shortest call depth. Callers are joined to `symbols` for their file and to `files` so that `files.is_test = FALSE` excludes test files, as required by the evidence.",
+      "label": "Constructing SQL"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "validate_sql_query",
+      "thought": null,
+      "label": "Validating SQL and intent"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "validate_sql_query",
+      "thought": "The query is structurally close: it recursively walks `calls` backwards from the callee to callers, records depth, de-duplicates by caller with `MIN(depth)`, and excludes test files via `files.is_test = FALSE`. Output columns are aliased as requested (`symbol_id`, `depth`).\n\nHowever, there is a critical evidence-compliance issue: the authoritative evidence says to follow **resolved calls** backwards. The `calls` table has a `resolution` column, but the generated SQL never filters on it in either the anchor or recursive member. As written, the traversal can follow unresolved or otherwise non-resolved call edges, which can produce incorrect caller symbols and incorrect shortest depths. The evidence also notes that callback references (`call_kind = 'callback'`) are part of the call graph, so a correct filter must preserve callbacks while excluding non-resolved non-callback edges if that is what `resolution` distinguishes. The current query includes all call edges regardless of resolution, which is not acceptable under the strict evidence requirement.\n\nA secondary but non-blocking concern is that the target symbol is located by `symbols.name = 'resolve_semantic_fks'` rather than by full `symbol_id`; if multiple symbols share that bare name, the result could over-include. But the primary critical failure is the missing resolved-call filter.",
+      "label": "Validating SQL and intent"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "reconstruct_sql",
+      "thought": null,
+      "label": "Reconstructing SQL"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "reconstruct_sql",
+      "thought": "The target symbol is identified by its bare name resolve_semantic_fks, so both standalone functions and methods with that name are matched. The call graph is traversed backwards from callee to caller through the calls table. The evidence requires following only resolved calls, so every calls row used in the anchor and recursive step must have resolution in ('same_file', 'imported', 'method_on_self'); callback rows are still included when they meet that resolved-call condition. Tests are excluded by joining the caller symbol to its file and requiring files.is_test = FALSE. Each caller is reported once with its minimum recursion depth, and a path list prevents cycles. No symbol-kind filter is applied, because the question explicitly includes standalone functions, methods, and class-scope callers.",
+      "label": "Reconstructing SQL"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "validate_sql_query",
+      "thought": null,
+      "label": "Validating SQL and intent"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "validate_sql_query",
+      "thought": "The query uses a recursive CTE to walk `calls` backwards from the callee named `resolve_semantic_fks`, following only internally resolved calls (`same_file`, `imported`, `method_on_self`), which matches the evidence for resolved call-graph traversal. It does not restrict symbol kind, so standalone functions, methods, and class-scope callers are eligible. It joins callers to `symbols` and then `files`, and filters `files.is_test = FALSE`, using the evidence-specified test classification field. The final `MIN(depth)` grouped by caller symbol correctly returns the shortest call depth per distinct caller symbol. Joins are FK-backed and plausible: `calls.callee_symbol_id -> symbols.symbol_id`, `calls.caller_symbol_id -> symbols.symbol_id`, and `symbols.file_id -> files.file_id`. Callback references are not explicitly singled out, but they are also not excluded; any callback row that is resolved by the allowed resolution values is included. No critical join, aggregation, or evidence-compliance issue is present.",
+      "label": "Validating SQL and intent"
+    },
+    {
+      "type": "sql",
+      "node": "validate_sql_query",
+      "sql": "WITH RECURSIVE callers AS (SELECT c.callee_symbol_id AS current_id, c.caller_symbol_id AS caller_id, 1 AS depth, list_value(c.callee_symbol_id, c.caller_symbol_id) AS path FROM calls AS c INNER JOIN symbols AS s ON c.callee_symbol_id = s.symbol_id WHERE s.name = 'resolve_semantic_fks' AND c.callee_symbol_id IS NOT NULL AND c.resolution IN ('same_file', 'imported', 'method_on_self') UNION ALL SELECT c.callee_symbol_id AS current_id, c.caller_symbol_id AS caller_id, w.depth + 1 AS depth, list_append(w.path, c.caller_symbol_id) AS path FROM callers AS w INNER JOIN calls AS c ON c.callee_symbol_id = w.caller_id WHERE c.callee_symbol_id IS NOT NULL AND c.resolution IN ('same_file', 'imported', 'method_on_self') AND NOT list_contains(w.path, c.caller_symbol_id)) SELECT w.caller_id AS symbol_id, MIN(w.depth) AS depth FROM callers AS w INNER JOIN symbols AS caller_symbol ON caller_symbol.symbol_id = w.caller_id INNER JOIN files AS f ON f.file_id = caller_symbol.file_id WHERE f.is_test = FALSE GROUP BY w.caller_id ORDER BY depth, symbol_id"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "execute_sql_query",
+      "thought": null,
+      "label": "Executing SQL"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "execute_sql_query",
+      "thought": "Query failed, rewriting it: Catalog Error: Table with name calls does not exist! Did you mean \"code.calls\"? LINE 1: ...value(c.callee_symbol_id, c.caller_symbol_id) AS path FROM calls AS c INNER JOIN symbols AS s ON c.callee_symbol_id... ^",
+      "label": "Executing SQL"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "reconstruct_sql",
+      "thought": null,
+      "label": "Reconstructing SQL"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "reconstruct_sql",
+      "thought": "The catalog error requires schema-qualified names: the tables live in the `code` schema, so `code.calls`, `code.symbols` and `code.files` must be used even though the listing presents them under a schema context. The remaining assumptions stay valid: the target is identified by the bare name `resolve_semantic_fks` (so standalone functions and methods with that name are all seeds, since the question does not restrict symbol kind); the graph is walked backwards from callee to caller through `calls.callee_symbol_id`/`calls.caller_symbol_id`; only resolved internal edges are followed, using `calls.resolution` in `('same_file','imported','method_on_self')` in both the anchor and the recursive step, with callback references (`call_kind = 'callback'`, which always carry a callee) additionally admitted because the evidence says callbacks are part of the forward/backward call relation; a nullable `callee_symbol_id` is excluded because such rows have no internal callee to resolve. Cycle safety uses a path list so recursion terminates, and `MIN(depth)` collapses multiple occurrences of the same caller to its shortest call depth, matching the distinct-identity instruction (one row per caller, no per-call-site duplicates). Tests are excluded with `files.is_test = FALSE` on the caller's file (not via `test_links`), as the evidence requires, and no NULL filter is added since depth and symbol ids are always present for reached callers.",
+      "label": "Reconstructing SQL"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "validate_sql_query",
+      "thought": null,
+      "label": "Validating SQL and intent"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "validate_sql_query",
+      "thought": "The SQL correctly performs a recursive backward traversal from calls whose callee symbol is named resolve_semantic_fks to their callers, then to callers of those callers, and so on. It restricts traversal to resolved internal calls (`same_file`, `imported`, `method_on_self`) while also including callback references via `call_kind = 'callback'`, matching the authoritative evidence. It prevents cycles with a path list, groups by caller symbol to return one distinct row per caller, computes the shortest depth with `MIN(depth)`, and excludes test-file callers using `files.is_test = FALSE` rather than `test_links`. No symbol-kind restriction is applied, so standalone functions, methods, and class-scope callers can all appear. Joins use `callee_symbol_id`/`caller_symbol_id` against `symbols.symbol_id` and `symbols.file_id` against `files.file_id`, which are valid and aligned with the semantic model. The aggregation is appropriate: distinct caller symbols with minimum recursive depth. No critical evidence violation or clearly wrong aggregation/join is present.",
+      "label": "Validating SQL and intent"
+    },
+    {
+      "type": "sql",
+      "node": "validate_sql_query",
+      "sql": "WITH RECURSIVE callers AS (SELECT c.callee_symbol_id AS current_id, c.caller_symbol_id AS caller_id, 1 AS depth, list_value(c.callee_symbol_id, c.caller_symbol_id) AS path FROM code.calls AS c INNER JOIN code.symbols AS t ON c.callee_symbol_id = t.symbol_id WHERE t.name = 'resolve_semantic_fks' AND c.callee_symbol_id IS NOT NULL AND (c.resolution IN ('same_file', 'imported', 'method_on_self') OR c.call_kind = 'callback') UNION ALL SELECT c.callee_symbol_id AS current_id, c.caller_symbol_id AS caller_id, w.depth + 1 AS depth, list_append(w.path, c.caller_symbol_id) AS path FROM callers AS w INNER JOIN code.calls AS c ON c.callee_symbol_id = w.caller_id WHERE c.callee_symbol_id IS NOT NULL AND (c.resolution IN ('same_file', 'imported', 'method_on_self') OR c.call_kind = 'callback') AND NOT list_contains(w.path, c.caller_symbol_id)) SELECT w.caller_id AS symbol_id, MIN(w.depth) AS depth FROM callers AS w INNER JOIN code.symbols AS cs ON cs.symbol_id = w.caller_id INNER JOIN code.files AS f ON f.file_id = cs.file_id WHERE f.is_test = FALSE GROUP BY w.caller_id ORDER BY depth, symbol_id"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "execute_sql_query",
+      "thought": null,
+      "label": "Executing SQL"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "execute_sql_query",
+      "thought": null,
+      "label": "Executing SQL"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "check_empty_like_result",
+      "thought": null,
+      "label": "Checking results"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "check_empty_like_result",
+      "thought": null,
+      "label": "Checking results"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "check_value_repair",
+      "thought": null,
+      "label": "Checking values"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "check_value_repair",
+      "thought": null,
+      "label": "Checking values"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "format_and_respond",
+      "thought": null,
+      "label": "Formatting response"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "format_and_respond",
+      "thought": null,
+      "label": "Formatting response"
+    },
+    {
+      "type": "result",
+      "answer": {
+        "response": "This walks the call graph backwards from every symbol named resolve_semantic_fks, following resolved internal calls (including callback references passed as arguments) to their callers, then to those callers' callers, and so on. Each affected caller symbol is reported once with the smallest number of hops that reaches it, and callers located in test files are excluded using the file-level test flag. The output lists the full repository-relative symbol identifier and the shortest call depth, ordered from closest callers outward.",
+        "sql_code": "WITH RECURSIVE callers AS (SELECT c.callee_symbol_id AS current_id, c.caller_symbol_id AS caller_id, 1 AS depth, list_value(c.callee_symbol_id, c.caller_symbol_id) AS path FROM code.calls AS c INNER JOIN code.symbols AS t ON c.callee_symbol_id = t.symbol_id WHERE t.name = 'resolve_semantic_fks' AND c.callee_symbol_id IS NOT NULL AND (c.resolution IN ('same_file', 'imported', 'method_on_self') OR c.call_kind = 'callback') UNION ALL SELECT c.callee_symbol_id AS current_id, c.caller_symbol_id AS caller_id, w.depth + 1 AS depth, list_append(w.path, c.caller_symbol_id) AS path FROM callers AS w INNER JOIN code.calls AS c ON c.callee_symbol_id = w.caller_id WHERE c.callee_symbol_id IS NOT NULL AND (c.resolution IN ('same_file', 'imported', 'method_on_self') OR c.call_kind = 'callback') AND NOT list_contains(w.path, c.caller_symbol_id)) SELECT w.caller_id AS symbol_id, MIN(w.depth) AS depth FROM callers AS w INNER JOIN code.symbols AS cs ON cs.symbol_id = w.caller_id INNER JOIN code.files AS f ON f.file_id = cs.file_id WHERE f.is_test = FALSE GROUP BY w.caller_id ORDER BY depth, symbol_id",
+        "sql_columns": [
+          "5c25446c-6a95-4098-8755-0fd355af05f3",
+          "0678ddc2-e8e2-414c-925e-29955257f48c",
+          "1ce3f6be-30ff-4bb4-9995-834d99a527d1",
+          "a51c4ed5-1fd8-44e3-9040-01672f76bf12",
+          "41c58e50-9c82-4690-97ba-5e9df2bed1d9",
+          "ad200330-e8f7-4dd3-8689-43e753158a8d",
+          "87d58d1a-2f75-426f-84a7-5cf922bae7d1",
+          "a8ce424c-b369-46e1-8414-af843703ecff",
+          "687d8e24-9b21-432a-9e7a-4bdba6c3b2d3"
+        ],
+        "custom_analyses_used": [],
+        "sql_response_from_db": [
+          "[{\"symbol_id\":\"auto_ontology\\/semantic\\/compile.py::_run_semantic_compilation\",\"depth\":1},{\"symbol_id\":\"auto_ontology\\/semantic\\/compile.py::run_semantic_compilation\",\"depth\":2},{\"symbol_id\":\"auto_ontology\\/ingestion_service\\/semantic_scheduler.py::SemanticScheduler._run_once\",\"depth\":3},{\"symbol_id\":\"auto_ontology\\/semantic\\/__main__.py::main\",\"depth\":3}]"
+        ],
+        "thoughts": "- Preparing candidates: The question is a caller/callee graph traversal whose requested output is each caller's symbol identifier and depth. The canonical identifier for caller symbols is code.symbols.symbol_id.\n- Preparing candidates: Keep `calls` for the call graph and shortest-depth traversal, `symbols` to identify `resolve_semantic_fks` and connect callers to file/symbol metadata, and `test_links` because excluding tests requires identifying test files. No other table is needed for the requested output or row filtering.\n- Refining evidence: No certain repair applies: no value anchor or sample value contradicts a string, constant, or predicate operator, and the sanitized question is already grounded.\n- Constructing SQL: I identify the target by the bare symbol name `resolve_semantic_fks` so methods with that name are also included. I traverse the resolved internal call graph backwards through `calls` using `callee_symbol_id` to find callers, including both direct and callback edges, and require a resolved callee (`callee_symbol_id IS NOT NULL`). A recursive path list prevents cycles, and the final `MIN(depth)` gives each caller’s shortest call depth. Callers are joined to `symbols` for their file and to `files` so that `files.is_test = FALSE` excludes test files, as required by the evidence.\n- Validating SQL and intent: The query is structurally close: it recursively walks `calls` backwards from the callee to callers, records depth, de-duplicates by caller with `MIN(depth)`, and excludes test files via `files.is_test = FALSE`. Output columns are aliased as requested (`symbol_id`, `depth`).\n\nHowever, there is a critical evidence-compliance issue: the authoritative evidence says to follow **resolved calls** backwards. The `calls` table has a `resolution` column, but the generated SQL never filters on it in either the anchor or recursive member. As written, the traversal can follow unresolved or otherwise non-resolved call edges, which can produce incorrect caller symbols and incorrect shortest depths. The evidence also notes that callback references (`call_kind = 'callback'`) are part of the call graph, so a correct filter must preserve callbacks while excluding non-resolved non-callback edges if that is what `resolution` distinguishes. The current query includes all call edges regardless of resolution, which is not acceptable under the strict evidence requirement.\n\nA secondary but non-blocking concern is that the target symbol is located by `symbols.name = 'resolve_semantic_fks'` rather than by full `symbol_id`; if multiple symbols share that bare name, the result could over-include. But the primary critical failure is the missing resolved-call filter.\n- Reconstructing SQL: The error is a logic/compliance issue: the recursive CTE walks the calls graph without filtering to resolved calls via the `calls.resolution` column, which is available in the `calls` table. The needed data (resolution column, caller/callee edges, symbols, files.is_test) is all present in the existing tables. A corrected SQL that adds `c.resolution = 'resolved'` (or equivalent resolved-value predicate) in both the anchor and recursive members would fix the problem without needing new tables.\n- Reconstructing SQL: The target symbol is identified by its bare name resolve_semantic_fks, so both standalone functions and methods with that name are matched. The call graph is traversed backwards from callee to caller through the calls table. The evidence requires following only resolved calls, so every calls row used in the anchor and recursive step must have resolution in ('same_file', 'imported', 'method_on_self'); callback rows are still included when they meet that resolved-call condition. Tests are excluded by joining the caller symbol to its file and requiring files.is_test = FALSE. Each caller is reported once with its minimum recursion depth, and a path list prevents cycles. No symbol-kind filter is applied, because the question explicitly includes standalone functions, methods, and class-scope callers.\n- Validating SQL and intent: The query uses a recursive CTE to walk `calls` backwards from the callee named `resolve_semantic_fks`, following only internally resolved calls (`same_file`, `imported`, `method_on_self`), which matches the evidence for resolved call-graph traversal. It does not restrict symbol kind, so standalone functions, methods, and class-scope callers are eligible. It joins callers to `symbols` and then `files`, and filters `files.is_test = FALSE`, using the evidence-specified test classification field. The final `MIN(depth)` grouped by caller symbol correctly returns the shortest call depth per distinct caller symbol. Joins are FK-backed and plausible: `calls.callee_symbol_id -> symbols.symbol_id`, `calls.caller_symbol_id -> symbols.symbol_id`, and `symbols.file_id -> files.file_id`. Callback references are not explicitly singled out, but they are also not excluded; any callback row that is resolved by the allowed resolution values is included. No critical join, aggregation, or evidence-compliance issue is present.\n- Executing SQL: Query failed, rewriting it: Catalog Error: Table with name calls does not exist! Did you mean \"code.calls\"? LINE 1: ...value(c.callee_symbol_id, c.caller_symbol_id) AS path FROM calls AS c INNER JOIN symbols AS s ON c.callee_symbol_id... ^\n- Reconstructing SQL: The catalog error requires schema-qualified names: the tables live in the `code` schema, so `code.calls`, `code.symbols` and `code.files` must be used even though the listing presents them under a schema context. The remaining assumptions stay valid: the target is identified by the bare name `resolve_semantic_fks` (so standalone functions and methods with that name are all seeds, since the question does not restrict symbol kind); the graph is walked backwards from callee to caller through `calls.callee_symbol_id`/`calls.caller_symbol_id`; only resolved internal edges are followed, using `calls.resolution` in `('same_file','imported','method_on_self')` in both the anchor and the recursive step, with callback references (`call_kind = 'callback'`, which always carry a callee) additionally admitted because the evidence says callbacks are part of the forward/backward call relation; a nullable `callee_symbol_id` is excluded because such rows have no internal callee to resolve. Cycle safety uses a path list so recursion terminates, and `MIN(depth)` collapses multiple occurrences of the same caller to its shortest call depth, matching the distinct-identity instruction (one row per caller, no per-call-site duplicates). Tests are excluded with `files.is_test = FALSE` on the caller's file (not via `test_links`), as the evidence requires, and no NULL filter is added since depth and symbol ids are always present for reached callers.\n- Validating SQL and intent: The SQL correctly performs a recursive backward traversal from calls whose callee symbol is named resolve_semantic_fks to their callers, then to callers of those callers, and so on. It restricts traversal to resolved internal calls (`same_file`, `imported`, `method_on_self`) while also including callback references via `call_kind = 'callback'`, matching the authoritative evidence. It prevents cycles with a path list, groups by caller symbol to return one distinct row per caller, computes the shortest depth with `MIN(depth)`, and excludes test-file callers using `files.is_test = FALSE` rather than `test_links`. No symbol-kind restriction is applied, so standalone functions, methods, and class-scope callers can all appear. Joins use `callee_symbol_id`/`caller_symbol_id` against `symbols.symbol_id` and `symbols.file_id` against `files.file_id`, which are valid and aligned with the semantic model. The aggregation is appropriate: distinct caller symbols with minimum recursive depth. No critical evidence violation or clearly wrong aggregation/join is present."
+      }
+    }
+  ],
+  "question_id": 11,
+  "gold_sql": "WITH RECURSIVE impact(symbol_id, depth) AS (\n  SELECT c.caller_symbol_id, 1\n  FROM code.calls c\n  JOIN code.symbols t ON t.symbol_id = c.callee_symbol_id\n  WHERE t.name = 'resolve_semantic_fks'\n  UNION\n  SELECT c.caller_symbol_id, i.depth + 1\n  FROM code.calls c\n  JOIN impact i ON c.callee_symbol_id = i.symbol_id\n  WHERE i.depth < 6\n)\nSELECT i.symbol_id, MIN(i.depth) AS depth\nFROM impact i\nJOIN code.symbols s ON s.symbol_id = i.symbol_id\nJOIN code.files f ON f.file_id = s.file_id\nWHERE NOT f.is_test\nGROUP BY i.symbol_id\nORDER BY depth, i.symbol_id;",
+  "gold_row_count": 4,
+  "agent_sql": "WITH RECURSIVE callers AS (SELECT c.callee_symbol_id AS current_id, c.caller_symbol_id AS caller_id, 1 AS depth, list_value(c.callee_symbol_id, c.caller_symbol_id) AS path FROM code.calls AS c INNER JOIN code.symbols AS t ON c.callee_symbol_id = t.symbol_id WHERE t.name = 'resolve_semantic_fks' AND c.callee_symbol_id IS NOT NULL AND (c.resolution IN ('same_file', 'imported', 'method_on_self') OR c.call_kind = 'callback') UNION ALL SELECT c.callee_symbol_id AS current_id, c.caller_symbol_id AS caller_id, w.depth + 1 AS depth, list_append(w.path, c.caller_symbol_id) AS path FROM callers AS w INNER JOIN code.calls AS c ON c.callee_symbol_id = w.caller_id WHERE c.callee_symbol_id IS NOT NULL AND (c.resolution IN ('same_file', 'imported', 'method_on_self') OR c.call_kind = 'callback') AND NOT list_contains(w.path, c.caller_symbol_id)) SELECT w.caller_id AS symbol_id, MIN(w.depth) AS depth FROM callers AS w INNER JOIN code.symbols AS cs ON cs.symbol_id = w.caller_id INNER JOIN code.files AS f ON f.file_id = cs.file_id WHERE f.is_test = FALSE GROUP BY w.caller_id ORDER BY depth, symbol_id",
+  "agent_answer": "This walks the call graph backwards from every symbol named resolve_semantic_fks, following resolved internal calls (including callback references passed as arguments) to their callers, then to those callers' callers, and so on. Each affected caller symbol is reported once with the smallest number of hops that reaches it, and callers located in test files are excluded using the file-level test flag. The output lists the full repository-relative symbol identifier and the shortest call depth, ordered from closest callers outward.",
+  "agent_row_count": 4,
+  "correct_rows": true,
+  "error": null
+}

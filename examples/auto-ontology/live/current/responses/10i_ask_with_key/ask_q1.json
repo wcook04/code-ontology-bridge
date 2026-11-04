@@ -1,0 +1,199 @@
+{
+  "request": {
+    "question": "Which functions call upsert_table_term?\n\nRequested output columns: caller_symbol_id (string).\nReturn every requested field using exactly its specified column alias. Preserve complete case-sensitive repository-relative paths and symbol IDs; do not substitute display names. Include all requested counts and provenance fields. Explain the query result in ordinary prose; do not emit placeholder text. These questions concern a static map of open-source Python code. After executing SQL, describe the returned rows and query assumptions. Questions asking which files, modules or symbols mean distinct identities, not one repeated row per matching import or call occurrence; preserve occurrence counts only when requested. Caller/callee graph questions include methods as well as standalone functions unless a symbol kind is explicitly restricted. Use files.is_test for test-file classification; test_links describe associations, not the complete set of test files. Use DOUBLE or DECIMAL, rather than single-precision REAL, for percentage calculations.",
+    "evidence": "A call's callee_symbol_id is set only when the callee was resolved; call_kind 'callback' rows are places where the function is passed by reference to another call. The function is defined in auto_ontology/dal/terms.py.",
+    "calculation_only": true
+  },
+  "status": 200,
+  "elapsed_s": 270.4,
+  "events": [
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "question_intent",
+      "thought": null,
+      "label": "Classifying the question"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "question_intent",
+      "thought": null,
+      "label": "Classifying the question"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "question_extraction",
+      "thought": null,
+      "label": "Understanding the question"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "question_extraction",
+      "thought": null,
+      "label": "Understanding the question"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "retrieve_candidates",
+      "thought": null,
+      "label": "Retrieving candidates"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "retrieve_candidates",
+      "thought": null,
+      "label": "Retrieving candidates"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "prepare_candidates",
+      "thought": null,
+      "label": "Preparing candidates"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "prepare_candidates",
+      "thought": "Keep `calls` to find rows whose callee is `upsert_table_term` and to return `caller_symbol_id`. Keep `symbols` to restrict callers to actual functions via `symbols.symbol_id = calls.caller_symbol_id AND symbols.kind = 'function'`; without it, methods/classes or other callers could qualify.",
+      "label": "Preparing candidates"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "refine_evidence",
+      "thought": null,
+      "label": "Refining evidence"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "refine_evidence",
+      "thought": "Replaced the evidence-defined call concept with calls.callee_symbol_id resolution plus exclusion of call_kind = 'callback' rows, while leaving caller_symbol_id untouched because it is not described in the evidence.",
+      "label": "Refining evidence"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "construct_sql_from_candidates",
+      "thought": null,
+      "label": "Constructing SQL"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "construct_sql_from_candidates",
+      "thought": "The question asks for distinct caller identities (functions) that invoke upsert_table_term. I start from calls, filter out callback rows with call_kind <> 'callback', and require the callee to resolve to the function named upsert_table_term in auto_ontology/dal/terms.py by joining calls.callee_symbol_id to symbols.symbol_id. A second join from calls.caller_symbol_id to symbols.symbol_id restricts callers to kind = 'function', matching the question's wording and the retrieval plan that excludes methods/classes. DISTINCT is used because the question asks which functions call the target, i.e. distinct symbol identities rather than one row per call occurrence. No counts were requested, so none are projected. Assumption: the callee is uniquely identified by name plus the stated file path, since the evidence gives the defining file.",
+      "label": "Constructing SQL"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "validate_sql_query",
+      "thought": null,
+      "label": "Validating SQL and intent"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "validate_sql_query",
+      "thought": "The SQL correctly answers the call-graph question. It starts from calls, joins callee_symbol_id to symbols to identify upsert_table_term, joins caller_symbol_id to symbols to restrict callers to functions, excludes callback calls with call_kind <> 'callback', and returns DISTINCT caller_symbol_id. The callee is identified using the bare name plus the authoritative file path auto_ontology/dal/terms.py, which is consistent with the evidence that the function is defined there. The joins use valid FK relationships from calls to symbols. DISTINCT is appropriate because the question asks for distinct caller function identities, not one row per call occurrence. No critical joins, aggregations, or evidence-compliance problems are present. The caller.kind = 'function' filter is a reasonable interpretation of 'which functions'; even if methods were intended, this would be a scope interpretation rather than a critical invalidating error under lenient validation.",
+      "label": "Validating SQL and intent"
+    },
+    {
+      "type": "sql",
+      "node": "validate_sql_query",
+      "sql": "SELECT DISTINCT c.caller_symbol_id AS caller_symbol_id FROM auto_ontology_code.code.calls AS c INNER JOIN auto_ontology_code.code.symbols AS callee ON c.callee_symbol_id = callee.symbol_id INNER JOIN auto_ontology_code.code.symbols AS caller ON c.caller_symbol_id = caller.symbol_id WHERE callee.name = 'upsert_table_term' AND callee.file_id = 'auto_ontology/dal/terms.py' AND c.call_kind <> 'callback' AND caller.kind = 'function' ORDER BY caller_symbol_id;"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "execute_sql_query",
+      "thought": null,
+      "label": "Executing SQL"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "execute_sql_query",
+      "thought": null,
+      "label": "Executing SQL"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "check_empty_like_result",
+      "thought": null,
+      "label": "Checking results"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "check_empty_like_result",
+      "thought": null,
+      "label": "Checking results"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "check_value_repair",
+      "thought": null,
+      "label": "Checking values"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "check_value_repair",
+      "thought": null,
+      "label": "Checking values"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "format_and_respond",
+      "thought": null,
+      "label": "Formatting response"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "format_and_respond",
+      "thought": null,
+      "label": "Formatting response"
+    },
+    {
+      "type": "result",
+      "answer": {
+        "response": "This query finds the distinct functions that call upsert_table_term. It reads the call records, discards callback rows where a function is merely passed by reference, and keeps only calls whose resolved callee is the upsert_table_term symbol defined in auto_ontology/dal/terms.py. A join back to the symbol table limits the results to standalone functions, and the output is a de-duplicated list of caller symbol IDs sorted for readability.",
+        "sql_code": "SELECT DISTINCT c.caller_symbol_id AS caller_symbol_id FROM auto_ontology_code.code.calls AS c INNER JOIN auto_ontology_code.code.symbols AS callee ON c.callee_symbol_id = callee.symbol_id INNER JOIN auto_ontology_code.code.symbols AS caller ON c.caller_symbol_id = caller.symbol_id WHERE callee.name = 'upsert_table_term' AND callee.file_id = 'auto_ontology/dal/terms.py' AND c.call_kind <> 'callback' AND caller.kind = 'function' ORDER BY caller_symbol_id;",
+        "sql_columns": [
+          "23972eb9-0777-46e4-8c81-88123801d435",
+          "0678ddc2-e8e2-414c-925e-29955257f48c",
+          "a51c4ed5-1fd8-44e3-9040-01672f76bf12",
+          "41c58e50-9c82-4690-97ba-5e9df2bed1d9",
+          "ad200330-e8f7-4dd3-8689-43e753158a8d",
+          "a8ce424c-b369-46e1-8414-af843703ecff",
+          "687d8e24-9b21-432a-9e7a-4bdba6c3b2d3"
+        ],
+        "custom_analyses_used": [],
+        "sql_response_from_db": [
+          "[{\"caller_symbol_id\":\"auto_ontology\\/dal\\/tests\\/test_terms.py::test_upsert_table_term_is_idempotent_for_one_table\"},{\"caller_symbol_id\":\"auto_ontology\\/dal\\/tests\\/test_terms.py::test_upsert_table_term_qualifies_only_a_cross_table_name_collision\"},{\"caller_symbol_id\":\"auto_ontology\\/dal\\/tests\\/test_terms.py::test_upsert_table_term_writes_nothing_when_the_table_is_missing\"},{\"caller_symbol_id\":\"auto_ontology\\/semantic\\/visit_enter.py::_commit_terms\"},{\"caller_symbol_id\":\"dev_tools\\/fixtures\\/seed_graph_fixture.py::seed_terms\"}]"
+        ],
+        "thoughts": "- Preparing candidates: The question centers on caller_symbol_id, i.e., the exact case-sensitive symbol identifier for caller functions. Among the listed attributes, code.inbound_call_counts.symbol_id is the symbol-ID attribute representing a unique code symbol identifier composed from file path and symbol name, matching the requested return type.\n- Preparing candidates: Keep `calls` to find rows whose callee is `upsert_table_term` and to return `caller_symbol_id`. Keep `symbols` to restrict callers to actual functions via `symbols.symbol_id = calls.caller_symbol_id AND symbols.kind = 'function'`; without it, methods/classes or other callers could qualify.\n- Refining evidence: Replaced the evidence-defined call concept with calls.callee_symbol_id resolution plus exclusion of call_kind = 'callback' rows, while leaving caller_symbol_id untouched because it is not described in the evidence.\n- Constructing SQL: The question asks for distinct caller identities (functions) that invoke upsert_table_term. I start from calls, filter out callback rows with call_kind <> 'callback', and require the callee to resolve to the function named upsert_table_term in auto_ontology/dal/terms.py by joining calls.callee_symbol_id to symbols.symbol_id. A second join from calls.caller_symbol_id to symbols.symbol_id restricts callers to kind = 'function', matching the question's wording and the retrieval plan that excludes methods/classes. DISTINCT is used because the question asks which functions call the target, i.e. distinct symbol identities rather than one row per call occurrence. No counts were requested, so none are projected. Assumption: the callee is uniquely identified by name plus the stated file path, since the evidence gives the defining file.\n- Validating SQL and intent: The SQL correctly answers the call-graph question. It starts from calls, joins callee_symbol_id to symbols to identify upsert_table_term, joins caller_symbol_id to symbols to restrict callers to functions, excludes callback calls with call_kind <> 'callback', and returns DISTINCT caller_symbol_id. The callee is identified using the bare name plus the authoritative file path auto_ontology/dal/terms.py, which is consistent with the evidence that the function is defined there. The joins use valid FK relationships from calls to symbols. DISTINCT is appropriate because the question asks for distinct caller function identities, not one row per call occurrence. No critical joins, aggregations, or evidence-compliance problems are present. The caller.kind = 'function' filter is a reasonable interpretation of 'which functions'; even if methods were intended, this would be a scope interpretation rather than a critical invalidating error under lenient validation."
+      }
+    }
+  ],
+  "question_id": 1,
+  "gold_sql": "SELECT DISTINCT c.caller_symbol_id\nFROM code.calls c\nJOIN code.symbols s ON s.symbol_id = c.callee_symbol_id\nWHERE s.name = 'upsert_table_term'\nORDER BY c.caller_symbol_id;",
+  "gold_row_count": 5,
+  "agent_sql": "SELECT DISTINCT c.caller_symbol_id AS caller_symbol_id FROM auto_ontology_code.code.calls AS c INNER JOIN auto_ontology_code.code.symbols AS callee ON c.callee_symbol_id = callee.symbol_id INNER JOIN auto_ontology_code.code.symbols AS caller ON c.caller_symbol_id = caller.symbol_id WHERE callee.name = 'upsert_table_term' AND callee.file_id = 'auto_ontology/dal/terms.py' AND c.call_kind <> 'callback' AND caller.kind = 'function' ORDER BY caller_symbol_id;",
+  "agent_answer": "This query finds the distinct functions that call upsert_table_term. It reads the call records, discards callback rows where a function is merely passed by reference, and keeps only calls whose resolved callee is the upsert_table_term symbol defined in auto_ontology/dal/terms.py. A join back to the symbol table limits the results to standalone functions, and the output is a de-duplicated list of caller symbol IDs sorted for readability.",
+  "agent_row_count": 5,
+  "correct_rows": true,
+  "error": null
+}

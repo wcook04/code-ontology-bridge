@@ -20,6 +20,10 @@ REQUIRED = {
     'code_ontology_bridge/cli.py', 'tools/check_repository.py',
     'tools/build_paper.sh', 'tools/build_paper.py', '.github/workflows/checks.yml',
     'examples/auto-ontology/live/RESULTS.md',
+    'examples/auto-ontology/live/current/manifest.json',
+    'examples/auto-ontology/live/current/score.json',
+    'examples/auto-ontology/live/current/review.json',
+    'examples/auto-ontology/live/current/artifacts.json',
 }
 
 
@@ -54,13 +58,15 @@ def allowed(name: str) -> bool:
         return p.suffix == '.py' or (p.suffix == '.json' and
             p.parts[1:3] == ('governance', 'examples'))
     if p.parts[:2] == ('examples', 'auto-ontology'):
-        # Historical captures and replay programs have stable published paths.
+        # Dataset exports, current evidence and replay programs share this owner.
         if len(p.parts) == 3:
             return p.name in {'.gitignore', 'summary.json', 'reproduce.sh',
                               'auto_ontology_code.model.yaml'}
         if p.parts[2] == 'auto_ontology_code':
             return p.suffix in {'.csv', '.sql', '.json'}
         if p.parts[2] == 'live':
+            if len(p.parts) > 3 and p.parts[3] in {'evidence', 'responses', 'logs'}:
+                return False  # Superseded captures live in Git history; current/ owns retained evidence.
             return p.suffix in {'.md', '.py', '.sh', '.json', '.yaml', '.txt', '.log', '.sql', '.patch'} or p.name in {'.gitignore', 'ingestion_keyed.compile_marker'}
     return False
 

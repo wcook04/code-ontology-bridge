@@ -24,7 +24,7 @@ def main() -> None:
         if urlsplit(target).scheme or target.startswith('#'):
             return match[0]
         path = posixpath.normpath('docs/' + target)
-        return '](https://github.com/wcook04/code-ontology-bridge/blob/main/' + path + ')'
+        return '](https://github.com/wcook04/code-ontology-bridge/blob/codex/clarify-repository/' + path + ')'
 
     source = re.sub(r'\]\(([^)]+)\)', public_link, source)
     with tempfile.TemporaryDirectory(prefix='cob-paper-') as tmp:
@@ -33,6 +33,9 @@ def main() -> None:
         header = folder / 'header.tex'
         md.write_text(source)
         header.write_text(r'''\usepackage{microtype}
+\usepackage{needspace}
+\usepackage{etoolbox}
+\BeforeBeginEnvironment{longtable}{\Needspace{8\baselineskip}}
 \setlength{\parindent}{1em}
 \setlength{\parskip}{0.15em}
 \setlength{\emergencystretch}{3em}

@@ -62,8 +62,15 @@ def test_staged_removal_and_missing_anchor(repository):
     assert any('missing heading' in p for p in checker.check(repository))
 
 
-def test_historical_capture_exception(repository):
-    p = repository / 'examples/auto-ontology/live/evidence/example/backend.log'
+def test_current_capture_role(repository):
+    p = repository / 'examples/auto-ontology/live/current/logs/backend.log'
     p.parent.mkdir(parents=True)
     p.write_text('retained evidence')
     assert checker.check(repository) == []
+
+
+def test_superseded_capture_directory_rejected(repository):
+    p = repository / 'examples/auto-ontology/live/evidence/old/backend.log'
+    p.parent.mkdir(parents=True)
+    p.write_text('superseded evidence')
+    assert any('no directory role' in problem for problem in checker.check(repository))

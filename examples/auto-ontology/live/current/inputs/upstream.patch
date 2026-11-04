@@ -1,0 +1,426 @@
+diff --git a/.env.example b/.env.example
+index c292a73..96517f5 100644
+--- a/.env.example
++++ b/.env.example
+@@ -30,18 +30,18 @@ PGADMIN_PASSWORD=change-me
+ # (https://build.nvidia.com). Get an nvapi- key there.
+ DEFAULT_MODELS_API_KEY=nvapi-your-api-key-here
+ DEFAULT_MODELS_ENDPOINT=https://integrate.api.nvidia.com/v1
+-DEFAULT_MODELS_MODEL=nvidia/nemotron-3-nano-30b-a3b
++DEFAULT_MODELS_MODEL=nvidia/nemotron-3.5-lightning-30b-a3b
+ 
+ # Main (reasoning) model.
+ REASONING_API_KEY=nvapi-your-api-key-here
+ REASONING_ENDPOINT=https://integrate.api.nvidia.com/v1
+-REASONING_MODEL=nvidia/nemotron-3-nano-30b-a3b
++REASONING_MODEL=nvidia/nemotron-3.5-lightning-30b-a3b
+ 
+ # Non-reasoning model, e.g. for entity extraction. Can point at a different
+ # endpoint than the main model.
+ NON_REASONING_API_KEY=nvapi-your-api-key-here
+ NON_REASONING_ENDPOINT=https://integrate.api.nvidia.com/v1
+-NON_REASONING_MODEL=nvidia/nemotron-3-nano-30b-a3b
++NON_REASONING_MODEL=nvidia/nemotron-3.5-lightning-30b-a3b
+ 
+ # Embedding model. Set explicitly: unset fields would fall back to the
+ # DEFAULT_MODELS_ chat model above. Ingest and query must use the same one.
+diff --git a/auto_ontology/retrieval/text_to_sql/models.py b/auto_ontology/retrieval/text_to_sql/models.py
+index 777b358..dfca1eb 100644
+--- a/auto_ontology/retrieval/text_to_sql/models.py
++++ b/auto_ontology/retrieval/text_to_sql/models.py
+@@ -248,7 +248,7 @@ class SQLGenerationModel(StrictModel):
+             "User-facing summary in plain English (2-4 sentences): describe what "
+             "is being calculated, which tables and columns are used, any filters "
+             "or time windows applied, and the grouping/ordering. Refer to tables "
+-            "and columns by their human-readable names. "
++            "and columns by their human-readable names. Never use a placeholder such as test or TODO. "
+             "Do NOT include SQL and code fences "
+             "identifiers like 'schema.table', reasoning, self-corrections, "
+             "formatting notes, or internal thoughts."
+@@ -260,6 +260,11 @@ class SQLGenerationModel(StrictModel):
+     def reject_placeholder_strings(cls, v: str, info) -> str:
+         """Block LLM stubs like literal '...' that satisfy min length but are not valid output."""
+         t = (v or "").strip()
++        if t.casefold().strip(" .!?") in {"placeholder", "todo", "tbd", "test", "n/a"}:
++            raise ValueError(
++                f"{info.field_name!r} must be real content, not a literal placeholder. "
++                "sql_code must be executable SQL; response must explain the query."
++            )
+         if t in ("...", "…", "..", ".") or (
+             len(t) <= 3 and not t.isalnum() and set(t) <= {".", "…", " "}
+         ):
+diff --git a/auto_ontology/retrieval/text_to_sql/tests/test_prediction_override.py b/auto_ontology/retrieval/text_to_sql/tests/test_prediction_override.py
+index 32aec71..3fe29a9 100644
+--- a/auto_ontology/retrieval/text_to_sql/tests/test_prediction_override.py
++++ b/auto_ontology/retrieval/text_to_sql/tests/test_prediction_override.py
+@@ -151,8 +151,8 @@ def test_worker_submit_passes_prediction_through() -> None:
+     worker.submit("q", prediction=True)
+     worker.submit("q2")
+ 
+-    assert sent[0][1] == ("q", True, None, None, [], None)
+-    assert sent[1][1] == ("q2", None, None, None, [], None)
++    assert sent[0][1] == ("q", True, None, None, [], None, False)
++    assert sent[1][1] == ("q2", None, None, None, [], None, False)
+ 
+ 
+ def test_worker_submit_accepts_every_field_by_keyword() -> None:
+@@ -170,6 +170,7 @@ def test_worker_submit_accepts_every_field_by_keyword() -> None:
+         target_db="analytics",
+         subject_token="jwt",
+         evidence="authoritative",
++        calculation_only=True,
+     )
+ 
+     assert sent[0][1] == (
+@@ -179,6 +180,7 @@ def test_worker_submit_accepts_every_field_by_keyword() -> None:
+         "jwt",
+         [],
+         "authoritative",
++        True,
+     )
+ 
+ 
+@@ -192,7 +194,16 @@ def test_worker_payload_unpacks_as_the_loop_expects() -> None:
+ 
+     worker.submit("q", prediction=True, target_db="db", subject_token="tok")
+ 
+-    question, prediction, target_db, subject_token, history, evidence = sent[0][1]
++    (
++        question,
++        prediction,
++        target_db,
++        subject_token,
++        history,
++        evidence,
++        calculation_only,
++    ) = sent[0][1]
+     assert (question, prediction, target_db, subject_token) == ("q", True, "db", "tok")
+     assert history == []
+     assert evidence is None
++    assert calculation_only is False
+diff --git a/auto_ontology/retrieval/text_to_sql/tests/test_sql_from_semantic.py b/auto_ontology/retrieval/text_to_sql/tests/test_sql_from_semantic.py
+index 4b2bc20..63290bb 100644
+--- a/auto_ontology/retrieval/text_to_sql/tests/test_sql_from_semantic.py
++++ b/auto_ontology/retrieval/text_to_sql/tests/test_sql_from_semantic.py
+@@ -6,6 +6,9 @@
+ 
+ from __future__ import annotations
+ 
++import pytest
++from pydantic import ValidationError
++
+ from auto_ontology.retrieval.text_to_sql.agents import sql_from_semantic
+ from auto_ontology.retrieval.text_to_sql.agents.sql_from_semantic import (
+     SQLFromCandidatesAgent,
+@@ -273,3 +276,20 @@ def test_the_sql_tool_description_does_not_ask_for_the_models_reasoning() -> Non
+ 
+     assert "reasoning" not in description.lower()
+     assert "drain" not in description.lower()
++
++
++@pytest.mark.parametrize("stub", ["test", "Test.", "PLACEHOLDER", "TODO", "TBD", "N/A"])
++def test_sql_generation_rejects_literal_response_stubs(stub: str) -> None:
++    with pytest.raises(ValidationError, match="literal placeholder"):
++        SQLGenerationModel(
++            thought="No assumptions needed.", sql_code="SELECT 1", response=stub
++        )
++
++
++def test_sql_generation_accepts_explanations_about_tests() -> None:
++    result = SQLGenerationModel(
++        thought="No assumptions needed.",
++        sql_code="SELECT 1",
++        response="This lists test files linked to the requested source module.",
++    )
++    assert result.response.startswith("This lists test files")
+diff --git a/auto_ontology/server/chat/helpers.py b/auto_ontology/server/chat/helpers.py
+index e229916..d851895 100644
+--- a/auto_ontology/server/chat/helpers.py
++++ b/auto_ontology/server/chat/helpers.py
+@@ -55,6 +55,9 @@ class ChatRequest(BaseModel):
+     # False -> exclude prediction; classify as information or calculation
+     # None  -> classify among all intents (default)
+     prediction: bool | None = None
++    # True -> answer with SQL; skip the information (metadata) and prediction
++    # routes. For sources whose data reads like metadata, such as a code map.
++    calculation_only: bool = False
+     # Scope retrieval/SQL to one connected database. When omitted (and more
+     # than one connector is loaded), the pipeline does not pin a database.
+     target_db: str | None = Field(
+diff --git a/auto_ontology/server/chat/router.py b/auto_ontology/server/chat/router.py
+index 1709dd3..1f5e814 100644
+--- a/auto_ontology/server/chat/router.py
++++ b/auto_ontology/server/chat/router.py
+@@ -659,6 +659,7 @@ async def chat_completions(
+         subject_token=subject_token,
+         conversation_history=conversation_history,
+         evidence=request.evidence,
++        calculation_only=request.calculation_only,
+     )
+     threading.Thread(target=_pump, args=(slot,), daemon=True).start()
+     asyncio.create_task(_watch_disconnect(http_request, slot))
+diff --git a/auto_ontology/server/chat/tests/test_worker.py b/auto_ontology/server/chat/tests/test_worker.py
+index b283cf7..933cc48 100644
+--- a/auto_ontology/server/chat/tests/test_worker.py
++++ b/auto_ontology/server/chat/tests/test_worker.py
+@@ -33,6 +33,7 @@ def _run_loop(
+     connector_batches: list[list[str]],
+     *,
+     evidence: str | None = None,
++    calculation_only: bool = False,
+ ) -> dict:
+     """Drive one ASK through ``_worker_loop`` and return the agent payload it built.
+ 
+@@ -80,7 +81,14 @@ def _run_loop(
+         "auto_ontology.retrieval.text_to_sql.main.stream_agent_response", fake_stream
+     )
+ 
+-    in_q = _FakeQueue([(worker_module._MSG_ASK, ("q", None, None, None, [], evidence))])
++    in_q = _FakeQueue(
++        [
++            (
++                worker_module._MSG_ASK,
++                ("q", None, None, None, [], evidence, calculation_only),
++            )
++        ]
++    )
+     worker_module._worker_loop(in_q, _FakeQueue())
+     return captured
+ 
+@@ -122,3 +130,9 @@ def test_worker_forwards_evidence_without_changing_question(
+     assert payload["question"] == "q"
+     assert payload["processing_question"] == "q"
+     assert payload["evidence"] == "status means accounts.status"
++
++
++def test_worker_forwards_calculation_only(monkeypatch: MonkeyPatch) -> None:
++    assert _run_loop(monkeypatch, [["c"]])["calculation_only"] is False
++    payload = _run_loop(monkeypatch, [["c"]], calculation_only=True)
++    assert payload["calculation_only"] is True
+diff --git a/auto_ontology/server/chat/worker.py b/auto_ontology/server/chat/worker.py
+index 2dcb119..19448f9 100644
+--- a/auto_ontology/server/chat/worker.py
++++ b/auto_ontology/server/chat/worker.py
+@@ -141,6 +141,7 @@ def _worker_loop(
+             subject_token,
+             conversation_history,
+             evidence,
++            calculation_only,
+         ) = payload
+         try:
+             # Connections are resolved once at worker init. If that
+@@ -188,6 +189,7 @@ def _worker_loop(
+                 "evidence": evidence or "",
+                 "processing_question": processing_question,
+                 "prediction": prediction,
++                "calculation_only": calculation_only,
+                 "data_retriever": data_retriever,
+                 "semantic_retriever": semantic_retriever,
+                 "connectors": ask_connectors,
+@@ -246,6 +248,7 @@ class PrewarmedWorker:
+         subject_token: str | None = None,
+         conversation_history: list[dict[str, str | None]] | None = None,
+         evidence: str | None = None,
++        calculation_only: bool = False,
+     ) -> None:
+         """Ask *question*, optionally forcing the prediction/SQL branch.
+ 
+@@ -257,6 +260,8 @@ class PrewarmedWorker:
+         ones, so SQL executes under that user's own Databricks grants.
+         *evidence* is optional authoritative evidence kept separate from
+         the question.
++        *calculation_only* skips the information and prediction routes and
++        answers with SQL.
+         """
+         self._in_q.put(
+             (
+@@ -268,6 +273,7 @@ class PrewarmedWorker:
+                     subject_token,
+                     conversation_history or [],
+                     evidence,
++                    calculation_only,
+                 ),
+             )
+         )
+diff --git a/auto_ontology/utils/llm_invoke.py b/auto_ontology/utils/llm_invoke.py
+index bc1694f..ecf2c70 100644
+--- a/auto_ontology/utils/llm_invoke.py
++++ b/auto_ontology/utils/llm_invoke.py
+@@ -211,6 +211,30 @@ _NON_REASONING_MODEL_NAME = resolve("NON_REASONING", "MODEL")
+ _NON_REASONING_API_KEY = resolve("NON_REASONING", "API_KEY")
+ 
+ 
++def _env_flag(name: str, default: bool) -> bool:
++    value = os.environ.get(name)
++    return (
++        default
++        if value is None
++        else value.strip().lower() in {"1", "true", "yes", "on"}
++    )
++
++
++def _nemotron_thinking_kwargs(model: str, thinking: bool) -> dict:
++    """Request fields that switch Nemotron reasoning on or off.
++
++    Nemotron 3.5 models reason before answering by default. Under
++    ``response_format`` a long reasoning trace can outlast
++    ``LLM_INVOKE_TIMEOUT_S``; ChatNVIDIA then falls back to ``guided_json``,
++    which the hosted API rejects ("unknown field `guided_json`"). Turning
++    reasoning off returns the structured answer directly. Other models get no
++    extra fields.
++    """
++    if not model.startswith("nvidia/nemotron"):
++        return {}
++    return {"chat_template_kwargs": {"enable_thinking": thinking}}
++
++
+ def _build_client(
+     *,
+     model: str,
+@@ -218,14 +242,23 @@ def _build_client(
+     base_url: str,
+     temperature: float,
+     max_tokens: int,
++    thinking: bool = True,
++    client: str = "",
+ ) -> BaseChatModel:
+     """Build a chat client for the given model/endpoint.
+ 
+     OpenAI-family models (``openai/``, ``azure/``, ``aws/`` prefixes) go through
+     ``ChatOpenAI``, which supports structured output. Everything else uses
+-    ``ChatNVIDIA``.
++    ``ChatNVIDIA``. *client* (``<ROLE>_CLIENT`` / ``DEFAULT_MODELS_CLIENT``)
++    overrides the choice: ``openai`` for any OpenAI-compatible endpoint, such
++    as a model router, and ``nvidia`` for NVIDIA endpoints.
+     """
+-    if model.startswith(("openai/", "azure/", "aws/")):
++    use_openai = (
++        client == "openai"
++        if client in ("openai", "nvidia")
++        else model.startswith(("openai/", "azure/", "aws/"))
++    )
++    if use_openai:
+         from langchain_openai import ChatOpenAI
+ 
+         return ChatOpenAI(
+@@ -249,6 +282,7 @@ def _build_client(
+         base_url=base_url,
+         temperature=temperature,
+         max_tokens=max_tokens,
++        model_kwargs=_nemotron_thinking_kwargs(model, thinking),
+     )
+     client._client.get_session_fn = lambda: _TimeoutSession(LLM_INVOKE_TIMEOUT_S)
+     return client
+@@ -276,6 +310,8 @@ def get_llm_client(
+         base_url=_BASE_URL,
+         temperature=temperature,
+         max_tokens=max_tokens,
++        thinking=_env_flag("REASONING_ENABLE_THINKING", False),
++        client=resolve("REASONING", "CLIENT").strip().lower(),
+     )
+ 
+ 
+@@ -305,6 +341,8 @@ def get_non_reasoning_llm_client(
+         base_url=_NON_REASONING_BASE_URL,
+         temperature=temperature,
+         max_tokens=max_tokens,
++        thinking=_env_flag("NON_REASONING_ENABLE_THINKING", False),
++        client=resolve("NON_REASONING", "CLIENT").strip().lower(),
+     )
+     _remember_non_reasoning(client)
+     return client
+@@ -471,8 +509,15 @@ def _structured_output_kwargs(llm: BaseChatModel) -> dict:
+     "required", and langchain's default of naming the tool) hits that conflict, and only
+     omitting it succeeds. The model still calls the tool without being forced to, and
+     the caller retries if it ever answers without one.
++
++    Other OpenAI-compatible routes to Claude (``anthropic/`` models, e.g. through
++    OpenRouter) accept ``tool_choice``, and without it the model can answer in
++    plain text, so they keep langchain's default of naming the tool.
+     """
+     if _is_claude(llm):
++        model = str(getattr(llm, "model_name", "") or getattr(llm, "model", "") or "")
++        if model.startswith("anthropic/"):
++            return {"method": "function_calling"}
+         return {"method": "function_calling", "tool_choice": None}
+     return {}
+ 
+diff --git a/auto_ontology/utils/model_config.py b/auto_ontology/utils/model_config.py
+index 2bfd8e4..07b2c4e 100644
+--- a/auto_ontology/utils/model_config.py
++++ b/auto_ontology/utils/model_config.py
+@@ -41,9 +41,9 @@ _DEFAULTS_BY_KEY_PREFIX: dict[str, dict[str, str]] = {
+     # integrate.api.nvidia.com / build.nvidia.com (nvapi-... keys).
+     "nvapi-": {
+         "REASONING_ENDPOINT": "https://integrate.api.nvidia.com/v1",
+-        "REASONING_MODEL": "nvidia/nemotron-3-nano-30b-a3b",
++        "REASONING_MODEL": "nvidia/nemotron-3.5-lightning-30b-a3b",
+         "NON_REASONING_ENDPOINT": "https://integrate.api.nvidia.com/v1",
+-        "NON_REASONING_MODEL": "nvidia/nemotron-3-nano-30b-a3b",
++        "NON_REASONING_MODEL": "nvidia/nemotron-3.5-lightning-30b-a3b",
+         "EMBED_ENDPOINT": "https://integrate.api.nvidia.com/v1",
+         "EMBED_MODEL": "nvidia/nemotron-3-embed-1b",
+         "RERANK_ENDPOINT": (
+diff --git a/auto_ontology/utils/tests/test_llm_invoke.py b/auto_ontology/utils/tests/test_llm_invoke.py
+index 40be8f6..1519783 100644
+--- a/auto_ontology/utils/tests/test_llm_invoke.py
++++ b/auto_ontology/utils/tests/test_llm_invoke.py
+@@ -495,3 +495,42 @@ def test_missing_reasoning_client_keeps_the_original_failure(monkeypatch: Any) -
+     monkeypatch.setattr(llm_invoke, "get_llm_client", unavailable)
+ 
+     assert llm_invoke.invoke_with_structured_output(primary, [], _Schema) is None
++
++
++def test_nemotron_thinking_kwargs_only_for_nemotron():
++    assert llm_invoke._nemotron_thinking_kwargs(
++        "nvidia/nemotron-3.5-lightning-30b-a3b", False
++    ) == {"chat_template_kwargs": {"enable_thinking": False}}
++    assert llm_invoke._nemotron_thinking_kwargs(
++        "nvidia/nemotron-3.5-lightning-30b-a3b", True
++    ) == {"chat_template_kwargs": {"enable_thinking": True}}
++    assert (
++        llm_invoke._nemotron_thinking_kwargs(
++            "aws/anthropic/bedrock-claude-opus-4-8", False
++        )
++        == {}
++    )
++
++
++@pytest.mark.parametrize(
++    ("value", "expected"),
++    [(None, False), ("true", True), ("1", True), ("off", False), ("FALSE", False)],
++)
++def test_env_flag(monkeypatch, value, expected):
++    monkeypatch.delenv("X_ENABLE_THINKING", raising=False)
++    if value is not None:
++        monkeypatch.setenv("X_ENABLE_THINKING", value)
++    assert llm_invoke._env_flag("X_ENABLE_THINKING", False) is expected
++
++
++def test_chat_nvidia_client_sends_thinking_switch(monkeypatch):
++    monkeypatch.delenv("NON_REASONING_ENABLE_THINKING", raising=False)
++    client = llm_invoke._build_client(
++        model="nvidia/nemotron-3.5-lightning-30b-a3b",
++        api_key="nvapi-test",
++        base_url="https://integrate.api.nvidia.com/v1",
++        temperature=0.0,
++        max_tokens=16,
++        thinking=False,
++    )
++    assert client.model_kwargs == {"chat_template_kwargs": {"enable_thinking": False}}
+diff --git a/docs/openapi/backend.json b/docs/openapi/backend.json
+index 3b64934..111e59c 100644
+--- a/docs/openapi/backend.json
++++ b/docs/openapi/backend.json
+@@ -36,6 +36,11 @@
+       "ChatRequest": {
+         "description": "Payload sent by the frontend to start a chat completion.",
+         "properties": {
++          "calculation_only": {
++            "default": false,
++            "title": "Calculation Only",
++            "type": "boolean"
++          },
+           "conversation_id": {
+             "anyOf": [
+               {
