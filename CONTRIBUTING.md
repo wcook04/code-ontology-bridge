@@ -35,3 +35,11 @@ new export or interpret missing review findings as success. A partial terms
 readback is not a full compiled model. Tests must validate real JSON responses
 against OpenAPI and exercise cycle edges at the depth boundary, parallel call
 occurrences, caps and traversal through excluded test symbols.
+
+The source-to-answer projection lives in `inspection/walkthrough.py`, alongside
+the existing query and publication owners. Keep it derived from the bundle; do
+not copy saved results into frontend fixtures. `tools/build_publication.py` owns
+the pinned-source build and `tools/stage_publication.py` owns immutable release
+staging. Update the [deployment guide](docs/deployment.md) and
+[frontend handoff](docs/frontend-handoff.md) when their contracts change. Static
+API resources must match the corresponding live Inspector response exactly.

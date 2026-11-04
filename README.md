@@ -6,7 +6,7 @@ This project makes Python source queryable through [Auto Ontology](https://githu
 
 **A working example:** we mapped Auto Ontology's own repository, containing 473 Python files and 5,319 symbols. Given explicit reverse-traversal and callback guidance, its agent generated recursive SQL that returned four callers of `resolve_semantic_fks`, including a callback reference recorded from `asyncio.to_thread`.
 
-[Inspect the exact request, SQL and rows](examples/auto-ontology/live/current/responses/10i_ask_with_key/ask_q11.json) · [Read the paper](docs/case-study.md) · [Download the PDF](docs/case-study.pdf) · [Build the exports locally](#build-the-exports-locally)
+[Hosted inspection data](https://wcook04.github.io/code-ontology-bridge/data/index.json) · [Frontend handoff](docs/frontend-handoff.md) · [Inspect the exact request, SQL and rows](examples/auto-ontology/live/current/responses/10i_ask_with_key/ask_q11.json) · [Read the paper](docs/case-study.md) · [Download the PDF](docs/case-study.pdf) · [Build the exports locally](#build-the-exports-locally)
 
 Extraction and export run without model credentials or changes to NVIDIA's code. The recorded live agent run required a separate compatibility patch against a pinned revision. The evaluation uses development questions, not an independent accuracy benchmark.
 
@@ -163,7 +163,7 @@ The extractor is a static-analysis prototype. Dynamic calls can be missed, callb
 | [eval/](eval/) | Authored questions, reference SQL, output contracts and optional example analyses. |
 | [examples/auto-ontology/](examples/auto-ontology/) | Generated dataset and replay tools; [live/current/](examples/auto-ontology/live/current/) retains the complete run; the [Q11 descriptor](examples/auto-ontology/live/caller-chain-case.json) supplies the reading path. |
 | [tests/](tests/) | Local behavior and optional upstream compatibility checks. |
-| [tools/](tools/) | Repository checks and the paper builder. |
+| [tools/](tools/) | Repository checks, paper builder and [publication/deployment tools](docs/deployment.md). |
 | [SPEC.md](SPEC.md) / [GAPS.md](GAPS.md) | Interface contract / capability status and remaining limits. |
 
 Run `uv run pytest -q -ra` and `uv run python tools/check_repository.py` to check the checkout. See [contributing](CONTRIBUTING.md) for optional integration tests, figure maintenance and evidence-preservation rules.

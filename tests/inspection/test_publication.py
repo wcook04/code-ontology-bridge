@@ -38,7 +38,7 @@ def test_real_http_payloads_validate_and_negative_contract(bundle):
     jsonschema.Draft202012Validator.check_schema({"components": contract["components"]})
     app = Application(bundle)
     for path in contract["paths"]:
-        actual = path.replace("{id}", "11")
+        actual = path.replace("{id}", "11").replace("{case_id}", "caller-chain-q11").replace("{step_id}", "source")
         query = "symbol_id=" + bundle["cases"][0]["root_symbol_id"] if path.endswith("/graph") else ""
         response = request(app, actual, query)
         assert response["status"] == 200, actual

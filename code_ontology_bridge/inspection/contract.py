@@ -42,6 +42,15 @@ def openapi_document():
             "responses": {key: {"description": value["description"]} for key, value in get["responses"].items()}}}
 
     add("", "Snapshot identity and available routes", [], record)
+    case_parameter = {"name": "case_id", "in": "path", "required": True, "schema": text}
+    step_parameter = {"name": "step_id", "in": "path", "required": True,
+                      "schema": {"type": "string", "enum": ["source", "records", "model", "request", "sql", "answer"]}}
+    add("/walkthroughs/{case_id}", "Source-to-answer reading path with evidence availability", [case_parameter], ref("Walkthrough"))
+    add("/walkthroughs/{case_id}/steps/{step_id}", "One independently addressable reading step", [case_parameter, step_parameter], ref("WalkthroughStep"))
+    add("/outcomes", "All recorded outcomes with independent table and prose judgments", [*paging,
+        parameter("q", {"type": "string", "minLength": 1, "maxLength": 160}),
+        parameter("table_match", {"type": "string", "enum": ["pass", "fail", "unknown"]}),
+        parameter("prose_review", {"type": "string", "enum": ["substantive", "fail", "unknown"]})], ref("Outcomes"))
     add("/overview", "Counts, packages, provenance and evaluation limits", [], ref("Overview"))
     add("/models", "Frozen model input and explicitly distinguished readback stages", [], ref("Models"))
     add("/cases", "Authored reading paths resolved against saved evidence", [], {"type": "array", "items": ref("Case")})
@@ -197,4 +206,15 @@ def resource_schemas():
         "captions": arr(text), "editorial": {"const": True}, "recorded_response_ref": obj({"artifact": text, "sha256": text}),
         "source_span_ids": arr(text), "graphs": {"type": "object", "additionalProperties": ref("Graph")},
         "records": obj({"symbols": arr(row("symbols")), "calls": arr(row("calls"))}), "note": text})
+    schemas["WalkthroughStep"] = obj({"id": enum("source", "records", "model", "request", "sql", "answer"),
+        "title": text, "availability": enum("snapshot", "computed_locally", "recorded", "not_supplied", "not_captured"),
+        "route": text, "previous": nullable_text, "next": nullable_text, "data": record})
+    schemas["Walkthrough"] = obj({"id": text, "title": text, "short_question": text, "question_id": integer,
+        "question_route": text, "snapshot": row("snapshot"), "recorded_response_ref": obj({"artifact": text, "sha256": text}),
+        "binding": {"anyOf": [ref("Binding"), {"type": "null"}]}, "editorial": {"const": True},
+        "captions": arr(text), "steps": arr(ref("WalkthroughStep")), "note": text})
+    outcome = obj(dict(summary, question_route=text, walkthrough_routes=arr(text)))
+    schemas["Outcomes"] = obj({"items": arr(outcome), "total": integer, "population_total": integer,
+        "limit": integer, "offset": integer, "next_offset": {"type": ["integer", "null"]},
+        "population_counts": obj({k: counts for k in ("table_match", "prose_review")}), "scope": text, "note": text})
     return schemas

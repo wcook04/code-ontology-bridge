@@ -1,0 +1,63 @@
+# Deploy the inspection data
+
+The public entry is [data/index.json](https://wcook04.github.io/code-ontology-bridge/data/index.json).
+It points to an immutable publication manifest under `data/releases/<sha256>/`.
+This is a read-only static data backend on GitHub Pages, not a hosted Python
+process. General filtering and graph queries remain available through the
+[local inspection API](inspection-api.md). No model execution is exposed.
+
+## Build
+
+From the repository root with the locked environment installed:
+
+```sh
+uv run python tools/build_publication.py --fetch-source --out build/publication
+```
+
+The output directory must be new. The build uses the committed dataset, frozen
+run and Q11 descriptor. It fetches only the four case-selected Python files from
+the exact upstream commit and checks every full-file SHA-256 against the dataset.
+Use `--source-root /path/to/pinned/source` instead for an offline build. All
+published excerpts must be verified; the release does not silently omit them.
+It neither runs the NVIDIA service nor rewrites the experiment.
+
+The manifest retains the existing raw JSON resources and adds `api_routes`:
+exact logical request keys mapped to saved API response envelopes. Publication
+SHA-256 covers the manifest without its own digest field; resource receipts cover
+exact bytes, including the final newline. Bundle revision identifies input data;
+publication SHA identifies the representation and contract too.
+
+## Stage and publish
+
+Commit and validate source changes before staging a release. Clone the existing
+`gh-pages` branch into an ignored build directory (choose a new path):
+
+```sh
+git clone --single-branch --branch gh-pages \
+  https://github.com/wcook04/code-ontology-bridge.git build/pages
+uv run python tools/stage_publication.py \
+  --publication build/publication --site build/pages \
+  --source-commit "$(git rev-parse HEAD)"
+git -C build/pages add .nojekyll data
+git -C build/pages diff --cached --stat
+git -C build/pages commit -m "Publish inspection data"
+git -C build/pages push origin gh-pages
+```
+
+`stage_publication.py` verifies manifest and resource hashes before updating the
+pointer, refuses to alter an existing immutable release, and preserves frontend
+files and earlier releases. GitHub Pages is configured for `gh-pages` at `/`.
+Never force-push the deployment branch or replace its root with a data-only
+export after a frontend has been added. A concurrent remote update requires a
+fresh checkout and re-staging rather than overwriting it.
+
+Before reporting deployment complete, check the Pages build status, fetch the
+public entry and immutable manifest, verify resource hashes, open the Q11 source
+step and all 22 question records. A successful branch push alone is insufficient.
+The deployed pointer includes the source commit for traceability. Rollback means
+restoring the previous `data/index.json` in a new deployment commit; keep immutable
+releases intact for readers already using them.
+
+[Frontend handoff](frontend-handoff.md) includes a small manifest-driven client.
+The root website is reserved for that frontend; the data deployment itself adds
+no page design.

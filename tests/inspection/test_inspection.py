@@ -132,11 +132,12 @@ def test_openapi_uses_table_owner_and_real_routes(bundle):
     assert "/api/v1/tables/calls" in contract["paths"]
     assert contract["paths"]["/api/v1/graph"]["get"]["parameters"][0]["required"]
     for path in contract["paths"]:
-        path = path.replace("{id}", "11")
+        path = path.replace("{id}", "11").replace("{case_id}", "caller-chain-q11").replace("{step_id}", "source")
         query = ""
         if path.endswith("/graph"):
             query = urlencode({"symbol_id": next(iter(app.inspector.symbols))})
-        assert request(app, path, query)["status"] == 200
+        expected = 404 if "/walkthroughs/" in path else 200  # This fixture has no authored case.
+        assert request(app, path, query)["status"] == expected
 
 
 def test_digest_roundtrip_and_modified_bundle(tmp_path, bundle):

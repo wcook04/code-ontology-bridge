@@ -190,6 +190,31 @@ def publish(bundle, out):
                 "dataset": bundle.get("dataset"), "source_snapshot": bundle["snapshot"],
                 "entry_cases": [f"cases/{c['id']}.json" for c in bundle.get("cases", [])],
                 "question_count": len(bundle["evidence"]["questions"]), "resources": {}}
+    # Adapt the route-to-static-response pattern used by lean-exposition's exporter.
+    # Keep existing raw resources; the new map holds exact Inspector envelopes.
+    routes = ["/api/v1", *["/api/v1/" + name for name in
+              ("overview", "schema", "models", "cases", "source-spans", "outcomes", "questions")]]
+    routes += [f"/api/v1/questions/{q['question_id']}" for q in bundle["evidence"]["questions"]]
+    for case in bundle.get("cases", []):
+        route = f"/api/v1/walkthroughs/{case['id']}"
+        routes.append(route)
+        routes.extend(step["route"] for step in api.query(route, {})["steps"])
+    manifest["api_routes"] = {}
+    manifest["delivery"] = {"kind": "static_snapshot", "query_parameters": False,
+                            "dynamic_api": "Run cob inspect-serve locally for filtering, pagination and custom graph queries.",
+                            "entry_route": next((r for r in routes if "/walkthroughs/" in r), "/api/v1/outcomes?limit=100"),
+                            "outcomes_route": "/api/v1/outcomes"}
+    # Freeze complete lists, including when future runs exceed the default page size.
+    for route in routes:
+        params = {"limit": "100"} if route.endswith(("/questions", "/outcomes")) else {}
+        if params and len(bundle["evidence"]["questions"]) > 100:
+            raise ValueError("static publication supports at most 100 outcomes")
+        key = route + ("?limit=100" if params else "")
+        name = "api/" + hashlib.sha256(key.encode()).hexdigest() + ".json"
+        resources[name] = api.response(route, params)
+        manifest["api_routes"][key] = name
+    manifest["delivery"]["outcomes_route"] = "/api/v1/outcomes?limit=100"
+    check_public(resources)
     out = Path(out)
     if out.exists():
         raise ValueError("publication destination must not exist")
@@ -203,6 +228,7 @@ def publish(bundle, out):
             path.parent.mkdir(parents=True, exist_ok=True)
             path.write_bytes(raw)
             manifest["resources"][name] = {"sha256": hashlib.sha256(raw).hexdigest(), "bytes": len(raw), "media_type": "application/json"}
+        manifest["publication_sha256"] = hashlib.sha256(encode(manifest)).hexdigest()
         (root / "manifest.json").write_bytes(encode(manifest) + b"\n")
         root.rename(out)
     return manifest

@@ -55,6 +55,9 @@ data envelope. Its table schemas come from the same definitions as the exports.
 | --- | --- |
 | `/api/v1` | Snapshot, routes, limits and execution boundary. |
 | `/api/v1/overview` | Source summary, package counts, known analysis limits, saved run configuration, scores and manual review. |
+| `/api/v1/outcomes` | All recorded outcomes with full-run counts, question links and independent assessments; `q`, `table_match=pass\|fail\|unknown`, `prose_review=substantive\|fail\|unknown`, `limit`, `offset`. |
+| `/api/v1/walkthroughs/{case_id}` | Assembled source → records → model → request → SQL → answer path, including separate historical availability. |
+| `/api/v1/walkthroughs/{case_id}/steps/{step_id}` | One addressable step: `source`, `records`, `model`, `request`, `sql`, or `answer`. |
 | `/api/v1/models` | Frozen native model, optional newly generated export, partial compiled terms and explicit absent stages. |
 | `/api/v1/cases` | Authored reading path, resolved source/table/model/question references and Python-computed graph presets. |
 | `/api/v1/source-spans` | Selected symbol definitions and call occurrences; pinned paths, line ranges, file hashes and optional excerpts. |
@@ -254,3 +257,21 @@ remains `not_captured`; a digest computed now does not prove which table bytes
 that historical service read. Source commit, source fingerprint, dataset digest,
 exported model hash, run/bridge revision, patch hash and publication revision
 retain their separate roles.
+
+## Hosted frontend entry
+
+The [public entry](https://wcook04.github.io/code-ontology-bridge/data/index.json)
+resolves an immutable manifest. Its `api_routes` maps exact requests to static
+JSON responses with the same envelope as the local API; unmapped routes and
+query combinations are unavailable on the static host. All 22 question details,
+the complete outcomes list and every Q11 step are mapped. Original raw resource
+paths remain present for existing consumers. Follow the [deployment guide](deployment.md)
+for repeatable source-verified builds and the [Claude handoff](frontend-handoff.md)
+for client wiring and open-ended design references.
+
+Outcome search matches question text or its `Q<number>` label, ordered by question
+ID. Filters combine with AND. `population_total` and `population_counts` always
+describe the complete run; `total` describes the selected results. Walkthrough
+steps have stable IDs and previous/next IDs for linking, without imposing a UI
+layout. Their order is editorial, not a recorded execution trace. Step `data`
+contains the existing record/model/question payloads documented above.

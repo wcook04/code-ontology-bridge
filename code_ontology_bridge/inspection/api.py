@@ -181,9 +181,26 @@ class Inspector:
                 "tables": PREFIX + "/tables/{table}", "graph": PREFIX + "/graph",
                 "questions": PREFIX + "/questions", "question": PREFIX + "/questions/{id}",
                 "bundle": PREFIX + "/bundle", "openapi": PREFIX + "/openapi.json",
+                "outcomes": PREFIX + "/outcomes", "walkthrough": PREFIX + "/walkthroughs/{case_id}",
+                "walkthrough_step": PREFIX + "/walkthroughs/{case_id}/steps/{step_id}",
                 "models": PREFIX + "/models", "cases": PREFIX + "/cases", "source_spans": PREFIX + "/source-spans"},
                 "limits": {"page_size": 100, "graph_depth": 5, "graph_nodes": 200, "graph_edges": 500},
                 "execution": "unavailable", "contract": "docs/inspection-api.md"}
+        if path == PREFIX + "/outcomes":
+            from .walkthrough import outcomes
+            return outcomes(self, params)
+        if path.startswith(PREFIX + "/walkthroughs/"):
+            from .walkthrough import walkthrough
+            allowed(params, [])
+            parts = path.removeprefix(PREFIX + "/walkthroughs/").split("/")
+            result = walkthrough(self, parts[0])
+            if len(parts) == 1:
+                return result
+            if len(parts) == 3 and parts[1] == "steps":
+                for step in result["steps"]:
+                    if step["id"] == parts[2]:
+                        return step
+            raise APIError(404, "walkthrough step not found")
         if path == PREFIX + "/graph":
             return self.graph(params)
         if path.startswith(PREFIX + "/tables/"):
