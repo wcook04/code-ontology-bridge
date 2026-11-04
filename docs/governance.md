@@ -2,7 +2,7 @@
 
 These local commands record checks, plan certification updates, annotate returned SQL and reconcile definitions. They do not enforce certified-only retrieval in Auto Ontology. A check establishes only the property it tests; the live flag demonstration used reference-query reproduction, which does not validate the truth of the term text being flagged.
 
-Known defects and unverified integrations are tracked in [GAPS.md](../GAPS.md). In particular, revoking the sole column-attribute certification currently loses the parent term ID needed to send its update. Stale or failed local state withholds an update by default; it does not clear a server flag without `--unset-stale`.
+Known defects and unverified integrations are tracked in [GAPS.md](../GAPS.md). Stale or failed local state withholds an update by default; it does not clear a server flag without `--unset-stale`.
 
 ## Components
 
@@ -78,7 +78,7 @@ Theirs: `def upsert_table_term(` (`auto_ontology/dal/terms.py:417`). When anothe
 4. unique alias: its name or an alias matches the aliases of exactly one canonical term;
 5. otherwise a lone definition becomes a `new_terms` proposal, and definitions sharing a name, or matching several canonical terms, are returned in `ambiguous` with every candidate.
 
-A name changes only when a declared resolution supplies `name`, and the change is recorded under the term's `renames` with its reason and decider. Terms that still share a display name are listed in `name_collisions`, so you can settle names before Auto Ontology's `(name, source)` constraint does it for you. Assignment uses the stated precedence. When definitions share a canonical ID but have different display names, the first supplied name currently wins.
+A name changes only when a declared resolution supplies `name`, and the change is recorded under the term's `renames` with its reason and decider. Terms that still share a display name are listed in `name_collisions`, so you can settle names before Auto Ontology's `(name, source)` constraint does it for you. Assignment uses the stated precedence. Definitions are sorted by source, name and content before display-name selection, so presentation is stable across input order; this is not a semantic judgment.
 
 `governance/examples/worked_example.json` (regenerate with `python -m code_ontology_bridge.governance.examples.build_worked_example`) shows three runs next to their behaviour: two tables defining "revenue" differently, first ambiguous, then placed by declared resolutions; two modules both called `utils`, kept apart by their paths with a bare "utils" mention returned as ambiguous; and two real `service.py` modules from their repository with their real docstrings, flagged as a name collision.
 

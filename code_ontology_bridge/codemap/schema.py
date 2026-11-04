@@ -106,7 +106,7 @@ SYMBOLS = Table(
     "symbols",
     "Functions, methods and classes, their definition locations and extracted docstring summaries. Use this table for function definitions and function docstring questions.",
     (
-        _c("symbol_id", "TEXT", "Stable id: file path, '::', qualified name."),
+        _c("symbol_id", "TEXT", "ID: file path, '::', qualified name; repeated qualified definitions append @L<definition-line>."),
         _c("file_id", "TEXT", "File that defines the symbol."),
         _c("name", "TEXT", "Bare name of the symbol."),
         _c("qualname", "TEXT", "Dotted name within the module, e.g. Class.method."),

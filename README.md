@@ -71,7 +71,7 @@ uv run cob export-duckdb --codemap build/codemap.json --out build/repository.duc
 uv run cob export-model --codemap build/codemap.json --out build/repository.model.yaml --database repository
 ```
 
-This maps the bridge's own package and produces a summary, a queryable DuckDB file and model YAML. Replace `code_ontology_bridge` with another Python source directory to try a different input. The extractor is a prototype: repeated qualified definitions, such as a property getter and setter, can produce duplicate symbol IDs and prevent export. See [known limitations](GAPS.md#source-analysis-limits).
+This maps the bridge's own package and produces a summary, a queryable DuckDB file and model YAML. Replace `code_ontology_bridge` with another Python source directory to try a different input. The extractor is a static-analysis prototype. Repeated qualified definitions receive line-qualified IDs; ambiguous call targets remain unresolved. See [known limitations](GAPS.md#source-analysis-limits).
 
 For the recorded NVIDIA example, use the [pinned reproduction guide](docs/reproduction.md). It separates rebuilding data, testing compatibility and running a live model service.
 

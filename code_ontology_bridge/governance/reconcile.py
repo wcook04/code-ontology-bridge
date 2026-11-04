@@ -68,6 +68,8 @@ def _lookup_resolution(defn: dict[str, Any], resolutions: dict[str, dict[str, An
 
 def reconcile(definitions: list[dict[str, Any]], resolutions: dict[str, Any] | None = None) -> dict[str, Any]:
     declared, rejected = _validate_resolutions(resolutions or {})
+    # Stable presentation for equivalent inputs; no new semantic authority is implied.
+    definitions = sorted(definitions, key=lambda d: (str(d.get("source", "")), str(d.get("name", "")), json.dumps(d, sort_keys=True)))
 
     # Canonical terms are those some definition names with a canonical_id.
     canonical: dict[str, dict[str, Any]] = {}

@@ -101,3 +101,11 @@ def test_worked_example_file_is_current():
     assert built["revenue_without_resolutions"]["ambiguous"]
     assert {t["id"] for t in built["revenue_with_resolutions"]["terms"]} == {"gross_order_revenue", "recognised_revenue"}
     assert built["code_modules"]["ambiguous"][0]["name"] == "utils"
+
+
+def test_display_names_do_not_depend_on_definition_order():
+    definitions = [
+        {'source': 'a', 'name': 'Revenue', 'canonical_id': 'r', 'definition': 'income'},
+        {'source': 'b', 'name': 'REV', 'canonical_id': 'r', 'definition': 'income'},
+    ]
+    assert reconcile(definitions) == reconcile(list(reversed(definitions)))

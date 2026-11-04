@@ -52,6 +52,7 @@ class CallFact:
     # True for a dotted name passed as an argument (``to_thread(f)``, ``Thread(target=f)``)
     # rather than a call site; line and col are those of the argument.
     is_callback: bool = False
+    caller_line: int = 0  # definition identity, including duplicate qualified names
 
 
 @dataclass
@@ -133,6 +134,7 @@ class _Visitor(ast.NodeVisitor):
         self.module_assign_roots: dict[str, str] = {}
         # Stack of (qualname, kind) for enclosing definitions that are symbols.
         self._scope: list[tuple[str, str]] = []
+        self._definition_lines: list[int] = []
         # Depth of nested functions inside a symbol: their calls belong to the symbol.
         self._public_stack: list[bool] = []
         # Names bound locally by each enclosing symbol (empty for class bodies).
@@ -184,6 +186,7 @@ class _Visitor(ast.NodeVisitor):
             )
         )
         self._scope.append((qual, kind))
+        self._definition_lines.append(node.lineno)
         self._public_stack.append(not node.name.startswith("_"))
         self._locals.append(set() if kind == "class" else bound_names(node))
         # Decorators, defaults and annotations are evaluated with the definition: attribute them to it.
@@ -191,6 +194,7 @@ class _Visitor(ast.NodeVisitor):
         self._locals.pop()
         self._public_stack.pop()
         self._scope.pop()
+        self._definition_lines.pop()
 
     def visit_FunctionDef(self, node: ast.FunctionDef) -> None:
         self._visit_def(node, "function")
@@ -241,6 +245,7 @@ class _Visitor(ast.NodeVisitor):
             self.calls.append(
                 CallFact(
                     caller=caller,
+                    caller_line=self._definition_lines[-1],
                     enclosing_class=enclosing_class,
                     callee_text=callee_text(node.func),
                     parts=dotted_parts(node.func),
@@ -277,6 +282,7 @@ class _Visitor(ast.NodeVisitor):
             self.calls.append(
                 CallFact(
                     caller=caller,
+                    caller_line=self._definition_lines[-1],
                     enclosing_class=enclosing_class,
                     callee_text=".".join(parts),
                     parts=parts,

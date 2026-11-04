@@ -20,7 +20,7 @@ Hard rules
 - `code.snapshot(snapshot_id PK, repo_url, commit_sha, built_at, builder_version, source_fingerprint, file_count, omitted_file_count, known_limits)` one row.
 - `code.files(file_id PK = repo-relative path, package, module, is_test, line_count, sha256, description, description_source in {heading_purpose, module_docstring, none}, has_fixed_headings)`.
 - `code.headings(file_id FK, heading, value, ordinal)` fixed headings when present: `[PURPOSE]`, `[INTERFACE]`, `[FLOW]`, `[DEPENDENCIES]`, `[CONSTRAINTS]`, and atoms `Teleology:`, `Mechanism:`, `Guarantee:`, `Fails:`, `Reads:`, `Writes:`.
-- `code.symbols(symbol_id PK = path::qualname, file_id FK, name, qualname, kind in {function, method, class}, line_start, line_end, is_public, summary, summary_source in {docstring, none})`.
+- `code.symbols(symbol_id PK = path::qualname, with @L<line> when the qualified name repeats, file_id FK, name, qualname, kind in {function, method, class}, line_start, line_end, is_public, summary, summary_source in {docstring, none})`.
 - `code.calls(call_id PK, caller_symbol_id FK, callee_symbol_id FK nullable, callee_name, line, resolution in {same_file, imported, method_on_self, builtin, external, dynamic_attribute, unresolved}, confidence in {high, low})`. Only the first three carry a callee; every other call is kept with a null callee so nothing is silently dropped or guessed.
   Each call also has `call_kind in {direct, callback}`: a callback row is an internal function passed as a call argument (for example to `asyncio.to_thread`), always with a callee and low confidence.
 - `code.class_bases(class_symbol_id FK, ordinal, base_name, base_symbol_id FK nullable)`.

@@ -14,6 +14,7 @@ other argument names are ordinary data and produce no row.
 from __future__ import annotations
 
 import builtins
+from collections import Counter
 from dataclasses import dataclass, field
 from pathlib import PurePosixPath
 
@@ -64,6 +65,7 @@ class FileContext:
     is_package: bool
     facts: FileFacts
     symbols: dict[str, str] = field(default_factory=dict)  # qualname -> symbol_id
+    definition_ids: dict[tuple[str, int], str] = field(default_factory=dict)
     bases: dict[str, list[str]] = field(default_factory=dict)  # class qualname -> base texts
     bindings: dict[str, Binding] = field(default_factory=dict)
 
@@ -96,11 +98,17 @@ class RepoIndex:
         self.symbol_kinds: dict[str, str] = {}
         self.properties: set[str] = set()
         for ctx in contexts:
+            counts = Counter(sym.qualname for sym in ctx.facts.symbols)
             for sym in ctx.facts.symbols:
-                ctx.symbols[sym.qualname] = f"{ctx.file_id}::{sym.qualname}"
-                self.symbol_kinds[ctx.symbols[sym.qualname]] = sym.kind
+                symbol_id = f"{ctx.file_id}::{sym.qualname}"
+                if counts[sym.qualname] > 1:
+                    symbol_id += f"@L{sym.line_start}"
+                else:
+                    ctx.symbols[sym.qualname] = symbol_id
+                ctx.definition_ids[(sym.qualname, sym.line_start)] = symbol_id
+                self.symbol_kinds[symbol_id] = sym.kind
                 if any(d.split(".")[-1] in PROPERTY_DECORATORS for d in sym.decorators):
-                    self.properties.add(ctx.symbols[sym.qualname])
+                    self.properties.add(symbol_id)
                 if sym.kind == "class":
                     ctx.bases[sym.qualname] = sym.bases
             for imp in ctx.facts.imports:

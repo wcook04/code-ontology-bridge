@@ -437,6 +437,7 @@ def status(events: list[dict[str, Any]], root: Path | None) -> list[dict[str, An
     """
     stacks = _effective_stacks(events)
     revoked_keys = {_key(e) for e in events if e["decision"] == "revoke"}
+    latest = {_key(e): e for e in events}
     anomalies: dict[Key, list[str]] = {}
     seen: dict[Key, list[str]] = {}
     for event in events:
@@ -456,6 +457,7 @@ def status(events: list[dict[str, Any]], root: Path | None) -> list[dict[str, An
             "anomalies": anomalies.get(key, []),
         }
         if not stack:
+            row["parent_term_imported_id"] = latest[key].get("parent_term_imported_id")
             row.update(state="revoked" if key in revoked_keys else "never", effective_event_id=None, freshness=None)
             rows.append(row)
             continue

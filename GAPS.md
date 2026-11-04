@@ -31,9 +31,9 @@ These sidecars add explicit records around Auto Ontology's existing interfaces. 
 | G6 | Auto Ontology qualifies colliding term names to preserve unambiguous table ownership. | A separate pre-import reconciliation policy: canonical id, canonical name, declared resolution, unique alias, then ambiguity or new-term proposals. | Local examples cover competing revenue definitions and repeated module names. Declared resolutions require a reason and decider. Definition text is not evaluated for semantic equivalence, and this command does not automatically modify the exported model. See [worked example](code_ontology_bridge/governance/examples/worked_example.json). |
 | G7 | Corrections can be made through existing edits. | Certification events retain a local history and can identify changed checked sources. | No automatic correction-to-recompilation loop has been demonstrated. No automated watcher synchronizes a source change, local status and live server flags. |
 
-### Column-attribute revocation follow-up
+### Column-attribute revocation
 
-Revoking the only effective certification for a column attribute currently leaves its local state as `revoked`, but the status row loses the parent term id. The planner then produces a non-ready column-attribute route even when the caller supplied both live ids. This was reproduced locally during the documentation audit; no live mutation was made. The relevant branches are `status()` and `plan_patches()` in [certification.py](code_ontology_bridge/governance/certification.py). Preserve the parent term id in revoked state before claiming that revocation can clear every supported live flag. The existing tests cover SQL-attribute revocation, not this column-attribute case.
+The status row now retains the parent term ID after revoking the only effective certification, so the planner can send `certified: false` when both live IDs are supplied. A regression test exercises certification, revocation and the resulting route. This repairs the local planner; no new live PATCH is claimed.
 
 ## Public model API compatibility and routing
 
@@ -48,11 +48,16 @@ The [patch review](examples/auto-ontology/live/upstream-fix/README.md) describes
 
 ## Source-analysis limits
 
-**G16: repeated qualified definitions.** A valid property getter and setter can both become `a.py::A.x`, conflicting with the symbols primary key. The duplicate was independently reproduced during return review. The current analyzer and ID resolver need to distinguish definitions before arbitrary Python repositories can be exported reliably. This does not change the recorded NVIDIA snapshot.
+**G16: repeated qualified definitions, repaired.** A property getter and setter now receive separate IDs suffixed with `@L<definition-line>`. Calls inside each definition retain the correct owner. Call targets whose qualified name is ambiguous remain unresolved. A regression fixture exports successfully with primary-key constraints; ordinary unique symbol IDs are unchanged.
 
-**G17: reconciliation display names.** Definitions with the same canonical ID but different display names take the first name supplied. Assignment precedence is fixed; the resulting display name is not independent of input order. See `reconcile.py`'s construction of the canonical output.
+**G17: reconciliation display names, repaired.** Definition inputs are sorted by source, name and content before assignment and display-name selection. Reversing their input order produces the same result. This deterministic presentation does not decide whether competing definitions mean the same thing.
 
+**G18: source-distribution contents, repaired.** Explicit packaging exclusions keep local PostgreSQL clusters, working databases, caches and credentials out of source archives. Git ignore rules alone did not exclude the old nested database directory from the built archive. Package validation inspects the actual archive.
 
 The map is a static Python analysis. Callback rows identify possible invocation paths at low confidence. Dynamic dispatch, references stored in collections, local shadowing and excluded module-level calls limit its completeness and precision. Test links express imports and filename matches rather than measured coverage. Descriptions preserve source-docstring wording with whitespace normalized. The complete snapshot limits are in [summary.json](examples/auto-ontology/summary.json).
 
 The governance log is a local file with caller-supplied actors, without signatures or concurrency locking. It does not observe later edits made in Auto Ontology's UI. A passing check establishes the property that check implements, such as docstring agreement or reference-query reproduction. It does not establish general software correctness. See the [governance guide](docs/governance.md) for operational details.
+
+## Replay reliability
+
+**G19: replay startup, repaired.** Configurable service ports must also configure the backend's ingestion-service URL. The upstream proxy can return HTTP 202 after failing to reach ingestion, so acceptance alone does not establish compilation. The replay now wires that URL explicitly, ingests and imports with automatic compilation disabled, then enables and waits for one completed pass. The first isolated setup was stopped before any question request; the corrected complete evaluation uses a new output directory.

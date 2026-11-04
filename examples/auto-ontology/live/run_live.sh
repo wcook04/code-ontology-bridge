@@ -71,7 +71,8 @@ ao_env() {
   # password is a placeholder their code requires to be set, not a secret.
   POSTGRES_HOST=127.0.0.1 POSTGRES_PORT="$PG_PORT" POSTGRES_USER=postgres \
   POSTGRES_PASSWORD=trust-auth-placeholder POSTGRES_DATABASE="$1"
-  export POSTGRES_HOST POSTGRES_PORT POSTGRES_USER POSTGRES_PASSWORD POSTGRES_DATABASE
+  INGESTION_SERVICE_URL="http://127.0.0.1:$INGEST_PORT"
+  export POSTGRES_HOST POSTGRES_PORT POSTGRES_USER POSTGRES_PASSWORD POSTGRES_DATABASE INGESTION_SERVICE_URL
 }
 
 key_env() {
@@ -246,6 +247,7 @@ if [ -n "$KEY_FILE" ]; then
   psql_db postgres -q -c "DROP DATABASE IF EXISTS $DB3" -c "CREATE DATABASE $DB3"
   ( cd "$CLONE" && ao_env "$DB3" && uv run --no-sync alembic upgrade head ) > "$LOGS/alembic_$DB3.log" 2>&1
   psql_db $DB3 -q -f "$HERE/sql/frontend_configurations.sql"
+  psql_db $DB3 -q -c "UPDATE frontend.configurations SET value='false' WHERE key='semantic_compilation_enabled'"
   USE_KEY=1
   start_ingestion $DB3 "$LOGS/ingestion_keyed.log"
   start_backend $DB3 "$BACKEND_PORT" "$LOGS/backend_keyed.log" "duckdb://$WORK/auto_ontology_code.duckdb"
@@ -255,9 +257,13 @@ if [ -n "$KEY_FILE" ]; then
   "$PY" "$HERE/remap_catalog_ids.py" "$MODEL_FILE" "$WORK/live_catalog_ids_keyed.json" "$WORK/model_remapped_keyed.yaml" > "$RESP/10b_remap_summary.json"
   cap_required "$RESP/10c_model_import_embed_true.json" POST "$B2/api/model/import?replace=false&embed=true" \
     --body-file "$WORK/model_remapped_keyed.yaml" --content-type application/x-yaml
+  psql_db $DB3 -q -f "$HERE/sql/frontend_configurations.sql"
   : > "$LOGS/ingestion_keyed.compile_marker"
   cap_required "$RESP/10d_semantic_compile_trigger.json" POST "$B2/api/semantic-compilation/trigger" --json '{}'
-  i=0; until [ "$(grep -c "semantic: finished\|semantic: unhandled" "$LOGS/ingestion_keyed.log")" -ge 2 ]; do i=$((i+1)); [ $i -gt 1800 ] && break; sleep 2; done
+  i=0; until grep -q "semantic: finished\|semantic: unhandled" "$LOGS/ingestion_keyed.log"; do
+    i=$((i+1)); [ $i -gt 450 ] && { echo "compilation did not finish within 15 minutes"; exit 5; }; sleep 2
+  done
+  grep -q "semantic: finished successfully" "$LOGS/ingestion_keyed.log" || { echo "compilation failed"; exit 5; }
   cap_required "$RESP/10e_semantic_status.json" GET "$B2/api/semantic-compilation/status"
   cap "$RESP/10f_terms_after_compile.json" GET "$B2/api/terms"
   psql_db $DB3 -f "$HERE/sql/store_counts.sql" > "$RESP/10g_postgres_after_compile.txt"

@@ -332,3 +332,36 @@ def test_exclude_is_counted(repo):
     m = build_code_map(repo, commit_sha="x", exclude=["tests/*"])
     assert {o["file_id"] for o in m.omitted_files} == {"broken.py", "tests/test_a.py", "tests/test_b.py"}
     assert m.snapshot["omitted_file_count"] == 3
+
+
+def test_repeated_definitions_keep_unique_ids_and_call_owners(tmp_path):
+    from code_ontology_bridge.export.duckdb_export import export_duckdb
+    import duckdb
+
+    (tmp_path / 'a.py').write_text('''def helper():
+    return 1
+class A:
+    @property
+    def x(self):
+        return helper()
+    @x.setter
+    def x(self, value):
+        helper()
+def f():
+    return helper()
+def f():
+    return 0
+def caller():
+    return f()
+''')
+    result = build_code_map(tmp_path)
+    ids = [s['symbol_id'] for s in result.rows['symbols']]
+    assert len(ids) == len(set(ids))
+    assert {'a.py::A.x@L5', 'a.py::A.x@L8'} <= set(ids)
+    callers = {c['caller_symbol_id'] for c in result.rows['calls'] if c['callee_symbol_id'] == 'a.py::helper'}
+    assert {'a.py::A.x@L5', 'a.py::A.x@L8', 'a.py::f@L10'} <= callers
+    ambiguous = next(c for c in result.rows['calls'] if c['caller_symbol_id'] == 'a.py::caller')
+    assert ambiguous['callee_symbol_id'] is None
+    db = export_duckdb(result, tmp_path / 'repository.duckdb')
+    with duckdb.connect(str(db)) as con:
+        assert con.execute('SELECT COUNT(*) FROM code.symbols').fetchone()[0] == len(ids)
