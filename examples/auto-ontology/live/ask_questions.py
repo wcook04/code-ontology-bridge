@@ -14,6 +14,8 @@ Sends no credential: the model key lives only in the backend's environment.
 
 from __future__ import annotations
 
+import argparse
+from concurrent.futures import ThreadPoolExecutor
 import json
 import os
 import sys
@@ -103,15 +105,47 @@ def ask(base_url: str, question: str, evidence: str | None, timeout: float) -> d
     return {"request": body, "status": status, "elapsed_s": round(time.time() - started, 1), "events": events}
 
 
+def request_text(item: dict[str, Any], contracts: dict[str, Any] | None) -> str:
+    """Build public task instructions; never include reference SQL or values."""
+    question = item["question"]
+    if contracts:
+        contract = contracts["questions"][str(item["question_id"])]
+        fields = ", ".join(f"{f['name']} ({f['type']})" for f in contract["fields"])
+        question += "\n\nRequested output columns: " + fields + ".\n" + contracts["instruction"]
+        if contract.get("guidance"):
+            question += "\n" + contract["guidance"]
+    return question
+
+
 def main() -> int:
-    base_url, evaluation, out_dir = sys.argv[1], Path(sys.argv[2]), Path(sys.argv[3])
-    qids = [int(q) for q in sys.argv[4:]]
-    items = {int(i["question_id"]): i for i in json.loads(evaluation.read_text(encoding="utf-8"))}
-    out_dir.mkdir(parents=True, exist_ok=True)
-    summary = []
-    for qid in qids:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("base_url")
+    parser.add_argument("evaluation", type=Path)
+    parser.add_argument("out_dir", type=Path)
+    parser.add_argument("qids", type=int, nargs="+")
+    parser.add_argument("--contracts", type=Path, default=os.environ.get("AO_CONTRACTS"))
+    parser.add_argument("--workers", type=int, default=int(os.environ.get("AO_WORKERS", "1")))
+    args = parser.parse_args()
+    if not 1 <= args.workers <= 4:
+        parser.error("workers must be between 1 and 4")
+    items = {int(i["question_id"]): i for i in json.loads(args.evaluation.read_text())}
+    if len(args.qids) != len(set(args.qids)) or set(args.qids) - items.keys():
+        parser.error("question IDs must be unique and present in the evaluation")
+    contracts = json.loads(Path(args.contracts).read_text()) if args.contracts else None
+    args.out_dir.mkdir(parents=True, exist_ok=True)
+    if any(args.out_dir.glob("ask_*.json")):
+        parser.error("output contains an earlier run; choose a new directory")
+    # Freeze the complete input requests before sending the first request.
+    requests = {qid: request_text(items[qid], contracts) for qid in args.qids}
+    (args.out_dir / "request_protocol.json").write_text(json.dumps({
+        "contracts": contracts, "calculation_only": os.environ.get("AO_CALCULATION_ONLY") == "1",
+        "workers": args.workers, "question_ids": args.qids,
+        "questions": requests,
+    }, indent=2) + "\n")
+
+    def run_one(qid: int) -> dict[str, Any]:
         item = items[qid]
-        rec = ask(base_url, item["question"], item.get("evidence"), timeout=900)
+        rec = ask(args.base_url, requests[qid], item.get("evidence"), timeout=900)
         result = next((e for e in rec["events"] if e.get("type") == "result"), None)
         error = next((e for e in rec["events"] if e.get("type") in ("error", "http_error", "client_error")), None)
         answer = (result or {}).get("answer") or {}
@@ -119,24 +153,20 @@ def main() -> int:
         got = [list(r.values()) for r in rows]
         gold = _gold_rows(item)
         correct = bool(result) and _key(got) == _key(gold)
-        rec.update(
-            {
-                "question_id": qid,
-                "gold_sql": item["SQL"],
-                "gold_row_count": len(gold),
-                "agent_sql": answer.get("sql_code"),
-                "agent_answer": answer.get("response"),
-                "agent_row_count": len(got),
-                "correct_rows": correct,
-                "error": error,
-            }
-        )
-        (out_dir / f"ask_q{qid}.json").write_text(json.dumps(rec, indent=2, ensure_ascii=False, default=str) + "\n", encoding="utf-8")
-        line = {"question_id": qid, "status": rec["status"], "correct_rows": correct, "agent_rows": len(got), "gold_rows": len(gold), "error": (error or {}).get("message") or (error or {}).get("body")}
-        summary.append(line)
-        print(json.dumps(line, default=str))
-    (out_dir / "ask_summary.json").write_text(json.dumps(summary, indent=2, default=str) + "\n", encoding="utf-8")
-    return 0
+        rec.update({"question_id": qid, "gold_sql": item["SQL"], "gold_row_count": len(gold),
+            "agent_sql": answer.get("sql_code"), "agent_answer": answer.get("response"),
+            "agent_row_count": len(got), "correct_rows": correct, "error": error})
+        (args.out_dir / f"ask_q{qid}.json").write_text(json.dumps(rec, indent=2, ensure_ascii=False, default=str) + "\n")
+        line = {"question_id": qid, "status": rec["status"], "correct_rows": correct,
+            "agent_rows": len(got), "gold_rows": len(gold),
+            "error": (error or {}).get("message") or (error or {}).get("body")}
+        print(json.dumps(line, default=str), flush=True)
+        return line
+
+    with ThreadPoolExecutor(max_workers=args.workers) as pool:
+        summary = list(pool.map(run_one, args.qids))
+    (args.out_dir / "ask_summary.json").write_text(json.dumps(summary, indent=2) + "\n")
+    return int(any(item["error"] for item in summary))
 
 
 if __name__ == "__main__":

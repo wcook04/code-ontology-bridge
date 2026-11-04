@@ -74,7 +74,7 @@ SNAPSHOT = Table(
 
 FILES = Table(
     "files",
-    "One row per analysed Python source file.",
+    "One row per analysed Python source file. Module and package descriptions are in files.description; a package description belongs to its __init__.py row.",
     (
         _c("file_id", "TEXT", "Repository-relative path of the file, with forward slashes."),
         _c("package", "TEXT", "Dotted name of the package that contains the module; empty for a top-level module."),
@@ -91,7 +91,7 @@ FILES = Table(
 
 HEADINGS = Table(
     "headings",
-    "Fixed headings and contract atoms found in module docstrings, verbatim.",
+    "Optional fixed sections and contract atoms from module docstrings only. This table can be empty even when ordinary module and function docstrings exist. Function docstrings are in symbols.summary, not this table.",
     (
         _c("file_id", "TEXT", "File whose module docstring holds the heading."),
         _c("heading", "TEXT", "Heading name such as [PURPOSE], or an atom name such as Teleology or Fails."),
@@ -104,7 +104,7 @@ HEADINGS = Table(
 
 SYMBOLS = Table(
     "symbols",
-    "Functions, methods and classes defined in the analysed files.",
+    "Functions, methods and classes, their definition locations and extracted docstring summaries. Use this table for function definitions and function docstring questions.",
     (
         _c("symbol_id", "TEXT", "Stable id: file path, '::', qualified name."),
         _c("file_id", "TEXT", "File that defines the symbol."),
@@ -114,7 +114,7 @@ SYMBOLS = Table(
         _c("line_start", "INTEGER", "First line of the definition, decorators excluded."),
         _c("line_end", "INTEGER", "Last line of the definition."),
         _c("is_public", "BOOLEAN", "True when neither the name nor any enclosing class name starts with an underscore."),
-        _c("summary", "TEXT", "Verbatim first paragraph (or Teleology atom) of the symbol's docstring; empty when absent."),
+        _c("summary", "TEXT", "First paragraph (or Teleology atom) of this function, method or class docstring, with whitespace normalized; empty when absent. This is the function documentation, unlike optional module headings."),
         _c("summary_source", "TEXT", "docstring or none.", allowed=("docstring", "none")),
     ),
     ("symbol_id",),

@@ -1,4 +1,10 @@
-# Governance layer
+# Governance commands
+
+These local commands record checks, plan certification updates, annotate returned SQL and reconcile definitions. They do not enforce certified-only retrieval in Auto Ontology. A check establishes only the property it tests; the live flag demonstration used reference-query reproduction, which does not validate the truth of the term text being flagged.
+
+Known defects and unverified integrations are tracked in [GAPS.md](../GAPS.md). In particular, revoking the sole column-attribute certification currently loses the parent term ID needed to send its update. Stale or failed local state withholds an update by default; it does not clear a server flag without `--unset-stale`.
+
+## Components
 
 Three sidecar components in `code_ontology_bridge/governance/`, each filling a gap that Auto Ontology's own code or documentation names. None of them needs a change to Auto Ontology: they read the model YAML you already imported, the MCP answer you already received, and they talk to Auto Ontology only through PATCH routes it already exposes. All citations are to upstream `NVIDIA/auto-ontology` at `cdaf61e`.
 
@@ -58,7 +64,7 @@ Theirs: `class DataAnswer(BaseModel):` (`mcp/auto_ontology_mcp/chat.py:46`), wit
 
 **How it plugs in.** Run it on the result of their MCP `ask_question` tool. It makes no call to Auto Ontology.
 
-**Limits.** Not a SQL parser. Unqualified columns are attributed only when the query has one table and no CTEs; otherwise they are listed as `unattributed_columns`. `SELECT *` is not expanded, table functions and `USING (col)` are not resolved, and alias scoping is flat (an alias reused for different tables in two subqueries resolves to the last). The certification state is from our log, not from Auto Ontology's flags. Term name certification is reported but not scored in the verdict.
+**Limits.** These are candidate references inferred from returned SQL, not a trace of the definitions the agent retrieved or relied on. The verdict scores matched units only; unresolved dependencies can remain even when it says `grounded_in_certified`. Not a SQL parser. Unqualified columns are attributed only when the query has one table and no CTEs; otherwise they are listed as `unattributed_columns`. `SELECT *` is not expanded, table functions and `USING (col)` are not resolved, and alias scoping is flat (an alias reused for different tables in two subqueries resolves to the last). The certification state is from our log, not from Auto Ontology's flags. Term name certification is reported but not scored in the verdict.
 
 ## 3. Reconciliation
 
@@ -72,7 +78,7 @@ Theirs: `def upsert_table_term(` (`auto_ontology/dal/terms.py:417`). When anothe
 4. unique alias: its name or an alias matches the aliases of exactly one canonical term;
 5. otherwise a lone definition becomes a `new_terms` proposal, and definitions sharing a name, or matching several canonical terms, are returned in `ambiguous` with every candidate.
 
-A name changes only when a declared resolution supplies `name`, and the change is recorded under the term's `renames` with its reason and decider. Terms that still share a display name are listed in `name_collisions`, so you can settle names before Auto Ontology's `(name, source)` constraint does it for you. Which step places each definition does not depend on input order.
+A name changes only when a declared resolution supplies `name`, and the change is recorded under the term's `renames` with its reason and decider. Terms that still share a display name are listed in `name_collisions`, so you can settle names before Auto Ontology's `(name, source)` constraint does it for you. Assignment uses the stated precedence. When definitions share a canonical ID but have different display names, the first supplied name currently wins.
 
 `governance/examples/worked_example.json` (regenerate with `python -m code_ontology_bridge.governance.examples.build_worked_example`) shows three runs next to their behaviour: two tables defining "revenue" differently, first ambiguous, then placed by declared resolutions; two modules both called `utils`, kept apart by their paths with a bare "utils" mention returned as ambiguous; and two real `service.py` modules from their repository with their real docstrings, flagged as a name collision.
 

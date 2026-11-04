@@ -29,4 +29,4 @@ uv run cob export-duckdb --codemap "$HERE/codemap.json" --out "$HERE/$NAME.duckd
 uv run cob export-dataset --codemap "$HERE/codemap.json" --duckdb "$HERE/$NAME.duckdb" \
   --out "$HERE/$NAME" --questions eval/auto_ontology_questions.json --analyses eval/custom_analyses.json
 uv run cob export-model --codemap "$HERE/codemap.json" --out "$HERE/$NAME.model.yaml" \
-  --database "$NAME" --analyses eval/custom_analyses.json
+  --database "$NAME"

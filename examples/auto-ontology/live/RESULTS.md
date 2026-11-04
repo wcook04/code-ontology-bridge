@@ -1,109 +1,161 @@
-# Live run against Auto Ontology
+# Auto Ontology answering questions about its own code
 
-NVIDIA Auto Ontology at commit `cdaf61e`, run natively on macOS (no Docker): their FastAPI backend, their ingestion service and their Alembic migrations, against a local PostgreSQL 17 with `pg_trgm` and pgvector. Our code ontology (`auto_ontology_code.model.yaml`, `auto_ontology_code.duckdb`) went in through their own routes. Every request and response is saved under `responses/`.
+Auto Ontology returned 13 reference-matching tables after normalization or identity checks, eight partial reference tables, and one empty result on the 22-question code-map example. This combines an initial pass over all 22 questions with five targeted reruns after changing their routing. Eleven equivalences come from the scorer; two require the explicit identity comparisons below.
 
-Steps 1 to 9 use no model key. Step 10 used Will's NVIDIA key by reference; see "With a model key".
+The questions ran through Auto Ontology's chat API with the [public API patch](upstream-fix/README.md), DeepSeek V4.1 Flash for chat, and NVIDIA embeddings and reranking. The bridge supplied the source-code tables, their semantic descriptions, seven SQL examples, and the benchmark's question-specific evidence. The result demonstrates the integration on this curated example. It does not measure performance on unseen repositories or compare against a schema-only baseline.
 
-## Reproduce
+[Results and scoring](#results-and-scoring) · [One recorded answer](#one-recorded-answer) · [Integration findings](#integration-findings) · [Model experiments](#model-experiments) · [Reproduction](#reproduction)
+
+## Results and scoring
+
+The preserved result files distinguish a successful request from a complete answer. The [reference dataset](../auto_ontology_code/evaluation.json) supplies the questions, optional evidence, SQL, and expected rows. [`score_answers.py`](score_answers.py) compares the returned SQL rows with those reference rows.
+
+| Pass | Scorer-equivalent | Missing reference fields | Unmatched by scorer |
+|---|---:|---:|---:|
+| [22 questions, default routing](evidence/deepseek_22q_default_routing/10i_ask_with_key/score.json) | 10 | 7 | 5 |
+| [Five targeted reruns, `calculation_only`](evidence/deepseek_5q_calculation_only/10i_ask_with_key/score.json) | 1 | 1 | 3 |
+| Combined, replacing those five original answers | 11 | 8 | 3 |
+| Combined, after the Q15 and Q17 identity checks | 13 | 8 | 1 |
+
+The five original unmatched answers were Q2, Q4, Q10, Q15, and Q17. Auto Ontology classified them as information questions and sent them to its catalog-metadata agent. They concern the contents of the code tables, so the rerun set `calculation_only: true` in each request. The patch exposes that existing agent option through the chat API. A complete 22-question pass under the forced routing policy has not been recorded.
+
+The scorer's exact comparison preserves values, column order, and row order. Its equivalence comparison ignores column names and order, ignores row order, compares strings case-insensitively, reduces a symbol ID to its qualified name, and rounds numbers to one decimal place. The partial comparison requires the same row count and the corresponding ordered items, while allowing reference values to be omitted. Equivalence takes precedence over the partial predicate. These rules compare the saved outputs; they do not establish general SQL equivalence.
+
+### Every selected answer
+
+Links marked “rerun” select the second pass. All other links select the default-routing pass.
+
+| Question | Selected result | Finding |
+|---|---|---|
+| [Q1: callers of `upsert_table_term`](evidence/deepseek_22q_default_routing/10i_ask_with_key/ask_q1.json) | Equivalent | Five caller identities. |
+| [Q2: semantic package purpose, rerun](evidence/deepseek_5q_calculation_only/10i_ask_with_key/ask_q2.json) | Missing field | Correct description; omits its source label. |
+| [Q3: undocumented files](evidence/deepseek_22q_default_routing/10i_ask_with_key/ask_q3.json) | Equivalent | All 32 file paths. |
+| [Q4: definition and docstring, rerun](evidence/deepseek_5q_calculation_only/10i_ask_with_key/ask_q4.json) | Incorrect | Reads the empty headings table instead of the function summary. |
+| [Q5: repository counts](evidence/deepseek_22q_default_routing/10i_ask_with_key/ask_q5.json) | Equivalent | 473 Python files, 168 test files, 5,319 symbols. |
+| [Q6: snapshot identity](evidence/deepseek_22q_default_routing/10i_ask_with_key/ask_q6.json) | Missing field | Correct repository and commit; omits the fingerprint. |
+| [Q7: public symbols without test links](evidence/deepseek_22q_default_routing/10i_ask_with_key/ask_q7.json) | Equivalent | All five symbol identities. |
+| [Q8: most-called symbols](evidence/deepseek_22q_default_routing/10i_ask_with_key/ask_q8.json) | Missing field | Correct ordered ten symbols; omits call counts. |
+| [Q9: importers of `dal/terms.py`](evidence/deepseek_22q_default_routing/10i_ask_with_key/ask_q9.json) | Equivalent | All 17 file paths. |
+| [Q10: semantic-FK test links, rerun](evidence/deepseek_5q_calculation_only/10i_ask_with_key/ask_q10.json) | Equivalent | Both test files and link reasons. |
+| [Q11: static blast radius](evidence/deepseek_22q_default_routing/10i_ask_with_key/ask_q11.json) | Equivalent | Four callers and shortest depths. |
+| [Q12: largest packages](evidence/deepseek_22q_default_routing/10i_ask_with_key/ask_q12.json) | Missing field | Correct ordered five packages; omits line counts. |
+| [Q13: classes with most methods](evidence/deepseek_22q_default_routing/10i_ask_with_key/ask_q13.json) | Missing field | Correct ordered five classes; omits method counts. |
+| [Q14: call-resolution shares](evidence/deepseek_22q_default_routing/10i_ask_with_key/ask_q14.json) | Missing field | Correct labels and rounded percentages; omits counts. |
+| [Q15: connector imports, rerun](evidence/deepseek_5q_calculation_only/10i_ask_with_key/ask_q15.json) | Equivalent after identity check | The same 12 modules, written as dotted names. |
+| [Q16: modules without importers](evidence/deepseek_22q_default_routing/10i_ask_with_key/ask_q16.json) | Equivalent | All nine reference modules. |
+| [Q17: compilation callees, rerun](evidence/deepseek_5q_calculation_only/10i_ask_with_key/ask_q17.json) | Equivalent after identity check | The same seven functions, with files and line ranges. |
+| [Q18: packages with undocumented symbols](evidence/deepseek_22q_default_routing/10i_ask_with_key/ask_q18.json) | Missing fields | Correct ordered five packages; omits totals and percentages. |
+| [Q19: mutual package calls](evidence/deepseek_22q_default_routing/10i_ask_with_key/ask_q19.json) | Equivalent | All 14 package pairs. |
+| [Q20: transitive import impact](evidence/deepseek_22q_default_routing/10i_ask_with_key/ask_q20.json) | Equivalent | All nine package/count rows. |
+| [Q21: test file with most source links](evidence/deepseek_22q_default_routing/10i_ask_with_key/ask_q21.json) | Missing field | Correct test-file path; omits the count of 15. |
+| [Q22: connector base classes](evidence/deepseek_22q_default_routing/10i_ask_with_key/ask_q22.json) | Equivalent | `SQLDatabase` and 10 non-test subclasses. |
+
+For Q15, replace dots in each returned module name with slashes and append `.py`; the resulting set equals the 12 reference paths. For Q17, join each returned file path and function name with `::`; the resulting set equals the seven reference symbol IDs. Its additional line ranges match the source definitions. These two checks extend the scorer's result; the saved `score.json` files continue to show them as unmatched.
+
+These scores concern returned SQL rows, not systematically rated prose. Q16 matches the reference rows but has a placeholder in its prose-response field.
+
+The eight partial answers are incomplete relative to the reference rows. Some omitted fields go beyond what the question explicitly asks: Q2 requests a description, and Q6 requests a repository and commit. Keeping the omissions visible makes the scoring convention inspectable without changing it after seeing the answers.
+
+## One recorded answer
+
+Q11 asks which functions call `resolve_semantic_fks` directly or indirectly, outside tests, with the shortest depth. Its [saved answer and SQL](evidence/deepseek_22q_default_routing/10i_ask_with_key/ask_q11.json) return:
+
+| Caller | Shortest depth |
+|---|---:|
+| `_run_semantic_compilation` | 1 |
+| `run_semantic_compilation` | 2 |
+| `SemanticScheduler._run_once` | 3 |
+| `main` | 3 |
+
+The scheduler reaches `run_semantic_compilation` by passing it to `asyncio.to_thread`. The bridge records that function reference as a callback edge, so a recursive SQL query can reach it alongside direct callers. This is the impact set represented by the static graph; dynamic dispatch and calls missing from that graph remain outside its scope.
+
+The request includes prose explaining reverse traversal and callback edges. The imported [SQL examples](../../../eval/custom_analyses.json) also include a blast-radius query targeting this function. In this run, the [backend log](evidence/deepseek_22q_default_routing/backend_keyed.log) reports zero custom analyses retrieved for Q11 and zero in its SQL-construction context. The result should therefore be read as a query over a curated model with supplied task guidance. No held-out generalization test was performed.
+
+## Integration findings
+
+The live service used Auto Ontology's own ingestion service, FastAPI backend, model import, semantic compiler and chat API. The code-map DuckDB database held the source rows; PostgreSQL held Auto Ontology's catalog and semantic layer.
+
+| Area | Observed result | Evidence retained |
+|---|---|---|
+| DuckDB file format | The earlier file format was refused by upstream's pinned DuckDB. A v1.5.0-storage copy was readable. New bridge exports write that storage version. | [Refusal log](evidence/duckdb_2.0_file_refused_by_their_duckdb_1.5.5.log), [copy check](responses/05a_compat_duckdb_copy.json), [exporter](../../../code_ontology_bridge/export/duckdb_export.py) |
+| Connected source and model import | The live catalog IDs were remapped before importing terms, attributes, semantic joins and analyses into the connected source. | [Remapping summary](responses/10b_remap_summary.json), [successful keyed import](responses/10c_model_import_embed_true.json), [remapping helper](remap_catalog_ids.py) |
+| Keys | The connector reports no primary or foreign keys. Import supplies declared joins; the live catalog keeps no primary keys on tables skipped as already present. | [Stored counts](responses/10g_postgres_after_compile.txt), [run script](run_live.sh) |
+| Semantic compilation | The compiler removed the imported `headings.file_id` semantic FK because this repository's headings table is empty. | [Preserved compilation log](evidence/after_fix_thinking_off/ingestion_keyed.log) |
+| Internal chat route | Questions were submitted directly to the FastAPI route used by MCP `ask_question`. | [Request driver](ask_questions.py), preserved answer JSON files |
+
+An earlier keyless run also recorded model import into an empty store, read routes behind the MCP allow-list, stored but unreturned `imported_id` fields, and three certification PATCHes with one intentionally failed check withheld. It found a duplicate-database-name failure when importing onto an ingested catalog without remapping, and different authorization behavior with and without an internal user header. The current tree retains the [run script](run_live.sh), [certification targets](cert_targets.json), and [SQL probes](sql/), but the individual step 1 to 9 response files were overwritten by later runs. These findings need a fresh capture for a complete standalone audit. The [capability tracker](../../../GAPS.md) distinguishes the integration paths and remaining limits.
+
+## Model experiments
+
+The same-model timing comparison concerns Nemotron 3.5 Lightning. The final answer-quality result also changes the model and endpoint.
+
+| Configuration | Compilation and question result | Record |
+|---|---|---|
+| Original public default model | The original run report records `410 Gone`; its raw logs were overwritten. | Historical observation; patch changes the default name |
+| Nemotron 3.5 Lightning, before thinking control | First compilation pass: 663.3 s; 24 log lines report rejected `guided_json`. Q1 was stopped before completion after about 45 minutes. | [Compilation log](evidence/before_fix/ingestion_keyed.log), [backend log](evidence/before_fix/backend_keyed.log) |
+| Nemotron 3.5 Lightning, thinking disabled | First compilation pass: 32.1 s, with no `guided_json` rejection in that compilation log. Five question requests completed; none matched the reference rows. | [Compilation log](evidence/after_fix_thinking_off/ingestion_keyed.log), [five answers](evidence/after_fix_thinking_off/10i_ask_with_key/) |
+| Nemotron 3.5 Lightning, thinking enabled again | Q1 took 856 s; timeouts returned. | [Answer](evidence/after_fix_thinking_on_partial/10i_ask_with_key/ask_q1.json) |
+| DeepSeek V4.1 Flash trial | Three of three answers equivalent under the scorer. | [Trial scores](evidence/deepseek_trial_3q/10i_ask_with_key/score.json) |
+| DeepSeek V4.1 Flash full pass and targeted reruns | Combined 13 equivalent after identity checks, eight incomplete, one incorrect. | Result tables above |
+
+The earlier Nemotron Q5 illustrates why successful SQL execution is insufficient. A cross join multiplied the file and symbol counts and returned 2,515,887 symbols instead of 5,319. The later DeepSeek answer used independent counts and matched the reference.
+
+The reported OpenRouter usage was approximately **$0.54 across the trial, the full pass and the targeted rerun**, including their associated model calls. This is an account-usage difference recorded during the session; the counter alone cannot exclude concurrent unrelated usage. It excludes NVIDIA API and local compute costs; a separate billing receipt is not included here.
+
+Auto Ontology's benchmark documentation describes a tested Claude configuration on NVIDIA's internal gateway. That configuration and the full `auto-ontology-eval` harness were not run here. The [patch note](upstream-fix/README.md) describes the public-route changes and the recorded test coverage.
+
+## Reproduction
+
+Rebuild the source map from the clean upstream revision before applying the patch to a separate service checkout. The [repository instructions](../../../docs/reproduction.md) cover installing the bridge and generating its artifacts. Reproducing the 473-file snapshot requires the full upstream checkout, including its tests and development tools.
+
+The following examples run from a **disposable bridge checkout** after its Python environment and example artifacts have been built. `run_live.sh` replaces `responses/`, `logs/`, `cert/`, and `.work/`, and recreates its local databases. It uses native PostgreSQL 17 with `pg_trgm` and pgvector; the recorded machine was macOS. Set `PG_BIN` for your installation.
 
 ```sh
-brew install postgresql@17 pgvector          # once; pgserver's PostgreSQL 16 has no pg_trgm (see Setup)
-sh examples/auto-ontology/live/run_live.sh   # about one minute; stops every process it starts
+export AUTO_ONTOLOGY_CLONE=/absolute/path/to/patched-auto-ontology
+export PG_BIN=/opt/homebrew/opt/postgresql@17/bin
+sh examples/auto-ontology/live/run_live.sh
 ```
 
-`AUTO_ONTOLOGY_CLONE` points at their clone, `PG_BIN` at a PostgreSQL 17 bin directory, `PG_PORT` defaults to 54329. The script drops and recreates its databases on each run, so the ids in `responses/` change between runs.
+For the recorded DeepSeek configuration, the external env file must supply `NVIDIA_API_KEY` and `OPENROUTER_API_KEY`. The script reads them into the service processes. Keep that file outside the repository.
 
-Two Postgres databases in one local cluster (`.pgdata/`, gitignored):
+```sh
+export AO_CHAT_ENDPOINT=https://openrouter.ai/api/v1
+export AO_CHAT_KEY_VAR=OPENROUTER_API_KEY
+export AO_CHAT_MODEL=deepseek/deepseek-v4.1-flash-1017
+export AO_QIDS="1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22"
+unset AO_CALCULATION_ONLY
+KEYED_ONLY=1 sh examples/auto-ontology/live/run_live.sh --with-key /absolute/path/to/models.env
+uv run python examples/auto-ontology/live/score_answers.py \
+  examples/auto-ontology/live/responses/10i_ask_with_key \
+  examples/auto-ontology/auto_ontology_code/evaluation.json
+```
 
-- `auto_ontology`: empty store, then our model import (steps 1–3, 6, 7);
-- `auto_ontology_g10`: DuckDB source connected and ingested first, then our model import (steps 4, 5, 8, 9).
+Preserve that pass before starting another. From the bridge root, this creates a new directory and fails if the name already exists:
 
-## Setup findings
+```sh
+mkdir examples/auto-ontology/live/evidence/replay_default_routing
+cp -R examples/auto-ontology/live/responses \
+  examples/auto-ontology/live/evidence/replay_default_routing/responses
+cp -R examples/auto-ontology/live/logs \
+  examples/auto-ontology/live/evidence/replay_default_routing/logs
+```
 
-| What | Outcome | Evidence |
-|---|---|---|
-| `pgserver` (PostgreSQL 16.2) | Their first migration runs `CREATE EXTENSION pg_trgm`; pgserver ships only `plpgsql` and `vector`, so `alembic upgrade head` fails | `evidence/pgserver_pg16_lacks_pg_trgm.log` |
-| Homebrew `postgresql@17` + `pgvector` 0.8.7 | Migrations run to `99d4d343dd0b`; matches their compose image (`pgvector/pgvector:pg17`) | `logs/alembic_*.log`, `responses/00_postgres_version.txt` |
-| Our DuckDB file in their connector | **Refused.** Our export runs under duckdb 2.0.0 and their lockfile pins 1.5.5: "Trying to read a database file with version number 999, but we can only read versions between 64 and 68" | `evidence/duckdb_2.0_file_refused_by_their_duckdb_1.5.5.log` |
-| Copy with `STORAGE_VERSION 'v1.5.0'` | Their duckdb 1.5.5 reads it: 8 tables, 2 views, 18 PK/FK constraints, the same as the source | `make_compat_duckdb.py`, `responses/05a_compat_duckdb_copy.json` |
-| Feature flags | Read from the Prisma-owned `frontend.configurations`, which nothing creates without the Next.js frontend; every flag reads as off | `sql/frontend_configurations.sql` creates the table and turns semantic compilation on |
+Then run the five targeted questions:
 
-## Steps
+```sh
+export AO_QIDS="2 4 10 15 17"
+export AO_CALCULATION_ONLY=1
+KEYED_ONLY=1 sh examples/auto-ontology/live/run_live.sh --with-key /absolute/path/to/models.env
+uv run python examples/auto-ontology/live/score_answers.py \
+  examples/auto-ontology/live/responses/10i_ask_with_key \
+  examples/auto-ontology/auto_ontology_code/evaluation.json
+mkdir examples/auto-ontology/live/evidence/replay_calculation_only
+cp -R examples/auto-ontology/live/responses \
+  examples/auto-ontology/live/evidence/replay_calculation_only/responses
+cp -R examples/auto-ontology/live/logs \
+  examples/auto-ontology/live/evidence/replay_calculation_only/logs
+```
 
-| # | Command (all in `run_live.sh`) | Outcome | Evidence |
-|---|---|---|---|
-| 1 | `GET /api/health` on `uvicorn auto_ontology.server.__main__:create_app --factory --host 127.0.0.1 --port 3001` | 200; postgres ok; migrations ok at `99d4d343dd0b` | `responses/01_health.json` |
-| 2 | `POST /api/model/import?replace=false&embed=false`, YAML as the raw body (`application/x-yaml`) | 200. Created 1 database, 1 schema, 10 tables, 67 columns, 8 terms, 43 column attributes, 10 semantic FKs, 7 custom analyses; nothing skipped; format `auto_ontology`. Every count equals the YAML | `responses/02_model_import.json` |
-| 2 | `GET /api/terms`, `/api/terms/{id}`, `/api/terms/{id}/column-attributes`, `/api/exploration/semantic-graph`, `/api/exploration/graph`, `/api/exploration/edges`, `/api/datasources/dbs` | All 200. 8 terms; "Source file" has 9 column attributes and 4 related terms; semantic graph 8 nodes, 6 links (`SEMANTIC_FK`, `REPRESENTS`, `HAS_ATTRIBUTE`); exploration edges carry our 10 declared FKs and our custom-analysis SQL | `responses/02a`–`02g` |
-| 2 | Postgres, `sql/store_counts.sql` and `sql/catalog_keys.sql` | Every catalog row, term, column attribute and custom analysis has its `cob:` id in `imported_id` (67/67 columns, 8/8 terms, 43/43 attributes, 7/7 analyses). 10 `column__foreign_key`, 10 `column__semantic_fk`, 43 `column__has_attribute`, 8 tables with a PK. All 8 terms have `source = 'semantic'` (G11) | `responses/02h`, `02i`, `02j` |
-| 3 | G9: count `imported_id` in every step-1/2 response body | **0** in every response. It is stored (step 2) but not returned | `responses/03_g9_imported_id_in_responses.json` |
-| 4 | G10, store `auto_ontology_g10`: connect the DuckDB source via `CONNECTION_STRINGS`, ingest, then the same import | **500 Internal Server Error** (not 422): `UniqueViolation ... "uq_catalog_database_name" Key (name)=(auto_ontology_code)`, raised at `dal/model_interchange.py:831` in `_resolve_entities_batch`. The transaction rolls back; the store is unchanged | `responses/04e`, `04f`, `04g` |
-| 4 | Registering DuckDB through the UI route, `POST /api/connections/test` with `{"type":"duckdb",...}` | 422 "Unsupported connection type: 'duckdb'". DuckDB connects only through `CONNECTION_STRINGS` (`/api/connections/source` returns `true`) | `responses/04b`, `04c` |
-| 4 | Workaround: replace the YAML's catalog ids with the live ids by name (`remap_catalog_ids.py`), import again | 200. Database, schema, 10 tables, 67 columns skipped as existing; 8 terms, 43 attributes, 10 semantic FKs, 7 analyses created; 10 declared FKs added. The importer stamped `imported_id` onto the existing catalog rows. Tables keep **no PK**: skipped tables are not updated | `responses/04h`, `04i`, `04j` |
-| 5 | Ingestion service (`python -m auto_ontology.ingestion_service`, `CONNECTION_STRINGS=duckdb:///…/.work/auto_ontology_code.duckdb`), startup pass | Catalog written: 10 tables (8 tables + 2 views), 67 columns. **0 primary keys, 0 foreign keys** (their DuckDB connector reports none). Embedding then fails with 401 (no key) and is logged; the catalog stays | `responses/05b`, `05c`, `05d`, `logs/ingestion_db2.log` |
-| 6 | Routes in their MCP allow-list (`mcp/auto_ontology_mcp/tools.py:59`) on the imported model | Work with no key: `search_terms` (`GET /api/terms?query=symbol` → "Code symbol"), `get_term`, `get_term_columns`, `get_term_sql_attributes` (0: the model has none), `get_sql_attribute` (404 for an unknown id), `describe_table` (6 queries, 1 term), plus the readiness probes and global search. Needs a key: `check_answerable` (`POST /api/question-entity-coverage`) → 422 "LLM client is not configured." | `responses/06a`–`06j` |
-| 7 | `cob certify` (4 targets, `cert_targets.json`) → id map from Postgres → `cob cert-status --plan-patches --id-map` | 3 certified (gold SQL reproduces 22/22 and 3/3), 1 failed by design and withheld. 3 PATCH requests planned, all ready | `cert/events.jsonl`, `cert/id_map.json`, `cert/plan.json` |
-| 7 | `cob cert-status ... --apply --base-url http://127.0.0.1:3001` with no token | Exit 2, "set AUTO_ONTOLOGY_API_TOKEN to apply; nothing was sent". Our CLI requires a token even though the internal service does not check one | `cert/apply_attempt.stdout` |
-| 7 | Same 3 PATCH bodies sent to FastAPI with no token and no user header (`apply_plan_no_token.py`) | All 200. Postgres: `files.package.certified` false→true, `calls.name_certified` false→true, `symbols.description_certified` false→true; the withheld target stays false. `GET /api/terms/{id}` then shows `certification: "partial"`. `modified_by` stays null | `responses/07a`, `07b`, `07c_patch_no_header/`, `07e` |
-| 7 | Same PATCHes with `x-auto-ontology-user-id: live-run:code-ontology-bridge` | All **403** "You do not have permission to edit this". With the header, `enforce_edit` (`server/owners.py:95`) checks the user's role, and an id unknown to their user tables has none. Without the header there is no check at all | `responses/07d_patch_with_user_header/` |
-| 8 | `POST /api/chat/completions` (the route behind MCP `ask_question`) for Q1, no key | Stream completes with HTTP 200; the graph reaches `unconstructable_sql_response` twice; result "LLM failed to produce a response." | `responses/08_ask_no_key/ask_q1.json` |
-| 9 | `POST /api/semantic-compilation/trigger`, flag off, then on | Off: skipped ("compilation disabled in settings"). On, no key: the two views without terms fail with `REASONING_API_KEY is not set`; semantic FK inference is skipped (`EMBED_API_KEY not set`); the compiler **removed our imported semantic FK `headings.file_id → files.file_id`** because the column has no values (the `headings` table is empty in this example). Semantic FKs 10 → 9 | `responses/09a`, `09c`, `09d`, `09e` |
-| — | Secret scan (`grep -c nvapi-`) over `responses/`, `logs/`, `cert/` | none | `responses/99_secret_scan.txt` |
+Set `AO_CHAT_MODEL` explicitly for every keyed run. The retained driver still has the original retired model as its own fallback, independently of the patched upstream defaults. Model availability and stochastic outputs may differ on a later run. Keep the new records separate from the preserved observations linked above.
 
-## With a model key (3 Nov)
-
-Will's NVIDIA key was passed by reference with `--with-key <env file>`: it was read inside the subshell that starts each of their processes and never printed or written. After the run, no file here contains a string of the form `nvapi-` followed by key characters.
-
-| What | Outcome | Evidence |
-|---|---|---|
-| Their documented default chat model, `nvidia/nemotron-3-nano-30b-a3b` (`.env.example`) | Every chat call returned **`410 Gone`**: the model is no longer served on `integrate.api.nvidia.com` and is absent from `GET /v1/models`. All five questions ended "LLM failed to produce a response." Observed on the first keyed run; its logs were overwritten by the rerun below | session record |
-| Probe of current models (one 5-token call each) | `nvidia/nemotron-3.5-lightning-30b-a3b` 200; `nvidia/nemotron-3-super-120b-a12b` 404; `nvidia/nemotron-nano-3-30b-a3b` 404; `openai/gpt-oss-20b` 504 | session record |
-| Rerun with `AO_CHAT_MODEL=nvidia/nemotron-3.5-lightning-30b-a3b`: ingestion with embeddings, import with `embed=true` | Embeddings and import work (200) | `responses/10a`, `10c` |
-| Semantic compilation | Reports "10 table(s) compiled … finished successfully" while the same log holds 24 structured-output errors. The compiler again removed the imported semantic FK on the empty `headings.file_id`. Terms 8 → 18 (10 generated), column attributes 43 → 100 | `logs/ingestion_keyed.log`, `responses/10g` |
-| Structured output | The hosted model rejects their default structured-output request: `[400] unknown field guided_json` (113 times in the backend log). `_structured_output_kwargs` in `auto_ontology/utils/llm_invoke.py` chooses `function_calling` only for Claude models; every other model gets LangChain's default, which for `ChatNVIDIA` sends `guided_json`. Each failure costs about two minutes of retries before a fallback | `logs/backend_keyed.log` |
-| `check_answerable` for "Which functions call upsert_table_term?" | Coverage 1.0, but the candidates are two attributes of the term "Import statement" (`is internal`, `module name`), not of the call table | `responses/10h` |
-| `ask_question`, Q1 | After about 45 minutes Q1 was still in SQL repair, and the run was stopped. At that rate the five questions would take about four hours | `logs/backend_keyed.log` |
-
-Through NVIDIA's public API, with a model that is currently served, their pipeline ingests, embeds, imports and compiles our code ontology, but the text-to-SQL agent cannot use structured output and does not finish in practical time. Their README's tested configuration is a different route: an `sk-` key on `inference-api.nvidia.com` with Claude models, for which `function_calling` is selected.
-
-A possible fix on their side, untested here: select `method="json_mode"` or `"function_calling"` in `_structured_output_kwargs` for `ChatNVIDIA` models that reject `guided_json`, and update the default chat model in `.env.example`.
-
-Not run: their benchmark (`NVIDIA/auto-ontology-eval`).
-
-## Their agent on its own code (3 Nov)
-
-Auto Ontology's text-to-SQL agent, asked all 22 questions in `../auto_ontology_code/evaluation.json` about Auto Ontology's own source, gave the right content for 21. Setup: the patch in [`upstream-fix/`](upstream-fix/README.md) applied to `cdaf61e`; chat on `deepseek/deepseek-v4.1-flash-1017` through OpenRouter (`AO_CHAT_ENDPOINT`, `AO_CHAT_KEY_VAR`, `AO_CHAT_MODEL`); embeddings and reranking on NVIDIA's API. Both keys were read by name from an env file into their processes only. The OpenRouter cost for the trial, the 22 questions and the 5 reruns together was $0.54.
-
-`score_answers.py` scores each answer three ways and reports all three: **exact** (same values in the same order), **equivalent** (the same rows after normalising symbol ids, case and rounding), and **items** (the right items in the right order with a value column, usually a count, left out).
-
-| Run | Equivalent | Items, no value column | Wrong or empty | Evidence |
-|---|---|---|---|---|
-| 22 questions, default routing | 10 | 7 | 5 (all routed to the information agent) | `evidence/deepseek_22q_default_routing/` (also `responses/10i_ask_with_key/`) |
-| The 5 routed away, rerun with `calculation_only` | 1 (Q10) | 1 (Q2) | 3 by the scorer | `evidence/deepseek_5q_calculation_only/` |
-
-Of the three the scorer marks wrong in the rerun, two are right in another form, checked by comparing sets: Q15 returns module names (`auto_ontology.connectors.base`) for the same 12 files, and Q17 returns function, file and lines for the same 7 functions. Q4 is a real miss: it looked for the docstring in `code.headings` (the fixed-heading table, empty for this repository) instead of `code.symbols.summary`.
-
-Overall: 13 fully right, 8 right items without a count, 1 wrong.
-
-Answers worth showing:
-- Q11, "What would be affected if `resolve_semantic_fks` changed?": a recursive query over the call graph returns `_run_semantic_compilation` (1), `run_semantic_compilation` (2), `main` (3) and `SemanticScheduler._run_once` (3). The last is reached only through `asyncio.to_thread(run_semantic_compilation, …)`, a callback edge in the code map.
-- Q19, "Which pairs of packages call into each other in both directions?": all 14 pairs.
-- Q22, "Which public classes in `auto_ontology/connectors` are used only as base classes?": `SQLDatabase` with its 10 subclasses, from the `class_bases` table.
-
-Earlier runs on the same setup, recorded for comparison: `evidence/after_fix_thinking_off/` (Nemotron 3.5 Lightning with the reasoning switch; compilation in 32 s, answers finish but 0 of 5 right, 3 routed to the information agent), `evidence/after_fix_thinking_on_partial/` (reasoning on; back to timeouts, Q1 in 856 s), and `evidence/deepseek_trial_3q/` (3 of 3 equivalent).
-
-## What this changes in GAPS.md
-
-- Header line "No row has been run against a live Auto Ontology server": G1, G2, G9, G10 and G11 have now been run, and G3, G4 in part. The run needed no Docker; it used Homebrew PostgreSQL 17.
-- **G1**: run live, with a new gap. Their connector refuses our file as written, because duckdb 2.0.0 writes a storage version 1.5.5 cannot read. The existing test passes because it loads their connector under our duckdb. Fix in our exporter: write with `ATTACH ... (STORAGE_VERSION 'v1.5.0')`, or pin `duckdb<2` for the export, and run the test under their lockfile's duckdb. After that, ingestion catalogues 10 tables and 67 columns with 0 keys.
-- **G2**: run live. Ingestion gives 0 PKs and 0 FKs. Model import onto an empty store gives 10 FKs and 8 PKs. Import onto an ingested catalog (with remapped ids) adds the 10 FKs, but PKs stay empty. Compilation without a key removed one imported semantic FK (`headings.file_id`) because its column is empty. Imported semantic FKs are therefore not durable when a column has no data.
-- **G3/G4**: the PATCH routes on the internal service accept our planned requests with no token, and the flags change in Postgres. `modified_by` is set only from `x-auto-ontology-user-id`, and an unknown user id gets 403. Recording our actor in their row therefore needs a real user in their user tables.
-- **G9**: run live. `imported_id` is stored on every imported row and appears in 0 response bodies.
-- **G10**: run live and confirmed, as a 500 rather than a 422, at `dal/model_interchange.py:831`. A tested workaround exists: give the YAML the live catalog ids (`remap_catalog_ids.py`). G10 also does not cover a second gap: DuckDB cannot be registered through `/api/connections` ("Unsupported connection type"), only through `CONNECTION_STRINGS`.
-- **G11**: run live. All 8 imported terms have `source = 'semantic'` in Postgres.
-
-## Follow-up changes outside this folder
-
-- Done: the DuckDB exporter writes storage version v1.5.0, which their pinned duckdb 1.5.5 reads; `tests/export/test_duckdb.py` opens the export with duckdb 1.5.5. `make_compat_duckdb.py` is no longer needed for new exports.
-- Done: `cob cert-status --apply --internal [--user-id ID]` sends to the internal FastAPI service without a token, so `apply_plan_no_token.py` is no longer needed.
-- Open: `cob export-model` could take a live-id map for catalog rows, the role `remap_catalog_ids.py` plays here, so a model can be imported onto an already connected source.
+To repeat the three-question DeepSeek trial, use the same model settings with `AO_QIDS="1 5 11"` and unset `AO_CALCULATION_ONLY`. To inspect the patched Nemotron configuration, unset `AO_CHAT_ENDPOINT`, `AO_CHAT_KEY_VAR` and `AO_CALCULATION_ONLY`, set `AO_QIDS="1 5 11 15 22"`, set `AO_CHAT_MODEL=nvidia/nemotron-3.5-lightning-30b-a3b`, and set both `REASONING_ENABLE_THINKING` and `NON_REASONING_ENABLE_THINKING` to `false`. The reasoning-enabled comparison sets both to `true`; its preserved record contains only the partial run described above. Preserve each configuration's captures separately. The unpatched observations came from the clean Auto Ontology checkout; their saved logs remain the evidence for those historical endpoints and timings.
