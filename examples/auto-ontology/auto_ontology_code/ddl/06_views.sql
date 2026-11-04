@@ -12,7 +12,7 @@ FROM code.symbols s
 LEFT JOIN code.calls c ON c.callee_symbol_id = s.symbol_id
 GROUP BY s.symbol_id, s.file_id, s.name, s.qualname, s.kind, s.is_public;
 
--- Public symbols in non-test files whose file no test file links to.
+-- Public symbols in non-test files whose file has no recorded test association (no test imports it or matches its name). This does not show that the symbol is never tested.
 CREATE OR REPLACE VIEW code.untested_public_symbols AS
 SELECT s.symbol_id, s.file_id, s.name, s.qualname, s.kind
 FROM code.symbols s

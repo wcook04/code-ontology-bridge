@@ -76,7 +76,8 @@ def allowed(name: str) -> bool:
     if owner == '.github':
         return p.parts[1] == 'workflows' and p.suffix in {'.yml', '.yaml'}
     if owner == 'eval':
-        return name in {'eval/auto_ontology_questions.json', 'eval/custom_analyses.json', 'eval/answer_contracts.json'}
+        return name in {'eval/auto_ontology_questions.json', 'eval/custom_analyses.json', 'eval/answer_contracts.json',
+                        'eval/heldout_questions.json', 'eval/heldout_contracts.json'}
     if owner == 'code_ontology_bridge':
         return p.suffix == '.py' or (p.suffix == '.json' and
             p.parts[1:3] == ('governance', 'examples'))

@@ -1,0 +1,114 @@
+[
+  {
+    "question_id": 101,
+    "question": "Which functions or methods does run_ingest call directly? List the internal callees it resolves to.",
+    "evidence": "",
+    "SQL": "SELECT DISTINCT c.callee_symbol_id\nFROM code.calls c\nJOIN code.symbols s ON s.symbol_id = c.caller_symbol_id\nWHERE s.name = 'run_ingest' AND c.call_kind = 'direct' AND c.callee_symbol_id IS NOT NULL\nORDER BY c.callee_symbol_id;",
+    "difficulty": "simple"
+  },
+  {
+    "question_id": 102,
+    "question": "How many classes are defined in non-test files under auto_ontology/connectors?",
+    "evidence": "",
+    "SQL": "SELECT COUNT(*) AS classes\nFROM code.symbols s\nJOIN code.files f ON f.file_id = s.file_id\nWHERE s.kind = 'class' AND NOT f.is_test AND s.file_id LIKE 'auto_ontology/connectors/%';",
+    "difficulty": "simple"
+  },
+  {
+    "question_id": 103,
+    "question": "Which file defines the class SQLDatabase, and on which line does its definition start?",
+    "evidence": "",
+    "SQL": "SELECT file_id, line_start\nFROM code.symbols\nWHERE name = 'SQLDatabase' AND kind = 'class'\nORDER BY file_id;",
+    "difficulty": "simple"
+  },
+  {
+    "question_id": 104,
+    "question": "Which five non-test Python files have the most lines?",
+    "evidence": "",
+    "SQL": "SELECT file_id, line_count\nFROM code.files\nWHERE NOT is_test\nORDER BY line_count DESC, file_id\nLIMIT 5;",
+    "difficulty": "simple"
+  },
+  {
+    "question_id": 105,
+    "question": "Which test files import auto_ontology/dal/session.py?",
+    "evidence": "",
+    "SQL": "SELECT DISTINCT i.file_id\nFROM code.imports i\nJOIN code.files f ON f.file_id = i.file_id\nWHERE i.imported_file_id = 'auto_ontology/dal/session.py' AND f.is_test\nORDER BY i.file_id;",
+    "difficulty": "moderate"
+  },
+  {
+    "question_id": 106,
+    "question": "Which public functions in non-test files of the auto_ontology.semantic package have no recorded caller at all, neither a direct call nor a callback reference?",
+    "evidence": "",
+    "SQL": "SELECT s.symbol_id\nFROM code.symbols s\nJOIN code.files f ON f.file_id = s.file_id\nWHERE s.kind = 'function' AND s.is_public AND NOT f.is_test AND f.package = 'auto_ontology.semantic'\n  AND NOT EXISTS (SELECT 1 FROM code.calls c WHERE c.callee_symbol_id = s.symbol_id)\nORDER BY s.symbol_id;",
+    "difficulty": "moderate"
+  },
+  {
+    "question_id": 107,
+    "question": "How many non-test files are there, and how many of them have a module docstring?",
+    "evidence": "",
+    "SQL": "SELECT COUNT(*) AS non_test_files,\n       COUNT(*) FILTER (WHERE description_source <> 'none') AS with_docstring\nFROM code.files\nWHERE NOT is_test;",
+    "difficulty": "moderate"
+  },
+  {
+    "question_id": 108,
+    "question": "Which method names are defined both on SQLDatabase and on DatabricksDatabase?",
+    "evidence": "",
+    "SQL": "SELECT DISTINCT m.name AS method_name\nFROM code.symbols m\nJOIN code.symbols c ON c.kind = 'class' AND c.name = 'SQLDatabase' AND m.file_id = c.file_id AND m.qualname = c.qualname || '.' || m.name\nWHERE m.kind = 'method'\n  AND EXISTS (\n    SELECT 1 FROM code.symbols m2\n    JOIN code.symbols c2 ON c2.kind = 'class' AND c2.name = 'DatabricksDatabase' AND m2.file_id = c2.file_id AND m2.qualname = c2.qualname || '.' || m2.name\n    WHERE m2.kind = 'method' AND m2.name = m.name)\nORDER BY method_name;",
+    "difficulty": "challenging"
+  },
+  {
+    "question_id": 109,
+    "question": "Which public functions or methods in non-test files of auto_ontology/dal are called directly by more than 20 distinct callers outside the tests? Give each one's number of distinct callers.",
+    "evidence": "",
+    "SQL": "SELECT s.symbol_id, COUNT(DISTINCT c.caller_symbol_id) AS callers\nFROM code.symbols s\nJOIN code.files f ON f.file_id = s.file_id\nJOIN code.calls c ON c.callee_symbol_id = s.symbol_id AND c.call_kind = 'direct'\nJOIN code.symbols cs ON cs.symbol_id = c.caller_symbol_id\nJOIN code.files cf ON cf.file_id = cs.file_id\nWHERE s.is_public AND s.kind IN ('function', 'method') AND NOT f.is_test AND s.file_id LIKE 'auto_ontology/dal/%' AND NOT cf.is_test\nGROUP BY s.symbol_id\nHAVING COUNT(DISTINCT c.caller_symbol_id) > 20\nORDER BY callers DESC, s.symbol_id;",
+    "difficulty": "challenging"
+  },
+  {
+    "question_id": 110,
+    "question": "Which classes inherit directly from SQLDatabase?",
+    "evidence": "",
+    "SQL": "SELECT cb.class_symbol_id\nFROM code.class_bases cb\nJOIN code.symbols b ON b.symbol_id = cb.base_symbol_id\nWHERE b.name = 'SQLDatabase'\nORDER BY cb.class_symbol_id;",
+    "difficulty": "moderate"
+  },
+  {
+    "question_id": 111,
+    "question": "For each package, how many non-test files in it import auto_ontology/dal/session.py? Give the five packages with the most such files, breaking ties by package name, leaving out top-level files that belong to no package.",
+    "evidence": "",
+    "SQL": "SELECT f.package, COUNT(DISTINCT f.file_id) AS files\nFROM code.imports i\nJOIN code.files f ON f.file_id = i.file_id\nWHERE i.imported_file_id = 'auto_ontology/dal/session.py' AND NOT f.is_test AND f.package <> ''\nGROUP BY f.package\nORDER BY files DESC, f.package\nLIMIT 5;",
+    "difficulty": "moderate"
+  },
+  {
+    "question_id": 112,
+    "question": "Which functions or methods directly call both store and write_transaction from auto_ontology/dal/session.py?",
+    "evidence": "",
+    "SQL": "SELECT c.caller_symbol_id\nFROM code.calls c\nWHERE c.call_kind = 'direct' AND c.callee_symbol_id IN ('auto_ontology/dal/session.py::store', 'auto_ontology/dal/session.py::write_transaction')\nGROUP BY c.caller_symbol_id\nHAVING COUNT(DISTINCT c.callee_symbol_id) = 2\nORDER BY c.caller_symbol_id;",
+    "difficulty": "challenging"
+  },
+  {
+    "question_id": 113,
+    "question": "Which function or method outside the tests spans the most lines, and how many lines does its definition span?",
+    "evidence": "",
+    "SQL": "SELECT s.symbol_id, s.line_end - s.line_start + 1 AS lines\nFROM code.symbols s\nJOIN code.files f ON f.file_id = s.file_id\nWHERE s.kind IN ('function', 'method') AND NOT f.is_test\nORDER BY lines DESC, s.symbol_id\nLIMIT 1;",
+    "difficulty": "moderate"
+  },
+  {
+    "question_id": 114,
+    "question": "Which files in the repository does auto_ontology/semantic/compile.py import?",
+    "evidence": "",
+    "SQL": "SELECT DISTINCT imported_file_id\nFROM code.imports\nWHERE file_id = 'auto_ontology/semantic/compile.py' AND imported_file_id IS NOT NULL\nORDER BY imported_file_id;",
+    "difficulty": "simple"
+  },
+  {
+    "question_id": 115,
+    "question": "Which non-test functions or methods call themselves directly?",
+    "evidence": "",
+    "SQL": "SELECT DISTINCT c.caller_symbol_id\nFROM code.calls c\nJOIN code.symbols s ON s.symbol_id = c.caller_symbol_id\nJOIN code.files f ON f.file_id = s.file_id\nWHERE c.callee_symbol_id = c.caller_symbol_id AND c.call_kind = 'direct' AND NOT f.is_test\nORDER BY c.caller_symbol_id;",
+    "difficulty": "moderate"
+  },
+  {
+    "question_id": 116,
+    "question": "Which functions or methods are passed by reference (as callbacks) to another call, and which caller passes them? Only count callees defined under auto_ontology/semantic.",
+    "evidence": "",
+    "SQL": "SELECT DISTINCT c.caller_symbol_id, c.callee_symbol_id\nFROM code.calls c\nWHERE c.call_kind = 'callback' AND c.callee_symbol_id LIKE 'auto_ontology/semantic/%'\nORDER BY c.caller_symbol_id, c.callee_symbol_id;",
+    "difficulty": "moderate"
+  }
+]

@@ -1,7 +1,5 @@
 """The ontology-sql-eval dataset folder, its gold SQL on DuckDB, and the same folder seeded into Postgres."""
 
-import csv
-import io
 import json
 import math
 from decimal import Decimal
@@ -13,7 +11,7 @@ import pytest
 from code_ontology_bridge.codemap.schema import TABLES
 from code_ontology_bridge.export.dataset_export import run_query
 
-from .conftest import CORRECTIONS, ANALYSES, EXAMPLE, NAME, QUESTIONS, needs_clone
+from .conftest import ANALYSES, EXAMPLE, NAME, QUESTIONS, needs_clone
 
 EVAL_KEYS = ["question_id", "db_id", "question", "evidence", "SQL", "difficulty", "answer_raw", "answer"]
 
@@ -57,32 +55,16 @@ def test_gold_sql_runs_non_empty_and_deterministic(worked_example):
 
 @needs_clone
 def test_committed_worked_example_matches_a_fresh_build(worked_example):
-    """examples/auto-ontology is reproducible: a fresh build gives the committed rows and
-    gold answers, except for exactly the recorded extractor corrections."""
+    """examples/auto-ontology is reproducible: same rows, same gold answers."""
     committed = EXAMPLE / NAME
     if not committed.is_dir():
         pytest.skip("worked example not generated")
     for table in TABLES:
         name = f"code.{table.name}.csv"
-        old, new = (committed / "data" / name).read_text(), (worked_example.dataset / "data" / name).read_text()
-        change = CORRECTIONS["tables"].get(name)
-        if change is None:
-            assert old == new, name
-            continue
-        old_rows = {tuple(r) for r in list(csv.reader(io.StringIO(old)))[1:]}
-        new_rows = {tuple(r) for r in list(csv.reader(io.StringIO(new)))[1:]}
-        assert sorted(map(list, old_rows - new_rows)) == change["removed"], name
-        assert sorted(map(list, new_rows - old_rows)) == change["added"], name
-    evaluation = {q["question_id"]: q for q in json.loads((committed / "evaluation.json").read_text())}
-    for qid, change in CORRECTIONS["evaluation_changes"].items():
-        assert evaluation[int(qid)] == change["committed"]
-        evaluation[int(qid)] = change["fresh"]
-    fresh_eval = json.loads((worked_example.dataset / "evaluation.json").read_text())
-    assert [evaluation[q["question_id"]] for q in fresh_eval] == fresh_eval
+        assert (committed / "data" / name).read_bytes() == (worked_example.dataset / "data" / name).read_bytes(), name
+    assert json.loads((committed / "evaluation.json").read_text()) == json.loads((worked_example.dataset / "evaluation.json").read_text())
+    assert json.loads((committed / "heldout_evaluation.json").read_text()) == json.loads((worked_example.dataset / "heldout_evaluation.json").read_text())
     summary = json.loads((EXAMPLE / "summary.json").read_text())
-    for key, change in CORRECTIONS["summary_changes"].items():
-        assert summary.get(key) == change["committed"]
-        summary[key] = change["fresh"]
     assert summary == worked_example.code_map.stats
 
 

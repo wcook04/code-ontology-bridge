@@ -8,7 +8,7 @@ import pytest
 from code_ontology_bridge.codemap.schema import TABLES, VIEWS
 from code_ontology_bridge.export import export_duckdb
 
-from .conftest import CORRECTIONS, EXAMPLE, needs_clone
+from .conftest import EXAMPLE, needs_clone
 
 
 def test_refuses_a_file_named_code(tmp_path, worked_example):
@@ -99,13 +99,7 @@ def test_rebuild_gives_identical_rows(worked_example, tmp_path):
     assert first == _table_rows(export_duckdb(worked_example.code_map, tmp_path / "again.duckdb"))
     committed = EXAMPLE / "auto_ontology_code.duckdb"
     if committed.is_file():
-        frozen = _table_rows(committed)
-        for name, rows in first.items():
-            change = CORRECTIONS["tables"].get(f"code.{name}.csv")
-            if change is None:
-                assert frozen[name] == rows, name
-            else:  # exact rows are compared in test_dataset; here the counts must agree
-                assert len(frozen[name]) - len(change["removed"]) + len(change["added"]) == len(rows), name
+        assert _table_rows(committed) == first
 
 
 THEIR_DUCKDB = "1.5.5"  # the minimum Auto Ontology pins (pyproject: duckdb>=1.5.5)

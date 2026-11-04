@@ -2,6 +2,10 @@
 
 Usage: python fresh_run.py JOB_DIR UPSTREAM_CHECKOUT ENV_FILE
 JOB_DIR must not exist. Credentials stay in the external ENV_FILE.
+
+Optional environment: COB_QUESTION_SET=heldout runs the held-out questions instead of the
+development set; COB_CHAT_MODEL, COB_CHAT_ENDPOINT and COB_CHAT_KEY_VAR choose the chat model
+(default: DeepSeek v4.1 Flash through OpenRouter), so all arms of a comparison share one model.
 """
 from __future__ import annotations
 import hashlib
@@ -32,9 +36,10 @@ def main():
     job.mkdir(parents=True, exist_ok=False)
     inputs = job / 'inputs'
     inputs.mkdir()
+    heldout = os.environ.get('COB_QUESTION_SET') == 'heldout'
     sources = {
-        'evaluation.json': ROOT / 'examples/auto-ontology/auto_ontology_code/evaluation.json',
-        'contracts.json': ROOT / 'eval/answer_contracts.json',
+        'evaluation.json': ROOT / 'examples/auto-ontology/auto_ontology_code' / ('heldout_evaluation.json' if heldout else 'evaluation.json'),
+        'contracts.json': ROOT / 'eval' / ('heldout_contracts.json' if heldout else 'answer_contracts.json'),
         'model.yaml': ROOT / 'examples/auto-ontology/auto_ontology_code.model.yaml',
     }
     for name, path in sources.items():
@@ -49,11 +54,14 @@ def main():
         'started_at': time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime()),
         'bridge_commit': subprocess.check_output(['git', '-C', str(ROOT), 'rev-parse', 'HEAD'], text=True).strip(),
         'upstream_commit': subprocess.check_output(['git', '-C', str(upstream), 'rev-parse', 'HEAD'], text=True).strip(),
-        'chat_model': 'deepseek/deepseek-v4.1-flash-1017', 'chat_endpoint': 'https://openrouter.ai/api/v1',
+        'chat_model': os.environ.get('COB_CHAT_MODEL', 'deepseek/deepseek-v4.1-flash-1017'),
+        'chat_endpoint': os.environ.get('COB_CHAT_ENDPOINT', 'https://openrouter.ai/api/v1'),
+        'chat_key_var': os.environ.get('COB_CHAT_KEY_VAR', 'OPENROUTER_API_KEY'),
+        'question_set': 'heldout' if heldout else 'development',
         'embedding_model': 'nvidia/nemotron-3-embed-1b',
         'reranking_model': 'nvidia/llama-nemotron-rerank-vl-1b-v2',
         'protocol': json.loads((inputs / 'contracts.json').read_text())['protocol'], 'calculation_only': True, 'workers': 3,
-        'question_ids': list(range(1, 23)), 'attempts_per_question': 1,
+        'question_ids': [q['question_id'] for q in json.loads((inputs / 'evaluation.json').read_text())], 'attempts_per_question': 1,
         'custom_analyses_imported': 0,
         'input_sha256': {p.name: digest(p) for p in inputs.iterdir()},
         'runner_sha256': {str(p.relative_to(ROOT)): digest(p) for p in checks},
@@ -67,7 +75,7 @@ def main():
     env.update({
         'AUTO_ONTOLOGY_CLONE': str(upstream), 'AO_RUN_DIR': str(job / 'run'),
         'PG_PORT': '54339', 'AO_BACKEND_PORT': '3111', 'AO_KEYLESS_PORT': '3101', 'AO_INGEST_PORT': '3102',
-        'AO_CHAT_ENDPOINT': manifest['chat_endpoint'], 'AO_CHAT_KEY_VAR': 'OPENROUTER_API_KEY',
+        'AO_CHAT_ENDPOINT': manifest['chat_endpoint'], 'AO_CHAT_KEY_VAR': manifest['chat_key_var'],
         'AO_CHAT_MODEL': manifest['chat_model'], 'AO_CALCULATION_ONLY': '1',
         'AO_QIDS': ' '.join(map(str, manifest['question_ids'])), 'KEYED_ONLY': '1',
         'AO_CONTRACTS': str(inputs / 'contracts.json'), 'AO_MODEL_FILE': str(inputs / 'model.yaml'),

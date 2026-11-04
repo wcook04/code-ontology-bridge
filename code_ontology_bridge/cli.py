@@ -57,6 +57,7 @@ def cmd_export_dataset(args: argparse.Namespace) -> int:
         duckdb_path=args.duckdb,
         questions=load_json(args.questions),
         analyses=load_json(args.analyses),
+        heldout=load_json(args.heldout),
         db_id=args.db_id,
     )
     print(f"wrote {out}")
@@ -133,6 +134,7 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--out", required=True, help="datasets/<name> folder")
     p.add_argument("--questions", help="JSON list of {question_id, question, evidence, SQL, difficulty}")
     p.add_argument("--analyses", help="JSON list of {name, description, sql}")
+    p.add_argument("--heldout", help="JSON list of held-out questions; their reference answers go to heldout_evaluation.json")
     p.add_argument("--db-id", help="db_id recorded on each question (default: folder name upper-cased)")
     p.set_defaults(func=cmd_export_dataset)
 
