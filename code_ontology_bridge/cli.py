@@ -78,6 +78,26 @@ def cmd_export_model(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_inspect_export(args: argparse.Namespace) -> int:
+    from .inspection.bundle import build_bundle, encode, load_dataset
+
+    code_map = load_code_map(args.codemap) if args.codemap else load_dataset(Path(args.dataset))
+    bundle = build_bundle(code_map, Path(args.evidence) if args.evidence else None)
+    out = Path(args.out)
+    out.parent.mkdir(parents=True, exist_ok=True)
+    out.write_bytes(encode(bundle) + b"\n")
+    print(f"wrote {out} (revision {bundle['revision']})")
+    return 0
+
+
+def cmd_inspect_serve(args: argparse.Namespace) -> int:
+    from .inspection.bundle import load_bundle
+    from .inspection.http import serve
+
+    serve(load_bundle(Path(args.bundle)), args.port)
+    return 0
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="cob", description=__doc__.splitlines()[0])
     sub = parser.add_subparsers(dest="command", required=True)
@@ -112,6 +132,19 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--dialect", default="duckdb", choices=["duckdb", "postgres"])
     p.add_argument("--analyses", help="JSON list of {name, description, sql} to include as custom analyses")
     p.set_defaults(func=cmd_export_model)
+
+    p = sub.add_parser("inspect-export", help="build a portable JSON dataset for a future website")
+    source = p.add_mutually_exclusive_group(required=True)
+    source.add_argument("--codemap", help="JSON produced by cob build")
+    source.add_argument("--dataset", help="dataset directory produced by cob export-dataset")
+    p.add_argument("--evidence", help="explicit saved live-run directory; optional")
+    p.add_argument("--out", required=True)
+    p.set_defaults(func=cmd_inspect_export)
+
+    p = sub.add_parser("inspect-serve", help="serve an inspection bundle as a read-only local JSON API")
+    p.add_argument("--bundle", required=True)
+    p.add_argument("--port", type=int, default=8767)
+    p.set_defaults(func=cmd_inspect_serve)
 
     # --- governance subcommands (registered by code_ontology_bridge/governance/cli.py) ---
     try:

@@ -10,7 +10,7 @@ date: 4 November 2026
 
 ## Abstract
 
-Can a database agent answer questions about software if the source is represented as tables? We built **code-ontology-bridge**, a Python extractor that turns source files, symbols, calls and existing docstrings into relational data and a semantic model for NVIDIA Auto Ontology. Applied to Auto Ontology's own repository, the bridge let its agent recover a caller chain that includes a function passed to `asyncio.to_thread`. A complete run of 22 author-written questions produced 21 tables matching the references; 20 also had substantive explanations. The run used DeepSeek v4.1 Flash, NVIDIA embeddings and reranking, explicit output requirements and a public-model compatibility patch. The contribution is a working adapter and an inspectable experiment on 473 files and 5,319 symbols. The questions informed development, so these results do not establish an accuracy advantage over schema-only querying or an agent reading source directly.
+Can a database agent answer questions about software if the source is represented as tables? We built **code-ontology-bridge**, a Python extractor that turns source files, symbols, calls and existing docstrings into relational data and a semantic model for NVIDIA Auto Ontology. Applied to Auto Ontology's own repository, the bridge supplied the relationships for a caller-chain query that includes a function passed to `asyncio.to_thread`. The request explicitly guided reverse traversal and callback handling; the agent generated and executed the SQL. A complete run of 22 author-written questions produced 21 tables matching the references; 20 also had substantive explanations. The run used DeepSeek v4.1 Flash, NVIDIA embeddings and reranking, explicit output requirements and a public-model compatibility patch. The contribution is a working adapter and an inspectable experiment on 473 files and 5,319 symbols. The questions informed development, so these results do not establish an accuracy advantage over schema-only querying or an agent reading source directly.
 
 ## 1. The question and the contribution
 
@@ -48,13 +48,13 @@ This distinction keeps the model small: it defines a symbol as an entity type, r
 
 ### What changed upstream?
 
-The data connector, model import and SQL pipeline already existed. A separate twelve-file compatibility patch configures public model clients, forwards the existing `calculation_only` option through the chat API and extends a placeholder validator. It adds no code-specific connector, SQL engine or query planner.
+The data connector, model import and SQL pipeline already existed. The source extractor and exports need no changes to NVIDIA's code or model credentials. The recorded live run used Auto Ontology at `cdaf61e1bd0cf3820d11d72b43bb460816aebbd3`; compatibility with later upstream revisions has not been established. A separate twelve-file compatibility patch configures public model clients, forwards the existing `calculation_only` option through the chat API and extends a placeholder validator. It adds no code-specific connector, SQL engine or query planner.
 
 Fixed SQL routing matters here because a question such as “What does this module do?” can sound like a metadata question. In this dataset, the answer is a value in a table. The patch selects the row-querying path for every question in the run. Its [documentation and validation](../examples/auto-ontology/live/upstream-fix/README.md) bind the patch to 611 passing tests in the upstream query, chat and utility scopes. That is scoped validation, not the full upstream test suite or evidence of upstream acceptance.
 
 ## 3. Following the caller chain
 
-Question 11 asks which resolved caller symbols reach `resolve_semantic_fks`, directly or indirectly, excluding tests and reporting the shortest depth. Auto Ontology generated recursive SQL over `code.calls` and returned four callers.
+Question 11 asks which resolved caller symbols reach `resolve_semantic_fks`, directly or indirectly, excluding tests and reporting the shortest depth. This is a summary of the request: the full input also prescribed column names and types and instructed the agent to traverse resolved calls backwards, recursively, including callback references. Given those instructions, Auto Ontology generated recursive SQL over `code.calls` and returned four callers.
 
 ![Four callers reach the foreign-key resolver through a wrapper and compiler. The table below identifies each source symbol. Arrows point from caller to callee, and SQL follows them in reverse. Solid edges are direct calls. The dashed edge records a callback passed to asyncio.to_thread, not proof that it ran.](figures/caller-chain.png)
 
@@ -116,6 +116,8 @@ For an Auto Ontology maintainer, the work separates into three reviewable pieces
 | How do source facts enter the existing interfaces? | [Extractor](../code_ontology_bridge/codemap/), [exporters](../code_ontology_bridge/export/) and [interface specification](../SPEC.md). |
 | What did the live service need? | [Compatibility patch](../examples/auto-ontology/live/upstream-fix/README.md), with configuration, boundaries and scoped tests. |
 | What did the agent actually produce? | [Detailed results](../examples/auto-ontology/live/RESULTS.md), linking every response, automatic score and manual review. |
+
+The immediate maintainer question is whether software repositories are a useful semantic-catalogue use case, and how public-model configuration and SQL-routing requirements should be supported.
 
 The next experiment should freeze independent questions, compare the same model with schema-only and semantic-layer context, and report which questions each condition fixes or breaks. A second repository would test transfer. Comparing against direct source navigation would test when building the map repays its cost. These comparisons remain unperformed.
 

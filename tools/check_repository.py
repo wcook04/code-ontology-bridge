@@ -16,7 +16,9 @@ ROOT_FILES = {
 REQUIRED = {
     'README.md', 'CONTRIBUTING.md', 'GAPS.md', 'SPEC.md', 'LICENSE', 'pyproject.toml',
     'docs/README.md', 'docs/case-study.md', 'docs/case-study.pdf',
-    'docs/reproduction.md', 'docs/governance.md',
+    'docs/reproduction.md', 'docs/governance.md', 'docs/inspection-api.md',
+    'code_ontology_bridge/inspection/bundle.py', 'code_ontology_bridge/inspection/api.py',
+    'code_ontology_bridge/inspection/contract.py', 'code_ontology_bridge/inspection/http.py',
     'code_ontology_bridge/cli.py', 'tools/check_repository.py',
     'tools/build_paper.sh', 'tools/build_paper.py', '.github/workflows/checks.yml',
     'examples/auto-ontology/live/RESULTS.md',
@@ -114,7 +116,7 @@ def check(root: Path, index: bool = False) -> list[str]:
                 if unquote(parts.fragment) not in anchors(read(target)):
                     problems.append(f'{name}: missing heading {url}')
     if 'README.md' in names:
-        for route in ('docs/case-study.md', 'docs/reproduction.md', 'docs/README.md',
+        for route in ('docs/case-study.md', 'docs/reproduction.md', 'docs/README.md', 'docs/inspection-api.md',
                       'examples/auto-ontology/live/RESULTS.md', 'CONTRIBUTING.md'):
             if f']({route})' not in read('README.md'):
                 problems.append(f'README.md: missing reader route {route}')

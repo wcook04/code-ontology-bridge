@@ -41,7 +41,7 @@ The default remains false. The patch does not change the MCP tool's public input
 
 ## Apply and validate
 
-The patch targets upstream commit `cdaf61e1bd0cf3820d11d72b43bb460816aebbd3`. Keep a clean source checkout for rebuilding the map and a separate patched checkout for services.
+The patch targets upstream commit `cdaf61e1bd0cf3820d11d72b43bb460816aebbd3`. It has not been validated against later upstream revisions. Keep a clean source checkout for rebuilding the map and a separate patched checkout for services.
 
 From the bridge root, after cloning Auto Ontology into the sibling `auto-ontology-source` directory:
 

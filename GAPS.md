@@ -25,6 +25,10 @@ The [DuckDB exporter](code_ontology_bridge/export/duckdb_export.py) writes a sto
 
 The live runner remaps model catalog IDs to existing server IDs before import and waits for compilation after ingestion/import. These fix the demonstrated startup path. Re-import and metadata refresh across changing source snapshots still need separate validation. The upstream DuckDB connector does not itself expose all declared key metadata. Imported term provenance uses the bridge ID namespace and snapshot metadata rather than a dedicated upstream source field.
 
+## Website inspection
+
+The [inspection backend](docs/inspection-api.md) serves source-map rows, bounded call neighborhoods and explicitly selected saved answers. It supplies a portable JSON bundle and a read-only API. Frontend design and public deployment are not implemented. The included server is for local development; a public deployment needs its own WSGI host and HTTPS proxy. It does not run new model queries or establish runtime call coverage. Saved evidence checks bind the selected artifacts and upstream revision, not a fresh comparison to the original database bytes.
+
 ## Governance boundaries
 
 The [governance commands](docs/governance.md) are local additions with local tests. Certification records a check and plans updates to existing flags; it does not force the agent to query only certified definitions. A reference-query check proves row agreement, not the truth of descriptive text. Source freshness is checked when a command runs; no watcher keeps server flags synchronized automatically.

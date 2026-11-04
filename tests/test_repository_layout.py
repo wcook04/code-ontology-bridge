@@ -23,7 +23,7 @@ def repository(tmp_path):
         p.parent.mkdir(parents=True, exist_ok=True)
         p.write_text('')
     (tmp_path / 'README.md').write_text('\n'.join(f'[read]({name})' for name in (
-        'docs/case-study.md', 'docs/reproduction.md', 'docs/README.md',
+        'docs/case-study.md', 'docs/reproduction.md', 'docs/README.md', 'docs/inspection-api.md',
         'examples/auto-ontology/live/RESULTS.md', 'CONTRIBUTING.md')))
     (tmp_path / 'pyproject.toml').write_text('[project]\nreadme = "README.md"\n')
     (tmp_path / '.gitignore').write_text('/build/\n')
