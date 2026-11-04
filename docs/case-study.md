@@ -30,7 +30,7 @@ The source-map approach comes from **CodeMap**, Will Cook's earlier source-navig
 
 Auto Ontology needs both a live database to query and semantic context that explains the database. The bridge exports them separately. Figure 1 follows the two paths to SQL execution.
 
-![Two exports serve different purposes. DuckDB supplies source-code rows; model YAML supplies descriptions and relationships through import and compilation. The outlined components belong to Auto Ontology. This simplified query path omits ingestion services, model providers and answer narration.](figures/architecture.png)
+![Two exports serve different purposes. DuckDB supplies source-code rows; model YAML supplies descriptions and relationships through import and compilation. The outlined components belong to Auto Ontology. The extractor is this bridge; the catalog is the semantic catalog and the connector is the existing DuckDB connector. This simplified query path omits ingestion services, model providers and answer narration.](figures/architecture.png)
 
 The **DuckDB export** contains eight tables: files, docstring headings, symbols, class bases, calls, imports, test links and a source snapshot. Two views summarize incoming calls and public symbols without test associations. Auto Ontology reads these through its existing DuckDB connector.
 
@@ -56,14 +56,16 @@ Fixed SQL routing matters here because a question such as “What does this modu
 
 Question 11 asks which resolved caller symbols reach `resolve_semantic_fks`, directly or indirectly, excluding tests and reporting the shortest depth. Auto Ontology generated recursive SQL over `code.calls` and returned four callers.
 
-![The four returned callers and their shortest depths. Arrows point from caller to callee; the query follows them in reverse from resolve_semantic_fks. The dashed edge records a callback passed to asyncio.to_thread. It is a static reference, not proof that the callback ran.](figures/caller-chain.png)
+![Four callers reach the foreign-key resolver through a wrapper and compiler. The table below identifies each source symbol. Arrows point from caller to callee, and SQL follows them in reverse. Solid edges are direct calls. The dashed edge records a callback passed to asyncio.to_thread, not proof that it ran.](figures/caller-chain.png)
 
-| Caller | Shortest depth |
-| --- | ---: |
-| `_run_semantic_compilation` | 1 |
-| `run_semantic_compilation` | 2 |
-| `SemanticScheduler._run_once` | 3 |
-| `main` | 3 |
+| Diagram label | Source symbol | Depth |
+| --- | --- | ---: |
+| Compiler | `_run_semantic_compilation` | 1 |
+| Wrapper | `run_semantic_compilation` | 2 |
+| Scheduler | `SemanticScheduler._run_once` | 3 |
+| CLI entry | `main` | 3 |
+
+The target labeled “FK resolver” is `resolve_semantic_fks`; it is not a returned caller.
 
 The scheduler passes `run_semantic_compilation` to `asyncio.to_thread`. The bridge records that argument as a callback reference, which connects the scheduler to the same chain as the ordinary caller `main`. The generated query follows reverse edges, avoids cycles and groups by full caller identity to select the minimum depth.
 
@@ -77,7 +79,7 @@ The chat model was `deepseek/deepseek-v4.1-flash-1017` through OpenRouter. Embed
 
 Reference SQL and answer values were used after the responses for scoring; they were not sent in the requests. Seven example SQL analyses remain in the distributed dataset but were excluded from the imported model.
 
-![All 22 responses come from the same complete run. Reference SQL and rows enter the scoring step, not the agent's request. Twenty-one tables match; review of their explanations identifies one prose stub, leaving 20 answers that satisfy both checks. These are development-set observations.](figures/evaluation.png)
+![The two checks explain the reported counts: 21 tables match, and 20 of those answers also have substantive explanations. Reference rows enter scoring only. The branches identify the extra row in Q2 and the prose stub in Q14. Every answer was reviewed; this flow groups the outcomes of one development run.](figures/evaluation.png)
 
 The table scorer requires named, typed columns, full case-sensitive identities, correct row multiplicity and requested ordering. Integers match exactly; other numbers allow absolute transport error up to 1e-6. HTTP completion must succeed. An automatic prose check rejects empty responses, known placeholders and generic unrelated refusals. Review of every final query, table and explanation supplements that check.
 
