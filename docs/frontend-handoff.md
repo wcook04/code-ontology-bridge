@@ -13,12 +13,14 @@ them. Build in this repository, keeping its existing interfaces and frozen run.
 
 ## Start here
 
-- [Hosted data entry](https://wcook04.github.io/code-ontology-bridge/data/index.json)
+- [Deployment data entry](https://wcook04.github.io/code-ontology-bridge/data/index.json)
 - [API contract and local server](inspection-api.md)
 - [Deployment and reproducible build](deployment.md)
 - [Q11 narrative](../README.md#one-question-all-the-way-through)
 - [All results and scoring explanation](../examples/auto-ontology/live/RESULTS.md)
 - [Paper](case-study.md) and [existing figures](figures/README.md)
+
+Check the [initial rollout record](deployment.md#initial-rollout-record--4-november-2026) and current public entry before assuming hosting is ready. The queued Pages deployment was affected by a GitHub service incident; local builds remain usable.
 
 The hosted data is a static publication of real Python API responses. It needs
 no model keys or service credentials. Fetch `data/index.json`, follow its relative

@@ -104,3 +104,44 @@ def test_publication_without_authored_case_has_resolvable_entry(bundle, tmp_path
     detached['source_spans'] = []
     manifest = publish(detached, tmp_path / 'no-case')
     assert manifest['delivery']['entry_route'] in manifest['api_routes']
+
+
+def test_hosted_publication_verifier_reads_real_http_and_rejects_tampering(bundle, tmp_path):
+    import functools
+    from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
+    import importlib.util
+    from pathlib import Path
+    import threading
+    modules = {}
+    for name in ('stage_publication', 'verify_publication'):
+        spec = importlib.util.spec_from_file_location(name, Path(__file__).resolve().parents[2] / ('tools/' + name + '.py'))
+        modules[name] = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(modules[name])
+    publication = tmp_path / 'publication'
+    publish(bundle, publication)
+    site = tmp_path / 'site'
+    modules['stage_publication'].stage(publication, site, '1' * 40)
+    class Handler(SimpleHTTPRequestHandler):
+        def log_message(self, *args):
+            pass
+    with ThreadingHTTPServer(('127.0.0.1', 0), functools.partial(Handler, directory=str(site))) as server:
+        thread = threading.Thread(target=server.serve_forever, daemon=True)
+        thread.start()
+        try:
+            url = f'http://127.0.0.1:{server.server_port}/data/index.json'
+            verify = modules['verify_publication'].verify
+            receipt = verify(url, '1' * 40)
+            assert receipt['outcomes_verified'] == 22
+            assert receipt['walkthrough_steps_verified'] == 6
+            with pytest.raises(ValueError, match='source commit differs'):
+                verify(url, '2' * 40)
+            release = site / 'data/releases' / receipt['publication_sha256']
+            (release / 'questions/11.json').write_text('{}')
+            with pytest.raises(ValueError, match='resource hash differs'):
+                verify(url)
+            for name in ('https://other.test/a', '../a', '/a'):
+                with pytest.raises(ValueError, match='invalid publication resource path'):
+                    modules['verify_publication'].relative_url(url, name)
+        finally:
+            server.shutdown()
+            thread.join(timeout=5)
