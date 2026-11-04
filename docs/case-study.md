@@ -146,13 +146,13 @@ The table scorer requires named, typed columns, full case-sensitive identities, 
 | --- | ---: |
 | Completed requests | 22 / 22 |
 | Tables matching all requested fields and rows | 21 / 22 |
-| Matching tables with substantive explanations | 20 / 22 |
+| Matching tables whose response explains the query | 20 / 22 |
 
 **Q2 returned an extra package.** Asked what the semantic module does, the agent selected `module LIKE '%semantic%'`. That matched both `auto_ontology.semantic` and the server's semantic-compilation package. The latter had an empty description. The reference selects only the first package.
 
 **Q14 returned correct rows but unusable prose.** Its seven resolution-statistics rows matched, but the explanation was just “thought”. The automatic placeholder check missed it. Manual review therefore reduces the combined count from 21 to 20. Neither response has been edited or replaced.
 
-Other successful questions found mutually calling packages, transitive import dependencies and a base class with ten non-test subclasses. Most explanations describe the query and its assumptions, leaving answer values in the accompanying table. “Substantive” does not certify a polished standalone narrative.
+Other successful questions found mutually calling packages, transitive import dependencies and a base class with ten non-test subclasses. The explanations describe the query and its assumptions, leaving answer values in the accompanying table. That is the job Auto Ontology gives them at this revision: its SQL agent writes the explanation together with the SQL, before the query runs, and the rows are returned beside it. “Substantive” therefore means a correct explanation of the query, not a standalone narrative of the result.
 
 ## 5. What the result establishes
 
