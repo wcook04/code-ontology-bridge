@@ -1,0 +1,231 @@
+{
+  "request": {
+    "question": "Which public classes in auto_ontology/connectors are used only as base classes: subclassed by other non-test classes but never constructed by a resolved call? Give the number of non-test subclasses of each.\n\nRequested output columns: symbol_id (string), subclasses (integer).\nReturn every requested field using exactly its specified column alias. Preserve complete case-sensitive repository-relative paths and symbol IDs; do not substitute display names. Include all requested counts and provenance fields. Explain the query result in ordinary prose; do not emit placeholder text.",
+    "evidence": "code.class_bases records the base classes named in each class statement; base_symbol_id is the internal class a base resolves to. Calling a class name creates an instance.",
+    "calculation_only": true
+  },
+  "status": 200,
+  "elapsed_s": 216.3,
+  "events": [
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "question_intent",
+      "thought": null,
+      "label": "Classifying the question"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "question_intent",
+      "thought": null,
+      "label": "Classifying the question"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "question_extraction",
+      "thought": null,
+      "label": "Understanding the question"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "question_extraction",
+      "thought": null,
+      "label": "Understanding the question"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "retrieve_candidates",
+      "thought": null,
+      "label": "Retrieving candidates"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "retrieve_candidates",
+      "thought": null,
+      "label": "Retrieving candidates"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "prepare_candidates",
+      "thought": null,
+      "label": "Preparing candidates"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "prepare_candidates",
+      "thought": "The query needs `symbols` to find public class symbols in `auto_ontology/connectors`, `class_bases` to identify which classes are used as bases and to count their subclasses, and `files` to restrict those subclasses to non-test files. The other tables do not contribute to these filters or the returned subclass count.",
+      "label": "Preparing candidates"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "refine_evidence",
+      "thought": null,
+      "label": "Refining evidence"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "refine_evidence",
+      "thought": "The single evidence line is explanatory prose with no scalar constant or comparison operator to verify. The only grounded literals in the question are kind = 'class', is_public IS TRUE, and is_test IS FALSE, all of which match the supplied column descriptions (kind is 'function, method or class', is_public/is_test are BOOLEAN). No value anchor or sample value contradicts these, so no repair is warranted.",
+      "label": "Refining evidence"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "construct_sql_from_candidates",
+      "thought": null,
+      "label": "Constructing SQL"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "construct_sql_from_candidates",
+      "thought": "I map the request to three available tables: symbols for public class definitions, class_bases for base-to-subclass links, and files for the test/non-test flag. A class is treated as a base class when its symbol_id appears as class_bases.base_symbol_id for a child class whose file is not a test file (files.is_test = FALSE); the subclass count is COUNT(class_bases.class_symbol_id) over those non-test children, as specified. The 'public' restriction uses symbols.is_public = TRUE and symbols.kind = 'class', and 'in auto_ontology/connectors' is applied as a path prefix on the file path (symbols.file_id), preserving the case-sensitive repository-relative path in the output. Assumption/limitation: the request also requires excluding classes ever constructed by a resolved call, but no call/construction table (e.g., a calls or inbound_call_counts relation) is present in the available schema, so that condition cannot be evaluated and is not applied; the query therefore returns every qualifying public base class, which is a superset of the requested set. No DISTINCT is used because COUNT of child base-links is the intended measure; ties in ordering are broken by symbol_id.",
+      "label": "Constructing SQL"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "validate_sql_query",
+      "thought": null,
+      "label": "Validating SQL and intent"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "validate_sql_query",
+      "thought": "The SQL correctly selects public classes in auto_ontology/connectors, joins class_bases to find non-test subclasses, and counts them with COUNT(cb.class_symbol_id) AS subclasses. However, it only answers 'subclassed by other non-test classes' and does not enforce the required 'never constructed by a resolved call' part of the definition. That omission is a critical evidence-compliance issue because it can return classes that are both subclassed and also constructed.",
+      "label": "Validating SQL and intent"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "reconstruct_sql",
+      "thought": null,
+      "label": "Reconstructing SQL"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "reconstruct_sql",
+      "thought": "Same mapping as before: three core tables — symbols for the public class symbols in auto_ontology/connectors, class_bases for base→subclass links, and files for the non-test flag on the subclass side. A class counts as a base class when its symbol_id appears as class_bases.base_symbol_id for a child class (class_bases.class_symbol_id) whose file has files.is_test = FALSE; the returned metric is COUNT(class_bases.class_symbol_id) over exactly those non-test children, grouped per base class. 'Public' = symbols.is_public IS TRUE and symbols.kind = 'class'; 'in auto_ontology/connectors' = case-sensitive prefix match on the file path, and the full symbol_id is preserved as output. Changed assumption (required by the evidence and the validation error): the previous query could not evaluate 'never constructed by a resolved call'; the calls table is available, so construction is now excluded via NOT EXISTS on a call whose callee resolves to the class (callee_symbol_id = the class symbol) with a resolved resolution (same_file, imported or method_on_self), i.e. builtin/external/dynamic_attribute/unresolved calls do not count as resolved constructions. I additionally restrict to direct call sites because a callback reference (passing the class as an argument) does not itself construct an instance. Zero/missing: base links whose base_symbol_id is NULL cannot resolve to a symbol, so they drop out of the join; classes with no non-test subclasses have no rows and are therefore excluded rather than reported as 0, because the question asks only for classes that are subclassed by other non-test classes. Ties: ordering by subclasses descending is broken by symbol_id ascending to make the output deterministic. No DISTINCT is applied, since COUNT of qualifying child base-links is the intended measure.",
+      "label": "Reconstructing SQL"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "validate_sql_query",
+      "thought": null,
+      "label": "Validating SQL and intent"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "validate_sql_query",
+      "thought": "The SQL correctly enumerates public classes (s.is_public = TRUE, s.kind = 'class') in auto_ontology/connectors, restricts to symbols that appear as a base (JOIN class_bases ON cb.base_symbol_id = s.symbol_id — exactly the evidence-defined base relationship), and excludes those that are constructed by a resolved call via NOT EXISTS on code.calls with callee_symbol_id = s.symbol_id and resolution IN ('same_file','imported','method_on_self') (the resolved-call set defined by the evidence). The non-test restriction on subclasses is enforced by joining the child symbol's file (cb.class_symbol_id -> child.symbol_id -> child.file_id -> files.file_id) and filtering cf.is_test = FALSE, which follows the verified structural bridge and files join path. The aggregation COUNT(cb.class_symbol_id grouped by symbol_id) matches the requested 'subclasses' count of non-test subclasses, and the projection uses the exact aliases symbol_id and subclasses. No nonsensical joins, no wrong aggregation, and no substitution of evidence-defined columns, filters, or operators.",
+      "label": "Validating SQL and intent"
+    },
+    {
+      "type": "sql",
+      "node": "validate_sql_query",
+      "sql": "SELECT s.symbol_id, COUNT(cb.class_symbol_id) AS subclasses FROM auto_ontology_code.code.symbols AS s JOIN auto_ontology_code.code.class_bases AS cb ON cb.base_symbol_id = s.symbol_id JOIN auto_ontology_code.code.symbols AS child ON cb.class_symbol_id = child.symbol_id JOIN auto_ontology_code.code.files AS cf ON child.file_id = cf.file_id WHERE s.is_public = TRUE AND s.kind = 'class' AND s.file_id LIKE 'auto_ontology/connectors/%' AND cf.is_test = FALSE AND NOT EXISTS (SELECT 1 FROM auto_ontology_code.code.calls AS c WHERE c.callee_symbol_id = s.symbol_id AND c.call_kind = 'direct' AND c.resolution IN ('same_file', 'imported', 'method_on_self')) GROUP BY s.symbol_id ORDER BY subclasses DESC, s.symbol_id ASC"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "execute_sql_query",
+      "thought": null,
+      "label": "Executing SQL"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "execute_sql_query",
+      "thought": null,
+      "label": "Executing SQL"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "check_empty_like_result",
+      "thought": null,
+      "label": "Checking results"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "check_empty_like_result",
+      "thought": null,
+      "label": "Checking results"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "check_value_repair",
+      "thought": null,
+      "label": "Checking values"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "check_value_repair",
+      "thought": null,
+      "label": "Checking values"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "format_and_respond",
+      "thought": null,
+      "label": "Formatting response"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "format_and_respond",
+      "thought": null,
+      "label": "Formatting response"
+    },
+    {
+      "type": "result",
+      "answer": {
+        "response": "This lists the public classes defined under the connectors package that are only ever inherited from and never instantiated: each candidate class is confirmed to be the base of at least one subclass defined in a non-test file, and is excluded if any direct call site resolves to it (which would mean the class name is used to create an instance). For each remaining base class it reports the class's stable symbol identifier and how many non-test subclasses inherit from it, counting each base link to a subclass in a non-test file. Results are ordered from the most to the least subclassed, with identical counts broken by symbol identifier.",
+        "sql_code": "SELECT s.symbol_id, COUNT(cb.class_symbol_id) AS subclasses FROM auto_ontology_code.code.symbols AS s JOIN auto_ontology_code.code.class_bases AS cb ON cb.base_symbol_id = s.symbol_id JOIN auto_ontology_code.code.symbols AS child ON cb.class_symbol_id = child.symbol_id JOIN auto_ontology_code.code.files AS cf ON child.file_id = cf.file_id WHERE s.is_public = TRUE AND s.kind = 'class' AND s.file_id LIKE 'auto_ontology/connectors/%' AND cf.is_test = FALSE AND NOT EXISTS (SELECT 1 FROM auto_ontology_code.code.calls AS c WHERE c.callee_symbol_id = s.symbol_id AND c.call_kind = 'direct' AND c.resolution IN ('same_file', 'imported', 'method_on_self')) GROUP BY s.symbol_id ORDER BY subclasses DESC, s.symbol_id ASC",
+        "sql_columns": [
+          "8cdc1f85-11d2-4a68-a127-4db3899eadef",
+          "c2c5f0e5-2ebe-4246-8a62-c58e46eb68d0",
+          "08825b8a-db7d-47ae-a194-edfa659e00ef",
+          "bfc71dfb-39d7-4961-843a-2d1ff8a86591",
+          "e3f0489c-64f8-46c1-9953-ede99ae2d8e5",
+          "2f3c478c-3ec3-4b50-8894-c7ca7aa185f6",
+          "baa1d186-fa84-4dac-b353-c18daa2f45a0",
+          "dee21ac7-34b0-4b0e-84b6-5734780ab2fc",
+          "a00062e0-d50b-4e36-aadb-09b892579a3c",
+          "17fc94c3-3ce8-4f01-a0e3-ced94726f727",
+          "450d8fc0-4d9e-40b9-82b5-45caf4ebbb75"
+        ],
+        "custom_analyses_used": [],
+        "sql_response_from_db": [
+          "[{\"symbol_id\":\"auto_ontology\\/connectors\\/base.py::SQLDatabase\",\"subclasses\":10}]"
+        ],
+        "thoughts": "- Preparing candidates: The question’s primary focus is identifying public classes, which maps directly to code.symbols.is_public. The subclassing and symbol_id return details are supporting filters/outputs, but the main subject is the public class attribute.\n- Preparing candidates: The query needs `symbols` to find public class symbols in `auto_ontology/connectors`, `class_bases` to identify which classes are used as bases and to count their subclasses, and `files` to restrict those subclasses to non-test files. The other tables do not contribute to these filters or the returned subclass count.\n- Refining evidence: Use the exact physical column references supplied for public/class filtering, base-class resolution, non-test exclusion, and the symbol_id projection. The evidence-defined phrase 'used only as base classes' is expanded using the class_bases base_symbol_id/class_symbol_id relation and files.is_test IS FALSE; 'base_symbol_id' in the evidence is replaced by its exact quoted reference.\n- Refining evidence: The single evidence line is explanatory prose with no scalar constant or comparison operator to verify. The only grounded literals in the question are kind = 'class', is_public IS TRUE, and is_test IS FALSE, all of which match the supplied column descriptions (kind is 'function, method or class', is_public/is_test are BOOLEAN). No value anchor or sample value contradicts these, so no repair is warranted.\n- Constructing SQL: I map the request to three available tables: symbols for public class definitions, class_bases for base-to-subclass links, and files for the test/non-test flag. A class is treated as a base class when its symbol_id appears as class_bases.base_symbol_id for a child class whose file is not a test file (files.is_test = FALSE); the subclass count is COUNT(class_bases.class_symbol_id) over those non-test children, as specified. The 'public' restriction uses symbols.is_public = TRUE and symbols.kind = 'class', and 'in auto_ontology/connectors' is applied as a path prefix on the file path (symbols.file_id), preserving the case-sensitive repository-relative path in the output. Assumption/limitation: the request also requires excluding classes ever constructed by a resolved call, but no call/construction table (e.g., a calls or inbound_call_counts relation) is present in the available schema, so that condition cannot be evaluated and is not applied; the query therefore returns every qualifying public base class, which is a superset of the requested set. No DISTINCT is used because COUNT of child base-links is the intended measure; ties in ordering are broken by symbol_id.\n- Validating SQL and intent: The SQL correctly selects public classes in auto_ontology/connectors, joins class_bases to find non-test subclasses, and counts them with COUNT(cb.class_symbol_id) AS subclasses. However, it only answers 'subclassed by other non-test classes' and does not enforce the required 'never constructed by a resolved call' part of the definition. That omission is a critical evidence-compliance issue because it can return classes that are both subclassed and also constructed.\n- Reconstructing SQL: The authoritative definition requires two conditions: (a) the public class is subclassed by non-test classes, and (b) the class is never constructed by a resolved call. The provided schema only exposes symbols, class_bases, and files; none of these contains call, reference, or construction edges. Condition (a) can be expressed, but condition (b) cannot be expressed or verified with these tables, so no SQL rewrite using only symbols, class_bases, and files (plus files.is_test) can produce a correct answer. A dedicated call/reference/construction graph table (e.g. an inbound_call_counts or resolved call-edge table) must be located in the ontology before the query can be fixed; hence this is a missing-data root cause rather than a fixable SQL error.\n- Reconstructing SQL: Same mapping as before: three core tables — symbols for the public class symbols in auto_ontology/connectors, class_bases for base→subclass links, and files for the non-test flag on the subclass side. A class counts as a base class when its symbol_id appears as class_bases.base_symbol_id for a child class (class_bases.class_symbol_id) whose file has files.is_test = FALSE; the returned metric is COUNT(class_bases.class_symbol_id) over exactly those non-test children, grouped per base class. 'Public' = symbols.is_public IS TRUE and symbols.kind = 'class'; 'in auto_ontology/connectors' = case-sensitive prefix match on the file path, and the full symbol_id is preserved as output. Changed assumption (required by the evidence and the validation error): the previous query could not evaluate 'never constructed by a resolved call'; the calls table is available, so construction is now excluded via NOT EXISTS on a call whose callee resolves to the class (callee_symbol_id = the class symbol) with a resolved resolution (same_file, imported or method_on_self), i.e. builtin/external/dynamic_attribute/unresolved calls do not count as resolved constructions. I additionally restrict to direct call sites because a callback reference (passing the class as an argument) does not itself construct an instance. Zero/missing: base links whose base_symbol_id is NULL cannot resolve to a symbol, so they drop out of the join; classes with no non-test subclasses have no rows and are therefore excluded rather than reported as 0, because the question asks only for classes that are subclassed by other non-test classes. Ties: ordering by subclasses descending is broken by symbol_id ascending to make the output deterministic. No DISTINCT is applied, since COUNT of qualifying child base-links is the intended measure.\n- Validating SQL and intent: The SQL correctly enumerates public classes (s.is_public = TRUE, s.kind = 'class') in auto_ontology/connectors, restricts to symbols that appear as a base (JOIN class_bases ON cb.base_symbol_id = s.symbol_id — exactly the evidence-defined base relationship), and excludes those that are constructed by a resolved call via NOT EXISTS on code.calls with callee_symbol_id = s.symbol_id and resolution IN ('same_file','imported','method_on_self') (the resolved-call set defined by the evidence). The non-test restriction on subclasses is enforced by joining the child symbol's file (cb.class_symbol_id -> child.symbol_id -> child.file_id -> files.file_id) and filtering cf.is_test = FALSE, which follows the verified structural bridge and files join path. The aggregation COUNT(cb.class_symbol_id grouped by symbol_id) matches the requested 'subclasses' count of non-test subclasses, and the projection uses the exact aliases symbol_id and subclasses. No nonsensical joins, no wrong aggregation, and no substitution of evidence-defined columns, filters, or operators."
+      }
+    }
+  ],
+  "question_id": 22,
+  "gold_sql": "SELECT s.symbol_id, COUNT(DISTINCT b.class_symbol_id) AS subclasses\nFROM code.symbols s\nJOIN code.files f ON f.file_id = s.file_id\nJOIN code.class_bases b ON b.base_symbol_id = s.symbol_id\nJOIN code.symbols sub ON sub.symbol_id = b.class_symbol_id\nJOIN code.files sf ON sf.file_id = sub.file_id\nWHERE s.kind = 'class' AND s.is_public AND NOT f.is_test AND NOT sf.is_test\n  AND f.file_id LIKE 'auto_ontology/connectors/%'\n  AND NOT EXISTS (SELECT 1 FROM code.calls c WHERE c.callee_symbol_id = s.symbol_id AND c.call_kind = 'direct')\nGROUP BY s.symbol_id\nORDER BY s.symbol_id;",
+  "gold_row_count": 1,
+  "agent_sql": "SELECT s.symbol_id, COUNT(cb.class_symbol_id) AS subclasses FROM auto_ontology_code.code.symbols AS s JOIN auto_ontology_code.code.class_bases AS cb ON cb.base_symbol_id = s.symbol_id JOIN auto_ontology_code.code.symbols AS child ON cb.class_symbol_id = child.symbol_id JOIN auto_ontology_code.code.files AS cf ON child.file_id = cf.file_id WHERE s.is_public = TRUE AND s.kind = 'class' AND s.file_id LIKE 'auto_ontology/connectors/%' AND cf.is_test = FALSE AND NOT EXISTS (SELECT 1 FROM auto_ontology_code.code.calls AS c WHERE c.callee_symbol_id = s.symbol_id AND c.call_kind = 'direct' AND c.resolution IN ('same_file', 'imported', 'method_on_self')) GROUP BY s.symbol_id ORDER BY subclasses DESC, s.symbol_id ASC",
+  "agent_answer": "This lists the public classes defined under the connectors package that are only ever inherited from and never instantiated: each candidate class is confirmed to be the base of at least one subclass defined in a non-test file, and is excluded if any direct call site resolves to it (which would mean the class name is used to create an instance). For each remaining base class it reports the class's stable symbol identifier and how many non-test subclasses inherit from it, counting each base link to a subclass in a non-test file. Results are ordered from the most to the least subclassed, with identical counts broken by symbol identifier.",
+  "agent_row_count": 1,
+  "correct_rows": true,
+  "error": null
+}

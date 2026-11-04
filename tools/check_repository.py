@@ -61,7 +61,7 @@ def allowed(name: str) -> bool:
         if p.parts[2] == 'auto_ontology_code':
             return p.suffix in {'.csv', '.sql', '.json'}
         if p.parts[2] == 'live':
-            return p.suffix in {'.md', '.py', '.sh', '.json', '.txt', '.log', '.sql', '.patch'} or p.name in {'.gitignore', 'ingestion_keyed.compile_marker'}
+            return p.suffix in {'.md', '.py', '.sh', '.json', '.yaml', '.txt', '.log', '.sql', '.patch'} or p.name in {'.gitignore', 'ingestion_keyed.compile_marker'}
     return False
 
 

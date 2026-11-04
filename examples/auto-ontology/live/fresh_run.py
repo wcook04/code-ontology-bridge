@@ -51,7 +51,7 @@ def main():
         'chat_model': 'deepseek/deepseek-v4.1-flash-1017', 'chat_endpoint': 'https://openrouter.ai/api/v1',
         'embedding_model': 'nvidia/nemotron-3-embed-1b',
         'reranking_model': 'nvidia/llama-nemotron-rerank-vl-1b-v2',
-        'protocol': 'explicit-output-v1', 'calculation_only': True, 'workers': 3,
+        'protocol': json.loads((inputs / 'contracts.json').read_text())['protocol'], 'calculation_only': True, 'workers': 3,
         'question_ids': list(range(1, 23)), 'attempts_per_question': 1,
         'custom_analyses_imported': 0,
         'input_sha256': {p.name: digest(p) for p in inputs.iterdir()},

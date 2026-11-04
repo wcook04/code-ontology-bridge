@@ -51,3 +51,20 @@ def test_placeholder_is_separate_from_correct_rows():
     gold = {'question_id': 1, 'answer_raw': '[["a",2]]'}
     result = score_record(record([{'symbol_id': 'a', 'count': 2}], 'PLACEHOLDER'), gold, contract())
     assert result['strict_rows_pass'] and not result['pass']
+
+
+def test_absolute_numeric_tolerance_and_multiplicity():
+    policy = {'fields': [{'name': 'pct', 'type': 'number'}], 'ordered': False}
+    gold = {'question_id': 1, 'answer_raw': '[[41.2]]'}
+    assert score_record(record([{'pct': 41.2000007629}]), gold, policy)['pass']
+    assert not score_record(record([{'pct': 41.200002}]), gold, policy)['pass']
+    # One broad match must not consume the only neighbor of the next row.
+    gold = {'question_id': 1, 'answer_raw': '[[1.000001], [1.0]]'}
+    assert score_record(record([{'pct': 1.0}, {'pct': 1.000002}]), gold, policy)['pass']
+    assert not score_record(record([{'pct': 1.0}]), gold, policy)['pass']
+
+
+def test_correct_rows_with_unrelated_refusal_need_review():
+    gold = {'question_id': 1, 'answer_raw': '[["a",2]]'}
+    result = score_record(record([{'symbol_id': 'a', 'count': 2}], "I’m sorry, but I can’t help with that."), gold, contract())
+    assert result['strict_rows_pass'] and not result['pass']

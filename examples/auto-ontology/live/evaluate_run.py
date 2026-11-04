@@ -1,7 +1,6 @@
 """Score one complete run by named, typed output columns; never rewrite responses."""
 from __future__ import annotations
 
-from collections import Counter
 from decimal import Decimal
 import json
 from pathlib import Path
@@ -23,8 +22,7 @@ def value_key(value, kind):
         raise ValueError('non-finite number')
     if kind == 'integer' and number != number.to_integral_value():
         raise ValueError('expected integer')
-    # Six decimal places for JSON numeric transport; no rounding to one decimal.
-    return str(number.quantize(Decimal('0.000001')))
+    return number
 
 
 def score_record(record, reference, contract):
@@ -44,11 +42,28 @@ def score_record(record, reference, contract):
         issues.append(str(error))
     want = [tuple(value_key(v, f['type']) for v, f in zip(row, fields, strict=True))
             for row in _gold_rows(reference)]
-    values = schema and Counter(got) == Counter(want)
-    order = values and (not contract.get('ordered') or got == want)
+    def equal(left, right):
+        return all(abs(a - b) <= Decimal('0.000001') if f['type'] == 'number' else a == b
+                   for a, b, f in zip(left, right, fields, strict=True))
+
+    # Perfect bipartite matching preserves duplicate multiplicity under tolerance.
+    # Greedy matching can reject overlapping numeric neighborhoods incorrectly.
+    assigned = {}
+
+    def match(index, seen):
+        for target, row in enumerate(want):
+            if target not in seen and equal(got[index], row):
+                seen.add(target)
+                if target not in assigned or match(assigned[target], seen):
+                    assigned[target] = index
+                    return True
+        return False
+
+    values = schema and len(got) == len(want) and all(match(i, set()) for i in range(len(got)))
+    order = values and (not contract.get('ordered') or all(equal(a, b) for a, b in zip(got, want)))
     prose = answer.get('response')
     prose_valid = isinstance(prose, str) and bool(prose.strip()) and not re.search(
-        r'\b(PLACEHOLDER|TODO|TBD)\b', prose, re.I)
+        r'\b(PLACEHOLDER|TODO|TBD)\b|I[’\']?m sorry,? but I (?:can[’\']?t|cannot) help', prose, re.I)
     completed = event is not None and record.get('status') == 200 and not record.get('error')
     return {'question_id': int(reference['question_id']), 'completed': completed,
             'schema_complete': schema, 'values_match': values, 'order_matches': order,
@@ -71,7 +86,7 @@ def evaluate(directory, evaluation, contracts):
     return {'protocol': policy['protocol'], 'questions': len(references),
             'strict_rows_pass': sum(r['strict_rows_pass'] for r in results),
             'pass': sum(r['pass'] for r in results), 'results': results,
-            'prose_scope': 'Nonempty and non-placeholder only; semantic prose correctness is not automatically rated.'}
+            'prose_scope': 'Nonempty, non-placeholder and no generic unrelated refusal; semantic prose correctness requires manual review.'}
 
 
 if __name__ == '__main__':
