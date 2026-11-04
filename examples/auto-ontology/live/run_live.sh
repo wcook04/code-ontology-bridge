@@ -16,8 +16,9 @@
 # from ENV_FILE into the environment of their backend and ingestion processes
 # only. The value is never printed, logged or written; this script never echoes it.
 #
-# Everything is written under examples/auto-ontology/live/: responses/, logs/,
-# cert/, .work/ (derived files, gitignored) and .pgdata/ (gitignored).
+# AO_RUN_DIR must name a new absolute output directory. Captures and the
+# disposable PostgreSQL cluster are isolated there; existing runs are never reset.
+# AO_BACKEND_PORT, AO_KEYLESS_PORT and AO_INGEST_PORT select service ports.
 set -eu
 
 HERE="$(cd "$(dirname "$0")" && pwd)"
@@ -31,22 +32,31 @@ COB="$REPO/.venv/bin/cob"
 DB1=auto_ontology        # step 2-3, 6-7: model import onto an empty store
 DB2=auto_ontology_g10    # step 4-5, 8-9: DuckDB source connected first, then import
 DB3=auto_ontology_keyed  # step 10 (only with --with-key)
-B1=http://127.0.0.1:3001
-B2=http://127.0.0.1:3011
-I2=http://127.0.0.1:3002
+BACKEND_PORT=${AO_BACKEND_PORT:-3011}
+KEYLESS_PORT=${AO_KEYLESS_PORT:-3001}
+INGEST_PORT=${AO_INGEST_PORT:-3002}
+B1=http://127.0.0.1:$KEYLESS_PORT
+B2=http://127.0.0.1:$BACKEND_PORT
+MODEL_FILE="${AO_MODEL_FILE:-$EX/auto_ontology_code.model.yaml}"
+EVALUATION_FILE="${AO_EVALUATION_FILE:-$EX/auto_ontology_code/evaluation.json}"
 KEY_FILE=""
 if [ "${1:-}" = "--with-key" ]; then KEY_FILE="${2:?--with-key needs an env file path}"; fi
 
-PGDATA="$HERE/.pgdata"
-RESP="$HERE/responses"
-LOGS="$HERE/logs"
-WORK="$HERE/.work"
-CERT="$HERE/cert"
+RUN_ROOT="${AO_RUN_DIR:?set AO_RUN_DIR to a new, absolute output directory}"
+case "$RUN_ROOT" in /*) ;; *) echo "AO_RUN_DIR must be absolute" >&2; exit 2 ;; esac
+[ ! -e "$RUN_ROOT" ] || { echo "refusing to overwrite existing AO_RUN_DIR" >&2; exit 2; }
+mkdir -p "$RUN_ROOT"
+PGDATA="$RUN_ROOT/.pgdata"
+RESP="$RUN_ROOT/responses"
+LOGS="$RUN_ROOT/logs"
+WORK="$RUN_ROOT/.work"
+CERT="$RUN_ROOT/cert"
 PIDS=""
 
 say() { printf '\n== %s\n' "$*"; }
 psql_db() { _pgdb="$1"; shift; "$PG_BIN/psql" -h 127.0.0.1 -p "$PG_PORT" -U postgres -d "$_pgdb" -v ON_ERROR_STOP=1 "$@"; }
 cap() { "$PY" "$HERE/capture.py" "$@" || true; }
+cap_required() { "$PY" "$HERE/capture.py" "$@"; }
 
 cleanup() {
   for p in $PIDS; do kill "$p" 2>/dev/null || true; done
@@ -61,7 +71,8 @@ ao_env() {
   # password is a placeholder their code requires to be set, not a secret.
   POSTGRES_HOST=127.0.0.1 POSTGRES_PORT="$PG_PORT" POSTGRES_USER=postgres \
   POSTGRES_PASSWORD=trust-auth-placeholder POSTGRES_DATABASE="$1"
-  export POSTGRES_HOST POSTGRES_PORT POSTGRES_USER POSTGRES_PASSWORD POSTGRES_DATABASE
+  INGESTION_SERVICE_URL="http://127.0.0.1:$INGEST_PORT"
+  export POSTGRES_HOST POSTGRES_PORT POSTGRES_USER POSTGRES_PASSWORD POSTGRES_DATABASE INGESTION_SERVICE_URL
 }
 
 key_env() {
@@ -98,7 +109,7 @@ start_backend() { # db port log [connection_string] ; uses the key when USE_KEY=
 
 start_ingestion() { # db log ; uses the key when USE_KEY=1
   ( cd "$CLONE" && ao_env "$1" && { [ "${USE_KEY:-0}" != 1 ] || key_env; } \
-      && CONNECTION_STRINGS="duckdb://$WORK/auto_ontology_code.duckdb" INGESTION_PORT=3002 \
+      && CONNECTION_STRINGS="duckdb://$WORK/auto_ontology_code.duckdb" INGESTION_PORT="$INGEST_PORT" \
       exec .venv/bin/python -m auto_ontology.ingestion_service ) > "$2" 2>&1 &
   PIDS="$PIDS $!"
   i=0; until grep -q "ingest: next run at" "$2" 2>/dev/null; do i=$((i+1)); [ $i -gt 600 ] && { echo "ingestion did not finish its startup pass"; tail -30 "$2"; exit 1; }; sleep 1; done
@@ -109,9 +120,9 @@ stop_started() { for p in $PIDS; do kill "$p" 2>/dev/null || true; done; sleep 3
 # ---------------------------------------------------------------------------
 say "0. setup: their venv, our DuckDB, Postgres 17 with pg_trgm + pgvector"
 [ -d "$CLONE/auto_ontology" ] || { echo "no Auto Ontology clone at $CLONE"; exit 2; }
-( cd "$CLONE" && uv sync --frozen >/dev/null )
+if [ "${AO_SKIP_SYNC:-0}" != 1 ]; then ( cd "$CLONE" && uv sync --frozen >/dev/null ); fi
 [ -f "$EX/auto_ontology_code.duckdb" ] || AUTO_ONTOLOGY_CLONE="$CLONE" sh "$EX/reproduce.sh" "$CLONE"
-rm -rf "$RESP" "$LOGS" "$CERT" "$WORK"; mkdir -p "$RESP" "$LOGS" "$CERT" "$WORK"
+mkdir -p "$RESP" "$LOGS" "$CERT" "$WORK"
 git -C "$CLONE" rev-parse HEAD > "$RESP/00_auto_ontology_commit.txt"
 git -C "$REPO" rev-parse HEAD > "$RESP/00_code_ontology_bridge_commit.txt"
 "$PG_BIN/postgres" --version > "$RESP/00_postgres_version.txt"
@@ -130,12 +141,12 @@ done
 # ---------------------------------------------------------------------------
 if [ -z "${KEYED_ONLY:-}" ]; then  # KEYED_ONLY=1 with --with-key runs only step 10
 say "1. health (store $DB1)"
-start_backend $DB1 3001 "$LOGS/backend_db1.log"
+start_backend $DB1 "$KEYLESS_PORT" "$LOGS/backend_db1.log"
 cap "$RESP/01_health.json" GET "$B1/api/health"
 
 say "2. model import, replace=false, embed=false"
 cap "$RESP/02_model_import.json" POST "$B1/api/model/import?replace=false&embed=false" \
-  --body-file "$EX/auto_ontology_code.model.yaml" --content-type application/x-yaml
+  --body-file "$MODEL_FILE" --content-type application/x-yaml
 cap "$RESP/02a_terms.json" GET "$B1/api/terms"
 TID=$("$PY" -c "import json,sys;d=json.load(open(sys.argv[1]))['response'];print([t['id'] for t in d['terms'] if t['name']=='Source file'][0])" "$RESP/02a_terms.json")
 cap "$RESP/02b_term_source_file.json" GET "$B1/api/terms/$TID"
@@ -197,25 +208,25 @@ psql_db $DB2 -f "$HERE/sql/catalog_keys.sql" > "$RESP/05c_catalog_keys_after_ing
 grep -E "Data ingestion finished|Embed auto_ontology_code|AuthenticationError" "$LOGS/ingestion_db2.log" | cut -c1-300 > "$RESP/05d_ingestion_log_excerpt.txt" || true
 
 say "4. G10: import our model onto the store where the DuckDB source is already connected"
-start_backend $DB2 3011 "$LOGS/backend_db2.log" "duckdb://$WORK/auto_ontology_code.duckdb"
+start_backend $DB2 "$BACKEND_PORT" "$LOGS/backend_db2.log" "duckdb://$WORK/auto_ontology_code.duckdb"
 cap "$RESP/04a_health_db2.json" GET "$B2/api/health"
 cap "$RESP/04b_connections_test_duckdb.json" POST "$B2/api/connections/test" --json "{\"connection\":{\"type\":\"duckdb\",\"database\":\"$WORK/auto_ontology_code.duckdb\"}}"
 cap "$RESP/04c_connections_source.json" GET "$B2/api/connections/source"
 cap "$RESP/04d_datasources_dbs_before_import.json" GET "$B2/api/datasources/dbs"
 cap "$RESP/04e_model_import_onto_connected_db.json" POST "$B2/api/model/import?replace=false&embed=false" \
-  --body-file "$EX/auto_ontology_code.model.yaml" --content-type application/x-yaml
+  --body-file "$MODEL_FILE" --content-type application/x-yaml
 grep -E "UniqueViolation|DETAIL:|model_interchange.py\", line" "$LOGS/backend_db2.log" | head -8 > "$RESP/04f_model_import_500_log_excerpt.txt" || true
 psql_db $DB2 -f "$HERE/sql/store_counts.sql" > "$RESP/04g_postgres_after_failed_import.txt"
 # Workaround test: give the catalog rows their live ids, keep cob: ids for terms.
 psql_db $DB2 -At -f "$HERE/sql/live_catalog_ids.sql" > "$WORK/live_catalog_ids.json"
-"$PY" "$HERE/remap_catalog_ids.py" "$EX/auto_ontology_code.model.yaml" "$WORK/live_catalog_ids.json" "$WORK/model_remapped_to_live_catalog.yaml" > "$RESP/04h_remap_summary.json"
+"$PY" "$HERE/remap_catalog_ids.py" "$MODEL_FILE" "$WORK/live_catalog_ids.json" "$WORK/model_remapped_to_live_catalog.yaml" > "$RESP/04h_remap_summary.json"
 cap "$RESP/04i_model_import_remapped_to_live_catalog.json" POST "$B2/api/model/import?replace=false&embed=false" \
   --body-file "$WORK/model_remapped_to_live_catalog.yaml" --content-type application/x-yaml
 psql_db $DB2 -f "$HERE/sql/store_counts.sql" > "$RESP/04j_postgres_after_remapped_import.txt"
 psql_db $DB2 -f "$HERE/sql/catalog_keys.sql" >> "$RESP/04j_postgres_after_remapped_import.txt"
 
 say "8. ask_question route with no key (plumbing only)"
-"$PY" "$HERE/ask_questions.py" "$B2" "$EX/auto_ontology_code/evaluation.json" "$RESP/08_ask_no_key" 1 || true
+"$PY" "$HERE/ask_questions.py" "$B2" "$EVALUATION_FILE" "$RESP/08_ask_no_key" 1 || true
 
 say "9. semantic compilation with no key (flag off, then on)"
 cap "$RESP/09a_semantic_compile_trigger_flag_off.json" POST "$B2/api/semantic-compilation/trigger" --json '{}'
@@ -236,33 +247,38 @@ if [ -n "$KEY_FILE" ]; then
   psql_db postgres -q -c "DROP DATABASE IF EXISTS $DB3" -c "CREATE DATABASE $DB3"
   ( cd "$CLONE" && ao_env "$DB3" && uv run --no-sync alembic upgrade head ) > "$LOGS/alembic_$DB3.log" 2>&1
   psql_db $DB3 -q -f "$HERE/sql/frontend_configurations.sql"
+  psql_db $DB3 -q -c "UPDATE frontend.configurations SET value='false' WHERE key='semantic_compilation_enabled'"
   USE_KEY=1
   start_ingestion $DB3 "$LOGS/ingestion_keyed.log"
-  start_backend $DB3 3011 "$LOGS/backend_keyed.log" "duckdb://$WORK/auto_ontology_code.duckdb"
+  start_backend $DB3 "$BACKEND_PORT" "$LOGS/backend_keyed.log" "duckdb://$WORK/auto_ontology_code.duckdb"
   USE_KEY=0
   grep -E "Data ingestion finished|Embed auto_ontology_code" "$LOGS/ingestion_keyed.log" | cut -c1-300 > "$RESP/10a_ingest_log_excerpt.txt" || true
   psql_db $DB3 -At -f "$HERE/sql/live_catalog_ids.sql" > "$WORK/live_catalog_ids_keyed.json"
-  "$PY" "$HERE/remap_catalog_ids.py" "$EX/auto_ontology_code.model.yaml" "$WORK/live_catalog_ids_keyed.json" "$WORK/model_remapped_keyed.yaml" > "$RESP/10b_remap_summary.json"
-  cap "$RESP/10c_model_import_embed_true.json" POST "$B2/api/model/import?replace=false&embed=true" \
+  "$PY" "$HERE/remap_catalog_ids.py" "$MODEL_FILE" "$WORK/live_catalog_ids_keyed.json" "$WORK/model_remapped_keyed.yaml" > "$RESP/10b_remap_summary.json"
+  cap_required "$RESP/10c_model_import_embed_true.json" POST "$B2/api/model/import?replace=false&embed=true" \
     --body-file "$WORK/model_remapped_keyed.yaml" --content-type application/x-yaml
+  psql_db $DB3 -q -f "$HERE/sql/frontend_configurations.sql"
   : > "$LOGS/ingestion_keyed.compile_marker"
-  cap "$RESP/10d_semantic_compile_trigger.json" POST "$B2/api/semantic-compilation/trigger" --json '{}'
-  i=0; until [ "$(grep -c "semantic: finished\|semantic: unhandled" "$LOGS/ingestion_keyed.log")" -ge 2 ]; do i=$((i+1)); [ $i -gt 1800 ] && break; sleep 2; done
-  cap "$RESP/10e_semantic_status.json" GET "$B2/api/semantic-compilation/status"
+  cap_required "$RESP/10d_semantic_compile_trigger.json" POST "$B2/api/semantic-compilation/trigger" --json '{}'
+  i=0; until grep -q "semantic: finished\|semantic: unhandled" "$LOGS/ingestion_keyed.log"; do
+    i=$((i+1)); [ $i -gt 450 ] && { echo "compilation did not finish within 15 minutes"; exit 5; }; sleep 2
+  done
+  grep -q "semantic: finished successfully" "$LOGS/ingestion_keyed.log" || { echo "compilation failed"; exit 5; }
+  cap_required "$RESP/10e_semantic_status.json" GET "$B2/api/semantic-compilation/status"
   cap "$RESP/10f_terms_after_compile.json" GET "$B2/api/terms"
   psql_db $DB3 -f "$HERE/sql/store_counts.sql" > "$RESP/10g_postgres_after_compile.txt"
   cap "$RESP/10h_check_answerable.json" POST "$B2/api/question-entity-coverage" --json '{"question":"Which functions call upsert_table_term?"}'
-  "$PY" "$HERE/ask_questions.py" "$B2" "$EX/auto_ontology_code/evaluation.json" "$RESP/10i_ask_with_key" ${AO_QIDS:-1 5 11 15 22} || true
+  "$PY" "$HERE/ask_questions.py" "$B2" "$EVALUATION_FILE" "$RESP/10i_ask_with_key" ${AO_QIDS:-1 5 11 15 22}
   stop_started
 fi
 
 say "replace local paths in captured evidence with placeholders"
-for f in $(grep -rlF -e "$CLONE" -e "$REPO" -e "$HOME" "$RESP" "$LOGS" "$CERT" "$HERE/evidence" 2>/dev/null); do
+for f in $(grep -rlF -e "$CLONE" -e "$REPO" -e "$HOME" "$RESP" "$LOGS" "$CERT" 2>/dev/null); do
   sed -i.bak -e "s#$CLONE#<auto-ontology>#g" -e "s#$REPO#<code-ontology-bridge>#g" -e "s#$HOME#~#g" "$f" && rm -f "$f.bak"
 done
 
 say "secret scan of everything written (counts only)"
-grep -rcE "nvapi-[A-Za-z0-9_-]{20}|sk-or-v1-[A-Za-z0-9]{20}" "$RESP" "$LOGS" "$CERT" 2>/dev/null | awk -F: '$2>0' > "$HERE/responses/99_secret_scan.txt" || true
-[ -s "$HERE/responses/99_secret_scan.txt" ] && { echo "API key string found in outputs; see responses/99_secret_scan.txt"; exit 3; }
-echo "secret scan: 0 files in responses/, logs/ or cert/ contain the NVIDIA key prefix" > "$HERE/responses/99_secret_scan.txt"
+grep -rcE "nvapi-[A-Za-z0-9_-]{20}|sk-or-v1-[A-Za-z0-9]{20}" "$RESP" "$LOGS" "$CERT" 2>/dev/null | awk -F: '$2>0' > "$RESP/99_secret_scan.txt" || true
+[ -s "$RESP/99_secret_scan.txt" ] && { echo "API key string found in outputs; see responses/99_secret_scan.txt"; exit 3; }
+echo "secret scan: 0 files in responses/, logs/ or cert/ contain the NVIDIA key prefix" > "$RESP/99_secret_scan.txt"
 say "done; evidence in $RESP"

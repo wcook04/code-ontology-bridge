@@ -1,0 +1,194 @@
+{
+  "request": {
+    "question": "What share of direct call sites could the static analysis resolve, by resolution kind?\n\nRequested output columns: resolution (string), calls (integer), pct (number).\nReturn every requested field using exactly its specified column alias. Preserve complete case-sensitive repository-relative paths and symbol IDs; do not substitute display names. Include all requested counts and provenance fields. Explain the query result in ordinary prose; do not emit placeholder text. These questions concern a static map of open-source Python code. After executing SQL, describe the returned rows and query assumptions. Questions asking which files, modules or symbols mean distinct identities, not one repeated row per matching import or call occurrence; preserve occurrence counts only when requested. Caller/callee graph questions include methods as well as standalone functions unless a symbol kind is explicitly restricted. Use files.is_test for test-file classification; test_links describe associations, not the complete set of test files. Use DOUBLE or DECIMAL, rather than single-precision REAL, for percentage calculations.\nReturn counts as well as percentages, rounded to one decimal place. Order by calls descending, then resolution ascending.",
+    "evidence": "Direct call sites have call_kind 'direct'; callback rows are references passed as arguments and are not call sites.",
+    "calculation_only": true
+  },
+  "status": 200,
+  "elapsed_s": 116.0,
+  "events": [
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "question_intent",
+      "thought": null,
+      "label": "Classifying the question"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "question_intent",
+      "thought": null,
+      "label": "Classifying the question"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "question_extraction",
+      "thought": null,
+      "label": "Understanding the question"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "question_extraction",
+      "thought": null,
+      "label": "Understanding the question"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "retrieve_candidates",
+      "thought": null,
+      "label": "Retrieving candidates"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "retrieve_candidates",
+      "thought": null,
+      "label": "Retrieving candidates"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "prepare_candidates",
+      "thought": null,
+      "label": "Preparing candidates"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "prepare_candidates",
+      "thought": "The query is an aggregate over direct call sites: it needs `call_kind` to filter `direct`, `resolution` to group, and a count/percentage derived from those same rows. `calls` alone provides all required columns. No other candidate table supplies a needed output column or an unavoidable row-scoping condition for this question.",
+      "label": "Preparing candidates"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "refine_evidence",
+      "thought": null,
+      "label": "Refining evidence"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "refine_evidence",
+      "thought": "No certain repair applies. The only grounded string literal, `code.calls.call_kind = 'direct'`, matches the verified stored value and description; no operator, constant, or representation correction is proven.",
+      "label": "Refining evidence"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "construct_sql_from_candidates",
+      "thought": null,
+      "label": "Constructing SQL"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "construct_sql_from_candidates",
+      "thought": "Filter direct call sites with call_kind = 'direct'. Group by resolution and count rows. The denominator for each percentage is the total number of direct call sites via SUM(COUNT(*)) OVER (), so pct is each resolution's share of all direct call sites. Resolution and call_kind are non-null per the schema, so no null exclusion is added; if there are no direct call sites, the grouped query returns no rows and no percentage is divided by zero. Percentages are cast to DOUBLE and rounded to one decimal place. Ties in counts are ordered by resolution ascending, matching the request.",
+      "label": "Constructing SQL"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "validate_sql_query",
+      "thought": null,
+      "label": "Validating SQL and intent"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "validate_sql_query",
+      "thought": "The SQL directly answers the question using only `code.calls`, filters to `call_kind = 'direct'`, groups by `resolution`, and computes both the count (`calls`) and percentage (`pct`). The percentage uses `DOUBLE` and `ROUND(..., 1)` as required, and the ordering matches `calls DESC, resolution ASC`. There are no joins, so no join issues apply. The aggregation is appropriate: COUNT(*) per resolution and a window SUM(COUNT(*)) for the denominator. It follows the authoritative evidence and requested output aliases.",
+      "label": "Validating SQL and intent"
+    },
+    {
+      "type": "sql",
+      "node": "validate_sql_query",
+      "sql": "SELECT c.resolution AS resolution, COUNT(*) AS calls, ROUND(CAST(COUNT(*) AS DOUBLE) * 100.0 / SUM(COUNT(*)) OVER (), 1) AS pct FROM code.calls AS c WHERE c.call_kind = 'direct' GROUP BY c.resolution ORDER BY calls DESC, resolution ASC;"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "execute_sql_query",
+      "thought": null,
+      "label": "Executing SQL"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "execute_sql_query",
+      "thought": null,
+      "label": "Executing SQL"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "check_empty_like_result",
+      "thought": null,
+      "label": "Checking results"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "check_empty_like_result",
+      "thought": null,
+      "label": "Checking results"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "check_value_repair",
+      "thought": null,
+      "label": "Checking values"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "check_value_repair",
+      "thought": null,
+      "label": "Checking values"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "format_and_respond",
+      "thought": null,
+      "label": "Formatting response"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "format_and_respond",
+      "thought": null,
+      "label": "Formatting response"
+    },
+    {
+      "type": "result",
+      "answer": {
+        "response": "thought",
+        "sql_code": "SELECT c.resolution AS resolution, COUNT(*) AS calls, ROUND(CAST(COUNT(*) AS DOUBLE) * 100.0 / SUM(COUNT(*)) OVER (), 1) AS pct FROM code.calls AS c WHERE c.call_kind = 'direct' GROUP BY c.resolution ORDER BY calls DESC, resolution ASC;",
+        "sql_columns": [
+          "1ce3f6be-30ff-4bb4-9995-834d99a527d1",
+          "a8ce424c-b369-46e1-8414-af843703ecff"
+        ],
+        "custom_analyses_used": [],
+        "sql_response_from_db": [
+          "[{\"resolution\":\"dynamic_attribute\",\"calls\":11794,\"pct\":37.8},{\"resolution\":\"external\",\"calls\":5430,\"pct\":17.4},{\"resolution\":\"imported\",\"calls\":4848,\"pct\":15.5},{\"resolution\":\"same_file\",\"calls\":4352,\"pct\":14.0},{\"resolution\":\"builtin\",\"calls\":4163,\"pct\":13.4},{\"resolution\":\"unresolved\",\"calls\":349,\"pct\":1.1},{\"resolution\":\"method_on_self\",\"calls\":242,\"pct\":0.8}]"
+        ],
+        "thoughts": "- Preparing candidates: The question asks to group direct call sites by resolution kind and compute counts and percentages. The primary column attribute being analyzed/grouped is the call resolution category, mapped to code.calls.resolution.\n- Preparing candidates: The query is an aggregate over direct call sites: it needs `call_kind` to filter `direct`, `resolution` to group, and a count/percentage derived from those same rows. `calls` alone provides all required columns. No other candidate table supplies a needed output column or an unavoidable row-scoping condition for this question.\n- Refining evidence: Reasoning...\n- Refining evidence: No certain repair applies. The only grounded string literal, `code.calls.call_kind = 'direct'`, matches the verified stored value and description; no operator, constant, or representation correction is proven.\n- Constructing SQL: Filter direct call sites with call_kind = 'direct'. Group by resolution and count rows. The denominator for each percentage is the total number of direct call sites via SUM(COUNT(*)) OVER (), so pct is each resolution's share of all direct call sites. Resolution and call_kind are non-null per the schema, so no null exclusion is added; if there are no direct call sites, the grouped query returns no rows and no percentage is divided by zero. Percentages are cast to DOUBLE and rounded to one decimal place. Ties in counts are ordered by resolution ascending, matching the request.\n- Validating SQL and intent: The SQL directly answers the question using only `code.calls`, filters to `call_kind = 'direct'`, groups by `resolution`, and computes both the count (`calls`) and percentage (`pct`). The percentage uses `DOUBLE` and `ROUND(..., 1)` as required, and the ordering matches `calls DESC, resolution ASC`. There are no joins, so no join issues apply. The aggregation is appropriate: COUNT(*) per resolution and a window SUM(COUNT(*)) for the denominator. It follows the authoritative evidence and requested output aliases."
+      }
+    }
+  ],
+  "question_id": 14,
+  "gold_sql": "SELECT resolution, COUNT(*) AS calls,\n       ROUND(100.0 * COUNT(*) / (SELECT COUNT(*) FROM code.calls WHERE call_kind = 'direct'), 1) AS pct\nFROM code.calls\nWHERE call_kind = 'direct'\nGROUP BY resolution\nORDER BY calls DESC, resolution;",
+  "gold_row_count": 7,
+  "agent_sql": "SELECT c.resolution AS resolution, COUNT(*) AS calls, ROUND(CAST(COUNT(*) AS DOUBLE) * 100.0 / SUM(COUNT(*)) OVER (), 1) AS pct FROM code.calls AS c WHERE c.call_kind = 'direct' GROUP BY c.resolution ORDER BY calls DESC, resolution ASC;",
+  "agent_answer": "thought",
+  "agent_row_count": 7,
+  "correct_rows": true,
+  "error": null
+}

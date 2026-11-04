@@ -1,28 +1,40 @@
-# Gap tracker
+# Capabilities and remaining work
 
-One row per Auto Ontology capability where this repository adds something or where running it surfaced an issue, checked against Auto Ontology at upstream `cdaf61e` (3 Nov 2026). Nothing here requires a change to Auto Ontology unless a row says so.
+The bridge exports a Python source map, imports it into Auto Ontology and lets its database agent query the resulting rows. The [fresh complete evaluation](examples/auto-ontology/live/RESULTS.md) matched 21/22 reference tables; 20 also had substantive explanations. This file tracks current limits. Earlier development observations remain in Git history.
 
-Status values:
-- **live**: run against Auto Ontology's backend on this machine (FastAPI, ingestion service, PostgreSQL 17 with pgvector); evidence in [`examples/auto-ontology/live/`](examples/auto-ontology/live/RESULTS.md);
-- **checked against their code**: a test loads Auto Ontology's own source or files and runs our output through it;
-- **tested here**: our component has tests; its link to Auto Ontology is by code reading at the cited lines;
-- **code reading**: a statement about Auto Ontology's behaviour, not executed;
-- **later**: planned.
+## Current evaluation limits
 
-| # | Capability | What Auto Ontology does today | What this repository adds | Plugs in through | Status | Evidence |
-|---|---|---|---|---|---|---|
-| G1 | Discover an ontology from sources | Sources are relational engines: a connector implements `SQLDatabase` (`auto_ontology/connectors/base.py:99`) | a code map as eight tables: files, headings, symbols, class bases, calls (direct and callback), imports, test links, snapshot | `CONNECTION_STRINGS=duckdb:///…/auto_ontology_code.duckdb` | live | ingestion catalogued 10 tables and 67 columns. Their pinned duckdb 1.5.5 cannot read files written by duckdb 2.x by default; the exporter now writes storage version v1.5.0, and a test opens the export with duckdb 1.5.5 |
-| G2 | Joins | Declared foreign keys are used as given; the LLM suggests keys only for undeclared columns (`semantic/fk_suggester.py:117-126`). The DuckDB connector reports no keys (`connectors/duckdb.py:215-219`) | keys declared in the model YAML and the dataset DDL | `POST /api/model/import` | live | ingestion alone: 0 primary and 0 foreign keys. Import onto an empty store: 8 tables with primary keys, 10 foreign keys, 10 semantic FKs. Compilation removes an imported semantic FK whose column is empty |
-| G3 | Validate queries against certified definitions | The text-to-SQL validators do not read the certified flags (`grep -rn certif auto_ontology/retrieval` finds one comment) | certification checks whose results decide the flags | existing PATCH routes | live | three planned PATCH requests sent to the internal FastAPI service returned 200 and set the flags in PostgreSQL; a deliberately failed check was withheld |
-| G4 | Certification record | Certified booleans plus `modified` and `modified_by` (`dal/schema.py:131-153`); their skill notes the fields "are not an atomic review/promotion system" (`skills/nvidia-ontology-management/references/publication.md:98`) | an append-only history per certification: check, actor, source fingerprint, commit, rollback target, stale detection | sidecar log; `cob cert-status --apply --internal [--user-id]` | live | without a user header `modified_by` stays empty; an unknown user id gets 403, so recording the actor needs an existing Auto Ontology user |
-| G5 | Provenance with answers | `DataAnswer` carries answer, sql, rows, row_count, truncated and reasoning (`mcp/auto_ontology_mcp/chat.py:46`) | the tables, columns and terms used, their certification state, and the snapshot | wraps the MCP `ask_question` result | tested here | `tests/governance`; not yet applied to a live answer (see G13) |
-| G6 | Reconcile definitions | A term name already owned by another table is qualified as `name (db.schema.table)`, as its docstring documents (`dal/terms.py:417`) | resolution in a fixed order with a stated reason per decision, and explicit ambiguity | before model import | tested here | worked examples: two "revenue" definitions; two `utils` modules |
-| G7 | Fold corrections back | Corrections are PATCH edits | certification events as the correction record; stale checks reopen them | sidecar log | later | |
-| G8 | Benchmarks | Datasets in `NVIDIA/auto-ontology-eval` (GitHub redirects `ontology-sql-eval` there) are relational | 22 code questions with reference SQL and 7 named analyses, in their dataset layout | their seed script (`scripts/seed/seed_wwi.py --database-name`) and benchmark | checked against their code | folder loaded into PostgreSQL in their seed order; DuckDB and PostgreSQL return the same rows for every reference query. Their benchmark itself not run |
-| G9 | Identity through import | Import keeps the YAML id as `imported_id` and assigns a new UUID | an id map for certification requests; a possible request: return `imported_id` in responses | `--id-map` | live | `imported_id` stored on every imported row; it appears in 0 response bodies |
-| G10 | Connect a source and import its model | `catalog_database.name` is unique (`dal/schema.py:183`) and import inserts without conflict handling (`dal/model_interchange.py:830-840`) | import onto a store where that database is not yet connected, or remap the YAML's catalog ids to the live ones | `POST /api/model/import` | live | import onto a connected database returns 500 (unique violation) and leaves the store unchanged; with remapped ids it succeeds |
-| G11 | Term origin | Imported terms are stamped `source = "semantic"`; `ModelTerm` has no `source` field (`server/model_interchange/schemas.py:107-112`) | origin carried in the `cob:<db>:` id namespace | `imported_id` | live | all 8 imported terms stored with `source = 'semantic'` |
-| G12 | Default model configuration | `.env.example` names `nvidia/nemotron-3-nano-30b-a3b` as the chat model | patch: default `nvidia/nemotron-3.5-lightning-30b-a3b` ([`upstream-fix/`](examples/auto-ontology/live/upstream-fix/README.md)) | `.env` | live | every chat call returned `410 Gone`; the model is absent from `integrate.api.nvidia.com/v1/models` |
-| G13 | Structured output on NVIDIA's public API | Nemotron 3.5 reasons before answering; on long prompts the reasoning outlasts the 120 s timeout and ChatNVIDIA falls back to `guided_json`, which the hosted API rejects | patch: reasoning switch for Nemotron, off by default; client choice by setting so any OpenAI-compatible endpoint can serve a role | their code | live | before: `guided_json` rejected 113 times, compilation 663 s, one question unfinished at 45 min. After: compilation 32 s, 0 structured-output errors in compilation; with DeepSeek V4.1 Flash all 22 questions answer |
-| G14 | Reporting compilation failures | Semantic compilation reports success per database | none needed; report upstream | their code | live | "10 table(s) compiled … finished successfully" with 24 structured-output errors in the same log |
-| G15 | Answering questions about a code ontology | The intent step sends questions that read like catalog questions ("Which functions does X call?", "What does the semantic module do?") to the information agent; the chat API offers no way to send them to SQL | patch: expose the agent's existing `calculation_only` on `ChatRequest` | `POST /api/chat/completions` | live | default routing: 17 of 22 right content, 5 routed away. With `calculation_only` on those 5, 4 right. Total 21 of 22 (`examples/auto-ontology/live/RESULTS.md`) |
+| Issue | Evidence | Remaining work |
+| --- | --- | --- |
+| Package-name ambiguity | [Q2](examples/auto-ontology/live/current/responses/10i_ask_with_key/ask_q2.json) matches two packages with `%semantic%`, where the reference identifies one. | Better grounding of informal names to complete package identities; evaluate on independent questions. |
+| Prose can still be a stub | [Q14](examples/auto-ontology/live/current/responses/10i_ask_with_key/ask_q14.json) has correct rows but only “thought” as its explanation. | Response validation must examine substance; a finite placeholder list is insufficient. The [review](examples/auto-ontology/live/current/review.json) records this miss. |
+| Development-set evidence | Questions, hints and output guidance informed implementation. | Freeze a held-out set, add another repository and compare semantic context with schema-only querying. No general accuracy advantage has been measured. |
+| Upstream benchmark not run | Exports and compatibility tests use NVIDIA's dataset contracts. | The full schema-only versus semantic-layer benchmark remains separate from the live demonstration. |
+
+The final run is retained as collected. Its score is not raised by selecting earlier answers or by changing references after evaluation.
+
+## Source-analysis limits
+
+The extractor is static. It misses dynamic calls, omits module-level calls from the call table, and records callback references without proving they execute. Only 9,442 of 31,178 direct call sites in the example resolve to an internal symbol. The 349 rows labelled `unresolved` are a residual category, not all unresolved behavior: 11,794 more are dynamic attribute calls. Test links are associations based on imports and filenames, not coverage. Missing descriptions stay empty.
+
+Repeated qualified definitions now receive line-qualified IDs, preserving property getter/setter ownership; ambiguous targets remain unresolved. See the [extractor](code_ontology_bridge/codemap/) and [tests](tests/codemap/). This repair does not make static resolution complete for arbitrary Python programs.
+
+## Data and model integration
+
+The [DuckDB exporter](code_ontology_bridge/export/duckdb_export.py) writes a storage format accepted by the pinned upstream connector. The model supplies table descriptions, terms, attributes and keys; the [dataset tests](tests/export/test_dataset.py) compare reference queries across DuckDB and PostgreSQL. A model import supplies metadata, while an ingested database supplies queryable rows.
+
+The live runner remaps model catalog IDs to existing server IDs before import and waits for compilation after ingestion/import. These fix the demonstrated startup path. Re-import and metadata refresh across changing source snapshots still need separate validation. The upstream DuckDB connector does not itself expose all declared key metadata. Imported term provenance uses the bridge ID namespace and snapshot metadata rather than a dedicated upstream source field.
+
+## Governance boundaries
+
+The [governance commands](docs/governance.md) are local additions with local tests. Certification records a check and plans updates to existing flags; it does not force the agent to query only certified definitions. A reference-query check proves row agreement, not the truth of descriptive text. Source freshness is checked when a command runs; no watcher keeps server flags synchronized automatically.
+
+Revoking a column-attribute certification now preserves the parent term ID so the planner can clear the server flag when given the live ID map. That repair has a regression test; the fresh question evaluation makes no new live certification claim. SQL annotation infers candidate references after generation, rather than recording retrieval provenance. Definition reconciliation is deterministic but does not judge semantic equivalence.
+
+## Upstream compatibility
+
+The [twelve-file patch](examples/auto-ontology/live/upstream-fix/README.md) covers public-client selection, Nemotron thinking controls, SQL-route forwarding and literal placeholder rejection. Its scoped validation passed 611 upstream tests, lint and format checks. It is a local patch against a pinned revision, not an accepted upstream change.
+
+**G14 remains open:** compilation-success accounting can conceal structured-output failures. A completed scheduler job is not a content-quality check. The patch does not repair that accounting. The tested public routes also do not establish compatibility with NVIDIA's internal gateway or every model provider.
+
+The whole upstream test suite and held-out evaluation remain unrun. Local tests, clean installation and hosted CI are recorded in the [reproduction guide](docs/reproduction.md#validation).

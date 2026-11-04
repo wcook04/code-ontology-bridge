@@ -1,25 +1,73 @@
-# Patch for NVIDIA Auto Ontology: public API models and code questions
+# Public model APIs and SQL routing
 
-With this patch, Auto Ontology's own agent runs through public model APIs and answers 21 of 22 questions about Auto Ontology's source code with the right content; unpatched, through NVIDIA's public API, it answered none.
+This local patch lets the pinned Auto Ontology service use configurable public model clients and exposes its existing SQL-only route through the chat API. The [fresh complete run](../RESULTS.md) used DeepSeek v4.1 Flash through OpenRouter with NVIDIA embeddings and reranking: 21/22 matching tables, 20/22 with substantive prose. This is an integration observation, without a controlled estimate of the patch's effect on accuracy.
 
-`public-api-nemotron.patch` applies to [NVIDIA/auto-ontology](https://github.com/NVIDIA/auto-ontology) at `cdaf61e` (`git apply public-api-nemotron.patch`). It changes 9 files. With it applied, `ruff check`, `ruff format --check` and `pytest auto_ontology/utils auto_ontology/server/chat` pass (178 tests), and `dev_tools.generate_backend_openapi` has been rerun.
+The [patch](public-api-nemotron.patch) contains twelve file diffs, including tests and generated OpenAPI. It adds no code-specific connector or query engine.
 
-It does four things.
+| Change | Purpose |
+| --- | --- |
+| Explicit OpenAI/NVIDIA client selection per role | Use public OpenAI-compatible endpoints without relying only on model-name prefixes. |
+| Nemotron thinking control and updated example default | Control reasoning on the tested ChatNVIDIA route; the fresh run sets its DeepSeek model explicitly. |
+| Structured tool choice for `anthropic/` names | Preserve LangChain tool choice on that OpenAI-compatible route; the internal-gateway path was not tested. |
+| `calculation_only` chat field and worker forwarding | Select the existing SQL pipeline for questions whose answers are code-map rows. |
+| Existing placeholder validator extended | Reject literal `test`, `TODO`, `PLACEHOLDER`, `TBD` and `N/A` through existing bounded validation retries. |
 
-1. **Current default model.** `.env.example` and `auto_ontology/utils/model_config.py` named `nvidia/nemotron-3-nano-30b-a3b`, which `integrate.api.nvidia.com` no longer serves (`410 Gone`). The default becomes `nvidia/nemotron-3.5-lightning-30b-a3b`.
+The placeholder check is incomplete: the fresh Q14 response was “thought”. Its rows pass, but manual review rejects its prose. No reference SQL or answers are supplied to the retry mechanism.
 
-2. **Nemotron reasoning switch.** Nemotron 3.5 reasons before it answers. On long prompts under `response_format` the reasoning outlasts `LLM_INVOKE_TIMEOUT_S` (120 s); ChatNVIDIA then falls back to `guided_json`, which the hosted API rejects (`unknown field guided_json`). `_build_client` now sends `chat_template_kwargs.enable_thinking` for `nvidia/nemotron*` models, off by default, with `REASONING_ENABLE_THINKING` and `NON_REASONING_ENABLE_THINKING` to turn it on.
+## Configuration
 
-3. **Client choice by setting.** `_build_client` chose `ChatOpenAI` only for `openai/`, `azure/` and `aws/` model names. `REASONING_CLIENT`, `NON_REASONING_CLIENT` and `DEFAULT_MODELS_CLIENT` (`openai` or `nvidia`, through the existing `resolve()`) now override that, so any OpenAI-compatible endpoint, such as a model router, can serve a role. For Claude through such a route (`anthropic/` model names), structured output keeps LangChain's forced tool call; the `tool_choice=None` workaround stays for the `aws/` and `azure/` gateway.
+These controls are read when clients are constructed. Restart the service processes after changing their environment.
 
-4. **`calculation_only` on the chat API.** The agent already supports `calculation_only`; `ChatRequest` did not expose it. For a code map, questions such as "Which functions does X call?" read like questions about the catalog and were routed to the information agent. The flag lets a caller send them to SQL.
+| Setting | Values and default |
+|---|---|
+| `REASONING_CLIENT` | `openai` or `nvidia`; falls back to `DEFAULT_MODELS_CLIENT`, then existing model-prefix selection |
+| `NON_REASONING_CLIENT` | Same precedence for the non-reasoning role |
+| `DEFAULT_MODELS_CLIENT` | Optional shared client choice |
+| `REASONING_ENABLE_THINKING` | `1`, `true`, `yes`, or `on` enables thinking; unset defaults to false |
+| `NON_REASONING_ENABLE_THINKING` | Same behavior for the non-reasoning role |
 
-## Measured effect
+The thinking request field is added only to the ChatNVIDIA branch for Nemotron-prefixed model names. Selecting `openai` does not send that ChatNVIDIA-specific field. Unrecognized client strings fall back to the existing prefix logic.
 
-Their own agent, asked 22 questions about Auto Ontology's source code (the code map in this repository), with `deepseek/deepseek-v4.1-flash-1017` through OpenRouter and NVIDIA embeddings. The full record is in [`../RESULTS.md`](../RESULTS.md).
+For a compatible chat request, the new field is:
 
-| | Unpatched, `nemotron-3-nano` | Unpatched, `nemotron-3.5-lightning` | Patched, DeepSeek V4.1 Flash |
-|---|---|---|---|
-| Semantic compilation | model calls fail (`410`) | 663 s, 24 structured-output errors | about 30 s |
-| Questions answered | 0 of 5 | 0 of 5 (first still running at 45 min) | 22 of 22 |
-| Right content | 0 | 0 | 21 of 22 |
+```json
+{
+  "question": "Which functions call upsert_table_term?",
+  "calculation_only": true
+}
+```
+
+The default remains false. The patch does not change the MCP tool's public input schema; the recorded run used the FastAPI chat route directly.
+
+## Apply and validate
+
+The patch targets upstream commit `cdaf61e1bd0cf3820d11d72b43bb460816aebbd3`. Keep a clean source checkout for rebuilding the map and a separate patched checkout for services.
+
+From the bridge root, after cloning Auto Ontology into the sibling `auto-ontology-source` directory:
+
+```sh
+export COB_CHECKOUT="$(pwd)"
+git -C ../auto-ontology-source worktree add --detach ../auto-ontology-api \
+  cdaf61e1bd0cf3820d11d72b43bb460816aebbd3
+git -C ../auto-ontology-api apply --check \
+  "$COB_CHECKOUT/examples/auto-ontology/live/upstream-fix/public-api-nemotron.patch"
+git -C ../auto-ontology-api apply \
+  "$COB_CHECKOUT/examples/auto-ontology/live/upstream-fix/public-api-nemotron.patch"
+```
+
+From the patched Auto Ontology checkout:
+
+```sh
+uv sync --frozen
+uv run ruff check auto_ontology/
+uv run ruff format --check auto_ontology/
+uv run pytest -q auto_ontology/retrieval/text_to_sql/tests auto_ontology/server/chat auto_ontology/utils
+```
+
+The [validation receipt](validation.json) binds the patch hash to 611 passing tests, two warnings, passing lint and 433 already-formatted files. A clean pinned checkout accepted `git apply --check`. These cover the query-pipeline, chat and utility scopes; they are not the entire upstream test suite. The warnings concern deprecated `max_tokens` use and NVIDIA model-type discovery.
+
+For a live run, follow the [reproduction guide](../../../../docs/reproduction.md). The isolated driver freezes inputs, imports no saved analyses, uses the same routing for all 22 requests and retains every response. Set the chat model explicitly when using the lower-level runner.
+
+## Remaining boundaries
+
+Compiler-success accounting ([G14](../../../../GAPS.md#upstream-compatibility)), model-import reconciliation and certification policy are outside this patch. Passing tests and one successful live setup do not establish provider-independent behavior. No NVIDIA outreach or upstream acceptance is implied.

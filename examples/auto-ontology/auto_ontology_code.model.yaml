@@ -103,7 +103,8 @@ data_layer:
           is_unique: false
       - id: cob:auto_ontology_code:table:code.files
         name: files
-        description: One row per analysed Python source file.
+        description: One row per analysed Python source file. Module and package descriptions are in files.description;
+          a package description belongs to its __init__.py row.
         pk:
         - cob:auto_ontology_code:column:code.files.file_id
         type: BASE TABLE
@@ -177,7 +178,9 @@ data_layer:
           is_unique: false
       - id: cob:auto_ontology_code:table:code.headings
         name: headings
-        description: Fixed headings and contract atoms found in module docstrings, verbatim.
+        description: Optional fixed sections and contract atoms from module docstrings only. This table
+          can be empty even when ordinary module and function docstrings exist. Function docstrings are
+          in symbols.summary, not this table.
         pk:
         - cob:auto_ontology_code:column:code.headings.file_id
         - cob:auto_ontology_code:column:code.headings.ordinal
@@ -213,7 +216,8 @@ data_layer:
           is_unique: false
       - id: cob:auto_ontology_code:table:code.symbols
         name: symbols
-        description: Functions, methods and classes defined in the analysed files.
+        description: Functions, methods and classes, their definition locations and extracted docstring
+          summaries. Use this table for function definitions and function docstring questions.
         pk:
         - cob:auto_ontology_code:column:code.symbols.symbol_id
         type: BASE TABLE
@@ -279,8 +283,9 @@ data_layer:
           is_unique: false
         - id: cob:auto_ontology_code:column:code.symbols.summary
           name: summary
-          description: Verbatim first paragraph (or Teleology atom) of the symbol's docstring; empty when
-            absent.
+          description: First paragraph (or Teleology atom) of this function, method or class docstring,
+            with whitespace normalized; empty when absent. This is the function documentation, unlike
+            optional module headings.
           type: VARCHAR
           sample_values: []
           is_nullable: false
@@ -683,7 +688,8 @@ semantic_layer:
       column_id: cob:auto_ontology_code:column:code.snapshot.known_limits
   - id: cob:auto_ontology_code:term:files
     name: Source file
-    description: One row per analysed Python source file.
+    description: One row per analysed Python source file. Module and package descriptions are in files.description;
+      a package description belongs to its __init__.py row.
     represents:
     - cob:auto_ontology_code:table:code.files
     columns_attributes:
@@ -727,7 +733,9 @@ semantic_layer:
       column_id: cob:auto_ontology_code:column:code.files.has_fixed_headings
   - id: cob:auto_ontology_code:term:headings
     name: Docstring heading
-    description: Fixed headings and contract atoms found in module docstrings, verbatim.
+    description: Optional fixed sections and contract atoms from module docstrings only. This table can
+      be empty even when ordinary module and function docstrings exist. Function docstrings are in symbols.summary,
+      not this table.
     represents:
     - cob:auto_ontology_code:table:code.headings
     columns_attributes:
@@ -745,7 +753,8 @@ semantic_layer:
       column_id: cob:auto_ontology_code:column:code.headings.ordinal
   - id: cob:auto_ontology_code:term:symbols
     name: Code symbol
-    description: Functions, methods and classes defined in the analysed files.
+    description: Functions, methods and classes, their definition locations and extracted docstring summaries.
+      Use this table for function definitions and function docstring questions.
     represents:
     - cob:auto_ontology_code:table:code.symbols
     columns_attributes:
@@ -779,8 +788,9 @@ semantic_layer:
       column_id: cob:auto_ontology_code:column:code.symbols.is_public
     - id: cob:auto_ontology_code:attribute:code.symbols.summary
       name: summary
-      description: Verbatim first paragraph (or Teleology atom) of the symbol's docstring; empty when
-        absent.
+      description: First paragraph (or Teleology atom) of this function, method or class docstring, with
+        whitespace normalized; empty when absent. This is the function documentation, unlike optional
+        module headings.
       column_id: cob:auto_ontology_code:column:code.symbols.summary
     - id: cob:auto_ontology_code:attribute:code.symbols.summary_source
       name: summary source
@@ -909,105 +919,5 @@ semantic_layer:
     table: []
     sql: []
     bridge_table: []
-  custom_analyses:
-  - id: cob:auto_ontology_code:analysis:blast_radius_of_a_symbol
-    name: Blast radius of a symbol
-    description: Every symbol that reaches a given symbol through resolved calls, directly or indirectly,
-      with the shortest call depth (up to 6). Calls include callback references, where a function is passed
-      to another call such as asyncio.to_thread(f, x). Replace the target name to analyse another symbol;
-      tests are included so the affected tests are listed too.
-    sql: "WITH RECURSIVE impact(symbol_id, depth) AS (\n  SELECT c.caller_symbol_id, 1\n  FROM code.calls\
-      \ c\n  JOIN code.symbols t ON t.symbol_id = c.callee_symbol_id\n  WHERE t.name = 'resolve_semantic_fks'\n\
-      \  UNION\n  SELECT c.caller_symbol_id, i.depth + 1\n  FROM code.calls c\n  JOIN impact i ON c.callee_symbol_id\
-      \ = i.symbol_id\n  WHERE i.depth < 6\n)\nSELECT i.symbol_id, s.file_id, f.is_test, MIN(i.depth)\
-      \ AS depth\nFROM impact i\nJOIN code.symbols s ON s.symbol_id = i.symbol_id\nJOIN code.files f ON\
-      \ f.file_id = s.file_id\nGROUP BY i.symbol_id, s.file_id, f.is_test\nORDER BY depth, i.symbol_id"
-    sql_column_is: []
-  - id: cob:auto_ontology_code:analysis:untested_public_api
-    name: Untested public API
-    description: 'Public functions, methods and classes in non-test files that no test file links to,
-      by import or by file name. Static links only: a test that reaches the file indirectly is not counted.'
-    sql: 'SELECT u.file_id, u.symbol_id, u.kind
-
-      FROM code.untested_public_symbols u
-
-      ORDER BY u.file_id, u.symbol_id'
-    sql_column_is: []
-  - id: cob:auto_ontology_code:analysis:most_called_functions
-    name: Most-called functions
-    description: Symbols outside the tests ranked by the number of resolved direct call sites that target
-      them, with the number of callback references (the symbol passed by reference to another call) and
-      of distinct callers. Unresolved calls are not counted.
-    sql: 'SELECT v.symbol_id, v.kind, v.inbound_calls, v.callback_references, v.distinct_callers
-
-      FROM code.inbound_call_counts v
-
-      JOIN code.files f ON f.file_id = v.file_id
-
-      WHERE NOT f.is_test AND v.inbound_calls > 0
-
-      ORDER BY v.inbound_calls DESC, v.symbol_id
-
-      LIMIT 50'
-    sql_column_is: []
-  - id: cob:auto_ontology_code:analysis:undocumented_modules
-    name: Undocumented modules
-    description: Non-test Python files whose module docstring is missing, so their description is empty
-      and its source is none.
-    sql: 'SELECT file_id, module, line_count
-
-      FROM code.files
-
-      WHERE description_source = ''none'' AND NOT is_test
-
-      ORDER BY line_count DESC, file_id'
-    sql_column_is: []
-  - id: cob:auto_ontology_code:analysis:package_documentation_coverage
-    name: Package documentation coverage
-    description: Per package, the number of non-test files and the share whose module docstring gives
-      a description.
-    sql: "SELECT package,\n       COUNT(*) AS files,\n       SUM(CASE WHEN description_source <> 'none'\
-      \ THEN 1 ELSE 0 END) AS described,\n       ROUND(100.0 * SUM(CASE WHEN description_source <> 'none'\
-      \ THEN 1 ELSE 0 END) / COUNT(*), 1) AS pct_described\nFROM code.files\nWHERE NOT is_test\nGROUP\
-      \ BY package\nORDER BY package"
-    sql_column_is: []
-  - id: cob:auto_ontology_code:analysis:import_fan_in_by_file
-    name: Import fan-in by file
-    description: Non-test files ranked by how many other files import them; a change to a file near the
-      top touches the most importers.
-    sql: 'SELECT i.imported_file_id AS file_id, COUNT(DISTINCT i.file_id) AS importers
-
-      FROM code.imports i
-
-      JOIN code.files f ON f.file_id = i.imported_file_id
-
-      WHERE NOT f.is_test AND i.file_id <> i.imported_file_id
-
-      GROUP BY i.imported_file_id
-
-      ORDER BY importers DESC, file_id
-
-      LIMIT 50'
-    sql_column_is: []
-  - id: cob:auto_ontology_code:analysis:unresolved_call_names
-    name: Unresolved call names
-    description: 'Callee names most often left unresolved outside the tests: calls that are not internal,
-      not a builtin, not rooted in an external import and not a method on an untyped object (callbacks,
-      parameters, local callables). A guide to where the call graph is genuinely incomplete.'
-    sql: 'SELECT c.callee_name, COUNT(*) AS call_sites
-
-      FROM code.calls c
-
-      JOIN code.symbols s ON s.symbol_id = c.caller_symbol_id
-
-      JOIN code.files f ON f.file_id = s.file_id
-
-      WHERE c.resolution = ''unresolved'' AND NOT f.is_test
-
-      GROUP BY c.callee_name
-
-      ORDER BY call_sites DESC, c.callee_name
-
-      LIMIT 50'
-    sql_column_is: []
+  custom_analyses: []
 zones: []

@@ -1,0 +1,24 @@
+# Contributing
+
+Use Python 3.12 and install the locked environment with `uv sync --locked`.
+
+```sh
+uv run pytest -q -ra
+uv run python tools/check_repository.py
+```
+
+The layout check validates Git-tracked and nonignored candidate files, documentation links and required reader routes. `--index` checks staged contents for use before a commit. CI runs the local suite and layout check; optional tests still need the pinned upstream checkout and generated database described in [reproduction](docs/reproduction.md).
+
+## Where changes belong
+
+- Runtime behavior belongs in `code_ontology_bridge/`, with tests in `tests/`.
+- Authored questions and reference SQL belong in `eval/`. The example dataset is their generated projection.
+- Guides belong in `docs/`; keep the root README focused on understanding and trying the project.
+- Repository maintenance commands belong in `tools/`.
+- Live replay tools, compatibility patches and the current run evidence remain together under `examples/auto-ontology/live/`.
+
+Do not rewrite a saved response, score or log to make a new interpretation agree with it. Explain revised judgments in `RESULTS.md` and preserve the original scoring. Earlier captures may leave the current tree after their replacements are retained and links repaired; their original commits remain the historical record. New experiments need separate capture directories and their own source, configuration and scoring details. Never commit model credentials or local environment files.
+
+`docs/case-study.md` is the paper source. Run `sh tools/build_paper.sh` with Pandoc and Tectonic installed to refresh `docs/case-study.pdf`, then inspect its pages. The build uses Pandoc's article template and adapts the typography and margins of the returned paper draft.
+
+Known behavior gaps belong in [GAPS.md](GAPS.md), with an implementation pointer and reproducible evidence. Keep source-analysis limitations separate from failures in the upstream service or the experiment's scoring.

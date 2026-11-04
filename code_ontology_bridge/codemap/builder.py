@@ -153,7 +153,7 @@ def build_code_map(
             summary, summary_source = docstrings.symbol_summary(sym.docstring)
             symbol_rows.append(
                 {
-                    "symbol_id": ctx.symbols[sym.qualname],
+                    "symbol_id": ctx.definition_ids[(sym.qualname, sym.line_start)],
                     "file_id": ctx.file_id,
                     "name": sym.name,
                     "qualname": sym.qualname,
@@ -168,7 +168,7 @@ def build_code_map(
             for ordinal, (base_name, parts) in enumerate(sym.base_exprs, start=1):
                 base_rows.append(
                     {
-                        "class_symbol_id": ctx.symbols[sym.qualname],
+                        "class_symbol_id": ctx.definition_ids[(sym.qualname, sym.line_start)],
                         "ordinal": ordinal,
                         "base_name": base_name,
                         "base_symbol_id": index.resolve_base(ctx, parts),
@@ -186,7 +186,7 @@ def build_code_map(
             call_rows.append(
                 {
                     "call_id": f"{ctx.file_id}:{call.line}:{call.col}:{seq}",
-                    "caller_symbol_id": ctx.symbols[call.caller],
+                    "caller_symbol_id": ctx.definition_ids[(call.caller, call.caller_line)],
                     "callee_symbol_id": res.callee_symbol_id,
                     "callee_name": call.callee_text,
                     "line": call.line,
@@ -226,6 +226,9 @@ def build_code_map(
 
     known_limits = list(STATIC_KNOWN_LIMITS)
     known_limits.append(f"Calls at module level, outside any function or class, are not recorded ({module_level_calls} in this snapshot).")
+    repeated = sum(len(c.definition_ids) - len(c.symbols) for c in contexts)
+    if repeated:
+        known_limits.append(f"{repeated} definitions share a qualified name. Their IDs include @L<definition-line>; ambiguous call targets are not resolved.")
     if index.ambiguous_modules:
         known_limits.append(
             f"{len(index.ambiguous_modules)} module names are shared by several files (e.g. top-level test modules); imports of those names are not resolved."

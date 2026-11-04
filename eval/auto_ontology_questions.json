@@ -71,7 +71,7 @@
   },
   {
     "question_id": 11,
-    "question": "What would be affected if resolve_semantic_fks changed? List every function that calls it directly or indirectly, with the shortest call depth, outside the tests.",
+    "question": "What would be affected if resolve_semantic_fks changed? List every resolved caller symbol, including standalone functions, methods and class-scope callers, reached directly or indirectly, with the shortest call depth, outside the tests.",
     "evidence": "Follow resolved calls backwards from the callee to its callers, recursively. Calls include callback references (call_kind 'callback'), where a function is passed to another call such as asyncio.to_thread(f, x). Overridden methods called through a base class (self._run_once() in a base class) are not followed to the subclass.",
     "SQL": "WITH RECURSIVE impact(symbol_id, depth) AS (\n  SELECT c.caller_symbol_id, 1\n  FROM code.calls c\n  JOIN code.symbols t ON t.symbol_id = c.callee_symbol_id\n  WHERE t.name = 'resolve_semantic_fks'\n  UNION\n  SELECT c.caller_symbol_id, i.depth + 1\n  FROM code.calls c\n  JOIN impact i ON c.callee_symbol_id = i.symbol_id\n  WHERE i.depth < 6\n)\nSELECT i.symbol_id, MIN(i.depth) AS depth\nFROM impact i\nJOIN code.symbols s ON s.symbol_id = i.symbol_id\nJOIN code.files f ON f.file_id = s.file_id\nWHERE NOT f.is_test\nGROUP BY i.symbol_id\nORDER BY depth, i.symbol_id;",
     "difficulty": "challenging"

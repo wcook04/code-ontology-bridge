@@ -366,3 +366,17 @@ def test_cli_apply_never_prints_the_token(tmp_path, src_root):
     payload = json.loads(proc.stdout)
     assert payload["mode"] == "applied"
     assert sorted(r["status"] for r in payload["applied"]) == [200, 404]
+
+
+def test_revoked_column_attribute_keeps_parent_route(tmp_path, src_root):
+    log = cert.EventLog(tmp_path / 'events.jsonl')
+    target = {**term_target(), 'target_kind': 'column_attribute',
+              'target_imported_id': 'attr', 'parent_term_imported_id': 'term',
+              'field': 'certified'}
+    event = cert.certify(log, target, root=src_root, actor='test')
+    cert.revoke(log, event['event_id'], actor='test', reason='withdrawn')
+    state = cert.status(log.read(), src_root)
+    plan = cert.plan_patches(state, {'attr': 'live-attr', 'term': 'live-term'})
+    assert plan['requests'][0]['ready']
+    assert plan['requests'][0]['path'] == '/api/terms/live-term/column-attributes/live-attr'
+    assert plan['requests'][0]['json'] == {'certified': False}

@@ -1,0 +1,245 @@
+{
+  "request": {
+    "question": "Which packages have the highest share of public symbols without a docstring? Consider packages with at least 20 public symbols outside the tests and give the top five.\n\nRequested output columns: package (string), public_symbols (integer), undocumented (integer), pct_undocumented (number).\nReturn every requested field using exactly its specified column alias. Preserve complete case-sensitive repository-relative paths and symbol IDs; do not substitute display names. Include all requested counts and provenance fields. Explain the query result in ordinary prose; do not emit placeholder text. These questions concern a static map of open-source Python code. After executing SQL, describe the returned rows and query assumptions. Questions asking which files, modules or symbols mean distinct identities, not one repeated row per matching import or call occurrence; preserve occurrence counts only when requested. Caller/callee graph questions include methods as well as standalone functions unless a symbol kind is explicitly restricted. Use files.is_test for test-file classification; test_links describe associations, not the complete set of test files. Use DOUBLE or DECIMAL, rather than single-precision REAL, for percentage calculations.\nReturn total public symbols, the undocumented count, and the undocumented percentage rounded to one decimal place. Order by pct_undocumented descending, then package ascending.",
+    "evidence": "summary_source is 'none' when a symbol has no docstring.",
+    "calculation_only": true
+  },
+  "status": 200,
+  "elapsed_s": 123.2,
+  "events": [
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "question_intent",
+      "thought": null,
+      "label": "Classifying the question"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "question_intent",
+      "thought": null,
+      "label": "Classifying the question"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "question_extraction",
+      "thought": null,
+      "label": "Understanding the question"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "question_extraction",
+      "thought": null,
+      "label": "Understanding the question"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "retrieve_candidates",
+      "thought": null,
+      "label": "Retrieving candidates"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "retrieve_candidates",
+      "thought": null,
+      "label": "Retrieving candidates"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "prepare_candidates",
+      "thought": null,
+      "label": "Preparing candidates"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "prepare_candidates",
+      "thought": "The query needs public-symbol counts and docstring presence from `code.symbols`, joined to `code.files` to exclude test files and to obtain the package/path grouping. No other candidate table supplies a column used in the select, filters, grouping, or ordering, nor is any other table required as a join bridge between `symbols` and `files`.",
+      "label": "Preparing candidates"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "refine_evidence",
+      "thought": null,
+      "label": "Refining evidence"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "refine_evidence",
+      "thought": "No certain repair applies; the evidence already matches the question’s value representations and predicates.",
+      "label": "Refining evidence"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "construct_sql_from_candidates",
+      "thought": null,
+      "label": "Constructing SQL"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "construct_sql_from_candidates",
+      "thought": "I join symbols to files by file_id, because the package and test-file classifications live in files. I treat public symbols as rows where is_public is true, non-test files as files where is_test is false, and undocumented symbols as rows whose summary_source is exactly 'none'. I group by files.package, the dotted package name, and exclude the empty package value because the schema uses empty for top-level modules rather than packages. The percentage is calculated with DOUBLE arithmetic as undocumented divided by public_symbols times 100 and rounded to one decimal; the HAVING count of at least 20 guarantees the denominator is nonzero. Ties in pct_undocumented are broken by package ascending, and the result is limited to five packages.",
+      "label": "Constructing SQL"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "validate_sql_query",
+      "thought": null,
+      "label": "Validating SQL and intent"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "validate_sql_query",
+      "thought": "The SQL correctly joins symbols to files, filters public symbols in non-test files, counts undocumented symbols via summary_source = 'none', calculates the percentage with DOUBLE precision rounded to one decimal, applies the >=20 threshold, and orders/limits as requested.",
+      "label": "Validating SQL and intent"
+    },
+    {
+      "type": "sql",
+      "node": "validate_sql_query",
+      "sql": "SELECT f.package AS package, COUNT(*) AS public_symbols, CAST(SUM(CASE WHEN s.summary_source = 'none' THEN 1 ELSE 0 END) AS INTEGER) AS undocumented, ROUND(100.0 * CAST(SUM(CASE WHEN s.summary_source = 'none' THEN 1 ELSE 0 END) AS DOUBLE) / CAST(COUNT(*) AS DOUBLE), 1) AS pct_undocumented FROM symbols AS s JOIN files AS f ON s.file_id = f.file_id WHERE s.is_public = TRUE AND f.is_test = FALSE AND f.package <> '' GROUP BY f.package HAVING COUNT(*) >= 20 ORDER BY pct_undocumented DESC, package ASC LIMIT 5;"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "execute_sql_query",
+      "thought": null,
+      "label": "Executing SQL"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "execute_sql_query",
+      "thought": "Query failed, rewriting it: Catalog Error: Table with name symbols does not exist! Did you mean \"code.symbols\"? LINE 1: ...) / CAST(COUNT(*) AS DOUBLE), 1) AS pct_undocumented FROM symbols AS s JOIN files AS f ON s.file_id = f.file_id WHERE... ^",
+      "label": "Executing SQL"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "reconstruct_sql",
+      "thought": null,
+      "label": "Reconstructing SQL"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "reconstruct_sql",
+      "thought": "The schema is under the code schema, so symbols and files must be referenced as code.symbols and code.files; that qualification change is required by the catalog error. All original assumptions remain valid: public symbols are rows where is_public is true; non-test files are rows where is_test is false; undocumented symbols are those whose summary_source is exactly 'none'; the grouping key is files.package, the dotted package name; the empty package value is excluded because it denotes top-level modules rather than a package. The percentage uses DOUBLE arithmetic as undocumented divided by public_symbols times 100, rounded to one decimal, and the HAVING clause of at least 20 guarantees a nonzero denominator. Ties in pct_undocumented are broken by package ascending, and the result is limited to five packages.",
+      "label": "Reconstructing SQL"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "validate_sql_query",
+      "thought": null,
+      "label": "Validating SQL and intent"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "validate_sql_query",
+      "thought": "The SQL joins symbols to files via the verified file_id path, filters public non-test symbols with package names, aggregates counts and a DOUBLE-based percentage rounded to one decimal, applies the HAVING >= 20 threshold, and orders/limits as requested. It matches both the question and the authoritative evidence (summary_source = 'none', files.is_test, DOUBLE percentage).",
+      "label": "Validating SQL and intent"
+    },
+    {
+      "type": "sql",
+      "node": "validate_sql_query",
+      "sql": "SELECT f.package AS package, COUNT(*) AS public_symbols, CAST(SUM(CASE WHEN s.summary_source = 'none' THEN 1 ELSE 0 END) AS INTEGER) AS undocumented, ROUND(100.0 * CAST(SUM(CASE WHEN s.summary_source = 'none' THEN 1 ELSE 0 END) AS DOUBLE) / CAST(COUNT(*) AS DOUBLE), 1) AS pct_undocumented FROM code.symbols AS s JOIN code.files AS f ON s.file_id = f.file_id WHERE s.is_public = TRUE AND f.is_test = FALSE AND f.package <> '' GROUP BY f.package HAVING COUNT(*) >= 20 ORDER BY pct_undocumented DESC, package ASC LIMIT 5;"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "execute_sql_query",
+      "thought": null,
+      "label": "Executing SQL"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "execute_sql_query",
+      "thought": null,
+      "label": "Executing SQL"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "check_empty_like_result",
+      "thought": null,
+      "label": "Checking results"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "check_empty_like_result",
+      "thought": null,
+      "label": "Checking results"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "check_value_repair",
+      "thought": null,
+      "label": "Checking values"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "check_value_repair",
+      "thought": null,
+      "label": "Checking values"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "format_and_respond",
+      "thought": null,
+      "label": "Formatting response"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "format_and_respond",
+      "thought": null,
+      "label": "Formatting response"
+    },
+    {
+      "type": "result",
+      "answer": {
+        "response": "The corrected query returns the five packages with the largest share of public symbols lacking a docstring among packages with at least 20 such symbols in non-test files.",
+        "sql_code": "SELECT f.package AS package, COUNT(*) AS public_symbols, CAST(SUM(CASE WHEN s.summary_source = 'none' THEN 1 ELSE 0 END) AS INTEGER) AS undocumented, ROUND(100.0 * CAST(SUM(CASE WHEN s.summary_source = 'none' THEN 1 ELSE 0 END) AS DOUBLE) / CAST(COUNT(*) AS DOUBLE), 1) AS pct_undocumented FROM code.symbols AS s JOIN code.files AS f ON s.file_id = f.file_id WHERE s.is_public = TRUE AND f.is_test = FALSE AND f.package <> '' GROUP BY f.package HAVING COUNT(*) >= 20 ORDER BY pct_undocumented DESC, package ASC LIMIT 5;",
+        "sql_columns": [
+          "87d58d1a-2f75-426f-84a7-5cf922bae7d1",
+          "f9ea6632-d4c7-4bbd-a592-70ca80b26f6d",
+          "e0adba80-b26d-4f3c-b8be-3137ca43273e",
+          "5c25446c-6a95-4098-8755-0fd355af05f3",
+          "3de16395-569d-432b-a02b-ab55f3f35335",
+          "0678ddc2-e8e2-414c-925e-29955257f48c"
+        ],
+        "custom_analyses_used": [],
+        "sql_response_from_db": [
+          "[{\"package\":\"auto_ontology.catalog.model\",\"public_symbols\":47,\"undocumented\":43,\"pct_undocumented\":91.5},{\"package\":\"dev_tools.fixtures\",\"public_symbols\":25,\"undocumented\":14,\"pct_undocumented\":56.0},{\"package\":\"auto_ontology.server.model_interchange\",\"public_symbols\":34,\"undocumented\":14,\"pct_undocumented\":41.2},{\"package\":\"auto_ontology.connectors\",\"public_symbols\":162,\"undocumented\":58,\"pct_undocumented\":35.8},{\"package\":\"auto_ontology.retrieval.text_to_sql.agents\",\"public_symbols\":104,\"undocumented\":35,\"pct_undocumented\":33.7}]"
+        ],
+        "thoughts": "- Preparing candidates: The question centers on identifying symbols without docstrings. The schema attribute that directly encodes this is code.symbols.summary_source, where 'none' indicates no docstring; other attributes support filtering/grouping but are not the primary subject.\n- Preparing candidates: The query needs public-symbol counts and docstring presence from `code.symbols`, joined to `code.files` to exclude test files and to obtain the package/path grouping. No other candidate table supplies a column used in the select, filters, grouping, or ordering, nor is any other table required as a join bridge between `symbols` and `files`.\n- Refining evidence: Grounded the evidence-defined concept for symbols lacking docstrings to the physical summary_source column with the value 'none'. Grounded the test-file classification concept to files.is_test with the question's 'outside' condition as false. Left all unrelated wording, computed column names, ordering, and type guidance unchanged.\n- Refining evidence: No certain repair applies; the evidence already matches the question’s value representations and predicates.\n- Constructing SQL: I join symbols to files by file_id, because the package and test-file classifications live in files. I treat public symbols as rows where is_public is true, non-test files as files where is_test is false, and undocumented symbols as rows whose summary_source is exactly 'none'. I group by files.package, the dotted package name, and exclude the empty package value because the schema uses empty for top-level modules rather than packages. The percentage is calculated with DOUBLE arithmetic as undocumented divided by public_symbols times 100 and rounded to one decimal; the HAVING count of at least 20 guarantees the denominator is nonzero. Ties in pct_undocumented are broken by package ascending, and the result is limited to five packages.\n- Validating SQL and intent: The SQL correctly joins symbols to files, filters public symbols in non-test files, counts undocumented symbols via summary_source = 'none', calculates the percentage with DOUBLE precision rounded to one decimal, applies the >=20 threshold, and orders/limits as requested.\n- Executing SQL: Query failed, rewriting it: Catalog Error: Table with name symbols does not exist! Did you mean \"code.symbols\"? LINE 1: ...) / CAST(COUNT(*) AS DOUBLE), 1) AS pct_undocumented FROM symbols AS s JOIN files AS f ON s.file_id = f.file_id WHERE... ^\n- Reconstructing SQL: The failure is a pure catalog/schema-qualification error: the tables exist but must be referenced as `code.symbols` and `code.files`. The columns needed (symbols.summary_source, symbols.is_public, files.is_test, files.package, and the symbols.file_id = files.file_id join) are all present, so a simple rewrite with schema-qualified table names fixes it. No new data is required.\n- Reconstructing SQL: The schema is under the code schema, so symbols and files must be referenced as code.symbols and code.files; that qualification change is required by the catalog error. All original assumptions remain valid: public symbols are rows where is_public is true; non-test files are rows where is_test is false; undocumented symbols are those whose summary_source is exactly 'none'; the grouping key is files.package, the dotted package name; the empty package value is excluded because it denotes top-level modules rather than a package. The percentage uses DOUBLE arithmetic as undocumented divided by public_symbols times 100, rounded to one decimal, and the HAVING clause of at least 20 guarantees a nonzero denominator. Ties in pct_undocumented are broken by package ascending, and the result is limited to five packages.\n- Validating SQL and intent: The SQL joins symbols to files via the verified file_id path, filters public non-test symbols with package names, aggregates counts and a DOUBLE-based percentage rounded to one decimal, applies the HAVING >= 20 threshold, and orders/limits as requested. It matches both the question and the authoritative evidence (summary_source = 'none', files.is_test, DOUBLE percentage)."
+      }
+    }
+  ],
+  "question_id": 18,
+  "gold_sql": "SELECT f.package,\n       COUNT(*) AS public_symbols,\n       SUM(CASE WHEN s.summary_source = 'none' THEN 1 ELSE 0 END) AS undocumented,\n       ROUND(100.0 * SUM(CASE WHEN s.summary_source = 'none' THEN 1 ELSE 0 END) / COUNT(*), 1) AS pct_undocumented\nFROM code.symbols s\nJOIN code.files f ON f.file_id = s.file_id\nWHERE s.is_public AND NOT f.is_test\nGROUP BY f.package\nHAVING COUNT(*) >= 20\nORDER BY pct_undocumented DESC, f.package\nLIMIT 5;",
+  "gold_row_count": 5,
+  "agent_sql": "SELECT f.package AS package, COUNT(*) AS public_symbols, CAST(SUM(CASE WHEN s.summary_source = 'none' THEN 1 ELSE 0 END) AS INTEGER) AS undocumented, ROUND(100.0 * CAST(SUM(CASE WHEN s.summary_source = 'none' THEN 1 ELSE 0 END) AS DOUBLE) / CAST(COUNT(*) AS DOUBLE), 1) AS pct_undocumented FROM code.symbols AS s JOIN code.files AS f ON s.file_id = f.file_id WHERE s.is_public = TRUE AND f.is_test = FALSE AND f.package <> '' GROUP BY f.package HAVING COUNT(*) >= 20 ORDER BY pct_undocumented DESC, package ASC LIMIT 5;",
+  "agent_answer": "The corrected query returns the five packages with the largest share of public symbols lacking a docstring among packages with at least 20 such symbols in non-test files.",
+  "agent_row_count": 5,
+  "correct_rows": true,
+  "error": null
+}

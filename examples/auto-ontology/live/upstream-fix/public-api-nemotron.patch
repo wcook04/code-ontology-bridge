@@ -24,6 +24,115 @@ index c292a73..96517f5 100644
  
  # Embedding model. Set explicitly: unset fields would fall back to the
  # DEFAULT_MODELS_ chat model above. Ingest and query must use the same one.
+diff --git a/auto_ontology/retrieval/text_to_sql/models.py b/auto_ontology/retrieval/text_to_sql/models.py
+index 777b358..dfca1eb 100644
+--- a/auto_ontology/retrieval/text_to_sql/models.py
++++ b/auto_ontology/retrieval/text_to_sql/models.py
+@@ -248,7 +248,7 @@ class SQLGenerationModel(StrictModel):
+             "User-facing summary in plain English (2-4 sentences): describe what "
+             "is being calculated, which tables and columns are used, any filters "
+             "or time windows applied, and the grouping/ordering. Refer to tables "
+-            "and columns by their human-readable names. "
++            "and columns by their human-readable names. Never use a placeholder such as test or TODO. "
+             "Do NOT include SQL and code fences "
+             "identifiers like 'schema.table', reasoning, self-corrections, "
+             "formatting notes, or internal thoughts."
+@@ -260,6 +260,11 @@ class SQLGenerationModel(StrictModel):
+     def reject_placeholder_strings(cls, v: str, info) -> str:
+         """Block LLM stubs like literal '...' that satisfy min length but are not valid output."""
+         t = (v or "").strip()
++        if t.casefold().strip(" .!?") in {"placeholder", "todo", "tbd", "test", "n/a"}:
++            raise ValueError(
++                f"{info.field_name!r} must be real content, not a literal placeholder. "
++                "sql_code must be executable SQL; response must explain the query."
++            )
+         if t in ("...", "…", "..", ".") or (
+             len(t) <= 3 and not t.isalnum() and set(t) <= {".", "…", " "}
+         ):
+diff --git a/auto_ontology/retrieval/text_to_sql/tests/test_prediction_override.py b/auto_ontology/retrieval/text_to_sql/tests/test_prediction_override.py
+index 32aec71..3fe29a9 100644
+--- a/auto_ontology/retrieval/text_to_sql/tests/test_prediction_override.py
++++ b/auto_ontology/retrieval/text_to_sql/tests/test_prediction_override.py
+@@ -151,8 +151,8 @@ def test_worker_submit_passes_prediction_through() -> None:
+     worker.submit("q", prediction=True)
+     worker.submit("q2")
+ 
+-    assert sent[0][1] == ("q", True, None, None, [], None)
+-    assert sent[1][1] == ("q2", None, None, None, [], None)
++    assert sent[0][1] == ("q", True, None, None, [], None, False)
++    assert sent[1][1] == ("q2", None, None, None, [], None, False)
+ 
+ 
+ def test_worker_submit_accepts_every_field_by_keyword() -> None:
+@@ -170,6 +170,7 @@ def test_worker_submit_accepts_every_field_by_keyword() -> None:
+         target_db="analytics",
+         subject_token="jwt",
+         evidence="authoritative",
++        calculation_only=True,
+     )
+ 
+     assert sent[0][1] == (
+@@ -179,6 +180,7 @@ def test_worker_submit_accepts_every_field_by_keyword() -> None:
+         "jwt",
+         [],
+         "authoritative",
++        True,
+     )
+ 
+ 
+@@ -192,7 +194,16 @@ def test_worker_payload_unpacks_as_the_loop_expects() -> None:
+ 
+     worker.submit("q", prediction=True, target_db="db", subject_token="tok")
+ 
+-    question, prediction, target_db, subject_token, history, evidence = sent[0][1]
++    (
++        question,
++        prediction,
++        target_db,
++        subject_token,
++        history,
++        evidence,
++        calculation_only,
++    ) = sent[0][1]
+     assert (question, prediction, target_db, subject_token) == ("q", True, "db", "tok")
+     assert history == []
+     assert evidence is None
++    assert calculation_only is False
+diff --git a/auto_ontology/retrieval/text_to_sql/tests/test_sql_from_semantic.py b/auto_ontology/retrieval/text_to_sql/tests/test_sql_from_semantic.py
+index 4b2bc20..63290bb 100644
+--- a/auto_ontology/retrieval/text_to_sql/tests/test_sql_from_semantic.py
++++ b/auto_ontology/retrieval/text_to_sql/tests/test_sql_from_semantic.py
+@@ -6,6 +6,9 @@
+ 
+ from __future__ import annotations
+ 
++import pytest
++from pydantic import ValidationError
++
+ from auto_ontology.retrieval.text_to_sql.agents import sql_from_semantic
+ from auto_ontology.retrieval.text_to_sql.agents.sql_from_semantic import (
+     SQLFromCandidatesAgent,
+@@ -273,3 +276,20 @@ def test_the_sql_tool_description_does_not_ask_for_the_models_reasoning() -> Non
+ 
+     assert "reasoning" not in description.lower()
+     assert "drain" not in description.lower()
++
++
++@pytest.mark.parametrize("stub", ["test", "Test.", "PLACEHOLDER", "TODO", "TBD", "N/A"])
++def test_sql_generation_rejects_literal_response_stubs(stub: str) -> None:
++    with pytest.raises(ValidationError, match="literal placeholder"):
++        SQLGenerationModel(
++            thought="No assumptions needed.", sql_code="SELECT 1", response=stub
++        )
++
++
++def test_sql_generation_accepts_explanations_about_tests() -> None:
++    result = SQLGenerationModel(
++        thought="No assumptions needed.",
++        sql_code="SELECT 1",
++        response="This lists test files linked to the requested source module.",
++    )
++    assert result.response.startswith("This lists test files")
 diff --git a/auto_ontology/server/chat/helpers.py b/auto_ontology/server/chat/helpers.py
 index e229916..d851895 100644
 --- a/auto_ontology/server/chat/helpers.py

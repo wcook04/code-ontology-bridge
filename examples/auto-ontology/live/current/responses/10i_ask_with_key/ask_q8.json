@@ -1,0 +1,200 @@
+{
+  "request": {
+    "question": "Which ten non-test functions or methods are called from the most call sites in non-test code?\n\nRequested output columns: symbol_id (string), call_sites (integer).\nReturn every requested field using exactly its specified column alias. Preserve complete case-sensitive repository-relative paths and symbol IDs; do not substitute display names. Include all requested counts and provenance fields. Explain the query result in ordinary prose; do not emit placeholder text. These questions concern a static map of open-source Python code. After executing SQL, describe the returned rows and query assumptions. Questions asking which files, modules or symbols mean distinct identities, not one repeated row per matching import or call occurrence; preserve occurrence counts only when requested. Caller/callee graph questions include methods as well as standalone functions unless a symbol kind is explicitly restricted. Use files.is_test for test-file classification; test_links describe associations, not the complete set of test files. Use DOUBLE or DECIMAL, rather than single-precision REAL, for percentage calculations.\nReturn both the symbol ID and its direct call-site count. Order by call_sites descending, then symbol_id ascending.",
+    "evidence": "Count resolved direct call sites (call_kind 'direct') whose caller and callee are both outside test files. Ties are broken by symbol id.",
+    "calculation_only": true
+  },
+  "status": 200,
+  "elapsed_s": 196.6,
+  "events": [
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "question_intent",
+      "thought": null,
+      "label": "Classifying the question"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "question_intent",
+      "thought": null,
+      "label": "Classifying the question"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "question_extraction",
+      "thought": null,
+      "label": "Understanding the question"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "question_extraction",
+      "thought": null,
+      "label": "Understanding the question"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "retrieve_candidates",
+      "thought": null,
+      "label": "Retrieving candidates"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "retrieve_candidates",
+      "thought": null,
+      "label": "Retrieving candidates"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "prepare_candidates",
+      "thought": null,
+      "label": "Preparing candidates"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "prepare_candidates",
+      "thought": "The query needs non-test caller files, direct call rows, and callee definitions filtered to function/method in non-test files. That requires calls joined to symbols and files; aggregate inbound_call_counts is not sufficient because it does not expose caller test status or exact direct-call rows.",
+      "label": "Preparing candidates"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "refine_evidence",
+      "thought": null,
+      "label": "Refining evidence"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "refine_evidence",
+      "thought": "No repairs are certain from the supplied evidence. The question's key grounded values, including call_kind 'direct' and the requested aliases, match the provided descriptions. No string-representation, constant-value, or predicate-operator correction is proven necessary.",
+      "label": "Refining evidence"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "construct_sql_from_candidates",
+      "thought": null,
+      "label": "Constructing SQL"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "construct_sql_from_candidates",
+      "thought": "The authoritative evidence requires counting resolved direct call sites with call_kind 'direct' where both caller and callee are outside test files. I map caller and callee to symbols, then to files, and use files.is_test = FALSE for both sides. Resolved calls are enforced by the inner joins through callee_symbol_id and caller_symbol_id to symbols. The callee is restricted to kind 'function' or 'method' because the question asks for functions or methods, while caller kind is unrestricted because the request only says 'non-test code.' COUNT(*) counts each direct call row as one call site, with no DISTINCT because the evidence asks for a count of call sites, not unique callers or unique callees per caller. Ties are broken by symbol_id ascending, and the final result is limited to ten rows as requested.",
+      "label": "Constructing SQL"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "validate_sql_query",
+      "thought": null,
+      "label": "Validating SQL and intent"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "validate_sql_query",
+      "thought": "The SQL counts direct call rows grouped by callee symbol, requiring both callee and caller files to be non-test and callee kind to be function/method, ordered by count desc then symbol_id asc with limit 10 — matching the question and evidence instructions. Joins follow the verified path calls→symbols→files and a valid FK for the caller side.",
+      "label": "Validating SQL and intent"
+    },
+    {
+      "type": "sql",
+      "node": "validate_sql_query",
+      "sql": "SELECT callee.symbol_id AS symbol_id, CAST(COUNT(*) AS INTEGER) AS call_sites FROM auto_ontology_code.code.calls AS c JOIN auto_ontology_code.code.symbols AS callee ON c.callee_symbol_id = callee.symbol_id JOIN auto_ontology_code.code.files AS callee_file ON callee.file_id = callee_file.file_id JOIN auto_ontology_code.code.symbols AS caller ON c.caller_symbol_id = caller.symbol_id JOIN auto_ontology_code.code.files AS caller_file ON caller.file_id = caller_file.file_id WHERE c.call_kind = 'direct' AND callee_file.is_test = FALSE AND caller_file.is_test = FALSE AND callee.kind IN ('function', 'method') GROUP BY callee.symbol_id ORDER BY call_sites DESC, symbol_id ASC LIMIT 10;"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "execute_sql_query",
+      "thought": null,
+      "label": "Executing SQL"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "execute_sql_query",
+      "thought": null,
+      "label": "Executing SQL"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "check_empty_like_result",
+      "thought": null,
+      "label": "Checking results"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "check_empty_like_result",
+      "thought": null,
+      "label": "Checking results"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "check_value_repair",
+      "thought": null,
+      "label": "Checking values"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "check_value_repair",
+      "thought": null,
+      "label": "Checking values"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "format_and_respond",
+      "thought": null,
+      "label": "Formatting response"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "format_and_respond",
+      "thought": null,
+      "label": "Formatting response"
+    },
+    {
+      "type": "result",
+      "answer": {
+        "response": "This query ranks the ten non-test functions or methods that are invoked by the most direct call sites in non-test code. It counts direct call rows where both the caller and the callee live in files not marked as tests, restricts callees to functions and methods, groups by callee symbol ID, and orders by the call-site count descending with symbol ID ascending as the tie-breaker.",
+        "sql_code": "SELECT callee.symbol_id AS symbol_id, CAST(COUNT(*) AS INTEGER) AS call_sites FROM auto_ontology_code.code.calls AS c JOIN auto_ontology_code.code.symbols AS callee ON c.callee_symbol_id = callee.symbol_id JOIN auto_ontology_code.code.files AS callee_file ON callee.file_id = callee_file.file_id JOIN auto_ontology_code.code.symbols AS caller ON c.caller_symbol_id = caller.symbol_id JOIN auto_ontology_code.code.files AS caller_file ON caller.file_id = caller_file.file_id WHERE c.call_kind = 'direct' AND callee_file.is_test = FALSE AND caller_file.is_test = FALSE AND callee.kind IN ('function', 'method') GROUP BY callee.symbol_id ORDER BY call_sites DESC, symbol_id ASC LIMIT 10;",
+        "sql_columns": [
+          "5c25446c-6a95-4098-8755-0fd355af05f3",
+          "23972eb9-0777-46e4-8c81-88123801d435",
+          "0678ddc2-e8e2-414c-925e-29955257f48c",
+          "a51c4ed5-1fd8-44e3-9040-01672f76bf12",
+          "ad200330-e8f7-4dd3-8689-43e753158a8d",
+          "87d58d1a-2f75-426f-84a7-5cf922bae7d1",
+          "a8ce424c-b369-46e1-8414-af843703ecff",
+          "41c58e50-9c82-4690-97ba-5e9df2bed1d9"
+        ],
+        "custom_analyses_used": [],
+        "sql_response_from_db": [
+          "[{\"symbol_id\":\"auto_ontology\\/dal\\/session.py::store\",\"call_sites\":312},{\"symbol_id\":\"auto_ontology\\/connectors\\/connection_string_factory.py::_enc\",\"call_sites\":38},{\"symbol_id\":\"auto_ontology\\/dal\\/session.py::write_transaction\",\"call_sites\":32},{\"symbol_id\":\"auto_ontology\\/retrieval\\/text_to_sql\\/agents\\/information_tools.py::_error\",\"call_sites\":32},{\"symbol_id\":\"auto_ontology\\/connectors\\/connection_string_factory.py::_require\",\"call_sites\":30},{\"symbol_id\":\"auto_ontology\\/utils\\/llm_invoke.py::invoke_with_structured_output\",\"call_sites\":29},{\"symbol_id\":\"auto_ontology\\/retrieval\\/kumo\\/graph_cache.py::_term\",\"call_sites\":25},{\"symbol_id\":\"auto_ontology\\/dal\\/users.py::resolve_accessible_catalog_ids\",\"call_sites\":24},{\"symbol_id\":\"auto_ontology\\/retrieval\\/text_to_sql\\/base.py::agent_wrapper\",\"call_sites\":21},{\"symbol_id\":\"auto_ontology\\/retrieval\\/text_to_sql\\/text_to_sql_graph.py::_make_node\",\"call_sites\":18}]"
+        ],
+        "thoughts": "- Preparing candidates: The question asks for top symbols by direct call-site count and requires returning symbol_id; the primary subject is the symbol identifier in the inbound call-count context.\n- Preparing candidates: The query needs non-test caller files, direct call rows, and callee definitions filtered to function/method in non-test files. That requires calls joined to symbols and files; aggregate inbound_call_counts is not sufficient because it does not expose caller test status or exact direct-call rows.\n- Refining evidence: No repairs are certain from the supplied evidence. The question's key grounded values, including call_kind 'direct' and the requested aliases, match the provided descriptions. No string-representation, constant-value, or predicate-operator correction is proven necessary.\n- Constructing SQL: The authoritative evidence requires counting resolved direct call sites with call_kind 'direct' where both caller and callee are outside test files. I map caller and callee to symbols, then to files, and use files.is_test = FALSE for both sides. Resolved calls are enforced by the inner joins through callee_symbol_id and caller_symbol_id to symbols. The callee is restricted to kind 'function' or 'method' because the question asks for functions or methods, while caller kind is unrestricted because the request only says 'non-test code.' COUNT(*) counts each direct call row as one call site, with no DISTINCT because the evidence asks for a count of call sites, not unique callers or unique callees per caller. Ties are broken by symbol_id ascending, and the final result is limited to ten rows as requested.\n- Validating SQL and intent: The SQL counts direct call rows grouped by callee symbol, requiring both callee and caller files to be non-test and callee kind to be function/method, ordered by count desc then symbol_id asc with limit 10 — matching the question and evidence instructions. Joins follow the verified path calls→symbols→files and a valid FK for the caller side."
+      }
+    }
+  ],
+  "question_id": 8,
+  "gold_sql": "SELECT s.symbol_id, COUNT(*) AS call_sites\nFROM code.calls c\nJOIN code.symbols s ON s.symbol_id = c.callee_symbol_id\nJOIN code.files f ON f.file_id = s.file_id\nJOIN code.symbols cs ON cs.symbol_id = c.caller_symbol_id\nJOIN code.files cf ON cf.file_id = cs.file_id\nWHERE c.call_kind = 'direct'\n  AND s.kind IN ('function', 'method')\n  AND NOT f.is_test AND NOT cf.is_test\nGROUP BY s.symbol_id\nORDER BY call_sites DESC, s.symbol_id\nLIMIT 10;",
+  "gold_row_count": 10,
+  "agent_sql": "SELECT callee.symbol_id AS symbol_id, CAST(COUNT(*) AS INTEGER) AS call_sites FROM auto_ontology_code.code.calls AS c JOIN auto_ontology_code.code.symbols AS callee ON c.callee_symbol_id = callee.symbol_id JOIN auto_ontology_code.code.files AS callee_file ON callee.file_id = callee_file.file_id JOIN auto_ontology_code.code.symbols AS caller ON c.caller_symbol_id = caller.symbol_id JOIN auto_ontology_code.code.files AS caller_file ON caller.file_id = caller_file.file_id WHERE c.call_kind = 'direct' AND callee_file.is_test = FALSE AND caller_file.is_test = FALSE AND callee.kind IN ('function', 'method') GROUP BY callee.symbol_id ORDER BY call_sites DESC, symbol_id ASC LIMIT 10;",
+  "agent_answer": "This query ranks the ten non-test functions or methods that are invoked by the most direct call sites in non-test code. It counts direct call rows where both the caller and the callee live in files not marked as tests, restricts callees to functions and methods, groups by callee symbol ID, and orders by the call-site count descending with symbol ID ascending as the tie-breaker.",
+  "agent_row_count": 10,
+  "correct_rows": true,
+  "error": null
+}
