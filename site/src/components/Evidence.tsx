@@ -133,13 +133,9 @@ export function AssessmentBlock({ assessment, score, finding }: { assessment: As
       </div>
       {finding ? (
         <div className="assess__finding">
-          <p className="assess__head">The author’s finding</p>
-          <p>
-            <strong>Rows:</strong> {finding.reason}
-          </p>
-          <p>
-            <strong>Prose:</strong> {finding.prose}
-          </p>
+          <p className="assess__head">What the author found</p>
+          <p>{finding.reason}</p>
+          {finding.prose && !/^(pass|fail|unknown|substantive)$/.test(finding.prose) ? <p>About the written answer: {finding.prose}</p> : null}
         </div>
       ) : null}
     </div>

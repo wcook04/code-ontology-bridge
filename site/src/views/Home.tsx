@@ -457,7 +457,7 @@ function OutcomesTeaser() {
                       <span className="cases__status">
                         <TableStatus value={q.assessment.table_match} /> <ProseStatus value={q.assessment.prose_review} />
                       </span>
-                      <span className="small">{q.question_id === 2 ? q.review_finding?.reason : q.review_finding?.prose ?? q.review_finding?.reason}</span>
+                      <span className="small">{q.review_finding?.reason}</span>
                     </li>
                   ) : null,
                 )}
