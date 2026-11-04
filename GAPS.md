@@ -37,4 +37,4 @@ The [twelve-file patch](examples/auto-ontology/live/upstream-fix/README.md) cove
 
 **G14 remains open:** compilation-success accounting can conceal structured-output failures. A completed scheduler job is not a content-quality check. The patch does not repair that accounting. The tested public routes also do not establish compatibility with NVIDIA's internal gateway or every model provider.
 
-The whole upstream test suite, held-out evaluation and hosted CI for this branch are separate from the local checks recorded here.
+The whole upstream test suite and held-out evaluation remain unrun. Local tests, clean installation and hosted CI are recorded in the [reproduction guide](docs/reproduction.md#validation).

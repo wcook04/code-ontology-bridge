@@ -14,10 +14,10 @@ Auto Ontology's agent generated recursive SQL over the extracted call relationsh
 
 | Caller | Depth |
 | --- | ---: |
-| `_run_semantic_compilation` | 1 |
-| `run_semantic_compilation` | 2 |
-| `SemanticScheduler._run_once` | 3 |
-| `main` | 3 |
+| _run_semantic_compilation | 1 |
+| run_semantic_compilation | 2 |
+| SemanticScheduler._run_once | 3 |
+| main | 3 |
 
 The scheduler passes `run_semantic_compilation` to `asyncio.to_thread`. Recording that callback reference lets the SQL traversal reach the scheduler as well as ordinary callers. You can inspect the [question, generated SQL and returned rows](examples/auto-ontology/live/current/responses/10i_ask_with_key/ask_q11.json).
 
@@ -56,7 +56,7 @@ This is a development-set demonstration: the questions, hints and output require
 Extraction and export use no model API. Install [uv](https://docs.astral.sh/uv/) and use Python 3.12:
 
 ```sh
-git clone https://github.com/wcook04/code-ontology-bridge.git
+git clone --branch codex/clarify-repository https://github.com/wcook04/code-ontology-bridge.git
 cd code-ontology-bridge
 uv sync --locked
 mkdir -p build

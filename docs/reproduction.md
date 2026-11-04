@@ -9,7 +9,7 @@ Use Python 3.12 and uv. The repository pins Python 3.12 because its optional Pos
 Run this in a disposable checkout: `reproduce.sh` writes the tracked example exports. It uses the upstream checkout's actual contents and revision; it does not enforce the revision below for you.
 
 ```sh
-git clone https://github.com/wcook04/code-ontology-bridge.git
+git clone --branch codex/clarify-repository https://github.com/wcook04/code-ontology-bridge.git
 git clone https://github.com/NVIDIA/auto-ontology.git auto-ontology-source
 git -C auto-ontology-source checkout --detach cdaf61e1bd0cf3820d11d72b43bb460816aebbd3
 cd code-ontology-bridge
@@ -69,3 +69,17 @@ uv run python examples/auto-ontology/live/evaluate_run.py \
 ```
 
 This reproduces the original automatic 21/22 score. The separate review records Q14's prose failure. The upstream schema-only versus semantic-layer benchmark remains a separate, unrun experiment.
+
+
+## Validation
+
+The closeout checks on 4 November 2026 passed:
+
+- **80 bridge tests** with the pinned upstream checkout and generated example database available.
+- **65 tests in a fresh isolated clone**, with 15 integration tests explicitly skipped because that clone lacked the optional upstream checkout and generated DuckDB file.
+- **611 scoped upstream tests**, plus lint, formatting and clean patch application; see the [patch receipt](../examples/auto-ontology/live/upstream-fix/validation.json).
+- Wheel installation in a separate environment, then extraction, DuckDB export and model export from outside the source checkout.
+- Source/wheel package inspection, working-tree and staged layout checks, local Markdown links, captured-artifact hashes, and credential/private-path scans.
+- Visual inspection of all three PDF pages and the published GitHub README at desktop and phone widths.
+
+[Hosted CI passed for the closeout commit](https://github.com/wcook04/code-ontology-bridge/actions/runs/41825926632). It runs the default suite, staged layout check and package build; optional integration coverage is supplied by the local run above. The current documentation is published on `codex/clarify-repository`; the clone commands select that branch explicitly.
