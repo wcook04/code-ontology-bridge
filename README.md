@@ -16,7 +16,7 @@ Auto Ontology's agent generated recursive SQL over the extracted call relationsh
 | --- | ---: |
 | _run_semantic_compilation | 1 |
 | run_semantic_compilation | 2 |
-| SemanticScheduler.<wbr>_run_once | 3 |
+| SemanticScheduler.<br>_run_once | 3 |
 | main | 3 |
 
 The scheduler passes `run_semantic_compilation` to `asyncio.to_thread`. Recording that callback reference lets the SQL traversal reach the scheduler as well as ordinary callers. You can inspect the [question, generated SQL and returned rows](examples/auto-ontology/live/current/responses/10i_ask_with_key/ask_q11.json).
