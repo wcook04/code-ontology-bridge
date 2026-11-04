@@ -1,6 +1,6 @@
 import { defineConfig, loadEnv, type Plugin } from "vite";
 import react from "@vitejs/plugin-react";
-import { createReadStream, existsSync, statSync, writeFileSync } from "node:fs";
+import { copyFileSync, createReadStream, existsSync, mkdirSync, statSync, writeFileSync } from "node:fs";
 import { resolve, normalize, sep } from "node:path";
 import { execSync } from "node:child_process";
 
@@ -22,6 +22,15 @@ function localData(dir: string): Plugin {
   const serve = (server: { middlewares: { use: (fn: (req: any, res: any, next: () => void) => void) => void } }) => {
     server.middlewares.use((req, res, next) => {
       const path = req.url?.split("?", 1)[0] ?? "";
+      if (path === "/experiment/summary.json") {
+        const summary = resolve("../examples/auto-ontology/live/experiment/summary.json");
+        if (!existsSync(summary)) {
+          res.statusCode = 404;
+          return res.end("No comparison results yet");
+        }
+        res.setHeader("Content-Type", "application/json");
+        return createReadStream(summary).pipe(res);
+      }
       const match = path.match(/^\/data\/(.+)$/);
       if (!match) return next();
       const file = normalize(resolve(root, decodeURIComponent(match[1])));
@@ -39,6 +48,12 @@ function localData(dir: string): Plugin {
     configurePreviewServer: serve,
     closeBundle() {
       writeFileSync(resolve("dist", ".nojekyll"), "");
+      // The comparison results, written by tools/summarise_experiment.py, ship beside the pages.
+      const summary = resolve("../examples/auto-ontology/live/experiment/summary.json");
+      if (existsSync(summary)) {
+        mkdirSync(resolve("dist", "experiment"), { recursive: true });
+        copyFileSync(summary, resolve("dist", "experiment", "summary.json"));
+      }
     },
   };
 }

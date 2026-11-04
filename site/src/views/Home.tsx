@@ -7,6 +7,7 @@ import type { AnswerStep, ModelStep, Outcomes, RecordsStep, RequestStep, SourceS
 import { useRoute } from "../data/useRoute";
 import { CallerGraph, type Selection } from "../components/CallerGraph";
 import { SystemDiagram } from "../components/SystemDiagram";
+import { HeadlineResult } from "../components/HeadlineResult";
 import { Term } from "../components/Term";
 import { CopyButton, Excerpt, Gate, Out, ProseStatus, RowsTable, TableStatus } from "../components/parts";
 import { RunConfig } from "../components/RunConfig";
@@ -61,6 +62,7 @@ function Hero() {
         <p className="recorded">
           This website shows one recorded run: Auto Ontology was asked 22 questions about its own source code. Nothing here runs live.
         </p>
+        <HeadlineResult />
         <Stages />
         <p className="headline-result">
           In the recorded example, following direct calls finds three of the four functions that reach{" "}

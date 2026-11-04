@@ -16,6 +16,7 @@ export type Route =
   | { view: "outcomes"; params: URLSearchParams }
   | { view: "question"; id: number }
   | { view: "source"; span: string }
+  | { view: "comparison" }
   | { view: "missing"; hash: string };
 
 export interface EntryState {
@@ -42,6 +43,7 @@ export function parse(hash: string): Route {
   if (parts[0] === "walkthrough" && parts.length === 2) return { view: "home", step: decode(parts[1]) };
   if (parts[0] === "outcomes" && parts.length === 1) return { view: "outcomes", params: new URLSearchParams(query) };
   if (parts[0] === "questions" && parts.length === 2 && /^\d+$/.test(parts[1])) return { view: "question", id: Number(parts[1]) };
+  if (parts[0] === "comparison" && parts.length === 1) return { view: "comparison" };
   if (parts[0] === "source" && parts.length >= 2) return { view: "source", span: decode(parts.slice(1).join("/")) };
   return { view: "missing", hash };
 }
@@ -58,6 +60,8 @@ export function href(route: Route): string {
       return `#/questions/${route.id}`;
     case "source":
       return `#/source/${encodeURIComponent(route.span)}`;
+    case "comparison":
+      return "#/comparison";
     case "missing":
       return route.hash;
   }
