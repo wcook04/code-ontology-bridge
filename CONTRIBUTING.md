@@ -26,3 +26,12 @@ The [figure briefs](docs/figures/README.md) record source references, relationsh
 Known behavior gaps belong in [GAPS.md](GAPS.md), with an implementation pointer and reproducible evidence. Keep source-analysis limitations separate from failures in the upstream service or the experiment's scoring.
 
 The [inspection backend](docs/inspection-api.md) lives in `code_ontology_bridge/inspection/`, with tests in `tests/inspection/`. Its bundles are generated outputs under ignored `build/`, not a new evidence authority. Keep its table definitions derived from `codemap/schema.py`; preserve exact saved requests and separate automatic scores from manual review. Changes to its API must update the contract, guide and HTTP tests together. No HTTP route may execute supplied SQL, start model jobs or select a host path.
+
+Publication cases belong beside the example's replay tools, outside frozen
+`live/current/`. Their captions are editorial; source/model/question references
+are validated by `inspection/publication.py`. Keep generated publication assets
+in ignored `build/`. Do not replace a missing historical model payload with a
+new export or interpret missing review findings as success. A partial terms
+readback is not a full compiled model. Tests must validate real JSON responses
+against OpenAPI and exercise cycle edges at the depth boundary, parallel call
+occurrences, caps and traversal through excluded test symbols.

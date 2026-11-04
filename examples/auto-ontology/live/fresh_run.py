@@ -44,6 +44,7 @@ def main():
     checks += list((HERE / 'sql').glob('*.sql'))
     patch = subprocess.check_output(['git', '-C', str(upstream), 'diff', '--binary'])
     (inputs / 'upstream.patch').write_bytes(patch)
+    from code_ontology_bridge.inspection.bundle import database_digest
     manifest = {
         'started_at': time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime()),
         'bridge_commit': subprocess.check_output(['git', '-C', str(ROOT), 'rev-parse', 'HEAD'], text=True).strip(),
@@ -56,6 +57,8 @@ def main():
         'custom_analyses_imported': 0,
         'input_sha256': {p.name: digest(p) for p in inputs.iterdir()},
         'runner_sha256': {str(p.relative_to(ROOT)): digest(p) for p in checks},
+        'dataset_sha256': database_digest(ROOT / 'examples/auto-ontology/auto_ontology_code.duckdb'),
+        'dataset_digest_algorithm': 'cob_typed_tables_v1',
         'source_database_sha256': digest(ROOT / 'examples/auto-ontology/auto_ontology_code.duckdb'),
     }
     write(job / 'manifest.json', manifest)

@@ -82,11 +82,22 @@ def cmd_inspect_export(args: argparse.Namespace) -> int:
     from .inspection.bundle import build_bundle, encode, load_dataset
 
     code_map = load_code_map(args.codemap) if args.codemap else load_dataset(Path(args.dataset))
-    bundle = build_bundle(code_map, Path(args.evidence) if args.evidence else None)
+    bundle = build_bundle(code_map, Path(args.evidence) if args.evidence else None,
+                          model_database=args.model_database, case=Path(args.case) if args.case else None,
+                          source_root=Path(args.source_root) if args.source_root else None)
     out = Path(args.out)
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_bytes(encode(bundle) + b"\n")
     print(f"wrote {out} (revision {bundle['revision']})")
+    return 0
+
+
+def cmd_inspect_publish(args: argparse.Namespace) -> int:
+    from .inspection.bundle import load_bundle
+    from .inspection.publication import publish
+
+    manifest = publish(load_bundle(Path(args.bundle)), Path(args.out))
+    print(f"wrote {args.out} ({len(manifest['resources'])} resources; {manifest['question_count']} recorded questions)")
     return 0
 
 
@@ -138,8 +149,16 @@ def build_parser() -> argparse.ArgumentParser:
     source.add_argument("--codemap", help="JSON produced by cob build")
     source.add_argument("--dataset", help="dataset directory produced by cob export-dataset")
     p.add_argument("--evidence", help="explicit saved live-run directory; optional")
+    p.add_argument("--model-database", help="also expose a newly generated native model, labeled separately")
+    p.add_argument("--case", help="authored case descriptor JSON")
+    p.add_argument("--source-root", help="build-time snapshot directory; only case-selected, hash-checked source is read")
     p.add_argument("--out", required=True)
     p.set_defaults(func=cmd_inspect_export)
+
+    p = sub.add_parser("inspect-publish", help="write static JSON resources into a new publication directory")
+    p.add_argument("--bundle", required=True)
+    p.add_argument("--out", required=True)
+    p.set_defaults(func=cmd_inspect_publish)
 
     p = sub.add_parser("inspect-serve", help="serve an inspection bundle as a read-only local JSON API")
     p.add_argument("--bundle", required=True)

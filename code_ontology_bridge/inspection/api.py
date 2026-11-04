@@ -74,7 +74,10 @@ class Inspector:
         if name not in TABLES_BY_NAME:
             raise APIError(404, "table not found")
         columns = TABLES_BY_NAME[name].column_names
-        allowed(params, ["q", "limit", "offset", *columns])
+        allowed(params, ["q", "limit", "offset", *columns, *(["target"] if name == "calls" else [])])
+        target = params.get("target", "all")
+        if target not in ("all", "resolved", "null"):
+            raise APIError(400, "target must be all, resolved or null")
         query = params.get("q", "").strip().casefold()
         if "q" in params and (not query or len(query) > 160):
             raise APIError(400, "q must contain 1–160 nonblank characters")
@@ -89,7 +92,8 @@ class Inspector:
             else:
                 filters[col.name] = params[col.name]
         rows = [r for r in self.tables[name]
-                if all(r[k] == v for k, v in filters.items())
+                if (target == "all" or (r["callee_symbol_id"] is not None) == (target == "resolved"))
+                and all(r[k] == v for k, v in filters.items())
                 and (not query or any(query in str(v).casefold() for v in r.values() if v is not None))]
         result = self.page(rows, params)
         if name in ("files", "symbols"):
@@ -111,34 +115,61 @@ class Inspector:
         include_tests = boolean(params, "include_tests", True)
         adjacency = self.incoming if direction == "callers" else self.outgoing
         neighbor = "caller_symbol_id" if direction == "callers" else "callee_symbol_id"
-        distances, edges, queue = {root: 0}, {}, deque([root])
-        truncated = depth_limited = False
+        distances, queue = {root: 0}, deque([root])
+        omissions = set()
+
+        def eligible(edge):
+            if kind != "all" and edge["call_kind"] != kind:
+                return False
+            # Root remains visible even if it is a test; other test symbols do not expand.
+            return include_tests or all(s == root or not self.files[self.symbols[s]["file_id"]]["is_test"]
+                                        for s in (edge["caller_symbol_id"], edge["callee_symbol_id"]))
+
         while queue:
             current = queue.popleft()
-            for edge in adjacency[current]:
+            if distances[current] == depth:
+                continue
+            for edge in sorted(adjacency[current], key=lambda e: e["call_id"]):
                 target = edge[neighbor]
-                if kind != "all" and edge["call_kind"] != kind:
+                if not eligible(edge) or target in distances:
                     continue
-                if not include_tests and self.files[self.symbols[target]["file_id"]]["is_test"]:
+                if len(distances) >= max_nodes:
+                    omissions.add("node_limit")
                     continue
-                if distances[current] == depth:
-                    depth_limited |= target not in distances
+                distances[target] = distances[current] + 1
+                queue.append(target)
+        # Induced edges include cycles at the boundary and parallel call occurrences.
+        candidates = {}
+        for current in distances:
+            for edge in adjacency[current]:
+                if not eligible(edge):
                     continue
-                if edge["call_id"] in edges:
-                    continue
-                if len(edges) >= max_edges or (target not in distances and len(distances) >= max_nodes):
-                    truncated = True
-                    continue
-                edges[edge["call_id"]] = edge
-                if target not in distances:
-                    distances[target] = distances[current] + 1
-                    queue.append(target)
+                if edge[neighbor] in distances:
+                    candidates[edge["call_id"]] = edge
+                elif distances[current] == depth:
+                    omissions.add("depth_limit")
+        selected = [candidates[k] for k in sorted(candidates)][:max_edges]
+        if len(selected) < len(candidates):
+            omissions.add("edge_limit")
+        edges = []
+        for edge in selected:
+            caller = self.symbols[edge["caller_symbol_id"]]
+            edges.append(dict(edge, source_url=self.source_url({"file_id": caller["file_id"],
+                              "line_start": edge.get("line", caller.get("line_start", 1))})))
         return {
             "root": root, "direction": direction, "depth": depth,
-            "truncated": truncated, "depth_limited": depth_limited,
+            "call_kind": kind, "include_tests": include_tests,
+            "test_policy": "include" if include_tests else "exclude_from_traversal_except_root",
+            "max_nodes": max_nodes, "max_edges": max_edges,
+            "edge_semantics": "induced_call_occurrences", "availability": "computed_locally",
+            "truncated": bool(omissions & {"node_limit", "edge_limit"}),
+            "depth_limited": "depth_limit" in omissions, "omission_reasons": sorted(omissions),
+            "counts": {"nodes": len(distances), "call_occurrences": len(edges),
+                       "unique_pairs": len({(e["caller_symbol_id"], e["callee_symbol_id"]) for e in edges}),
+                       "eligible_call_occurrences": len(candidates)},
             "nodes": [dict(self.symbols[s], depth=d, source_url=self.source_url(self.symbols[s]))
                       for s, d in sorted(distances.items(), key=lambda item: (item[1], item[0]))],
-            "edges": [edges[k] for k in sorted(edges)],
+            "edges": edges,
             "semantics": "Resolved static relationships; arrows remain caller-to-callee. Callback references do not establish execution.",
         }
 
@@ -149,7 +180,8 @@ class Inspector:
                 "overview": PREFIX + "/overview", "schema": PREFIX + "/schema",
                 "tables": PREFIX + "/tables/{table}", "graph": PREFIX + "/graph",
                 "questions": PREFIX + "/questions", "question": PREFIX + "/questions/{id}",
-                "bundle": PREFIX + "/bundle", "openapi": PREFIX + "/openapi.json"},
+                "bundle": PREFIX + "/bundle", "openapi": PREFIX + "/openapi.json",
+                "models": PREFIX + "/models", "cases": PREFIX + "/cases", "source_spans": PREFIX + "/source-spans"},
                 "limits": {"page_size": 100, "graph_depth": 5, "graph_nodes": 200, "graph_edges": 500},
                 "execution": "unavailable", "contract": "docs/inspection-api.md"}
         if path == PREFIX + "/graph":
@@ -158,7 +190,7 @@ class Inspector:
             return self.table(path.removeprefix(PREFIX + "/tables/"), params)
         if path == PREFIX + "/questions":
             allowed(params, ["limit", "offset"])
-            return self.page([{k: q[k] for k in ("question_id", "question", "score", "review_finding")}
+            return self.page([{k: q[k] for k in ("question_id", "question", "score", "review_finding", "assessment") if k in q}
                               for q in self.questions.values()], params)
         if path.startswith(PREFIX + "/questions/"):
             allowed(params, [])
@@ -167,6 +199,12 @@ class Inspector:
                 raise APIError(404, "question not found")
             return self.questions[qid]
         allowed(params, [])
+        if path == PREFIX + "/models":
+            return self.bundle.get("models", {})
+        if path == PREFIX + "/cases":
+            return self.bundle.get("cases", [])
+        if path == PREFIX + "/source-spans":
+            return self.bundle.get("source_spans", [])
         if path == PREFIX + "/schema":
             return self.bundle["schema"]
         if path == PREFIX + "/bundle":
@@ -179,7 +217,8 @@ class Inspector:
                 packages[self.files[row["file_id"]]["package"]]["symbols"] += 1
             return {"snapshot": self.bundle["snapshot"], "summary": self.bundle["summary"],
                     "packages": [dict(package=k, **v) for k, v in sorted(packages.items())],
-                    "evidence": {k: v for k, v in self.bundle["evidence"].items() if k != "questions"}}
+                    "dataset": self.bundle.get("dataset"),
+                    "evidence": {k: v for k, v in self.bundle["evidence"].items() if k not in ("questions", "contracts")}}
         raise APIError(404, "route not found")
 
     def response(self, path, params):

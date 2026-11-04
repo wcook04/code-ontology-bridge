@@ -19,6 +19,8 @@ REQUIRED = {
     'docs/reproduction.md', 'docs/governance.md', 'docs/inspection-api.md',
     'code_ontology_bridge/inspection/bundle.py', 'code_ontology_bridge/inspection/api.py',
     'code_ontology_bridge/inspection/contract.py', 'code_ontology_bridge/inspection/http.py',
+    'code_ontology_bridge/inspection/models.py', 'code_ontology_bridge/inspection/publication.py',
+    'examples/auto-ontology/live/caller-chain-case.json',
     'code_ontology_bridge/cli.py', 'tools/check_repository.py',
     'tools/build_paper.sh', 'tools/build_paper.py', '.github/workflows/checks.yml',
     'examples/auto-ontology/live/RESULTS.md',

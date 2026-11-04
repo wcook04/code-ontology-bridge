@@ -10,7 +10,7 @@ date: 4 November 2026
 
 ## Abstract
 
-Can a database agent answer questions about software if the source is represented as tables? We built **code-ontology-bridge**, a Python extractor that turns source files, symbols, calls and existing docstrings into relational data and a semantic model for NVIDIA Auto Ontology. Applied to Auto Ontology's own repository, the bridge supplied the relationships for a caller-chain query that includes a function passed to `asyncio.to_thread`. The request explicitly guided reverse traversal and callback handling; the agent generated and executed the SQL. A complete run of 22 author-written questions produced 21 tables matching the references; 20 also had substantive explanations. The run used DeepSeek v4.1 Flash, NVIDIA embeddings and reranking, explicit output requirements and a public-model compatibility patch. The contribution is a working adapter and an inspectable experiment on 473 files and 5,319 symbols. The questions informed development, so these results do not establish an accuracy advantage over schema-only querying or an agent reading source directly.
+Can a database agent answer questions about software if the source is represented as tables? We built **code-ontology-bridge**, a Python extractor that turns source files, symbols, calls and existing docstrings into relational data and a semantic model for NVIDIA Auto Ontology. Applied to Auto Ontology's own repository, the bridge supplied the relationships for a caller-chain query that includes a function passed to `asyncio.to_thread`. The request explicitly guided reverse traversal and callback handling; the agent generated and executed the SQL. A complete run of 22 author-written questions produced 21 tables matching the references; 20 also had substantive explanations. The run used DeepSeek v4.1 Flash, NVIDIA embeddings and reranking, explicit output requirements and a public-model compatibility patch. The contribution is a working adapter and an inspectable experiment on 473 Python files and 5,319 symbols. The questions informed development, so these results do not establish an accuracy advantage over schema-only querying or an agent reading source directly.
 
 ## 1. The question and the contribution
 
@@ -46,6 +46,63 @@ The extractor uses Python's AST and preserves source paths and line ranges. A fu
 
 This distinction keeps the model small: it defines a symbol as an entity type, rather than creating a separate semantic term for every function. Source descriptions are copied from existing docstrings. Missing descriptions stay empty; the extractor does not ask a model to invent them. The [interface specification](../SPEC.md) gives all columns, identity rules and resolution categories.
 
+### One source occurrence, two representations
+
+In `semantic_scheduler.py` under `auto_ontology/ingestion_service/`,
+line 203 of the pinned source passes the wrapper as an argument:
+
+```python
+tables_processed = await asyncio.to_thread(
+    run_semantic_compilation, database_name
+)
+```
+
+The extracted row includes these fields:
+
+```text
+call_kind: callback    resolution: imported
+confidence: low       line: 203
+```
+
+The caller is `SemanticScheduler._run_once`, whose definition starts at line
+132 in the scheduler file. The callee is `run_semantic_compilation`, defined
+in `compile.py` under `auto_ontology/semantic/`.
+
+These selected fields from the [frozen native model input](../examples/auto-ontology/live/current/inputs/model.yaml)
+show how Code symbol maps to the data:
+
+```yaml
+id: cob:auto_ontology_code:term:symbols
+name: Code symbol
+represents:
+  - cob:auto_ontology_code:table:code.symbols
+columns_attributes:
+  - id: cob:auto_ontology_code:attribute:code.symbols.symbol_id
+    name: symbol id
+    column_id: cob:auto_ontology_code:column:code.symbols.symbol_id
+```
+
+Below, IDs omit the shared `cob:auto_ontology_code:` prefix.
+The Call site term represents `table:code.calls`. Its semantic
+foreign keys connect two columns to the symbol-ID attribute:
+
+- `column:code.calls.caller_symbol_id`
+- `column:code.calls.callee_symbol_id`
+
+Both target `attribute:code.symbols.symbol_id`. These definitions describe the joins;
+the particular functions and call occurrences remain database rows.
+The `summary` attribute's authored description explains a source-docstring
+column, while each row's `summary` contains the original docstring.
+Both the queryable rows and the imported semantic context are needed.
+This is Auto Ontology's native format, not Ossie YAML.
+
+The runner remaps exported catalog IDs before import. The frozen exported
+input and a later `/api/terms` response are retained; the submitted YAML,
+ID mapping and full compiled-model export are not. The terms response is a
+partial catalog readback and does not show which definitions a question
+retrieved. The [inspection backend](inspection-api.md) exposes these stages
+separately and supplies hash-checked source excerpts at build time.
+
 ### What changed upstream?
 
 The data connector, model import and SQL pipeline already existed. The source extractor and exports need no changes to NVIDIA's code or model credentials. The recorded live run used Auto Ontology at `cdaf61e1bd0cf3820d11d72b43bb460816aebbd3`; compatibility with later upstream revisions has not been established. A separate twelve-file compatibility patch configures public model clients, forwards the existing `calculation_only` option through the chat API and extends a placeholder validator. It adds no code-specific connector, SQL engine or query planner.
@@ -66,6 +123,8 @@ Question 11 asks which resolved caller symbols reach `resolve_semantic_fks`, dir
 | CLI entry | `main` | 3 |
 
 The target labeled “FK resolver” is `resolve_semantic_fks`; it is not a returned caller.
+
+The locally computed inspection presets return three callers with direct calls alone and four when callback references are included; only the scheduler is added. This is a traversal of saved rows, not another model answer.
 
 The scheduler passes `run_semantic_compilation` to `asyncio.to_thread`. The bridge records that argument as a callback reference, which connects the scheduler to the same chain as the ordinary caller `main`. The generated query follows reverse edges, avoids cycles and groups by full caller identity to select the minimum depth.
 
