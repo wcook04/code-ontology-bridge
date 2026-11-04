@@ -39,3 +39,9 @@ Every request sends the question, its hint if it has one, and the output contrac
 - Reported per arm and set: questions with exactly the expected rows, SQL runs per question, requests that needed a repair, seconds per request, and model tokens where the provider reports them.
 - The written explanation is kept with each response. Auto Ontology writes it before the query runs, so it is not scored against the result.
 - Every response of every run is published, with the protocol commit, the model and the input hashes.
+
+## Amendment, 4 November 2026, 23:55 UTC (before the runs it affects)
+
+The Nemotron runs of arm C sent chat through Auto Ontology's OpenAI-compatible client, because `run_live.sh` selects that client whenever `AO_CHAT_ENDPOINT` is set. That client never sends the compatibility patch's Nemotron thinking switch, so Nemotron 3.5 Lightning reasoned by default, and 1,120 of Auto Ontology's structured-output calls in the development run used the whole 8,192-token output limit on reasoning. Those two runs are kept and reported as run.
+
+Two further Nemotron arm C runs, development and held-out, use the route the patch provides for Nemotron: the NVIDIA endpoint through Auto Ontology's ChatNVIDIA client, with reasoning off (`enable_thinking: false`). `fresh_run_lane.py --native-nvidia` drops `AO_CHAT_ENDPOINT` so `run_live.sh` takes that route, and records it in each run's `lane.json`. Every other input, the question sets, the scorer and the one-run rule are unchanged. Arms A and B are not rerun.
