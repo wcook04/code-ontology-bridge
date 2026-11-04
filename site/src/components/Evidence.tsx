@@ -145,7 +145,7 @@ export function AssessmentBlock({ assessment, score, finding }: { assessment: As
 export function AnswerProse({ text }: { text: string }) {
   return (
     <figure className="prose-answer">
-      <figcaption>Auto Ontology’s written answer, verbatim</figcaption>
+      <figcaption>Auto Ontology’s written explanation of the query, verbatim</figcaption>
       <blockquote>{text}</blockquote>
     </figure>
   );

@@ -2,6 +2,15 @@ import { defineConfig, loadEnv, type Plugin } from "vite";
 import react from "@vitejs/plugin-react";
 import { createReadStream, existsSync, statSync, writeFileSync } from "node:fs";
 import { resolve, normalize, sep } from "node:path";
+import { execSync } from "node:child_process";
+
+function sourceCommit(): string {
+  try {
+    return execSync("git rev-parse HEAD", { stdio: ["ignore", "pipe", "ignore"] }).toString().trim();
+  } catch {
+    return "";
+  }
+}
 
 // The site reads the static publication from ./data/ beside its own index.html,
 // exactly as GitHub Pages serves it. During development and preview that folder
@@ -38,6 +47,7 @@ export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), "");
   return {
     base: env.VITE_BASE_PATH ?? "./",
+    define: { __SOURCE_COMMIT__: JSON.stringify(env.COB_SOURCE_COMMIT ?? sourceCommit()) },
     plugins: [react(), localData(env.COB_DATA_DIR ?? "../build/pages-release/data")],
     server: { port: 5181, strictPort: true },
     preview: { port: 4181, strictPort: true },

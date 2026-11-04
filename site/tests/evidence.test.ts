@@ -55,3 +55,17 @@ describe("addresses", () => {
     expect(parse("#/nowhere/at/all").view).toBe("missing");
   });
 });
+
+import { findingFor, proseReading } from "../src/app/findings";
+
+describe("editorial summaries", () => {
+  it("are shown only for the columns they were written against", () => {
+    expect(findingFor(14, ["resolution", "calls", "pct"])).toBeDefined();
+    expect(findingFor(14, ["resolution", "calls"])).toBeUndefined();
+    expect(findingFor(99, ["x"])).toBeUndefined();
+  });
+  it("separate a one-word response from an explanation of the query", () => {
+    expect(proseReading("thought").tone).toBe("fail");
+    expect(proseReading("This query counts the files in the repository.").tone).toBe("ok");
+  });
+});

@@ -44,7 +44,7 @@ export const FINDINGS: Record<number, Finding> = {
     sqlNote: "The SQL keeps only callers whose kind is “function”, although the shared instructions say caller questions include methods. On this code the rows still matched the reference.",
   },
   2: {
-    title: "What does the semantic package do?",
+    title: "What does the semantic package’s docstring say?",
     kind: "Documentation",
     view: "comparison",
     says: (rows) => {
@@ -118,7 +118,7 @@ export const FINDINGS: Record<number, Finding> = {
     limit: "The two rows are two reasons for one link, not two test files. A link is an association found in the source, not a record of which code the test runs.",
   },
   11: {
-    title: "Which functions would be affected if resolve_semantic_fks changed?",
+    title: "Which functions reach resolve_semantic_fks through recorded calls?",
     kind: "Callers, recursively",
     view: "graph",
     says: (rows) => `${count(rows, "function")} reach it through calls. One, the scheduler, reaches it only because the extractor recorded a function passed to asyncio.to_thread.`,
@@ -203,7 +203,7 @@ export const FINDINGS: Record<number, Finding> = {
     limit: "Links come from imports and matching names, not from running the tests.",
   },
   22: {
-    title: "Which connector classes are only ever subclassed, never constructed?",
+    title: "Which connector classes have subclasses but no recorded constructor call?",
     kind: "Class hierarchy",
     view: "record",
     says: (rows) => (rows[0] ? `${name(rows[0].symbol_id)} in ${file(rows[0].symbol_id)} has ${n(rows[0].subclasses)} non-test subclasses and no recorded call that constructs it.` : ""),
@@ -241,8 +241,38 @@ export const COLUMN_WORDS: Record<string, string> = {
   subclasses: "Non-test subclasses",
 };
 
-/** How the written answer relates to the result, read by this website. */
-export function proseReading(answer: string): { label: string; tone: "fail" | "partial" } {
-  if (answer.trim().split(/\s+/).length < 3) return { label: "No explanation: the whole answer is one word", tone: "fail" };
-  return { label: "Explains the query, but does not state the result", tone: "partial" };
+/**
+ * What the written answer is. At the pinned Auto Ontology revision the SQL agent
+ * writes its `response` field together with the SQL, before the query runs, and
+ * is asked to describe what is calculated, from which tables, with which filters
+ * and ordering (auto_ontology/retrieval/text_to_sql/models.py, SQLGenerationModel).
+ * The executed rows are returned beside it, not written into it.
+ */
+export function proseReading(answer: string): { label: string; tone: "fail" | "ok" } {
+  if (answer.trim().split(/\s+/).length < 3) return { label: "No explanation of the query: the response is one word", tone: "fail" };
+  return { label: "Explains the query, as Auto Ontology’s response is designed to", tone: "ok" };
+}
+
+/** Seconds each recorded request took, from the elapsed_s field of its saved response (three requests ran at a time). */
+export const ELAPSED: Record<number, number> = {
+  1: 270.4, 2: 197.4, 3: 110.8, 4: 198.6, 5: 167.3, 6: 50.2, 7: 274.2, 8: 196.6, 9: 81.1, 10: 133.5, 11: 246.2,
+  12: 233.3, 13: 122.3, 14: 116.0, 15: 166.6, 16: 104.7, 17: 120.8, 18: 123.2, 19: 159.2, 20: 93.4, 21: 105.5, 22: 263.0,
+};
+
+/** The output columns each summary was written against. A summary is shown only when the published question still has them. */
+export const EXPECTS: Record<number, string[]> = {
+  1: ["caller_symbol_id"], 2: ["description", "description_source"], 3: ["file_id"],
+  4: ["symbol_id", "file_id", "line_start", "line_end", "summary"], 5: ["files", "test_files", "symbols"],
+  6: ["repo_url", "commit_sha", "source_fingerprint"], 7: ["symbol_id"], 8: ["symbol_id", "call_sites"], 9: ["file_id"],
+  10: ["test_file_id", "reason"], 11: ["symbol_id", "depth"], 12: ["package", "lines"], 13: ["symbol_id", "methods"],
+  14: ["resolution", "calls", "pct"], 15: ["imported_file_id"], 16: ["file_id"], 17: ["callee_symbol_id"],
+  18: ["package", "public_symbols", "undocumented", "pct_undocumented"], 19: ["package_a", "package_b"], 20: ["area", "files"],
+  21: ["test_file_id", "targets"], 22: ["symbol_id", "subclasses"],
+};
+
+/** The summary for a question, or undefined when its columns no longer match what the summary was written for. */
+export function findingFor(id: number, fields: string[]): Finding | undefined {
+  const want = EXPECTS[id];
+  if (!want || want.length !== fields.length || want.some((f, i) => f !== fields[i])) return undefined;
+  return FINDINGS[id];
 }

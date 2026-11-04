@@ -1,6 +1,6 @@
 # Fresh evaluation: 4 November 2026
 
-**21/22 matching result tables; 20/22 with both matching tables and substantive prose.** This is one complete run of all 22 questions under protocol `explicit-output-v3`. No answer was replaced by a selected rerun.
+**21/22 matching result tables; 20/22 with both matching tables and substantive prose.** The written response is the agent's explanation of its query, which Auto Ontology writes together with the SQL before the query runs; the rows are returned beside it, so the prose describes the calculation rather than the values. This is one complete run of all 22 questions under protocol `explicit-output-v3`. No answer was replaced by a selected rerun.
 
 The [original automatic score](current/score.json) reports 21 passes. [Review of every response](current/review.json) reduces the combined count to 20 because Q14's prose is just “thought”. The original score and responses remain unchanged.
 

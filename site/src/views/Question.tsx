@@ -8,7 +8,7 @@ import { Captured, Gate, Out, RowsTable } from "../components/parts";
 import { ResultView } from "../components/ResultView";
 import { RequestBlock, Results } from "../components/Evidence";
 import { entryState, href, onLinkClick } from "../app/router";
-import { FINDINGS, proseReading } from "../app/findings";
+import { ELAPSED, findingFor, proseReading } from "../app/findings";
 import { readableSql } from "../app/sql";
 
 const REPO = "https://github.com/wcook04/code-ontology-bridge/blob/main/examples/auto-ontology/live/current/";
@@ -34,7 +34,8 @@ export function Question({ id, total }: { id: number; total: number }) {
 }
 
 function Body({ q, total }: { q: QuestionDetail; total: number }) {
-  const f = FINDINGS[q.question_id];
+  const f = findingFor(q.question_id, q.output_contract.fields.map((x) => x.name));
+  const links = Object.fromEntries(q.display_annotations.links.filter((l) => l.table_index === 0).map((l) => [`${l.row_index}:${l.column}`, l.source_url]));
   const rows = q.result_tables[0] ?? [];
   const prose = proseReading(q.answer);
   const rowsOk = q.assessment.table_match === "pass";
@@ -50,7 +51,7 @@ function Body({ q, total }: { q: QuestionDetail; total: number }) {
       <section className="finding" aria-labelledby="finding-title">
         <h2 id="finding-title" className="visually-hidden">What the returned rows show</h2>
         {f ? <p className="finding__says">{f.says(rows)}</p> : null}
-        {f ? <ResultView finding={f} rows={rows} contract={q.output_contract} referenceText={q.reference_rows} /> : null}
+        {f ? <ResultView finding={f} rows={rows} contract={q.output_contract} referenceText={q.reference_rows} links={links} /> : <p className="notice">This question’s columns differ from the ones this website’s summary was written for, so no summary is shown. The recorded rows are under “The recorded evidence”.</p>}
         {f?.limit ? <p className="finding__limit">{f.limit}</p> : null}
         <p className="finding__source">This summary was written for this website from the {rows.length} recorded {rows.length === 1 ? "row" : "rows"}. It is not Auto Ontology’s answer.</p>
       </section>
@@ -65,12 +66,16 @@ function Body({ q, total }: { q: QuestionDetail; total: number }) {
               {q.output_contract.ordered ? (q.score.order_matches ? ", in the expected order" : ", in a different order") : ""}. A program compared them with
               rows from a reference query the author wrote.
             </p>
+            {ELAPSED[q.question_id] ? <p className="small muted">The request took {Math.round(ELAPSED[q.question_id])} seconds, with three requests running at a time.</p> : null}
             {q.review_finding && !rowsOk ? <p className="small">{q.review_finding.reason}</p> : null}
           </div>
           <div className={`verdict__item is-${prose.tone}`}>
-            <p className="verdict__head">{prose.tone === "fail" ? "✕ " : "– "}{prose.label}</p>
+            <p className="verdict__head">{prose.tone === "fail" ? "✕ " : "✓ "}{prose.label}</p>
             <blockquote className="verdict__quote">{q.answer}</blockquote>
-            <p className="small muted">Auto Ontology’s written answer, verbatim.</p>
+            <p className="small muted">
+              Auto Ontology’s written response, verbatim. Its agent writes this together with the SQL, before the query runs, to describe
+              the calculation; the rows are returned beside it.
+            </p>
           </div>
         </div>
         {f?.sqlNote ? <p className="small measure">{f.sqlNote}</p> : null}

@@ -12,8 +12,16 @@ import { SymbolId } from "./parts";
 const fmt = (v: unknown) => (typeof v === "number" ? v.toLocaleString("en-GB") : v === null ? "null" : v === "" ? "(empty)" : String(v));
 
 /** A symbol ID or a path, shown as its name with its file underneath. */
-function Ident({ value }: { value: unknown }) {
+function Ident({ value, href: url }: { value: unknown; href?: string }) {
   const s = String(value);
+  if (url) {
+    return (
+      <a className="ident-link" href={url} target="_blank" rel="noreferrer" title="Open this definition at the pinned commit">
+        <Ident value={value} />
+        <span className="visually-hidden"> (opens the source on GitHub)</span>
+      </a>
+    );
+  }
   if (s.includes("::")) {
     const [path, qual] = s.split("::");
     return (
@@ -49,8 +57,9 @@ function Ident({ value }: { value: unknown }) {
   return <span className="ident__name">{s}</span>;
 }
 
-export function ResultView({ finding, rows, contract, referenceText }: { finding: Finding; rows: Row[]; contract: OutputContract; referenceText: string }) {
+export function ResultView({ finding, rows, contract, referenceText, links = {} }: { finding: Finding; rows: Row[]; contract: OutputContract; referenceText: string; links?: Record<string, string> }) {
   const fields = contract.fields.map((f) => f.name);
+  const at = (i: number, c: string) => links[`${i}:${c}`];
   switch (finding.view) {
     case "counts":
       return (
@@ -72,7 +81,7 @@ export function ResultView({ finding, rows, contract, referenceText }: { finding
         <ol className="bars">
           {rows.map((row, i) => (
             <li key={i} className="bars__row">
-              <span className="bars__label"><Ident value={row[r.label]} /></span>
+              <span className="bars__label"><Ident value={row[r.label]} href={at(i, r.label)} /></span>
               <span className="bars__track" aria-hidden="true">
                 <span className="bars__fill" style={{ width: `${(Number(row[r.value]) / max) * 100}%` }} />
               </span>
@@ -90,7 +99,7 @@ export function ResultView({ finding, rows, contract, referenceText }: { finding
           {fields.map((f) => (
             <div key={f}>
               <dt>{COLUMN_WORDS[f] ?? f}</dt>
-              <dd>{f.endsWith("_id") ? <Ident value={rows[0]?.[f]} /> : fmt(rows[0]?.[f])}</dd>
+              <dd>{f.endsWith("_id") ? <Ident value={rows[0]?.[f]} href={at(0, f)} /> : fmt(rows[0]?.[f])}</dd>
             </div>
           ))}
         </dl>
@@ -130,7 +139,7 @@ export function ResultView({ finding, rows, contract, referenceText }: { finding
           <ol className="plain-list">
             {rows.map((row, i) => (
               <li key={i}>
-                <Ident value={row.symbol_id} /> <span className="muted small">depth {fmt(row.depth)}</span>
+                <Ident value={row.symbol_id} href={at(i, "symbol_id")} /> <span className="muted small">depth {fmt(row.depth)}</span>
               </li>
             ))}
           </ol>
@@ -150,7 +159,7 @@ export function ResultView({ finding, rows, contract, referenceText }: { finding
             <li key={i}>
               {cols.map((c, j) => (
                 <span key={c} className={j ? "plain-list__extra" : undefined}>
-                  {c.endsWith("_id") || c.startsWith("package") ? <Ident value={row[c]} /> : <span className="muted small">{c === "reason" ? String(row[c]).replace("_", " ") : fmt(row[c])}</span>}
+                  {c.endsWith("_id") || c.startsWith("package") ? <Ident value={row[c]} href={at(i, c)} /> : <span className="muted small">{c === "reason" ? String(row[c]).replace("_", " ") : fmt(row[c])}</span>}
                 </span>
               ))}
             </li>
@@ -176,6 +185,7 @@ function Distribution({ rows }: { rows: Row[] }) {
           return <span key={g.key} className={`dist__seg dist__seg--${g.key}`} style={{ width: `${(sum / total) * 100}%` }} />;
         })}
       </div>
+      <p className="dist__axis">Each bar is drawn on the same scale: its full width would be 100% of all direct calls.</p>
       {groups.map((g) => {
         const sum = g.rows.reduce((s, r) => s + Number(r.calls), 0);
         return (
@@ -194,7 +204,7 @@ function Distribution({ rows }: { rows: Row[] }) {
                     {RESOLUTION_WORDS[String(r.resolution)] ?? String(r.resolution)} <code className="muted small">{String(r.resolution)}</code>
                   </span>
                   <span className="bars__track" aria-hidden="true">
-                    <span className={`bars__fill dist__seg--${g.key}`} style={{ width: `${Number(r.pct) * 2}%` }} />
+                    <span className={`bars__fill dist__seg--${g.key}`} style={{ width: `${Number(r.pct)}%` }} />
                   </span>
                   <span className="bars__value">
                     {Number(r.calls).toLocaleString("en-GB")} <span className="muted">({Number(r.pct).toFixed(1)}%)</span>

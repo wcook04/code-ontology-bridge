@@ -1,14 +1,14 @@
 # code-ontology-bridge
 
-**An independent Python-source adapter for NVIDIA Auto Ontology.**
+**Make a Python repository queryable by NVIDIA Auto Ontology's SQL agent.**
 
-This project makes Python source queryable through [Auto Ontology](https://github.com/NVIDIA/auto-ontology)'s existing database and semantic-model interfaces. The bridge extracts files, functions, classes, calls, imports and docstrings, then exports a DuckDB database and model YAML describing its tables and joins. NVIDIA supplies semantic retrieval, SQL generation and query execution.
+code-ontology-bridge reads a Python repository and writes two files that [Auto Ontology](https://github.com/NVIDIA/auto-ontology) already imports: a DuckDB database of the code's files, functions, methods, classes, calls, imports, base classes, docstrings and test links, and a semantic model in Auto Ontology's own YAML format that says what each table and column means and how the tables join. Auto Ontology needs no code-specific connector: its existing model import and DuckDB connector take it from there.
 
-**A working example:** we mapped Auto Ontology's own repository, containing 473 Python files and 5,319 symbols. Given explicit reverse-traversal and callback guidance, its agent generated recursive SQL that returned four callers of `resolve_semantic_fks`, including a callback reference recorded from `asyncio.to_thread`.
+**What the recorded run shows.** We exported Auto Ontology's own repository (473 Python files; 5,319 functions, methods and classes) and asked its agent 22 questions about that code. For 21 of them, the SQL the agent wrote returned exactly the rows of the reference query, and 20 of those responses also explained the query correctly. In the main example, following direct calls finds three of the four functions that reach `resolve_semantic_fks`. The fourth is a scheduler that hands one of them to `asyncio.to_thread`; the extractor records that hand-over as a callback reference, and the agent's recursive SQL returned all four.
 
-[Open the website](https://wcook04.github.io/code-ontology-bridge/) · [Hosted inspection data](https://wcook04.github.io/code-ontology-bridge/data/index.json) · [Inspect the exact request, SQL and rows](examples/auto-ontology/live/current/responses/10i_ask_with_key/ask_q11.json) · [Read the paper](docs/case-study.md) · [Download the PDF](docs/case-study.pdf) · [Build the exports locally](#build-the-exports-locally)
+[Open the website](https://wcook04.github.io/code-ontology-bridge/) · [Read the paper](docs/case-study.md) · [Download the PDF](docs/case-study.pdf) · [Build the exports locally](#build-the-exports-locally)
 
-Extraction and export run without model credentials or changes to NVIDIA's code. The recorded live agent run required a separate compatibility patch against a pinned revision. The evaluation uses development questions, not an independent accuracy benchmark.
+**What it does not show yet.** The author wrote the questions during development, each named its output columns and 18 came with a hint, so this is not an independent benchmark. No agent was given the same database without the semantic model, so the model's own contribution is unmeasured. The run used DeepSeek v4.1 Flash through OpenRouter with NVIDIA embedding and reranking models, against Auto Ontology `cdaf61e` with a twelve-file compatibility patch; requests took a median of 146 seconds with three running at a time. Extraction and export need neither the patch nor model credentials.
 
 ## What each part contributes
 
@@ -102,9 +102,9 @@ The complete run on 4 November 2026 used DeepSeek v4.1 Flash through OpenRouter,
 | --- | ---: |
 | Completed requests | 22/22 |
 | Matching result tables | 21/22 |
-| Matching tables with substantive explanations | 20/22 |
+| Matching tables whose written response explains the query | 20/22 |
 
-Q2 selected an extra package. Q14 returned the correct rows but only “thought” as its prose. Both remain in the [detailed results](examples/auto-ontology/live/RESULTS.md), alongside every other answer. There is no held-out set or schema-only control. The next test should compare schema-only and semantic-layer context on independent questions.
+Each response pairs the returned rows with a short written explanation. At this Auto Ontology revision the agent writes that explanation together with the SQL, before the query runs ([`SQLGenerationModel.response`](https://github.com/NVIDIA/auto-ontology/blob/cdaf61e1bd0cf3820d11d72b43bb460816aebbd3/auto_ontology/retrieval/text_to_sql/models.py)), so it describes the calculation; the rows are returned beside it. Q2 selected an extra package. Q14 returned the correct rows but only “thought” as its prose. Both remain in the [detailed results](examples/auto-ontology/live/RESULTS.md), alongside every other answer. There is no held-out set or schema-only control. The next test should compare schema-only and semantic-layer context on independent questions.
 
 <a id="serve-data-for-a-website"></a>
 

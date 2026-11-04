@@ -11,9 +11,10 @@ import { Out } from "../components/parts";
 import { TermProvider } from "../components/Term";
 
 const REPO = "https://github.com/wcook04/code-ontology-bridge";
-const PAPER = `${REPO}/blob/main/docs/case-study.pdf`;
-// The website source is on this branch until pull request 2 is merged.
-const CODE = `${REPO}/tree/codex/paper-and-diagrams`;
+// Both links name the exact commit this website was built from, so the paper and code match the deployed pages.
+const COMMIT = typeof __SOURCE_COMMIT__ === "string" && __SOURCE_COMMIT__ ? __SOURCE_COMMIT__ : "codex/paper-and-diagrams";
+const PAPER = `${REPO}/blob/${COMMIT}/docs/case-study.pdf`;
+const CODE = `${REPO}/tree/${COMMIT}`;
 
 export function App() {
   const hash = useHash();

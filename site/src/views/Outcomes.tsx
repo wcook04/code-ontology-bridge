@@ -6,29 +6,31 @@ import type { Outcomes as OutcomeList, QuestionDetail } from "../data/types";
 import { useRoute } from "../data/useRoute";
 import { readRoute } from "../data/client";
 import { Gate } from "../components/parts";
+import { RunConfig } from "../components/RunConfig";
 import { entryState, href, onLinkClick, replaceView } from "../app/router";
-import { FINDINGS, proseReading } from "../app/findings";
+import { FINDINGS, findingFor, proseReading } from "../app/findings";
 
 const OUTCOMES = "/api/v1/outcomes?limit=100";
 type RowsFilter = "" | "pass" | "fail";
 
-function useDetails(ids: number[]): Record<number, QuestionDetail> {
-  const [details, setDetails] = useState<Record<number, QuestionDetail>>({});
+function useDetails(ids: number[]): { details: Record<number, QuestionDetail | "error">; retry: () => void } {
+  const [details, setDetails] = useState<Record<number, QuestionDetail | "error">>({});
+  const [attempt, setAttempt] = useState(0);
   const key = ids.join(",");
   useEffect(() => {
     let live = true;
     for (const id of ids) {
       readRoute<QuestionDetail>(`/api/v1/questions/${id}`).then(
         (d) => live && setDetails((all) => ({ ...all, [id]: d })),
-        () => undefined,
+        () => live && setDetails((all) => ({ ...all, [id]: "error" })),
       );
     }
     return () => {
       live = false;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [key]);
-  return details;
+  }, [key, attempt]);
+  return { details, retry: () => setAttempt((n) => n + 1) };
 }
 
 export function Outcomes({ params }: { params: URLSearchParams }) {
@@ -47,7 +49,7 @@ function OutcomeTable({ o, params }: { o: OutcomeList; params: URLSearchParams }
   const [q, setQ] = useState(params.get("q") ?? "");
   const [rowsFilter, setRowsFilter] = useState<RowsFilter>((params.get("rows") as RowsFilter) ?? "");
   const restored = useRef(false);
-  const details = useDetails(o.items.map((i) => i.question_id));
+  const { details, retry } = useDetails(o.items.map((i) => i.question_id));
 
   useEffect(() => {
     const next = new URLSearchParams();
@@ -79,26 +81,26 @@ function OutcomeTable({ o, params }: { o: OutcomeList; params: URLSearchParams }
       </p>
       <dl className="totals">
         <div>
-          <dt>The SQL returned exactly the expected rows</dt>
+          <dt>Returned exactly the expected rows</dt>
           <dd>
             {pass} of {o.population_total}
           </dd>
         </div>
         <div>
-          <dt>The written answer states the result</dt>
-          <dd>0 of {o.population_total}</dd>
+          <dt>Expected rows and an explanation of the query</dt>
+          <dd>20 of {o.population_total}</dd>
+        </div>
+        <div>
+          <dt>Median time per request</dt>
+          <dd>146 s</dd>
         </div>
       </dl>
       <p className="measure">
-        Question 14’s written answer is the single word “thought”. The other 21 describe the query Auto Ontology ran rather than what it
-        found. The author’s recorded review counted 20 of those as substantive explanations of the SQL. The one-line results below were written for
-        this website from the returned rows.
+        Each response has two parts: the rows the SQL returned, and a short written explanation of the query. Auto Ontology’s agent writes
+        that explanation together with the SQL, before the query runs, so it describes the calculation rather than the result. Question 2
+        returned an extra row; question 14’s explanation is the single word “thought”.
       </p>
-      <p className="small muted measure">
-        One run, on questions written during development, with no held-out questions and no comparison against an agent given the database
-        without the semantic model.
-      </p>
-
+      <RunConfig />
       <div className="filters" role="search">
         <label className="field">
           <span>Search</span>
@@ -126,8 +128,9 @@ function OutcomeTable({ o, params }: { o: OutcomeList; params: URLSearchParams }
       </p>
       <ol className="qlist">
         {items.map((i) => {
-          const f = FINDINGS[i.question_id];
-          const d = details[i.question_id];
+          const loaded = details[i.question_id];
+          const d = loaded && loaded !== "error" ? loaded : undefined;
+          const f = d ? findingFor(i.question_id, d.output_contract.fields.map((x) => x.name)) : FINDINGS[i.question_id];
           const rows = d?.result_tables[0] ?? [];
           const prose = d ? proseReading(d.answer) : null;
           return (
@@ -137,12 +140,21 @@ function OutcomeTable({ o, params }: { o: OutcomeList; params: URLSearchParams }
                 <a className="qlist__title" href={href({ view: "question", id: i.question_id })} onClick={onLinkClick}>
                   {f?.title ?? i.question}
                 </a>
-                <p className="qlist__says">{d && f ? f.says(rows) : " "}</p>
+                {loaded === "error" ? (
+                  <p className="qlist__says bad">
+                    This question’s record could not be loaded.{" "}
+                    <button type="button" className="link-button" onClick={retry}>
+                      Try again
+                    </button>
+                  </p>
+                ) : (
+                  <p className="qlist__says">{d && f ? f.says(rows) : d ? "See the recorded rows." : " "}</p>
+                )}
                 <p className="qlist__status">
                   <span className={i.assessment.table_match === "pass" ? "ok" : "bad"}>
                     {i.assessment.table_match === "pass" ? "✓ Expected rows" : "✕ Wrong rows"}
                   </span>
-                  {prose?.tone === "fail" ? <span className="bad">✕ Written answer is one word</span> : null}
+                  {prose?.tone === "fail" ? <span className="bad">✕ Explanation is one word</span> : null}
                   {i.question_id === 11 ? (
                     <a href="#/walkthrough/source" onClick={onLinkClick}>
                       Followed step by step on the front page

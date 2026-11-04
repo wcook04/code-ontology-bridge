@@ -8,7 +8,8 @@ import { useRoute } from "../data/useRoute";
 import { CallerGraph, type Selection } from "../components/CallerGraph";
 import { SystemDiagram } from "../components/SystemDiagram";
 import { Term } from "../components/Term";
-import { CopyButton, Excerpt, Gate, Out, ProseStatus, TableStatus } from "../components/parts";
+import { CopyButton, Excerpt, Gate, Out, ProseStatus, RowsTable, TableStatus } from "../components/parts";
+import { RunConfig } from "../components/RunConfig";
 import { AnswerProse, AssessmentBlock, RequestBlock, Results, SqlPair } from "../components/Evidence";
 import { entryState, href, onLinkClick, replaceView } from "../app/router";
 import { ROLES, roleOf } from "../app/roles";
@@ -60,6 +61,12 @@ function Hero() {
           This website shows one recorded run: Auto Ontology was asked 22 questions about its own source code. Nothing here runs live.
         </p>
         <Stages />
+        <p className="headline-result">
+          In the recorded example, following direct calls finds three of the four functions that reach{" "}
+          <Term id="resolver">resolve_semantic_fks</Term>. The fourth, <Term id="scheduler">a scheduler</Term>, never calls into that chain: it hands one
+          of its functions to <Term id="to_thread">asyncio.to_thread</Term> instead. The extractor records that hand-over, and Auto Ontology’s SQL
+          found all four.
+        </p>
         <div className="actions">
           <a className="btn" href={href({ view: "home", step: "source" })} onClick={(e) => { e.preventDefault(); jump("source"); }}>
             Follow one question from code to answer
@@ -72,13 +79,17 @@ function Hero() {
       <section className="band" aria-labelledby="split-title">
         <h2 id="split-title">What this project adds, and what NVIDIA supplies</h2>
         <SystemDiagram onOpen={jump} />
+        <p className="small muted measure">
+          The arrows show how Auto Ontology is built to work. The run saved what went in and what came out: the database, the semantic model,
+          each question, the SQL and the rows. It did not save which table descriptions the agent looked up for a question.
+        </p>
         <div className="split-cols">
           <div>
             <h3>Built here</h3>
             <ul className="facts">
               <li>An extractor that parses every Python file and records files, functions, methods, classes, calls, imports, base classes, docstrings and links between tests and source files, in eight tables.</li>
-              <li>Each call is classified: resolved to a function in the repository, or labelled as a built-in, an external library, a dynamic attribute or unresolved. Nothing is guessed; an unlinked call keeps no target.</li>
-              <li>Functions passed as arguments, as in <Term id="to_thread">asyncio.to_thread</Term>(f), are recorded as <Term id="callback">callback references</Term>.</li>
+              <li>Each call is classified: resolved to a function in the repository, or labelled as a built-in, an external library, a dynamic attribute or unresolved. A call the extractor cannot follow keeps no target rather than a guessed one. Linked calls follow plain names only; the published limits list the patterns, such as a local variable shadowing a module-level name, that can still link the wrong definition.</li>
+              <li>Functions passed as arguments, as in <Term id="to_thread">asyncio.to_thread</Term>(f), are recorded as <Term id="callback">callback references</Term>, kept apart from direct calls.</li>
               <li>A <Term id="duckdb">DuckDB</Term> export of the tables and a semantic-model export in Auto Ontology’s own YAML format, both stamped with the source commit and file hashes.</li>
             </ul>
           </div>
@@ -129,8 +140,9 @@ function Stages() {
 function jump(id: string): void {
   const target = ALIASES[id] ?? id;
   const el = document.getElementById(`step-${target}`);
-  if (!el) return;
   replaceView({}, href({ view: "home", step: target }));
+  // Before the example has loaded, the address is enough: the example scrolls to it when it appears.
+  if (!el) return;
   el.scrollIntoView({ behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth", block: "start" });
   el.focus({ preventScroll: true });
 }
@@ -188,7 +200,18 @@ function Example({ w, stepTarget }: { w: Walkthrough; stepTarget?: string }) {
           Auto Ontology returned four callers, with <Sym id={SCHEDULER} lower /> at depth 3. These are the recorded rows; switching the graph in
           step 3 does not change them.
         </p>
-        <Results tables={answer.result_tables} referenceText={answer.reference_rows} contract={request.output_contract} score={answer.score} />
+        <RowsTable rows={answer.result_tables[0] ?? []} columns={request.output_contract.fields.map((f) => f.name)} caption="Rows Auto Ontology returned, in recorded order" />
+        <p className="small">
+          {answer.score.strict_rows_pass
+            ? `These are exactly the ${answer.score.reference_rows} rows of the reference query, in the same order.`
+            : "These differ from the reference rows."}
+        </p>
+        <details className="evidence__fold">
+          <summary>Compare with the reference rows</summary>
+          <div className="evidence__body">
+            <Results tables={answer.result_tables} referenceText={answer.reference_rows} contract={request.output_contract} score={answer.score} />
+          </div>
+        </details>
         <AnswerProse text={answer.answer} />
         <AssessmentBlock assessment={answer.assessment} score={answer.score} finding={answer.review_finding} />
         <p className="small">
@@ -499,8 +522,9 @@ function OutcomesTeaser() {
             <>
               <p className="measure">
                 Question 11 is one of {o.population_total}. For {o.population_counts.table_match.pass ?? 0} of them, the rows Auto Ontology
-                returned were exactly the expected rows. None of the written answers states the result: they describe the query instead. The author wrote the questions while
-                developing the project, so this is not an independent benchmark. Two answers fell short in other ways:
+                returned were exactly the expected rows. Each response pairs those rows with a short explanation of the query, which Auto Ontology’s agent writes before the query
+                runs. The author wrote the questions while developing the project, so this is not an independent benchmark. Two responses
+                fell short:
               </p>
               <ul className="cases">
                 {picks.map((q) =>
@@ -548,7 +572,8 @@ function Limits({ model }: { model: ModelStep }) {
           <ul className="facts">
             <li>Auto Ontology can import the extractor’s semantic model and query its database through the existing DuckDB connector.</li>
             <li>For 21 of 22 questions, the SQL its agent wrote returned exactly the rows of a reference query the author wrote.</li>
-            <li>Every request, SQL statement, returned row and written answer is recorded and published unchanged.</li>
+            <li>A relationship only the extractor records, a function handed to asyncio.to_thread, reached the final answer: direct calls alone find three of the four callers.</li>
+            <li>Every request, SQL statement, returned row and written response is recorded and published unchanged.</li>
           </ul>
         </div>
         <div>
@@ -556,11 +581,12 @@ function Limits({ model }: { model: ModelStep }) {
           <ul className="facts">
             <li>How much the semantic model helps: no agent was given the same database without it.</li>
             <li>Accuracy on new questions: the author wrote all 22 while developing the project, named the columns to return and gave hints for 18.</li>
-            <li>That the written answers are useful: none states its result; question 14’s is the word “thought”.</li>
+            <li>Speed in general: in this run a request took a median of 146 seconds, with three running at a time.</li>
             <li>What happens at run time: the extractor reads source text, so a recorded call is not proof the code runs, and a missing one is not proof it never happens.</li>
           </ul>
         </div>
       </div>
+      <RunConfig />
       <h3>Which stages of the run were saved</h3>
       <ul className="stages">
         <li>

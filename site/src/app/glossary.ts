@@ -33,7 +33,7 @@ const entries: GlossaryEntry[] = [
   {
     id: "callback",
     label: "Callback reference",
-    text: "A place where code passes a function to something else, which may call it later. The extractor records these as rows in the Calls table with the kind “callback”. A callback reference shows where a function is handed over, not that it ran.",
+    text: "A place where code passes a function to another call instead of calling it, as in asyncio.to_thread(f). The extractor records these in the Calls table with the kind “callback”, separate from direct calls. asyncio.to_thread is documented to run the function it receives; for other receiving calls the extractor assumes, without proof, that they do. A callback reference shows where a function is handed over, not that it ran.",
   },
   {
     id: "semantic-model",
