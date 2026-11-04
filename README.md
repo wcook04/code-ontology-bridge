@@ -16,7 +16,7 @@ Auto Ontology's agent generated recursive SQL over the extracted call relationsh
 | --- | ---: |
 | _run_semantic_compilation | 1 |
 | run_semantic_compilation | 2 |
-| SemanticScheduler._run_once | 3 |
+| SemanticScheduler.<wbr>_run_once | 3 |
 | main | 3 |
 
 The scheduler passes `run_semantic_compilation` to `asyncio.to_thread`. Recording that callback reference lets the SQL traversal reach the scheduler as well as ordinary callers. You can inspect the [question, generated SQL and returned rows](examples/auto-ontology/live/current/responses/10i_ask_with_key/ask_q11.json).
@@ -73,9 +73,9 @@ For the recorded NVIDIA example, use the [pinned reproduction guide](docs/reprod
 
 | Location | Responsibility |
 | --- | --- |
-| [code_ontology_bridge/](code_ontology_bridge/) | Installable extractor, exporters and governance commands. |
+| [Python package](code_ontology_bridge/) | Installable extractor, exporters and governance commands. |
 | [eval/](eval/) | Authored evaluation questions and example SQL analyses. |
-| [examples/auto-ontology/](examples/auto-ontology/) | Exported dataset and snapshot summary. Its [live/](examples/auto-ontology/live/RESULTS.md) directory holds replay tools, the current run and the upstream patch. |
+| [Worked example](examples/auto-ontology/) | Exported dataset and snapshot summary. Its [live/](examples/auto-ontology/live/RESULTS.md) directory holds replay tools, the current run and the upstream patch. |
 | [docs/](docs/README.md) | Case study, reproduction and governance guides. |
 | [tests/](tests/) | Local behavior and optional upstream compatibility tests. |
 | [tools/](tools/) | Repository checks and paper build command. |
