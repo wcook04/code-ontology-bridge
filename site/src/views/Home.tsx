@@ -59,8 +59,8 @@ function Hero() {
           <Term id="auto-ontology">NVIDIA Auto Ontology</Term> already imports, so its SQL agent can answer questions about the code.
         </p>
         <p className="recorded">
-          Auto Ontology was pointed at its own source code and asked 38 questions. The same questions also went to two language models given
-          only the database, with and without this project’s semantic model. Every run is recorded; nothing here runs live.
+          The study below asked 48 questions about four repositories, written without seeing this project, to two language models and to
+          Auto Ontology’s own agent, with and without what this project exports. Every run is recorded; nothing here runs live.
         </p>
         <HeadlineResult />
         <Stages />
@@ -576,7 +576,11 @@ const STAGE_WORDS: Record<string, { name: string; recorded: string }> = {
 function Limits({ model }: { model: ModelStep }) {
   return (
     <section className="band band--plain" id="step-limits" tabIndex={-1} aria-labelledby="h-limits">
-      <h2 id="h-limits">What this run shows, and what it does not</h2>
+      <h2 id="h-limits">What this walkthrough’s run shows, and what it does not</h2>
+      <p className="measure small muted">
+        This walkthrough comes from the earlier experiment. The <a href="#/study" onClick={onLinkClick}>study</a> repeats the test with
+        questions written blind, four repositories, repeated runs and counterfactual databases.
+      </p>
       <div className="split-cols">
         <div>
           <h3>It shows</h3>
