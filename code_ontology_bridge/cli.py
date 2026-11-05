@@ -79,6 +79,27 @@ def cmd_export_model(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_semantics(args: argparse.Namespace) -> int:
+    import duckdb
+    import yaml
+
+    from .semantics import extend_model_document, install_layer
+
+    con = duckdb.connect(str(args.duckdb))
+    try:
+        install_layer(con)
+        if args.model:
+            text = Path(args.model).read_text()
+            header = "".join(line for line in text.splitlines(keepends=True) if line.startswith("#"))
+            model = extend_model_document(yaml.safe_load(text), con)
+            Path(args.out_model).write_text(header + yaml.safe_dump(model, sort_keys=False, allow_unicode=True, width=120))
+            print(f"wrote {args.out_model}")
+    finally:
+        con.close()
+    print(f"installed the code semantics layer in {args.duckdb}")
+    return 0
+
+
 def cmd_inspect_export(args: argparse.Namespace) -> int:
     from .inspection.bundle import build_bundle, encode, load_dataset
 
@@ -145,6 +166,12 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--dialect", default="duckdb", choices=["duckdb", "postgres"])
     p.add_argument("--analyses", help="JSON list of {name, description, sql} to include as custom analyses")
     p.set_defaults(func=cmd_export_model)
+
+    p = sub.add_parser("semantics", help="install the code semantics layer views and extend a model YAML with them")
+    p.add_argument("--duckdb", required=True, type=Path, help="DuckDB file written by export-duckdb (modified in place)")
+    p.add_argument("--model", type=Path, help="model YAML written by export-model")
+    p.add_argument("--out-model", type=Path, help="where to write the extended model YAML")
+    p.set_defaults(func=cmd_semantics)
 
     p = sub.add_parser("inspect-export", help="build a portable JSON dataset for a future website")
     source = p.add_mutually_exclusive_group(required=True)
