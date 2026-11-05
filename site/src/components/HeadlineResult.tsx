@@ -59,7 +59,8 @@ export function HeadlineResult() {
     <figure className="headline-cmp" aria-labelledby="headline-cmp-cap">
       <figcaption id="headline-cmp-cap" className="headline-cmp__lead">
         48 questions about four Python repositories, written without seeing the bridge and frozen before any model ran. Questions answered
-        with the right rows on the real database and on eight altered copies of it, averaged over repeated runs:
+        with the right rows on the real database and on eight altered copies of it, averaged over repeated runs, scored against the
+        corrected references:
       </figcaption>
       {table(ROWS, "A model asked directly, given")}
       {inside.length ? table(inside, "NVIDIA’s Auto Ontology agent, 12 questions") : null}

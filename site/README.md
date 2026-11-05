@@ -1,8 +1,11 @@
 # Reading website
 
-The website at https://wcook04.github.io/code-ontology-bridge/ explains what this project does and lets a reader follow one recorded question, question 11, from a line of Python in Auto Ontology's scheduler to the rows Auto Ontology returned. It also lists all 22 recorded questions, each with its request, SQL, returned rows, reference rows and the two separate assessments.
+The website at https://wcook04.github.io/code-ontology-bridge/ explains what this project does and has two kinds of page:
 
-The site reads only the static publication described in [deployment](../docs/deployment.md): it fetches `data/index.json`, follows the pinned manifest and resolves each API route through `manifest.api_routes`. It runs no model and no SQL. Missing, failed and empty data are shown as three different states, and nothing is substituted when a request fails.
+- **The study** (`#/study`): the 48-question study's scores, directly and inside Auto Ontology, and a per-question grid. It fetches `study/summary.json`, a copy of `study/results/summary.json` staged beside the site; that file is not part of the pinned `data/` publication.
+- **The walkthrough** (the front page and `#/walkthrough/...`): one recorded question, question 11, followed from a line of Python in Auto Ontology's scheduler to the rows Auto Ontology returned, and the 22 recorded walkthrough questions with request, SQL, returned rows, reference rows and both assessments. These pages read only the static publication described in [deployment](../docs/deployment.md): they fetch `data/index.json`, follow the pinned manifest and resolve each API route through `manifest.api_routes`.
+
+The site runs no model and no SQL. Missing, failed and empty data are shown as three different states, and nothing is substituted when a request fails.
 
 ## Build and run
 

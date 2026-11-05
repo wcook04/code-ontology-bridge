@@ -17,11 +17,12 @@ export interface Cell {
   snapshot_mean: number;
   suite_mean: number;
   median_seconds: number | null;
-  cost_usd: number;
+  cost_usd: number | null;
 }
 interface Pair { model: string; from: string; to: string; questions: number; improved: string[]; regressed: string[] }
 interface QItem { id: string; repo: string; question: string; topic: string; difficulty: string }
 export interface StudySummary {
+  evaluator?: string;
   questions: number;
   cells: Cell[];
   paired: Pair[];
@@ -86,7 +87,15 @@ export function Study() {
       <p className="measure">
         Two scores. <strong>Exact rows</strong>: the answer matches the reference rows on the repository’s database.{" "}
         <strong>Robust</strong>: the same SQL also returns the right rows on eight altered copies of that database (extra calls,
-        callbacks, same-named functions, removed edges, changed docstrings), so it cannot be right by coincidence.
+        callbacks, classes, same-named functions, removed edges, changed docstrings), which catches many queries that are right on one
+        database by coincidence.
+      </p>
+      <p className="measure small">
+        These scores use the corrected references. After the runs, an outside review found a reference query that ignores its question’s
+        “functions or methods” restriction; an audit of all 48 corrected 21 references and accepted either of two readings for 5 questions,
+        before any rescoring. Saved responses were rescored without new model calls; exact-row scores did not change.{" "}
+        <Out href={`${REPO}/study/PROTOCOL.md#corrections-after-the-runs`}>What changed and why</Out>,{" "}
+        <Out href={`${REPO}/study/results/frozen/RESULTS.md`}>the scores as first published</Out>.
       </p>
 
       <h2>Asking a model directly: 48 questions, four repositories, five runs each</h2>
@@ -123,10 +132,12 @@ export function Study() {
 
       {inside.length ? (
         <>
-          <h2>Inside NVIDIA Auto Ontology: same agent, only the imported model changes</h2>
+          <h2>Inside NVIDIA Auto Ontology: same agent, same source facts</h2>
           <p className="measure">
-            The 12 Auto Ontology questions, asked through Auto Ontology’s own SQL agent with its retrieval, validation and repair. The
-            agent, database contents and chat model are fixed; three runs each.
+            The 12 Auto Ontology questions, asked through Auto Ontology’s own SQL agent with its retrieval, validation and repair, three
+            runs each. The agent, source facts and chat model are fixed; the semantics configuration adds the six layer views to the
+            database and imports the model that describes them. Chat runs through Auto Ontology’s own clients at temperature 0 with the
+            provider’s default reasoning.
           </p>
           <div className="table-wrap">
             <table className="rows cmp-table">
@@ -150,7 +161,10 @@ export function Study() {
       ) : null}
 
       <h2>Question by question</h2>
-      <p className="small muted measure">Share of runs whose answer was robustly right. Each column is one model and one briefing.</p>
+      <p className="small muted measure">
+        Share of runs whose answer was robustly right. Each column is one model (D DeepSeek, N Nemotron) and one briefing; each cell opens
+        that configuration’s first-run response, with the question, the SQL it ran and the rows it returned.
+      </p>
       <QuestionGrid data={data} models={models} />
       <p className="small muted measure">
         Every question, reference query, annotation, response and score is in the{" "}
@@ -161,15 +175,15 @@ export function Study() {
 }
 
 function QuestionGrid({ data, models }: { data: StudySummary; models: string[] }) {
-  const cols = models.flatMap((m) => ["A", "B", "S", "C-native", "C-base", "C-semantics"].map((a) => ({ m, a, key: `${m}/${a}` })))
+  const cols = models.flatMap((m) => ["A", "B", "V", "S", "C-native", "C-base", "C-semantics"].map((a) => ({ m, a, key: `${m}/${a}` })))
     .filter((c) => data.per_question_suite_rate[c.key]);
   return (
     <div className="table-wrap">
-      <table className="rows rows--compact">
+      <table className="rows rows--compact cmp-grid">
         <thead>
           <tr>
-            <th scope="col">Repository</th>
-            <th scope="col" className="cmp-qtext">Question</th>
+            <th scope="col">Question</th>
+            <th scope="col" className="cmp-qtext">Asked</th>
             {cols.map((c) => (
               <th key={c.key} scope="col" className="num" title={`${MODEL_NAMES[c.m]}, ${c.a}`}>{c.m === "nemotron" ? "N" : "D"}·{c.a.replace("C-", "C ")}</th>
             ))}
@@ -178,13 +192,20 @@ function QuestionGrid({ data, models }: { data: StudySummary; models: string[] }
         <tbody>
           {data.question_list.map((q) => (
             <tr key={q.id}>
-              <th scope="row" className="small">{REPOS[q.repo]}</th>
+              <th scope="row" className="small">
+                <span translate="no">{q.id}</span>
+                <br />
+                <span className="muted">{REPOS[q.repo]}</span>
+              </th>
               <td className="cmp-qtext small">{q.question}</td>
               {cols.map((c) => {
                 const r = data.per_question_suite_rate[c.key]?.[q.id];
                 return (
                   <td key={c.key} className={`num ${r === undefined ? "" : r >= 0.5 ? "ok" : "bad"}`}>
-                    {r === undefined ? "" : `${Math.round(r * 100)}%`}
+                    {r === undefined ? "" : (
+                      <a className="cmp-grid__link" href={responseUrl(c.m, c.a, q.repo, q.id)} target="_blank" rel="noreferrer"
+                        title={`${MODEL_NAMES[c.m]}, ${c.a}: open the first run's response on GitHub`}>{`${Math.round(r * 100)}%`}</a>
+                    )}
                   </td>
                 );
               })}
@@ -194,4 +215,10 @@ function QuestionGrid({ data, models }: { data: StudySummary; models: string[] }
       </table>
     </div>
   );
+}
+
+// The first run's saved response for one question and configuration, on GitHub.
+function responseUrl(model: string, arm: string, repo: string, qid: string): string {
+  const run = arm.startsWith("C-") ? `c/${model}-${arm.slice(2)}-1` : `direct/${model}/${arm}/${repo}/r1`;
+  return `${REPO}/study/runs/${run}/responses/${qid}.json`;
 }

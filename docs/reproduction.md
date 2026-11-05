@@ -57,7 +57,7 @@ The driver uses isolated local ports 54339 (PostgreSQL), 3111 (backend), 3101 (k
 
 The job directory contains `manifest.json`, `status.json`, `score.json`, frozen inputs and the service captures under `run/`. `status.json` records completion or failure. `score.json` separates requested-column completeness, typed value equality, ordering and non-placeholder prose. It does not automatically judge the semantic quality of prose. A failed answer remains part of the run; a new protocol requires a new complete run and directory.
 
-The [recorded run](../examples/auto-ontology/live/RESULTS.md) has 21/22 matching tables and 20/22 with substantive prose. To re-score its saved responses without a model call or modifying retained evidence:
+This section reproduces the recorded 22-question walkthrough run (the earlier experiment, before the 48-question [study](../study/RESULTS.md)). The [recorded run](../examples/auto-ontology/live/RESULTS.md) scores 22/22 on strict rows. Its automatic prose check also passes 22/22, but manual review finds question 2's explanation is the single word "Purple". To re-score its saved responses without a model call or modifying retained evidence:
 
 ```sh
 mkdir -p build/rescore
@@ -68,7 +68,7 @@ uv run python examples/auto-ontology/live/evaluate_run.py \
   examples/auto-ontology/live/current/inputs/contracts.json
 ```
 
-This reproduces the original automatic 21/22 score. The separate review records Q14's prose failure. The upstream schema-only versus semantic-layer benchmark remains a separate, unrun experiment.
+This reproduces the recorded 22/22 strict-row score in [score.json](../examples/auto-ontology/live/current/score.json). The automatic prose check accepts any non-placeholder text, so question 2's "Purple" passes it; [RESULTS.md](../examples/auto-ontology/live/RESULTS.md) records that review. To rescore the 48-question study instead, see [study/RESULTS.md](../study/RESULTS.md#reproduce). The upstream schema-only versus semantic-layer benchmark remains a separate, unrun experiment.
 
 
 ## Validation
