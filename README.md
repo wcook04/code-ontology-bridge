@@ -81,13 +81,17 @@ The [reproduction guide](docs/reproduction.md) rebuilds the pinned NVIDIA exampl
 | Semantics layer | Six views with their definitions, keys and joins: `call_edges`, `reachability`, `symbol_profile`, `file_profile`, `file_dependencies` and `class_ancestry`. |
 | Evaluation dataset | DDL, CSV data and reference questions in NVIDIA's evaluation format. |
 
-The database supplies facts; the model explains them; the layer defines operations on them. A function is a row in `code.symbols`, and the model's terms describe the tables, so the model stays small for any repository size. [`tests/semantics/`](tests/semantics/) checks every view against an independent Python computation on random code maps with cycles. See the [interface specification](SPEC.md) and the [layer](code_ontology_bridge/semantics/layer.py).
+The database holds the facts about the code. The model explains what each table and column means. The layer adds ready-made queries over those facts. Each function is one row in `code.symbols`, and the model describes tables rather than individual functions, so its size does not grow with the program. The tests in [`tests/semantics/`](tests/semantics/) compare every view with a separate Python calculation on randomly generated programs, including ones where functions call each other in a loop. See the [interface specification](SPEC.md) and the [layer](code_ontology_bridge/semantics/layer.py).
 
 ## The study
 
-Four repositories (NVIDIA Auto Ontology, click, httpx and rich) and 48 questions, written by separate AI authors who saw the source and a bare database and never the semantics layer, with every answer re-derived by a second AI annotator. The questions, reference SQL and protocol were frozen and pushed before any model ran ([protocol](study/PROTOCOL.md)). An answer is **robust** when its SQL returns the reference rows on the repository's database and on eight altered copies of it (extra calls, callbacks, classes, same-named functions, removed edges).
+The study asks whether the bridge's descriptions help an AI model answer questions about code correctly.
 
-After the runs, an outside review found a reference query that ignores its question's "functions or methods" restriction. An audit of all 48 found 21 references that miss a restriction their question states and 5 questions with two valid readings; the corrected references were committed before rescoring, the saved responses were rescored without new model calls, and the original scores stay published ([what changed](study/PROTOCOL.md#corrections-after-the-runs)). Corrected robust scores:
+Separate AI writers produced 48 questions about four open-source Python programs: NVIDIA Auto Ontology, click, httpx and rich. They wrote each question and its correct answer (a reference SQL query) from the source code and a bare database, without seeing the semantics layer. A second AI writer answered every question again from the wording alone. The questions, answers and [protocol](study/PROTOCOL.md) were published before any model ran.
+
+An answer counts as **robust** only if its SQL returns the reference rows on the program's database and on eight altered copies of it. The copies add calls, callbacks, classes and same-named functions, and remove some calls, so a query that is right by luck on one database fails.
+
+After the runs, an outside reviewer found a reference query that ignored its question's "functions or methods" condition. A review of all 48 found 21 reference queries that missed a condition stated in their question, and 5 questions that can be read two ways. The fixed reference queries were published before rescoring. The saved answers were then rescored without asking any model again. The original scores stay published ([what changed](study/PROTOCOL.md#corrections-after-the-runs)). The tables below use the fixed reference queries.
 
 A model asked directly, all 48 questions, mean of five runs:
 
@@ -105,7 +109,11 @@ Inside NVIDIA Auto Ontology's own agent, the 12 Auto Ontology questions, mean of
 | + base model | 8.7 | 2.3 |
 | + semantics layer views and model | **10.7** | 2.3 |
 
-Asked directly, the exported model lifts DeepSeek by about 9 robust answers (9 questions improve, 1 regresses), and the semantics layer is the best briefing for Nemotron (6 improve, none regress against the schema alone). Inside Auto Ontology, DeepSeek with Auto Ontology's own catalog already answers most questions; the semantics layer gives DeepSeek's highest mean, within run-to-run variation of the native catalog, while the base model alone scores lower; for Nemotron both imports raise the native 0.7 to 2.3. Every number, question and response, and the frozen scores, are in [study/RESULTS.md](study/RESULTS.md).
+Asked directly, DeepSeek answers about 9 more questions robustly with the base model than with table names alone: 9 questions improve and 1 gets worse. Nemotron does best with the semantics layer, where 6 questions improve and none get worse.
+
+Inside Auto Ontology, DeepSeek already answers most questions with Auto Ontology's own catalog. The semantics layer gives DeepSeek's highest mean, but the difference from the catalog alone is within the variation between runs. The base model alone scores lower. For Nemotron both imports raise the score from 0.7 to 2.3.
+
+Every number, question and saved answer, and the original scores, are in [study/RESULTS.md](study/RESULTS.md).
 
 | Evidence | What it is |
 | --- | --- |
@@ -123,13 +131,13 @@ The questions were written by AI authors under the protocol's rules, not by the 
 | --- | --- |
 | Extract source, export and query the database, export model YAML | This package alone, with DuckDB and PyYAML. |
 | Reproduce the recorded Auto Ontology runs | Auto Ontology at [`cdaf61e`](https://github.com/NVIDIA/auto-ontology/tree/cdaf61e1bd0cf3820d11d72b43bb460816aebbd3) with the [twelve-file compatibility patch](examples/auto-ontology/live/upstream-fix/README.md), PostgreSQL and model credentials. The patch selects public model clients, forwards the SQL-only route through chat and tightens response validation. |
-| Use a current Auto Ontology revision | Untested. The exports use the existing connector and native model format; which patch changes are still needed has to be checked against that revision. |
+| Use a current Auto Ontology revision | Untested. The exports use the existing connector and native model format; which patch changes are still needed against that revision is unknown. |
 
 <a id="serve-data-for-a-website"></a>
 
 ## Inspect the saved evidence
 
-`cob inspect-export`, `cob inspect-publish` and `cob inspect-serve` build a bundle, a static publication and a read-only local API over the committed example and the recorded walkthrough, with no model credentials. See the [inspection API](docs/inspection-api.md). Separate [governance commands](docs/governance.md) record checks and annotate SQL.
+`cob inspect-export`, `cob inspect-publish` and `cob inspect-serve` build a bundle, a static publication and a read-only local API over the committed example and the recorded walkthrough, with no model credentials. See the [inspection API](docs/inspection-api.md). Separate [governance commands](docs/governance.md) record which definitions a person has approved and annotate SQL.
 
 The source-map approach comes from **CodeMap**, Will Cook's earlier source-navigation tool, adapted here into a standalone extractor.
 
@@ -147,7 +155,7 @@ The source-map approach comes from **CodeMap**, Will Cook's earlier source-navig
 | [tools/](tools/) | Repository checks, paper builder and [publication tools](docs/deployment.md). |
 | [SPEC.md](SPEC.md) / [GAPS.md](GAPS.md) | Interface contract / current limits and remaining work. |
 
-Run `uv run pytest -q -ra` and `uv run python tools/check_repository.py` to check a checkout. See [contributing](CONTRIBUTING.md).
+Run `uv run pytest -q -ra` and `uv run python tools/check_repository.py` to run the tests and the repository layout rules. See [contributing](CONTRIBUTING.md).
 
 ## Licence
 

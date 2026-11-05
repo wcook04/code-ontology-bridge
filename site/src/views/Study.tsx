@@ -20,7 +20,7 @@ export interface Cell {
   cost_usd: number | null;
 }
 interface Pair { model: string; from: string; to: string; questions: number; improved: string[]; regressed: string[] }
-interface QItem { id: string; repo: string; question: string; topic: string; difficulty: string }
+interface QItem { id: string; repo: string; label?: string; question: string; topic: string; difficulty: string }
 export interface StudySummary {
   evaluator?: string;
   questions: number;
@@ -32,15 +32,15 @@ export interface StudySummary {
 
 export const MODEL_NAMES: Record<string, string> = { deepseek: "DeepSeek v4.1 Flash", nemotron: "NVIDIA Nemotron 3.5 Lightning" };
 const DIRECT: { id: string; name: string; what: string }[] = [
-  { id: "A", name: "Schema only", what: "Table and column names and types." },
-  { id: "B", name: "Bridge base model", what: "Plus what every table and column means, the keys and the joins." },
-  { id: "V", name: "Views, undocumented", what: "Schema plus the semantics layer’s views, with no descriptions: a control." },
-  { id: "S", name: "Bridge semantics layer", what: "Base model plus verified views for calls, reachability, profiles, dependencies and inheritance, with definitions." },
+  { id: "A", name: "Table names only", what: "The names of the tables and columns, nothing more." },
+  { id: "B", name: "+ the bridge’s descriptions", what: "A written explanation of every table and column, and how the tables link up." },
+  { id: "V", name: "+ ready-made queries, unexplained", what: "Six ready-made queries (for example “who calls whom”), with no explanation." },
+  { id: "S", name: "+ descriptions and explained queries", what: "The descriptions plus the six ready-made queries, each explained." },
 ];
-const INSIDE: { id: string; name: string }[] = [
-  { id: "C-native", name: "Auto Ontology alone, nothing imported" },
-  { id: "C-base", name: "Auto Ontology + bridge base model" },
-  { id: "C-semantics", name: "Auto Ontology + bridge semantics layer" },
+const INSIDE: { id: string; name: string; what: string }[] = [
+  { id: "C-native", name: "Nothing from the bridge", what: "NVIDIA’s system works out what the database means by itself." },
+  { id: "C-base", name: "+ the bridge’s descriptions", what: "The written explanation of every table and column is loaded in." },
+  { id: "C-semantics", name: "+ descriptions and explained queries", what: "The six ready-made queries are added, with their explanations." },
 ];
 const REPOS: Record<string, string> = { auto_ontology: "NVIDIA Auto Ontology", click: "pallets/click", httpx: "encode/httpx", rich: "Textualize/rich" };
 
@@ -55,16 +55,52 @@ export function useStudy(): StudySummary | null | "error" {
   return data;
 }
 
-function Score({ c, which }: { c?: Cell; which: "snapshot" | "suite" }) {
+function mean(v: number[]): number {
+  return v.reduce((a, b) => a + b, 0) / v.length;
+}
+
+function Score({ c }: { c?: Cell }) {
   if (!c) return <span className="muted small">not run</span>;
-  const vals = c[which];
-  const mean = vals.reduce((a, b) => a + b, 0) / vals.length;
+  const m = mean(c.suite);
   return (
     <>
-      <strong>{mean.toFixed(1)}</strong> <span className="muted">/ {c.denominator}</span>
-      <span className="cmp-bar" aria-hidden="true"><span style={{ width: `${(100 * mean) / c.denominator}%` }} /></span>
-      <span className="small muted cmp-range">{vals.length > 1 ? `${Math.min(...vals)}–${Math.max(...vals)} over ${vals.length} runs` : "1 run"}</span>
+      <strong>{m.toFixed(1)}</strong> <span className="muted">of {c.denominator}</span>
+      <span className="cmp-bar" aria-hidden="true"><span style={{ width: `${(100 * m) / c.denominator}%` }} /></span>
+      <span className="small muted cmp-range">
+        between {Math.min(...c.suite)} and {Math.max(...c.suite)} across runs
+      </span>
     </>
+  );
+}
+
+function ResultTable({ rows, models, cell, label }: {
+  rows: { id: string; name: string; what: string }[];
+  models: string[];
+  cell: (m: string, a: string) => Cell | undefined;
+  label: string;
+}) {
+  return (
+    <div className="table-wrap">
+      <table className="rows cmp-table study-table">
+        <thead>
+          <tr>
+            <th scope="col">{label}</th>
+            {models.map((m) => <th key={m} scope="col" className="num">{MODEL_NAMES[m]}</th>)}
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((a) => (
+            <tr key={a.id}>
+              <th scope="row">
+                {a.name}
+                <span className="study-table__what">{a.what}</span>
+              </th>
+              {models.map((m) => <td key={m} className="num cmp-score"><Score c={cell(m, a.id)} /></td>)}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
   );
 }
 
@@ -77,143 +113,128 @@ export function Study() {
   const inside = INSIDE.filter((a) => models.some((m) => cell(m, a.id)));
   return (
     <section className="band page comparison" aria-labelledby="study-title">
-      <h1 id="study-title">What the bridge’s semantics change, on questions it never saw</h1>
+      <h1 id="study-title">Does describing code to an AI help it answer questions about the code?</h1>
       <p className="lede-2">
-        Four separate AI authors wrote 12 questions each about four Python repositories, from the source and the bare database, without
-        seeing what the bridge adds. A second annotator re-derived every answer from the question alone; all 48 agreed, and 17 questions
-        were reworded to remove a second reading. The questions, references and{" "}
-        <Out href={`${REPO}/study/PROTOCOL.md`}>protocol</Out> were committed and pushed before any model saw them.
+        A program is made of functions that call one another. Questions such as “which functions end up running this one?” are hard to
+        answer by reading files. This project turns a program’s source code into a database, with a written explanation of every table,
+        so that an AI can answer by writing a database query. We tested whether those explanations make the AI’s answers right.
       </p>
-      <p className="measure">
-        Two scores. <strong>Exact rows</strong>: the answer matches the reference rows on the repository’s database.{" "}
-        <strong>Robust</strong>: the same SQL also returns the right rows on eight altered copies of that database (extra calls,
-        callbacks, classes, same-named functions, removed edges, changed docstrings), which catches many queries that are right on one
-        database by coincidence.
-      </p>
+      <div className="study-explain">
+        <p><strong>What we asked.</strong> 48 questions about four real open-source Python programs, including NVIDIA’s own Auto Ontology.
+          Separate AI writers produced the questions and the correct answers without seeing this project, and everything was fixed in
+          place before any test ran.</p>
+        <p><strong>Who answered.</strong> Two AI language models, DeepSeek v4.1 Flash and NVIDIA Nemotron 3.5 Lightning: first asked
+          directly, then working inside <Out href="https://github.com/NVIDIA/auto-ontology">NVIDIA Auto Ontology</Out>, NVIDIA’s system
+          for answering questions about databases.</p>
+        <p><strong>How we scored.</strong> An answer counts only if its query gives the right rows on the real database and also on
+          eight deliberately altered copies, so a query that is right by luck on one database does not count.</p>
+      </div>
       <p className="measure small">
-        These scores use the corrected references. After the runs, an outside review found a reference query that ignores its question’s
-        “functions or methods” restriction; an audit of all 48 corrected 21 references and accepted either of two readings for 5 questions,
-        before any rescoring. Saved responses were rescored without new model calls; exact-row scores did not change.{" "}
-        <Out href={`${REPO}/study/PROTOCOL.md#corrections-after-the-runs`}>What changed and why</Out>,{" "}
-        <Out href={`${REPO}/study/results/frozen/RESULTS.md`}>the scores as first published</Out>.
+        After the runs, a check found 21 answer keys that missed a condition stated in their own question. They were fixed before
+        rescoring; no AI was asked again. <Out href={`${REPO}/study/PROTOCOL.md#corrections-after-the-runs`}>What changed</Out>,{" "}
+        <Out href={`${REPO}/study/results/frozen/RESULTS.md`}>scores before the fix</Out>,{" "}
+        <Out href={`${REPO}/study/RESULTS.md`}>every number</Out>.
       </p>
 
-      <h2>Asking a model directly: 48 questions, four repositories, five runs each</h2>
-      <ol className="arms">
-        {DIRECT.map((a) => (
-          <li key={a.id}>
-            <span className="arms__n">{a.id}</span>
-            <span className="arms__name">{a.name}</span>
-            <span className="arms__what">{a.what}</span>
-          </li>
-        ))}
-      </ol>
-      {models.map((m) => (
-        <section key={m} className="cmp-model" aria-labelledby={`st-${m}`}>
-          <h3 id={`st-${m}`}>{MODEL_NAMES[m]}</h3>
-          <div className="table-wrap">
-            <table className="rows cmp-table">
-              <thead>
-                <tr><th scope="col">Model is given</th><th scope="col" className="num">Exact rows</th><th scope="col" className="num">Robust</th></tr>
-              </thead>
-              <tbody>
-                {DIRECT.map((a) => (
-                  <tr key={a.id} className={a.id === "B" || a.id === "S" ? "is-ours" : ""}>
-                    <th scope="row">{a.id}. {a.name}</th>
-                    <td className="num cmp-score"><Score c={cell(m, a.id)} which="snapshot" /></td>
-                    <td className="num cmp-score"><Score c={cell(m, a.id)} which="suite" /></td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </section>
-      ))}
+      <h2>An AI asked directly</h2>
+      <p className="measure small">
+        Questions answered correctly out of 48, averaged over five runs. Each row gives the AI more information about the database.
+      </p>
+      <ResultTable rows={DIRECT} models={models} cell={cell} label="The AI is given" />
 
       {inside.length ? (
         <>
-          <h2>Inside NVIDIA Auto Ontology: same agent, same source facts</h2>
-          <p className="measure">
-            The 12 Auto Ontology questions, asked through Auto Ontology’s own SQL agent with its retrieval, validation and repair, three
-            runs each. The agent, source facts and chat model are fixed; the semantics configuration adds the six layer views to the
-            database and imports the model that describes them. Chat runs through Auto Ontology’s own clients at temperature 0 with the
-            provider’s default reasoning.
+          <h2>The same AI inside NVIDIA Auto Ontology</h2>
+          <p className="measure small">
+            The 12 questions about Auto Ontology’s own code, answered by Auto Ontology’s question-answering agent, averaged over three
+            runs. Only what the bridge supplies changes from row to row.
           </p>
-          <div className="table-wrap">
-            <table className="rows cmp-table">
-              <thead>
-                <tr>
-                  <th scope="col">Auto Ontology is given</th>
-                  {models.map((m) => <th key={m} scope="col" className="num">{MODEL_NAMES[m]}, robust</th>)}
-                </tr>
-              </thead>
-              <tbody>
-                {inside.map((a) => (
-                  <tr key={a.id} className={a.id === "C-native" ? "" : "is-ours"}>
-                    <th scope="row">{a.name}</th>
-                    {models.map((m) => <td key={m} className="num cmp-score"><Score c={cell(m, a.id)} which="suite" /></td>)}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <ResultTable rows={inside} models={models} cell={cell} label="Auto Ontology is given" />
+          <p className="measure small">
+            Asked directly, the bridge’s descriptions lift DeepSeek from 18.0 to 27.2 correct answers. Inside Auto Ontology, NVIDIA’s
+            system already answers most questions on its own. For DeepSeek the full bridge adds a little, within the variation between
+            runs, and the descriptions alone take a little away; for Nemotron both lift it from almost none to about two.
+          </p>
         </>
       ) : null}
 
       <h2>Question by question</h2>
-      <p className="small muted measure">
-        Share of runs whose answer was robustly right. Each column is one model (D DeepSeek, N Nemotron) and one briefing; each cell opens
-        that configuration’s first-run response, with the question, the SQL it ran and the rows it returned.
-      </p>
       <QuestionGrid data={data} models={models} />
-      <p className="small muted measure">
-        Every question, reference query, annotation, response and score is in the{" "}
-        <Out href={`${REPO}/study`}>study folder</Out>; the results page is <Out href={`${REPO}/study/RESULTS.md`}>RESULTS.md</Out>.
-      </p>
     </section>
   );
 }
 
+const GRID_ARMS: { id: string; short: string; name: string }[] = [
+  { id: "A", short: "A", name: "asked directly, table names only" },
+  { id: "B", short: "B", name: "asked directly, with descriptions" },
+  { id: "V", short: "V", name: "asked directly, with unexplained ready-made queries" },
+  { id: "S", short: "S", name: "asked directly, with descriptions and explained queries" },
+  { id: "C-native", short: "AO", name: "inside Auto Ontology, nothing from the bridge" },
+  { id: "C-base", short: "AO+B", name: "inside Auto Ontology, with descriptions" },
+  { id: "C-semantics", short: "AO+S", name: "inside Auto Ontology, with descriptions and explained queries" },
+];
+
 function QuestionGrid({ data, models }: { data: StudySummary; models: string[] }) {
-  const cols = models.flatMap((m) => ["A", "B", "V", "S", "C-native", "C-base", "C-semantics"].map((a) => ({ m, a, key: `${m}/${a}` })))
-    .filter((c) => data.per_question_suite_rate[c.key]);
+  const [model, setModel] = useState(models[0]);
+  const [open, setOpen] = useState<string | null>(null);
+  const arms = GRID_ARMS.filter((a) => data.per_question_suite_rate[`${model}/${a.id}`]);
   return (
-    <div className="table-wrap">
-      <table className="rows rows--compact cmp-grid">
-        <thead>
-          <tr>
-            <th scope="col">Question</th>
-            <th scope="col" className="cmp-qtext">Asked</th>
-            {cols.map((c) => (
-              <th key={c.key} scope="col" className="num" title={`${MODEL_NAMES[c.m]}, ${c.a}`}>{c.m === "nemotron" ? "N" : "D"}·{c.a.replace("C-", "C ")}</th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>
-          {data.question_list.map((q) => (
-            <tr key={q.id}>
-              <th scope="row" className="small">
-                <span translate="no">{q.id}</span>
-                <br />
-                <span className="muted">{REPOS[q.repo]}</span>
-              </th>
-              <td className="cmp-qtext small">{q.question}</td>
-              {cols.map((c) => {
-                const r = data.per_question_suite_rate[c.key]?.[q.id];
-                return (
-                  <td key={c.key} className={`num ${r === undefined ? "" : r >= 0.5 ? "ok" : "bad"}`}>
-                    {r === undefined ? "" : (
-                      <a className="cmp-grid__link" href={responseUrl(c.m, c.a, q.repo, q.id)} target="_blank" rel="noreferrer"
-                        title={`${MODEL_NAMES[c.m]}, ${c.a}: open the first run's response on GitHub`}>{`${Math.round(r * 100)}%`}</a>
-                    )}
-                  </td>
-                );
-              })}
-            </tr>
+    <>
+      <div className="study-grid__head">
+        <p className="measure small">
+          How often each question was answered correctly, across runs. Click a question to read it in full; click a number to see
+          the AI’s saved answer, with the query it wrote and the rows it got.
+        </p>
+        <div className="study-switch" role="group" aria-label="Model">
+          {models.map((m) => (
+            <button key={m} type="button" aria-pressed={m === model} onClick={() => setModel(m)}>{MODEL_NAMES[m]}</button>
           ))}
-        </tbody>
-      </table>
-    </div>
+        </div>
+      </div>
+      <dl className="study-key">
+        {GRID_ARMS.map((a) => <div key={a.id}><dt>{a.short}</dt><dd>{a.name}</dd></div>)}
+      </dl>
+      <div className="table-wrap">
+        <table className="rows rows--compact cmp-grid study-grid">
+          <thead>
+            <tr>
+              <th scope="col">Question</th>
+              {arms.map((a) => <th key={a.id} scope="col" className="num"><abbr title={a.name}>{a.short}</abbr></th>)}
+            </tr>
+          </thead>
+          <tbody>
+            {data.question_list.map((q) => {
+              const isOpen = open === q.id;
+              return [
+                <tr key={q.id}>
+                  <th scope="row">
+                    <button type="button" className="study-grid__q" aria-expanded={isOpen} onClick={() => setOpen(isOpen ? null : q.id)}>
+                      {q.label ?? q.topic}
+                    </button>
+                  </th>
+                  {arms.map((a) => {
+                    const r = data.per_question_suite_rate[`${model}/${a.id}`]?.[q.id];
+                    return (
+                      <td key={a.id} className={`num ${r === undefined ? "" : r >= 0.5 ? "ok" : "bad"}`}>
+                        {r === undefined ? "" : (
+                          <a className="cmp-grid__link" href={responseUrl(model, a.id, q.repo, q.id)} target="_blank" rel="noreferrer"
+                            title={`${MODEL_NAMES[model]}, ${a.name}: open the first run's response`}>{`${Math.round(r * 100)}%`}</a>
+                        )}
+                      </td>
+                    );
+                  })}
+                </tr>,
+                isOpen ? (
+                  <tr key={`${q.id}-text`} className="study-grid__text">
+                    <td colSpan={arms.length + 1}><p><span className="study-grid__id" translate="no">{q.id}, {REPOS[q.repo]}.</span> {q.question}</p></td>
+                  </tr>
+                ) : null,
+              ];
+            })}
+          </tbody>
+        </table>
+      </div>
+    </>
   );
 }
 

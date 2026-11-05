@@ -159,7 +159,11 @@ Each answer is scored twice. **Exact rows**: the returned rows equal the referen
 
 ### 4.3 Results
 
-**Reference corrections.** After the runs, an outside review found that one reference query (`ao-03`) ignores its question's restriction to functions and methods; the extracted symbols also include classes, which appear as callers when a class body makes a call and as callees when a class is constructed. Four auditors then checked all 48 references against their questions' wording without seeing any response or score. 21 references were corrected, 15 of them for the same missing restriction, and 5 questions whose wording supports two readings accept either. The corrections were committed before rescoring, the saved responses were rescored without new model calls, and the frozen scores remain published. No corrected reference changes its answer on a real database, so exact-row scores are unchanged; robust scores move. Directly prompted models usually omitted the restriction, as the frozen references did, and lose robust answers; Auto Ontology's agent with DeepSeek usually wrote it and gains. The figures below use the corrected references.
+**Reference corrections.** After the runs, an outside reviewer found that the reference query for `ao-03` ignores its question's restriction to functions and methods. The extracted symbols also include classes. A class appears as a caller when its body makes a call, and as a callee when it is constructed.
+
+Four auditors then compared all 48 reference queries with their questions' wording, without seeing any model answer or score. They found 21 reference queries that missed a condition stated in the question; 15 of these lacked the same function-or-method restriction. Five questions can be read two ways, and the scorer now accepts either reading. The corrected queries were published before rescoring, and the saved answers were rescored without new model calls. The original scores remain published.
+
+No corrected query changes its answer on a real database, so exact-row scores are unchanged. Robust scores do change. Directly prompted models usually left out the restriction, as the original references did, so they lose robust answers. Auto Ontology's agent with DeepSeek usually wrote the restriction, so it gains. The tables below use the corrected references.
 
 A model asked directly, robust answers out of 48, mean of five runs (lowest and highest in brackets):
 
