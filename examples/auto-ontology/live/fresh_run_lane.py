@@ -1,6 +1,6 @@
 """Run fresh_run.py with every local port shifted, so two runs can share one machine.
 
-Usage: fresh_run_lane.py [--native-nvidia] OFFSET JOB_DIR UPSTREAM KEYS
+Usage: fresh_run_lane.py [--native-nvidia] [--workers N] OFFSET JOB_DIR UPSTREAM KEYS
 
 fresh_run.py fixes the PostgreSQL and backend ports. This wrapper adds OFFSET to each of them
 before run_live.sh starts and changes nothing else: the runner files, inputs, model calls and
@@ -24,6 +24,11 @@ def main():
     native = '--native-nvidia' in sys.argv
     if native:
         sys.argv.remove('--native-nvidia')
+    workers = None
+    if '--workers' in sys.argv:
+        i = sys.argv.index('--workers')
+        workers = int(sys.argv[i + 1])
+        del sys.argv[i:i + 2]
     offset = int(sys.argv.pop(1))
     job = Path(sys.argv[1]).resolve()
     call = subprocess.call
@@ -41,6 +46,13 @@ def main():
             env.pop('AO_CHAT_ENDPOINT', None)
             env.pop('AO_CHAT_KEY_VAR', None)
             lane['chat_route'] = 'NVIDIA endpoint through ChatNVIDIA, Nemotron reasoning off (enable_thinking: false)'
+        if workers is not None:
+            # The manifest is written before this call; record the concurrency actually used.
+            env['AO_WORKERS'] = str(workers)
+            lane['workers'] = workers
+            manifest = json.loads((job / 'manifest.json').read_text())
+            manifest['workers'] = workers
+            (job / 'manifest.json').write_text(json.dumps(manifest, indent=2) + '\n')
         kwargs['env'] = env
         (job / 'lane.json').write_text(json.dumps(lane, indent=2) + '\n')
         return call(args, **kwargs)
