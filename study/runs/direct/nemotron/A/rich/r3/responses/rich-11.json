@@ -1,0 +1,31 @@
+{
+  "question_id": "rich-11",
+  "arm": "A",
+  "model": "nvidia/nemotron-3.5-lightning",
+  "error": null,
+  "elapsed_s": 4.13,
+  "attempts": [
+    {
+      "sql": "WITH public_funcs AS (\n  SELECT s.file_id, s.symbol_id, s.name, s.kind\n  FROM code.symbols s\n  WHERE s.kind IN ('function', 'method')\n    AND s.name NOT LIKE '_%'\n    AND s.qualname NOT LIKE '_.%'\n),\nundoc_count AS (\n  SELECT p.file_id, COUNT(*) AS undocumented_count\n  FROM public_funcs p\n  LEFT JOIN code.symbols d\n    ON d.file_id = p.file_id\n   AND d.qualname = p.qualname\n   AND d.name = p.name\n   AND d.summary IS NOT NULL\n  WHERE d.symbol_id IS NULL\n  GROUP BY p.file_id\n)\nSELECT file_id, undocumented_count\nFROM undoc_count\nORDER BY undocumented_count DESC, file_id ASC\nLIMIT 5",
+      "error": "Binder Error: Values list \"p\" does not have a column named \"qualname\""
+    },
+    {
+      "sql": "WITH public_funcs AS (\n  SELECT s.file_id, s.symbol_id, s.name, s.qualname, s.kind\n  FROM code.symbols s\n  WHERE s.kind IN ('function', 'method')\n    AND s.name NOT LIKE '_%'\n    AND s.qualname NOT LIKE '_.%'\n),\nundoc_count AS (\n  SELECT p.file_id, COUNT(*) AS undocumented_count\n  FROM public_funcs p\n  LEFT JOIN code.symbols d\n    ON d.file_id = p.file_id\n   AND d.qualname = p.qualname\n   AND d.name = p.name\n   AND d.summary IS NOT NULL\n  WHERE d.symbol_id IS NULL\n  GROUP BY p.file_id\n)\nSELECT file_id, undocumented_count\nFROM undoc_count\nORDER BY undocumented_count DESC, file_id ASC\nLIMIT 5",
+      "error": null
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 1539,
+    "completion_tokens": 571,
+    "total_tokens": 2110,
+    "cost": 0.00022193,
+    "providers": [
+      "CoreWeave",
+      "CoreWeave"
+    ]
+  },
+  "request": "Under the rich/ folder, which five files contain the most public functions and methods that have no docstring? A function or method is public when neither its own name nor the name of its enclosing class starts with an underscore (so dunder methods are not public); classes themselves are not counted, and every definition counts separately (each @overload stub and each property getter or setter). Give the file path and the count, ordered by count descending, ties broken by file path ascending.\n\nRequested output columns: file_id (string), undocumented_count (integer). Order the rows as the question asks.",
+  "explanation": "The query first identifies all public function/method symbols whose own name and enclosing class name do not start with underscore. It then left-joins each such symbol to a symbols row that has a non-null summary (docstring). Symbols missing from the join are undocumented. Counts are grouped by file, ordered by descending count and ascending file path, and limited to the top 5.",
+  "sql": "WITH public_funcs AS (\n  SELECT s.file_id, s.symbol_id, s.name, s.qualname, s.kind\n  FROM code.symbols s\n  WHERE s.kind IN ('function', 'method')\n    AND s.name NOT LIKE '_%'\n    AND s.qualname NOT LIKE '_.%'\n),\nundoc_count AS (\n  SELECT p.file_id, COUNT(*) AS undocumented_count\n  FROM public_funcs p\n  LEFT JOIN code.symbols d\n    ON d.file_id = p.file_id\n   AND d.qualname = p.qualname\n   AND d.name = p.name\n   AND d.summary IS NOT NULL\n  WHERE d.symbol_id IS NULL\n  GROUP BY p.file_id\n)\nSELECT file_id, undocumented_count\nFROM undoc_count\nORDER BY undocumented_count DESC, file_id ASC\nLIMIT 5",
+  "rows": []
+}

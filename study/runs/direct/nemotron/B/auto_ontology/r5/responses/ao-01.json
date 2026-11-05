@@ -1,0 +1,31 @@
+{
+  "question_id": "ao-01",
+  "arm": "B",
+  "model": "nvidia/nemotron-3.5-lightning",
+  "error": null,
+  "elapsed_s": 4.86,
+  "attempts": [
+    {
+      "sql": "WITH connector_classes AS (\n  SELECT s.symbol_id AS class_symbol_id\n  FROM code.symbols s\n  JOIN code.files f ON s.file_id = f.file_id\n  WHERE s.kind = 'class'\n    AND f.module = 'auto_ontology.connectors.base'\n    AND f.is_test = FALSE\n),\nconnector_methods AS (\n  SELECT s.symbol_id, s.name AS method_name\n  FROM code.symbols s\n  WHERE s.kind = 'function'\n    AND s.is_public = TRUE\n    AND s.name NOT LIKE '_%'\n    AND s.symbol_id IN (\n      SELECT c.class_symbol_id || '::' || s2.name\n      FROM connector_classes c\n      JOIN code.symbols s2 ON s2.file_id = c.class_symbol_id\n        AND s2.kind = 'function'\n        AND s2.is_public = TRUE\n        AND s2.name NOT LIKE '_%'\n    )\n),\nbase_methods AS (\n  SELECT symbol_id\n  FROM code.symbols\n  WHERE qualname = 'SQLDatabase'\n    AND is_public = TRUE\n    AND name NOT LIKE '_%'\n)\nSELECT DISTINCT cm.class_symbol_id, cm.method_name\nFROM connector_methods cm\nLEFT JOIN base_methods bm ON cm.method_name = bm.symbol_id\nWHERE bm.symbol_id IS NULL;",
+      "error": "Binder Error: Values list \"cm\" does not have a column named \"class_symbol_id\""
+    },
+    {
+      "sql": "WITH connector_classes AS (\n  SELECT s.symbol_id AS class_symbol_id\n  FROM code.symbols s\n  JOIN code.files f ON s.file_id = f.file_id\n  WHERE s.kind = 'class'\n    AND f.module = 'auto_ontology.connectors.base'\n    AND f.is_test = FALSE\n),\nconnector_methods AS (\n  SELECT s.symbol_id AS class_symbol_id, s.name AS method_name\n  FROM code.symbols s\n  WHERE s.kind = 'function'\n    AND s.is_public = TRUE\n    AND s.name NOT LIKE '_%'\n    AND EXISTS (\n      SELECT 1\n      FROM connector_classes c\n      WHERE s.file_id = c.class_symbol_id\n    )\n),\nbase_methods AS (\n  SELECT symbol_id\n  FROM code.symbols\n  WHERE qualname = 'SQLDatabase'\n    AND is_public = TRUE\n    AND name NOT LIKE '_%'\n)\nSELECT DISTINCT cm.class_symbol_id, cm.method_name\nFROM connector_methods cm\nLEFT JOIN base_methods bm ON cm.method_name = bm.symbol_id\nWHERE bm.symbol_id IS NULL;",
+      "error": null
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 6017,
+    "completion_tokens": 735,
+    "total_tokens": 6752,
+    "cost": 0.00044147,
+    "providers": [
+      "CoreWeave",
+      "CoreWeave"
+    ]
+  },
+  "request": "The production database connectors are the classes that directly subclass SQLDatabase (defined in auto_ontology/connectors/base.py), excluding any class defined in test code (every file under a tests/ folder counts as test code). For each such connector class, which public methods does the class define in its own body that SQLDatabase itself does not define? A method is public when its name does not start with an underscore (so __init__ and other dunder methods are excluded); anything written with def directly in the class body counts as a method, including properties and context-manager methods. Methods inherited without being redefined do not count. Return one row per (connector class symbol ID, method name).\n\nRequested output columns: class_symbol_id (string), method_name (string).",
+  "explanation": "The query identifies connector classes that directly subclass SQLDatabase in the non-test file auto_ontology/connectors/base.py, then collects all public methods (non-underscore-prefixed) defined directly in each connector class body, and finally excludes any method name that also appears as a public method on SQLDatabase itself.",
+  "sql": "WITH connector_classes AS (\n  SELECT s.symbol_id AS class_symbol_id\n  FROM code.symbols s\n  JOIN code.files f ON s.file_id = f.file_id\n  WHERE s.kind = 'class'\n    AND f.module = 'auto_ontology.connectors.base'\n    AND f.is_test = FALSE\n),\nconnector_methods AS (\n  SELECT s.symbol_id AS class_symbol_id, s.name AS method_name\n  FROM code.symbols s\n  WHERE s.kind = 'function'\n    AND s.is_public = TRUE\n    AND s.name NOT LIKE '_%'\n    AND EXISTS (\n      SELECT 1\n      FROM connector_classes c\n      WHERE s.file_id = c.class_symbol_id\n    )\n),\nbase_methods AS (\n  SELECT symbol_id\n  FROM code.symbols\n  WHERE qualname = 'SQLDatabase'\n    AND is_public = TRUE\n    AND name NOT LIKE '_%'\n)\nSELECT DISTINCT cm.class_symbol_id, cm.method_name\nFROM connector_methods cm\nLEFT JOIN base_methods bm ON cm.method_name = bm.symbol_id\nWHERE bm.symbol_id IS NULL;",
+  "rows": []
+}

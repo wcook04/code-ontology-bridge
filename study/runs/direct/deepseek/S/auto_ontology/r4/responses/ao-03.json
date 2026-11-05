@@ -1,0 +1,66 @@
+{
+  "question_id": "ao-03",
+  "arm": "S",
+  "model": "deepseek/deepseek-v4.1-flash-1017",
+  "error": null,
+  "elapsed_s": 2.83,
+  "attempts": [
+    {
+      "sql": "WITH target AS (SELECT symbol_id FROM code.symbols WHERE file_id = 'auto_ontology/utils/llm_invoke.py' AND name = 'invoke_with_structured_output'), direct AS (SELECT DISTINCT e.caller_symbol_id FROM code.call_edges e JOIN target t ON e.callee_symbol_id = t.symbol_id WHERE e.calls_directly), two_hop AS (SELECT DISTINCT e.caller_symbol_id FROM code.call_edges e JOIN direct d ON e.callee_symbol_id = d.caller_symbol_id WHERE e.calls_directly AND e.caller_symbol_id NOT IN (SELECT caller_symbol_id FROM direct)) SELECT s.symbol_id FROM two_hop th JOIN code.symbols s ON s.symbol_id = th.caller_symbol_id JOIN code.files f ON f.file_id = s.file_id WHERE NOT f.is_test ORDER BY s.symbol_id",
+      "error": null
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 5538,
+    "completion_tokens": 255,
+    "total_tokens": 5793,
+    "cost": 0.000257088,
+    "providers": [
+      "DekaLLM"
+    ]
+  },
+  "request": "invoke_with_structured_output in auto_ontology/utils/llm_invoke.py is the main structured-LLM-call wrapper. Which functions or methods in non-test code (every file under a tests/ folder is test code) reach it at exactly two hops: they do not call invoke_with_structured_output directly themselves, but they directly call at least one function or method that does call it directly? Consider direct calls only on both hops, and follow only calls to a named function or to a method on self (a call through another object's attribute, such as self._backend.classify(), is not followed); a function passed as an argument (e.g. pool.submit(f)) does not count as calling it. The intermediate function may live anywhere, including test code, but the functions you list must be in non-test code. Return their symbol IDs.\n\nRequested output columns: symbol_id (string).",
+  "explanation": "Finds the target symbol, then its direct callers (hop 1), then symbols that directly call those callers (hop 2), excluding symbols that call the target directly. Only direct calls are followed, and results are restricted to symbols defined in non-test files.",
+  "sql": "WITH target AS (SELECT symbol_id FROM code.symbols WHERE file_id = 'auto_ontology/utils/llm_invoke.py' AND name = 'invoke_with_structured_output'), direct AS (SELECT DISTINCT e.caller_symbol_id FROM code.call_edges e JOIN target t ON e.callee_symbol_id = t.symbol_id WHERE e.calls_directly), two_hop AS (SELECT DISTINCT e.caller_symbol_id FROM code.call_edges e JOIN direct d ON e.callee_symbol_id = d.caller_symbol_id WHERE e.calls_directly AND e.caller_symbol_id NOT IN (SELECT caller_symbol_id FROM direct)) SELECT s.symbol_id FROM two_hop th JOIN code.symbols s ON s.symbol_id = th.caller_symbol_id JOIN code.files f ON f.file_id = s.file_id WHERE NOT f.is_test ORDER BY s.symbol_id",
+  "rows": [
+    {
+      "symbol_id": "auto_ontology/retrieval/text_to_sql/agents/candidates_preparation.py::CandidatePreparationAgent.execute"
+    },
+    {
+      "symbol_id": "auto_ontology/retrieval/text_to_sql/agents/candidates_retrieval.py::CandidateRetrievalAgent.execute"
+    },
+    {
+      "symbol_id": "auto_ontology/retrieval/text_to_sql/agents/evidence_refinement.py::EvidenceRefinementAgent.execute"
+    },
+    {
+      "symbol_id": "auto_ontology/retrieval/text_to_sql/agents/sql_parse_validation.py::SQLValidationAgent.execute"
+    },
+    {
+      "symbol_id": "auto_ontology/semantic/bridge_tables.py::build_bridge_tables_sql_attributes"
+    },
+    {
+      "symbol_id": "auto_ontology/semantic/deterministic.py::_generate_column_descriptions"
+    },
+    {
+      "symbol_id": "auto_ontology/semantic/semantic_fk.py::_resolve_via_vdb"
+    },
+    {
+      "symbol_id": "auto_ontology/semantic/semantic_fk.py::select_semantic_fk_join_defaults"
+    },
+    {
+      "symbol_id": "auto_ontology/semantic/sql_attribute_suggester.py::suggest_sql_attributes"
+    },
+    {
+      "symbol_id": "auto_ontology/semantic/visit_enter.py::process_table"
+    },
+    {
+      "symbol_id": "auto_ontology/server/chat/router.py::_build_charts_event"
+    },
+    {
+      "symbol_id": "auto_ontology/server/chat/worker.py::_worker_loop"
+    },
+    {
+      "symbol_id": "auto_ontology/server/sql_attributes/router.py::get_sql_attribute_description_suggestion"
+    }
+  ]
+}

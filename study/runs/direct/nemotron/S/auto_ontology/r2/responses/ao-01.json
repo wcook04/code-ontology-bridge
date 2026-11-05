@@ -1,0 +1,26 @@
+{
+  "question_id": "ao-01",
+  "arm": "S",
+  "model": "nvidia/nemotron-3.5-lightning",
+  "error": null,
+  "elapsed_s": 3.08,
+  "attempts": [
+    {
+      "sql": "WITH connector_classes AS (\n  SELECT s.symbol_id AS class_symbol_id, s.qualname, s.file_id\n  FROM code.symbols s\n  JOIN code.class_bases cb ON s.symbol_id = cb.class_symbol_id\n  WHERE cb.base_name = 'SQLDatabase'\n    AND s.file_id NOT IN (SELECT file_id FROM code.files WHERE is_test = TRUE)\n    AND s.kind = 'class'\n),\nconnector_methods AS (\n  SELECT s.symbol_id, s.name AS method_name, s.file_id\n  FROM code.symbols s\n  WHERE s.kind = 'method'\n    AND s.file_id IN (SELECT class_symbol_id FROM connector_classes)\n    AND s.name NOT LIKE '_%'\n),\nconnector_method_owners AS (\n  SELECT cm.symbol_id AS method_owner, cm.method_name, cc.class_symbol_id\n  FROM connector_methods cm\n  JOIN connector_classes cc ON cm.file_id = cc.class_symbol_id\n),\nbase_methods AS (\n  SELECT DISTINCT s.symbol_id AS base_method_symbol_id\n  FROM code.symbols s\n  WHERE s.kind = 'method'\n    AND s.file_id IN (SELECT file_id FROM code.files WHERE name = 'SQLDatabase')\n)\nSELECT cmo.class_symbol_id, cmo.method_name\nFROM connector_method_owners cmo\nWHERE cmo.method_name NOT IN (SELECT base_method_symbol_id FROM base_methods)\nORDER BY cmo.class_symbol_id, cmo.method_name;",
+      "error": null
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 5454,
+    "completion_tokens": 394,
+    "total_tokens": 5848,
+    "cost": 0.00030218,
+    "providers": [
+      "CoreWeave"
+    ]
+  },
+  "request": "The production database connectors are the classes that directly subclass SQLDatabase (defined in auto_ontology/connectors/base.py), excluding any class defined in test code (every file under a tests/ folder counts as test code). For each such connector class, which public methods does the class define in its own body that SQLDatabase itself does not define? A method is public when its name does not start with an underscore (so __init__ and other dunder methods are excluded); anything written with def directly in the class body counts as a method, including properties and context-manager methods. Methods inherited without being redefined do not count. Return one row per (connector class symbol ID, method name).\n\nRequested output columns: class_symbol_id (string), method_name (string).",
+  "explanation": "The query first identifies connector classes that directly subclass SQLDatabase and are not in test files. It then finds all public methods defined in those classes' bodies, filters out methods inherited from SQLDatabase itself, and returns the remaining method names per connector class.",
+  "sql": "WITH connector_classes AS (\n  SELECT s.symbol_id AS class_symbol_id, s.qualname, s.file_id\n  FROM code.symbols s\n  JOIN code.class_bases cb ON s.symbol_id = cb.class_symbol_id\n  WHERE cb.base_name = 'SQLDatabase'\n    AND s.file_id NOT IN (SELECT file_id FROM code.files WHERE is_test = TRUE)\n    AND s.kind = 'class'\n),\nconnector_methods AS (\n  SELECT s.symbol_id, s.name AS method_name, s.file_id\n  FROM code.symbols s\n  WHERE s.kind = 'method'\n    AND s.file_id IN (SELECT class_symbol_id FROM connector_classes)\n    AND s.name NOT LIKE '_%'\n),\nconnector_method_owners AS (\n  SELECT cm.symbol_id AS method_owner, cm.method_name, cc.class_symbol_id\n  FROM connector_methods cm\n  JOIN connector_classes cc ON cm.file_id = cc.class_symbol_id\n),\nbase_methods AS (\n  SELECT DISTINCT s.symbol_id AS base_method_symbol_id\n  FROM code.symbols s\n  WHERE s.kind = 'method'\n    AND s.file_id IN (SELECT file_id FROM code.files WHERE name = 'SQLDatabase')\n)\nSELECT cmo.class_symbol_id, cmo.method_name\nFROM connector_method_owners cmo\nWHERE cmo.method_name NOT IN (SELECT base_method_symbol_id FROM base_methods)\nORDER BY cmo.class_symbol_id, cmo.method_name;",
+  "rows": []
+}

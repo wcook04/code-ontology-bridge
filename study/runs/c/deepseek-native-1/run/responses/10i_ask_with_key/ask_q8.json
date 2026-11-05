@@ -1,0 +1,199 @@
+{
+  "request": {
+    "question": "Which five functions in the data-access layer are used most widely by the rest of the codebase? Consider module-level functions (not methods or classes) defined in non-test files under auto_ontology/dal/, excluding auto_ontology/dal/session.py. Rank them by the number of distinct functions or methods that call them directly, counting only callers that are in non-test files (every file under a tests/ folder is test code) located outside auto_ontology/dal/. Calls through a module alias (e.g. `dal.fetch_databases()` after `from auto_ontology.dal import datasources as dal`) or an import alias count; a function passed by reference without being called does not. Highest count first; break ties by symbol ID ascending and return exactly five rows. Return the symbol ID and the caller count.\n\nRequested output columns: symbol_id (string), caller_count (integer).\nReturn exactly the requested output columns, using each requested name as the column alias, in the requested order. Return complete repository-relative file paths and complete symbol IDs exactly as stored. When the question asks which files, symbols or modules, return each distinct one once unless it asks for occurrences.\nOrder the rows as the question asks.",
+    "calculation_only": true
+  },
+  "status": 200,
+  "elapsed_s": 263.3,
+  "events": [
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "question_intent",
+      "thought": null,
+      "label": "Classifying the question"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "question_intent",
+      "thought": null,
+      "label": "Classifying the question"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "question_extraction",
+      "thought": null,
+      "label": "Understanding the question"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "question_extraction",
+      "thought": null,
+      "label": "Understanding the question"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "retrieve_candidates",
+      "thought": null,
+      "label": "Retrieving candidates"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "retrieve_candidates",
+      "thought": null,
+      "label": "Retrieving candidates"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "prepare_candidates",
+      "thought": null,
+      "label": "Preparing candidates"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "prepare_candidates",
+      "thought": "All four identified tables are crucial for answering the question: `inbound_call_counts` provides the aggregated call count; `symbols` identifies the functions; `files` applies the file constraints (non-test, path); and `calls` is required to trace the caller's location and verify it meets the exclusion criteria.",
+      "label": "Preparing candidates"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "refine_evidence",
+      "thought": null,
+      "label": "Refining evidence"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "refine_evidence",
+      "thought": "No certain repair is supported by the supplied question, value anchors, or fallback sample values. The path exclusion auto_ontology/dal/session.py matches a verified sample value, and no scalar or predicate operator in the grounded instructions is proven wrong.",
+      "label": "Refining evidence"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "construct_sql_from_candidates",
+      "thought": null,
+      "label": "Constructing SQL"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "construct_sql_from_candidates",
+      "thought": "I count distinct caller symbols from the calls table, filtering direct calls only because callback/reference-only occurrences should not count. The callee must be a module-level function in a non-test DAL file other than session.py, and the caller must be a function or method in a non-test file outside auto_ontology/dal. Ties are broken by symbol ID ascending, and the result is limited to five rows.",
+      "label": "Constructing SQL"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "validate_sql_query",
+      "thought": null,
+      "label": "Validating SQL and intent"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "validate_sql_query",
+      "thought": "The SQL joins calls to symbols on callee_symbol_id (authoritative path) and symbols to files on file_id (authoritative path), then does the same for callers. Filters: callee.kind='function' matches 'module-level functions, not methods or classes'; callee_file.is_test=FALSE matches non-test files; callee_file.file_id LIKE 'auto_ontology/dal/%' AND <> 'auto_ontology/dal/session.py' matches the location/exclusion; caller.kind IN ('function','method') matches 'distinct functions or methods'; caller_file.is_test=FALSE AND NOT LIKE 'auto_ontology/dal/%' matches callers in non-test files outside the DAL. call_kind='direct' excludes callback/reference-style edges, which is consistent with 'a function passed by reference without being called does not count'. The aggregation COUNT(DISTINCT caller.symbol_id) correctly counts distinct caller symbols, ORDER BY caller_count DESC, callee.symbol_id ASC LIMIT 5 matches the ranking/tie-break/limit. No critical join or aggregation errors; evidence instructions are followed.",
+      "label": "Validating SQL and intent"
+    },
+    {
+      "type": "sql",
+      "node": "validate_sql_query",
+      "sql": "SELECT callee.symbol_id AS symbol_id, COUNT(DISTINCT caller.symbol_id) AS caller_count FROM auto_ontology_code.code.calls AS c JOIN auto_ontology_code.code.symbols AS callee ON c.callee_symbol_id = callee.symbol_id JOIN auto_ontology_code.code.files AS callee_file ON callee.file_id = callee_file.file_id JOIN auto_ontology_code.code.symbols AS caller ON c.caller_symbol_id = caller.symbol_id JOIN auto_ontology_code.code.files AS caller_file ON caller.file_id = caller_file.file_id WHERE c.call_kind = 'direct' AND callee.kind = 'function' AND callee_file.is_test = FALSE AND callee_file.file_id LIKE 'auto_ontology/dal/%' AND callee_file.file_id <> 'auto_ontology/dal/session.py' AND caller.kind IN ('function', 'method') AND caller_file.is_test = FALSE AND caller_file.file_id NOT LIKE 'auto_ontology/dal/%' GROUP BY callee.symbol_id ORDER BY caller_count DESC, callee.symbol_id ASC LIMIT 5;"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "execute_sql_query",
+      "thought": null,
+      "label": "Executing SQL"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "execute_sql_query",
+      "thought": null,
+      "label": "Executing SQL"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "check_empty_like_result",
+      "thought": null,
+      "label": "Checking results"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "check_empty_like_result",
+      "thought": null,
+      "label": "Checking results"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "check_value_repair",
+      "thought": null,
+      "label": "Checking values"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "check_value_repair",
+      "thought": null,
+      "label": "Checking values"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "format_and_respond",
+      "thought": null,
+      "label": "Formatting response"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "format_and_respond",
+      "thought": null,
+      "label": "Formatting response"
+    },
+    {
+      "type": "result",
+      "answer": {
+        "response": "The query identifies DAL functions in non-test files under auto_ontology/dal, excluding session.py, and counts distinct calling functions or methods that directly invoke each one. It restricts callers to non-test files outside auto_ontology/dal, orders by caller count descending with symbol ID ascending for ties, and returns the top five.",
+        "sql_code": "SELECT callee.symbol_id AS symbol_id, COUNT(DISTINCT caller.symbol_id) AS caller_count FROM auto_ontology_code.code.calls AS c JOIN auto_ontology_code.code.symbols AS callee ON c.callee_symbol_id = callee.symbol_id JOIN auto_ontology_code.code.files AS callee_file ON callee.file_id = callee_file.file_id JOIN auto_ontology_code.code.symbols AS caller ON c.caller_symbol_id = caller.symbol_id JOIN auto_ontology_code.code.files AS caller_file ON caller.file_id = caller_file.file_id WHERE c.call_kind = 'direct' AND callee.kind = 'function' AND callee_file.is_test = FALSE AND callee_file.file_id LIKE 'auto_ontology/dal/%' AND callee_file.file_id <> 'auto_ontology/dal/session.py' AND caller.kind IN ('function', 'method') AND caller_file.is_test = FALSE AND caller_file.file_id NOT LIKE 'auto_ontology/dal/%' GROUP BY callee.symbol_id ORDER BY caller_count DESC, callee.symbol_id ASC LIMIT 5;",
+        "sql_columns": [
+          "36c00b21-93e5-4b30-98c3-62f0abc51565",
+          "bce043c0-edb8-4b32-8bf2-04c786873be4",
+          "8519ae2a-e8cf-4c6a-b037-23d04dd71443",
+          "2650809f-e8a3-4bc6-adc2-b83eb3fb2613",
+          "5b837142-b11d-44f0-9b43-90b491046a1d",
+          "188f8816-586c-4f0b-88d3-d4ef2b940f75",
+          "7c44d976-d0df-4ac0-956c-1e3099ae0b6f",
+          "a88b620d-2b6f-404d-808a-fc1c580beeae"
+        ],
+        "custom_analyses_used": [],
+        "sql_response_from_db": [
+          "[{\"symbol_id\":\"auto_ontology\\/dal\\/owners.py::edit_subject\",\"caller_count\":9},{\"symbol_id\":\"auto_ontology\\/dal\\/connections.py::list_connections\",\"caller_count\":8},{\"symbol_id\":\"auto_ontology\\/dal\\/datasources.py::fetch_databases\",\"caller_count\":8},{\"symbol_id\":\"auto_ontology\\/dal\\/datasources.py::fetch_schemas_for_database\",\"caller_count\":7},{\"symbol_id\":\"auto_ontology\\/dal\\/datasources.py::fetch_schemas_by_ids\",\"caller_count\":6}]"
+        ],
+        "thoughts": "- Preparing candidates: The question is asking which module-level functions match criteria, so the primary subject is the function symbol identifier. The caller count is a ranking metric, not the main entity being identified. The relevant column is code.symbols.symbol_id.\n- Preparing candidates: All four identified tables are crucial for answering the question: `inbound_call_counts` provides the aggregated call count; `symbols` identifies the functions; `files` applies the file constraints (non-test, path); and `calls` is required to trace the caller's location and verify it meets the exclusion criteria.\n- Refining evidence: No certain repair is supported by the supplied question, value anchors, or fallback sample values. The path exclusion auto_ontology/dal/session.py matches a verified sample value, and no scalar or predicate operator in the grounded instructions is proven wrong.\n- Constructing SQL: I count distinct caller symbols from the calls table, filtering direct calls only because callback/reference-only occurrences should not count. The callee must be a module-level function in a non-test DAL file other than session.py, and the caller must be a function or method in a non-test file outside auto_ontology/dal. Ties are broken by symbol ID ascending, and the result is limited to five rows.\n- Validating SQL and intent: The SQL joins calls to symbols on callee_symbol_id (authoritative path) and symbols to files on file_id (authoritative path), then does the same for callers. Filters: callee.kind='function' matches 'module-level functions, not methods or classes'; callee_file.is_test=FALSE matches non-test files; callee_file.file_id LIKE 'auto_ontology/dal/%' AND <> 'auto_ontology/dal/session.py' matches the location/exclusion; caller.kind IN ('function','method') matches 'distinct functions or methods'; caller_file.is_test=FALSE AND NOT LIKE 'auto_ontology/dal/%' matches callers in non-test files outside the DAL. call_kind='direct' excludes callback/reference-style edges, which is consistent with 'a function passed by reference without being called does not count'. The aggregation COUNT(DISTINCT caller.symbol_id) correctly counts distinct caller symbols, ORDER BY caller_count DESC, callee.symbol_id ASC LIMIT 5 matches the ranking/tie-break/limit. No critical join or aggregation errors; evidence instructions are followed."
+      }
+    }
+  ],
+  "question_id": 8,
+  "gold_sql": "SELECT c.callee_symbol_id AS symbol_id, COUNT(DISTINCT c.caller_symbol_id) AS caller_count FROM code.calls c JOIN code.symbols cs ON cs.symbol_id = c.caller_symbol_id JOIN code.files cf ON cf.file_id = cs.file_id JOIN code.symbols t ON t.symbol_id = c.callee_symbol_id JOIN code.files tf ON tf.file_id = t.file_id WHERE c.call_kind = 'direct' AND NOT cf.is_test AND cs.kind IN ('function', 'method') AND cs.file_id NOT LIKE 'auto_ontology/dal/%' AND t.kind = 'function' AND t.file_id LIKE 'auto_ontology/dal/%' AND NOT tf.is_test AND t.file_id <> 'auto_ontology/dal/session.py' GROUP BY 1 ORDER BY 2 DESC, 1 LIMIT 5",
+  "gold_row_count": 1,
+  "agent_sql": "SELECT callee.symbol_id AS symbol_id, COUNT(DISTINCT caller.symbol_id) AS caller_count FROM auto_ontology_code.code.calls AS c JOIN auto_ontology_code.code.symbols AS callee ON c.callee_symbol_id = callee.symbol_id JOIN auto_ontology_code.code.files AS callee_file ON callee.file_id = callee_file.file_id JOIN auto_ontology_code.code.symbols AS caller ON c.caller_symbol_id = caller.symbol_id JOIN auto_ontology_code.code.files AS caller_file ON caller.file_id = caller_file.file_id WHERE c.call_kind = 'direct' AND callee.kind = 'function' AND callee_file.is_test = FALSE AND callee_file.file_id LIKE 'auto_ontology/dal/%' AND callee_file.file_id <> 'auto_ontology/dal/session.py' AND caller.kind IN ('function', 'method') AND caller_file.is_test = FALSE AND caller_file.file_id NOT LIKE 'auto_ontology/dal/%' GROUP BY callee.symbol_id ORDER BY caller_count DESC, callee.symbol_id ASC LIMIT 5;",
+  "agent_answer": "The query identifies DAL functions in non-test files under auto_ontology/dal, excluding session.py, and counts distinct calling functions or methods that directly invoke each one. It restricts callers to non-test files outside auto_ontology/dal, orders by caller count descending with symbol ID ascending for ties, and returns the top five.",
+  "agent_row_count": 5,
+  "correct_rows": false,
+  "error": null
+}

@@ -1,0 +1,55 @@
+{
+  "question_id": "httpx-06",
+  "arm": "B",
+  "model": "deepseek/deepseek-v4.1-flash-1017",
+  "error": null,
+  "elapsed_s": 1.56,
+  "attempts": [
+    {
+      "sql": "SELECT s.symbol_id, COUNT(m.symbol_id)::INTEGER AS method_count FROM code.symbols s JOIN code.symbols m ON m.file_id = s.file_id AND m.kind = 'method' AND m.qualname LIKE s.qualname || '.%' AND m.qualname NOT LIKE s.qualname || '.%.%' JOIN code.files f ON f.file_id = s.file_id WHERE s.kind = 'class' AND f.is_test = FALSE GROUP BY s.symbol_id HAVING COUNT(m.symbol_id) >= 20 ORDER BY method_count DESC, s.symbol_id ASC",
+      "error": null
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 2741,
+    "completion_tokens": 208,
+    "total_tokens": 2949,
+    "cost": 0.00018549,
+    "providers": [
+      "ModelRun"
+    ]
+  },
+  "request": "Which classes in the non-test code define at least 20 methods directly in their own body? Count every method definition separately (a property getter and its setter count as two; inherited methods and methods of nested classes do not count). Return each class's symbol ID and its method count, largest count first, ties broken by symbol ID alphabetically.\n\nRequested output columns: symbol_id (string), method_count (integer). Order the rows as the question asks.",
+  "explanation": "Joins each class symbol to method symbols in the same file whose qualname is directly nested under the class (exactly one extra dotted segment), excluding nested-class methods. It filters to non-test files, groups by class, keeps classes with at least 20 such methods, and orders by count descending then symbol ID.",
+  "sql": "SELECT s.symbol_id, COUNT(m.symbol_id)::INTEGER AS method_count FROM code.symbols s JOIN code.symbols m ON m.file_id = s.file_id AND m.kind = 'method' AND m.qualname LIKE s.qualname || '.%' AND m.qualname NOT LIKE s.qualname || '.%.%' JOIN code.files f ON f.file_id = s.file_id WHERE s.kind = 'class' AND f.is_test = FALSE GROUP BY s.symbol_id HAVING COUNT(m.symbol_id) >= 20 ORDER BY method_count DESC, s.symbol_id ASC",
+  "rows": [
+    {
+      "symbol_id": "httpx/_models.py::Response",
+      "method_count": 42
+    },
+    {
+      "symbol_id": "httpx/_client.py::BaseClient",
+      "method_count": 32
+    },
+    {
+      "symbol_id": "httpx/_urls.py::URL",
+      "method_count": 28
+    },
+    {
+      "symbol_id": "httpx/_urls.py::QueryParams",
+      "method_count": 22
+    },
+    {
+      "symbol_id": "httpx/_client.py::AsyncClient",
+      "method_count": 20
+    },
+    {
+      "symbol_id": "httpx/_client.py::Client",
+      "method_count": 20
+    },
+    {
+      "symbol_id": "httpx/_models.py::Headers",
+      "method_count": 20
+    }
+  ]
+}

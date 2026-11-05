@@ -1,0 +1,47 @@
+{
+  "question_id": "ao-12",
+  "arm": "S",
+  "model": "deepseek/deepseek-v4.1-flash-1017",
+  "error": null,
+  "elapsed_s": 0.64,
+  "attempts": [
+    {
+      "sql": "WITH target AS (SELECT symbol_id FROM code.symbols WHERE file_id = 'auto_ontology/server/models.py' AND name = 'ApiModel'), direct AS (SELECT cb.class_symbol_id FROM code.class_bases cb JOIN target t ON cb.base_symbol_id = t.symbol_id), indirect AS (SELECT ca.class_symbol_id, ca.depth FROM code.class_ancestry ca JOIN target t ON ca.ancestor_symbol_id = t.symbol_id WHERE ca.depth >= 2) SELECT i.class_symbol_id, i.depth FROM indirect i WHERE i.class_symbol_id NOT IN (SELECT class_symbol_id FROM direct) ORDER BY i.depth, i.class_symbol_id",
+      "error": null
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 5483,
+    "completion_tokens": 209,
+    "total_tokens": 5692,
+    "cost": 0.000300584,
+    "providers": [
+      "Relace"
+    ]
+  },
+  "request": "Which classes inherit from ApiModel (auto_ontology/server/models.py) only indirectly, i.e. through at least one intermediate class of this repository, and do not name ApiModel directly in their class statement? An import alias of ApiModel (auto_ontology/server/responses.py imports it as _Payload) counts as naming ApiModel directly, and a subscripted base such as ListResponse[T] counts as its class. For each, give the class symbol ID and the length of the shortest inheritance chain to ApiModel (2 when the parent class directly subclasses ApiModel).\n\nRequested output columns: class_symbol_id (string), depth (integer).",
+  "explanation": "Finds ApiModel in models.py, then uses class_ancestry to get all classes reaching it at depth >= 2 (indirect inheritance). It excludes classes that name ApiModel directly as a base, leaving only those inheriting through an intermediate repository class, with the shortest chain length.",
+  "sql": "WITH target AS (SELECT symbol_id FROM code.symbols WHERE file_id = 'auto_ontology/server/models.py' AND name = 'ApiModel'), direct AS (SELECT cb.class_symbol_id FROM code.class_bases cb JOIN target t ON cb.base_symbol_id = t.symbol_id), indirect AS (SELECT ca.class_symbol_id, ca.depth FROM code.class_ancestry ca JOIN target t ON ca.ancestor_symbol_id = t.symbol_id WHERE ca.depth >= 2) SELECT i.class_symbol_id, i.depth FROM indirect i WHERE i.class_symbol_id NOT IN (SELECT class_symbol_id FROM direct) ORDER BY i.depth, i.class_symbol_id",
+  "rows": [
+    {
+      "class_symbol_id": "auto_ontology/server/models.py::TableExplorationTerm",
+      "depth": 2
+    },
+    {
+      "class_symbol_id": "auto_ontology/server/models.py::Term",
+      "depth": 2
+    },
+    {
+      "class_symbol_id": "auto_ontology/server/responses.py::PagedListResponse",
+      "depth": 2
+    },
+    {
+      "class_symbol_id": "auto_ontology/server/models.py::TermDetail",
+      "depth": 3
+    },
+    {
+      "class_symbol_id": "auto_ontology/server/models.py::TermListItem",
+      "depth": 3
+    }
+  ]
+}

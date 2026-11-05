@@ -1,0 +1,26 @@
+{
+  "question_id": "rich-11",
+  "arm": "A",
+  "model": "nvidia/nemotron-3.5-lightning",
+  "error": null,
+  "elapsed_s": 6.43,
+  "attempts": [
+    {
+      "sql": "WITH public_functions AS (\n    SELECT s.file_id, s.symbol_id, s.name, s.kind\n    FROM code.symbols s\n    WHERE s.kind IN ('function', 'method')\n      AND s.name NOT LIKE '_%'  -- own name not starting with underscore\n    AND (s.qualname NOT LIKE '_%' OR s.qualname IS NULL)  -- enclosing class name not starting with underscore\n),\nundocumented AS (\n    SELECT pf.file_id, COUNT(*) AS undocumented_count\n    FROM public_functions pf\n    LEFT JOIN code.headings h\n      ON h.file_id = pf.file_id\n     AND h.heading = 'Docstring'\n    WHERE h.heading IS NULL  -- no Docstring heading found\n    GROUP BY pf.file_id\n)\nSELECT file_id, undocumented_count\nFROM undocumented\nORDER BY undocumented_count DESC, file_id ASC\nLIMIT 5",
+      "error": null
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 608,
+    "completion_tokens": 290,
+    "total_tokens": 898,
+    "cost": 5e-05,
+    "providers": [
+      "Darkbloom"
+    ]
+  },
+  "request": "Under the rich/ folder, which five files contain the most public functions and methods that have no docstring? A function or method is public when neither its own name nor the name of its enclosing class starts with an underscore (so dunder methods are not public); classes themselves are not counted, and every definition counts separately (each @overload stub and each property getter or setter). Give the file path and the count, ordered by count descending, ties broken by file path ascending.\n\nRequested output columns: file_id (string), undocumented_count (integer). Order the rows as the question asks.",
+  "explanation": "The query first identifies all public functions/methods (excluding those whose name or enclosing class starts with underscore). It then left-joins to headings to check for a 'Docstring' entry; where none exists the symbol is undocumented. Finally it aggregates by file, counts undocumented symbols, and returns the top 5 files ordered by count descending and file path ascending.",
+  "sql": "WITH public_functions AS (\n    SELECT s.file_id, s.symbol_id, s.name, s.kind\n    FROM code.symbols s\n    WHERE s.kind IN ('function', 'method')\n      AND s.name NOT LIKE '_%'  -- own name not starting with underscore\n    AND (s.qualname NOT LIKE '_%' OR s.qualname IS NULL)  -- enclosing class name not starting with underscore\n),\nundocumented AS (\n    SELECT pf.file_id, COUNT(*) AS undocumented_count\n    FROM public_functions pf\n    LEFT JOIN code.headings h\n      ON h.file_id = pf.file_id\n     AND h.heading = 'Docstring'\n    WHERE h.heading IS NULL  -- no Docstring heading found\n    GROUP BY pf.file_id\n)\nSELECT file_id, undocumented_count\nFROM undocumented\nORDER BY undocumented_count DESC, file_id ASC\nLIMIT 5",
+  "rows": []
+}

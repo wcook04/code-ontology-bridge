@@ -1,0 +1,31 @@
+{
+  "question_id": "ao-01",
+  "arm": "A",
+  "model": "nvidia/nemotron-3.5-lightning",
+  "error": null,
+  "elapsed_s": 5.33,
+  "attempts": [
+    {
+      "sql": "WITH production_files AS (\n  SELECT s.symbol_id AS class_symbol_id, s.file_id\n  FROM code.symbols s\n  WHERE s.kind = 'class'\n    AND s.qualname LIKE '%.SQLDatabase'\n    AND s.file_id IN (\n      SELECT f.file_id\n      FROM code.files f\n      WHERE f.module NOT LIKE 'tests/%'\n    )\n),\nconnector_classes AS (\n  SELECT DISTINCT class_symbol_id\n  FROM production_files\n),\nclass_methods AS (\n  SELECT s.symbol_id AS method_symbol_id,\n         s.qualname AS method_qualname,\n         s.file_id AS class_file_id\n  FROM code.symbols s\n  WHERE s.kind = 'method'\n    AND s.qualname NOT LIKE '_%'\n),\nown_methods AS (\n  SELECT cm.method_symbol_id,\n         cm.method_qualname,\n         cm.class_file_id\n  FROM class_methods cc\n  JOIN class_methods cm ON cm.class_file_id = cc.file_id\n  WHERE cm.method_qualname NOT IN (\n    SELECT s2.qualname\n    FROM code.symbols s2\n    WHERE s2.file_id = cc.file_id\n      AND s2.kind = 'method'\n      AND s2.qualname NOT LIKE '_%'\n      AND s2.qualname != cm.method_qualname\n  )\n),\npublic_own_methods AS (\n  SELECT method_symbol_id,\n         method_qualname AS method_name,\n         class_file_id AS class_symbol_id\n  FROM own_methods\n  WHERE method_name NOT LIKE '_%'\n)\nSELECT class_symbol_id,\n       method_name\nFROM public_own_methods\nORDER BY class_symbol_id,\n         method_name;",
+      "error": "Binder Error: Values list \"cc\" does not have a column named \"file_id\""
+    },
+    {
+      "sql": "WITH production_files AS (\n  SELECT s.symbol_id AS class_symbol_id, s.file_id\n  FROM code.symbols s\n  WHERE s.kind = 'class'\n    AND s.qualname LIKE '%.SQLDatabase'\n    AND s.file_id IN (\n      SELECT f.file_id\n      FROM code.files f\n      WHERE f.module NOT LIKE 'tests/%'\n    )\n),\nconnector_classes AS (\n  SELECT DISTINCT class_symbol_id\n  FROM production_files\n),\nclass_methods AS (\n  SELECT s.symbol_id AS method_symbol_id,\n         s.qualname AS method_qualname,\n         s.file_id AS class_file_id\n  FROM code.symbols s\n  WHERE s.kind = 'method'\n    AND s.qualname NOT LIKE '_%'\n),\nown_methods AS (\n  SELECT cm.method_symbol_id,\n         cm.method_qualname,\n         cm.class_file_id\n  FROM class_methods cm\n  WHERE NOT EXISTS (\n    SELECT 1\n    FROM class_methods other_m\n    WHERE other_m.class_file_id = cm.class_file_id\n      AND other_m.method_qualname = cm.method_qualname\n      AND other_m.method_symbol_id != cm.method_symbol_id\n  )\n),\npublic_own_methods AS (\n  SELECT method_symbol_id,\n         method_qualname AS method_name,\n         class_file_id AS class_symbol_id\n  FROM own_methods\n  WHERE method_qualname NOT LIKE '_%'\n)\nSELECT class_symbol_id,\n       method_name\nFROM public_own_methods\nORDER BY class_symbol_id,\n       method_name;",
+      "error": null
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 1824,
+    "completion_tokens": 946,
+    "total_tokens": 2770,
+    "cost": 0.00031687999999999996,
+    "providers": [
+      "CoreWeave",
+      "CoreWeave"
+    ]
+  },
+  "request": "The production database connectors are the classes that directly subclass SQLDatabase (defined in auto_ontology/connectors/base.py), excluding any class defined in test code (every file under a tests/ folder counts as test code). For each such connector class, which public methods does the class define in its own body that SQLDatabase itself does not define? A method is public when its name does not start with an underscore (so __init__ and other dunder methods are excluded); anything written with def directly in the class body counts as a method, including properties and context-manager methods. Methods inherited without being redefined do not count. Return one row per (connector class symbol ID, method name).\n\nRequested output columns: class_symbol_id (string), method_name (string).",
+  "explanation": "The query identifies production files with SQLDatabase subclasses, then finds methods directly defined in those classes (excluding inherited ones via NOT EXISTS). It filters to public methods (names not starting with underscore) and returns one row per (class_symbol_id, method_name). The column alias file_id was replaced with class_file_id to match the actual column name in code.symbols.",
+  "sql": "WITH production_files AS (\n  SELECT s.symbol_id AS class_symbol_id, s.file_id\n  FROM code.symbols s\n  WHERE s.kind = 'class'\n    AND s.qualname LIKE '%.SQLDatabase'\n    AND s.file_id IN (\n      SELECT f.file_id\n      FROM code.files f\n      WHERE f.module NOT LIKE 'tests/%'\n    )\n),\nconnector_classes AS (\n  SELECT DISTINCT class_symbol_id\n  FROM production_files\n),\nclass_methods AS (\n  SELECT s.symbol_id AS method_symbol_id,\n         s.qualname AS method_qualname,\n         s.file_id AS class_file_id\n  FROM code.symbols s\n  WHERE s.kind = 'method'\n    AND s.qualname NOT LIKE '_%'\n),\nown_methods AS (\n  SELECT cm.method_symbol_id,\n         cm.method_qualname,\n         cm.class_file_id\n  FROM class_methods cm\n  WHERE NOT EXISTS (\n    SELECT 1\n    FROM class_methods other_m\n    WHERE other_m.class_file_id = cm.class_file_id\n      AND other_m.method_qualname = cm.method_qualname\n      AND other_m.method_symbol_id != cm.method_symbol_id\n  )\n),\npublic_own_methods AS (\n  SELECT method_symbol_id,\n         method_qualname AS method_name,\n         class_file_id AS class_symbol_id\n  FROM own_methods\n  WHERE method_qualname NOT LIKE '_%'\n)\nSELECT class_symbol_id,\n       method_name\nFROM public_own_methods\nORDER BY class_symbol_id,\n       method_name;",
+  "rows": []
+}

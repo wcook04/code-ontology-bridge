@@ -1,0 +1,491 @@
+{
+  "question_id": "ao-01",
+  "arm": "C-base",
+  "model": "nvidia/nemotron-3.5-lightning",
+  "error": null,
+  "elapsed_s": 144.5,
+  "attempts": [
+    {
+      "sql": "WITH connector_classes AS (\n    SELECT symbol_id AS class_symbol_id,\n           name AS class_name,\n           line_start,\n           line_end\n    FROM auto_ontology_code.code.symbols\n    WHERE kind = 'class'\n      AND file_id LIKE 'auto_ontology/connectors/%'\n      AND file_id NOT LIKE '%/tests/%'\n),\nconnector_methods AS (\n    SELECT s.name AS method_name,\n           c.class_symbol_id\n    FROM auto_ontology_code.code.symbols s\n    JOIN connector_classes c\n      ON s.qualname LIKE c.class_name || '.%'\n     AND s.kind = 'method'\n     AND s.is_public = true\n     AND s.line_start >= c.line_start\n     AND s.line_end <= c.line_end\n     AND s.qualname NOT LIKE 'SQLDatabase.%'\n)\nSELECT c.class_symbol_id,\n       s.method_name\nFROM connector_methods s\nJOIN connector_classes c\n  ON c.class_symbol_id = s.class_symbol_id\nORDER BY c.class_symbol_id,\n         s.method_name;"
+    }
+  ],
+  "usage": {},
+  "request": "The production database connectors are the classes that directly subclass SQLDatabase (defined in auto_ontology/connectors/base.py), excluding any class defined in test code (every file under a tests/ folder counts as test code). For each such connector class, which public methods does the class define in its own body that SQLDatabase itself does not define? A method is public when its name does not start with an underscore (so __init__ and other dunder methods are excluded); anything written with def directly in the class body counts as a method, including properties and context-manager methods. Methods inherited without being redefined do not count. Return one row per (connector class symbol ID, method name).\n\nRequested output columns: class_symbol_id (string), method_name (string).\nReturn exactly the requested output columns, using each requested name as the column alias, in the requested order. Return complete repository-relative file paths and complete symbol IDs exactly as stored. When the question asks which files, symbols or modules, return each distinct one once unless it asks for occurrences.",
+  "explanation": "This query lists, for every production database connector class defined outside of test files, the public methods that are authored directly in that class and are not inherited from SQLDatabase. It returns one row per (class symbol ID, method name) pair, showing the API surface each connector contributes on its own.",
+  "sql": "WITH connector_classes AS (\n    SELECT symbol_id AS class_symbol_id,\n           name AS class_name,\n           line_start,\n           line_end\n    FROM auto_ontology_code.code.symbols\n    WHERE kind = 'class'\n      AND file_id LIKE 'auto_ontology/connectors/%'\n      AND file_id NOT LIKE '%/tests/%'\n),\nconnector_methods AS (\n    SELECT s.name AS method_name,\n           c.class_symbol_id\n    FROM auto_ontology_code.code.symbols s\n    JOIN connector_classes c\n      ON s.qualname LIKE c.class_name || '.%'\n     AND s.kind = 'method'\n     AND s.is_public = true\n     AND s.line_start >= c.line_start\n     AND s.line_end <= c.line_end\n     AND s.qualname NOT LIKE 'SQLDatabase.%'\n)\nSELECT c.class_symbol_id,\n       s.method_name\nFROM connector_methods s\nJOIN connector_classes c\n  ON c.class_symbol_id = s.class_symbol_id\nORDER BY c.class_symbol_id,\n         s.method_name;",
+  "rows": [
+    {
+      "class_symbol_id": "auto_ontology/connectors/base.py::StatementTimeout",
+      "method_name": "since"
+    },
+    {
+      "class_symbol_id": "auto_ontology/connectors/clickhouse.py::ClickHouseDatabase",
+      "method_name": "close"
+    },
+    {
+      "class_symbol_id": "auto_ontology/connectors/clickhouse.py::ClickHouseDatabase",
+      "method_name": "database_name"
+    },
+    {
+      "class_symbol_id": "auto_ontology/connectors/clickhouse.py::ClickHouseDatabase",
+      "method_name": "dialect"
+    },
+    {
+      "class_symbol_id": "auto_ontology/connectors/clickhouse.py::ClickHouseDatabase",
+      "method_name": "execute"
+    },
+    {
+      "class_symbol_id": "auto_ontology/connectors/clickhouse.py::ClickHouseDatabase",
+      "method_name": "get_columns"
+    },
+    {
+      "class_symbol_id": "auto_ontology/connectors/clickhouse.py::ClickHouseDatabase",
+      "method_name": "get_fks"
+    },
+    {
+      "class_symbol_id": "auto_ontology/connectors/clickhouse.py::ClickHouseDatabase",
+      "method_name": "get_pks"
+    },
+    {
+      "class_symbol_id": "auto_ontology/connectors/clickhouse.py::ClickHouseDatabase",
+      "method_name": "get_queries"
+    },
+    {
+      "class_symbol_id": "auto_ontology/connectors/clickhouse.py::ClickHouseDatabase",
+      "method_name": "get_tables"
+    },
+    {
+      "class_symbol_id": "auto_ontology/connectors/clickhouse.py::ClickHouseDatabase",
+      "method_name": "get_views"
+    },
+    {
+      "class_symbol_id": "auto_ontology/connectors/clickhouse.py::ClickHouseDatabase",
+      "method_name": "ping"
+    },
+    {
+      "class_symbol_id": "auto_ontology/connectors/databricks.py::DatabricksDatabase",
+      "method_name": "auth_mode"
+    },
+    {
+      "class_symbol_id": "auto_ontology/connectors/databricks.py::DatabricksDatabase",
+      "method_name": "close"
+    },
+    {
+      "class_symbol_id": "auto_ontology/connectors/databricks.py::DatabricksDatabase",
+      "method_name": "database_name"
+    },
+    {
+      "class_symbol_id": "auto_ontology/connectors/databricks.py::DatabricksDatabase",
+      "method_name": "dialect"
+    },
+    {
+      "class_symbol_id": "auto_ontology/connectors/databricks.py::DatabricksDatabase",
+      "method_name": "execute"
+    },
+    {
+      "class_symbol_id": "auto_ontology/connectors/databricks.py::DatabricksDatabase",
+      "method_name": "get_columns"
+    },
+    {
+      "class_symbol_id": "auto_ontology/connectors/databricks.py::DatabricksDatabase",
+      "method_name": "get_fks"
+    },
+    {
+      "class_symbol_id": "auto_ontology/connectors/databricks.py::DatabricksDatabase",
+      "method_name": "get_pks"
+    },
+    {
+      "class_symbol_id": "auto_ontology/connectors/databricks.py::DatabricksDatabase",
+      "method_name": "get_queries"
+    },
+    {
+      "class_symbol_id": "auto_ontology/connectors/databricks.py::DatabricksDatabase",
+      "method_name": "get_schemas"
+    },
+    {
+      "class_symbol_id": "auto_ontology/connectors/databricks.py::DatabricksDatabase",
+      "method_name": "get_tables"
+    },
+    {
+      "class_symbol_id": "auto_ontology/connectors/databricks.py::DatabricksDatabase",
+      "method_name": "get_views"
+    },
+    {
+      "class_symbol_id": "auto_ontology/connectors/databricks.py::DatabricksDatabase",
+      "method_name": "ping"
+    },
+    {
+      "class_symbol_id": "auto_ontology/connectors/databricks.py::DatabricksDatabase",
+      "method_name": "qualify"
+    },
+    {
+      "class_symbol_id": "auto_ontology/connectors/databricks.py::DatabricksDatabase",
+      "method_name": "reuse_connection"
+    },
+    {
+      "class_symbol_id": "auto_ontology/connectors/duckdb.py::DuckDBDatabase",
+      "method_name": "close"
+    },
+    {
+      "class_symbol_id": "auto_ontology/connectors/duckdb.py::DuckDBDatabase",
+      "method_name": "database_name"
+    },
+    {
+      "class_symbol_id": "auto_ontology/connectors/duckdb.py::DuckDBDatabase",
+      "method_name": "dialect"
+    },
+    {
+      "class_symbol_id": "auto_ontology/connectors/duckdb.py::DuckDBDatabase",
+      "method_name": "execute"
+    },
+    {
+      "class_symbol_id": "auto_ontology/connectors/duckdb.py::DuckDBDatabase",
+      "method_name": "get_columns"
+    },
+    {
+      "class_symbol_id": "auto_ontology/connectors/duckdb.py::DuckDBDatabase",
+      "method_name": "get_fks"
+    },
+    {
+      "class_symbol_id": "auto_ontology/connectors/duckdb.py::DuckDBDatabase",
+      "method_name": "get_pks"
+    },
+    {
+      "class_symbol_id": "auto_ontology/connectors/duckdb.py::DuckDBDatabase",
+      "method_name": "get_queries"
+    },
+    {
+      "class_symbol_id": "auto_ontology/connectors/duckdb.py::DuckDBDatabase",
+      "method_name": "get_tables"
+    },
+    {
+      "class_symbol_id": "auto_ontology/connectors/duckdb.py::DuckDBDatabase",
+      "method_name": "get_views"
+    },
+    {
+      "class_symbol_id": "auto_ontology/connectors/heavydb.py::HeavyDBDatabase",
+      "method_name": "close"
+    },
+    {
+      "class_symbol_id": "auto_ontology/connectors/heavydb.py::HeavyDBDatabase",
+      "method_name": "database_name"
+    },
+    {
+      "class_symbol_id": "auto_ontology/connectors/heavydb.py::HeavyDBDatabase",
+      "method_name": "dialect"
+    },
+    {
+      "class_symbol_id": "auto_ontology/connectors/heavydb.py::HeavyDBDatabase",
+      "method_name": "execute"
+    },
+    {
+      "class_symbol_id": "auto_ontology/connectors/heavydb.py::HeavyDBDatabase",
+      "method_name": "get_columns"
+    },
+    {
+      "class_symbol_id": "auto_ontology/connectors/heavydb.py::HeavyDBDatabase",
+      "method_name": "get_fks"
+    },
+    {
+      "class_symbol_id": "auto_ontology/connectors/heavydb.py::HeavyDBDatabase",
+      "method_name": "get_pks"
+    },
+    {
+      "class_symbol_id": "auto_ontology/connectors/heavydb.py::HeavyDBDatabase",
+      "method_name": "get_queries"
+    },
+    {
+      "class_symbol_id": "auto_ontology/connectors/heavydb.py::HeavyDBDatabase",
+      "method_name": "get_tables"
+    },
+    {
+      "class_symbol_id": "auto_ontology/connectors/heavydb.py::HeavyDBDatabase",
+      "method_name": "get_views"
+    },
+    {
+      "class_symbol_id": "auto_ontology/connectors/heavydb.py::HeavyDBDatabase",
+      "method_name": "ping"
+    },
+    {
+      "class_symbol_id": "auto_ontology/connectors/kyuubi.py::KyuubiDatabase",
+      "method_name": "close"
+    },
+    {
+      "class_symbol_id": "auto_ontology/connectors/kyuubi.py::KyuubiDatabase",
+      "method_name": "database_name"
+    },
+    {
+      "class_symbol_id": "auto_ontology/connectors/kyuubi.py::KyuubiDatabase",
+      "method_name": "dialect"
+    },
+    {
+      "class_symbol_id": "auto_ontology/connectors/kyuubi.py::KyuubiDatabase",
+      "method_name": "execute"
+    },
+    {
+      "class_symbol_id": "auto_ontology/connectors/kyuubi.py::KyuubiDatabase",
+      "method_name": "get_columns"
+    },
+    {
+      "class_symbol_id": "auto_ontology/connectors/kyuubi.py::KyuubiDatabase",
+      "method_name": "get_fks"
+    },
+    {
+      "class_symbol_id": "auto_ontology/connectors/kyuubi.py::KyuubiDatabase",
+      "method_name": "get_pks"
+    },
+    {
+      "class_symbol_id": "auto_ontology/connectors/kyuubi.py::KyuubiDatabase",
+      "method_name": "get_queries"
+    },
+    {
+      "class_symbol_id": "auto_ontology/connectors/kyuubi.py::KyuubiDatabase",
+      "method_name": "get_schemas"
+    },
+    {
+      "class_symbol_id": "auto_ontology/connectors/kyuubi.py::KyuubiDatabase",
+      "method_name": "get_tables"
+    },
+    {
+      "class_symbol_id": "auto_ontology/connectors/kyuubi.py::KyuubiDatabase",
+      "method_name": "get_views"
+    },
+    {
+      "class_symbol_id": "auto_ontology/connectors/kyuubi.py::KyuubiDatabase",
+      "method_name": "ping"
+    },
+    {
+      "class_symbol_id": "auto_ontology/connectors/kyuubi.py::KyuubiDatabase",
+      "method_name": "qualify"
+    },
+    {
+      "class_symbol_id": "auto_ontology/connectors/mysql.py::MySQLDatabase",
+      "method_name": "close"
+    },
+    {
+      "class_symbol_id": "auto_ontology/connectors/mysql.py::MySQLDatabase",
+      "method_name": "database_name"
+    },
+    {
+      "class_symbol_id": "auto_ontology/connectors/mysql.py::MySQLDatabase",
+      "method_name": "dialect"
+    },
+    {
+      "class_symbol_id": "auto_ontology/connectors/mysql.py::MySQLDatabase",
+      "method_name": "execute"
+    },
+    {
+      "class_symbol_id": "auto_ontology/connectors/mysql.py::MySQLDatabase",
+      "method_name": "get_columns"
+    },
+    {
+      "class_symbol_id": "auto_ontology/connectors/mysql.py::MySQLDatabase",
+      "method_name": "get_fks"
+    },
+    {
+      "class_symbol_id": "auto_ontology/connectors/mysql.py::MySQLDatabase",
+      "method_name": "get_pks"
+    },
+    {
+      "class_symbol_id": "auto_ontology/connectors/mysql.py::MySQLDatabase",
+      "method_name": "get_queries"
+    },
+    {
+      "class_symbol_id": "auto_ontology/connectors/mysql.py::MySQLDatabase",
+      "method_name": "get_tables"
+    },
+    {
+      "class_symbol_id": "auto_ontology/connectors/mysql.py::MySQLDatabase",
+      "method_name": "get_views"
+    },
+    {
+      "class_symbol_id": "auto_ontology/connectors/mysql.py::MySQLDatabase",
+      "method_name": "ping"
+    },
+    {
+      "class_symbol_id": "auto_ontology/connectors/postgres.py::PostgresDatabase",
+      "method_name": "close"
+    },
+    {
+      "class_symbol_id": "auto_ontology/connectors/postgres.py::PostgresDatabase",
+      "method_name": "database_name"
+    },
+    {
+      "class_symbol_id": "auto_ontology/connectors/postgres.py::PostgresDatabase",
+      "method_name": "dialect"
+    },
+    {
+      "class_symbol_id": "auto_ontology/connectors/postgres.py::PostgresDatabase",
+      "method_name": "execute"
+    },
+    {
+      "class_symbol_id": "auto_ontology/connectors/postgres.py::PostgresDatabase",
+      "method_name": "get_columns"
+    },
+    {
+      "class_symbol_id": "auto_ontology/connectors/postgres.py::PostgresDatabase",
+      "method_name": "get_fks"
+    },
+    {
+      "class_symbol_id": "auto_ontology/connectors/postgres.py::PostgresDatabase",
+      "method_name": "get_pks"
+    },
+    {
+      "class_symbol_id": "auto_ontology/connectors/postgres.py::PostgresDatabase",
+      "method_name": "get_queries"
+    },
+    {
+      "class_symbol_id": "auto_ontology/connectors/postgres.py::PostgresDatabase",
+      "method_name": "get_tables"
+    },
+    {
+      "class_symbol_id": "auto_ontology/connectors/postgres.py::PostgresDatabase",
+      "method_name": "get_views"
+    },
+    {
+      "class_symbol_id": "auto_ontology/connectors/postgres.py::PostgresDatabase",
+      "method_name": "ping"
+    },
+    {
+      "class_symbol_id": "auto_ontology/connectors/snowflake.py::SnowflakeDatabase",
+      "method_name": "close"
+    },
+    {
+      "class_symbol_id": "auto_ontology/connectors/snowflake.py::SnowflakeDatabase",
+      "method_name": "database_name"
+    },
+    {
+      "class_symbol_id": "auto_ontology/connectors/snowflake.py::SnowflakeDatabase",
+      "method_name": "dialect"
+    },
+    {
+      "class_symbol_id": "auto_ontology/connectors/snowflake.py::SnowflakeDatabase",
+      "method_name": "execute"
+    },
+    {
+      "class_symbol_id": "auto_ontology/connectors/snowflake.py::SnowflakeDatabase",
+      "method_name": "get_columns"
+    },
+    {
+      "class_symbol_id": "auto_ontology/connectors/snowflake.py::SnowflakeDatabase",
+      "method_name": "get_fks"
+    },
+    {
+      "class_symbol_id": "auto_ontology/connectors/snowflake.py::SnowflakeDatabase",
+      "method_name": "get_pks"
+    },
+    {
+      "class_symbol_id": "auto_ontology/connectors/snowflake.py::SnowflakeDatabase",
+      "method_name": "get_queries"
+    },
+    {
+      "class_symbol_id": "auto_ontology/connectors/snowflake.py::SnowflakeDatabase",
+      "method_name": "get_schemas"
+    },
+    {
+      "class_symbol_id": "auto_ontology/connectors/snowflake.py::SnowflakeDatabase",
+      "method_name": "get_tables"
+    },
+    {
+      "class_symbol_id": "auto_ontology/connectors/snowflake.py::SnowflakeDatabase",
+      "method_name": "get_views"
+    },
+    {
+      "class_symbol_id": "auto_ontology/connectors/snowflake.py::SnowflakeDatabase",
+      "method_name": "ping"
+    },
+    {
+      "class_symbol_id": "auto_ontology/connectors/sqlite.py::SQLiteDatabase",
+      "method_name": "close"
+    },
+    {
+      "class_symbol_id": "auto_ontology/connectors/sqlite.py::SQLiteDatabase",
+      "method_name": "database_name"
+    },
+    {
+      "class_symbol_id": "auto_ontology/connectors/sqlite.py::SQLiteDatabase",
+      "method_name": "dialect"
+    },
+    {
+      "class_symbol_id": "auto_ontology/connectors/sqlite.py::SQLiteDatabase",
+      "method_name": "execute"
+    },
+    {
+      "class_symbol_id": "auto_ontology/connectors/sqlite.py::SQLiteDatabase",
+      "method_name": "get_columns"
+    },
+    {
+      "class_symbol_id": "auto_ontology/connectors/sqlite.py::SQLiteDatabase",
+      "method_name": "get_fks"
+    },
+    {
+      "class_symbol_id": "auto_ontology/connectors/sqlite.py::SQLiteDatabase",
+      "method_name": "get_pks"
+    },
+    {
+      "class_symbol_id": "auto_ontology/connectors/sqlite.py::SQLiteDatabase",
+      "method_name": "get_queries"
+    },
+    {
+      "class_symbol_id": "auto_ontology/connectors/sqlite.py::SQLiteDatabase",
+      "method_name": "get_tables"
+    },
+    {
+      "class_symbol_id": "auto_ontology/connectors/sqlite.py::SQLiteDatabase",
+      "method_name": "get_views"
+    },
+    {
+      "class_symbol_id": "auto_ontology/connectors/trino.py::TrinoDatabase",
+      "method_name": "close"
+    },
+    {
+      "class_symbol_id": "auto_ontology/connectors/trino.py::TrinoDatabase",
+      "method_name": "database_name"
+    },
+    {
+      "class_symbol_id": "auto_ontology/connectors/trino.py::TrinoDatabase",
+      "method_name": "dialect"
+    },
+    {
+      "class_symbol_id": "auto_ontology/connectors/trino.py::TrinoDatabase",
+      "method_name": "execute"
+    },
+    {
+      "class_symbol_id": "auto_ontology/connectors/trino.py::TrinoDatabase",
+      "method_name": "get_columns"
+    },
+    {
+      "class_symbol_id": "auto_ontology/connectors/trino.py::TrinoDatabase",
+      "method_name": "get_fks"
+    },
+    {
+      "class_symbol_id": "auto_ontology/connectors/trino.py::TrinoDatabase",
+      "method_name": "get_pks"
+    },
+    {
+      "class_symbol_id": "auto_ontology/connectors/trino.py::TrinoDatabase",
+      "method_name": "get_queries"
+    },
+    {
+      "class_symbol_id": "auto_ontology/connectors/trino.py::TrinoDatabase",
+      "method_name": "get_schemas"
+    },
+    {
+      "class_symbol_id": "auto_ontology/connectors/trino.py::TrinoDatabase",
+      "method_name": "get_tables"
+    },
+    {
+      "class_symbol_id": "auto_ontology/connectors/trino.py::TrinoDatabase",
+      "method_name": "get_views"
+    },
+    {
+      "class_symbol_id": "auto_ontology/connectors/trino.py::TrinoDatabase",
+      "method_name": "ping"
+    },
+    {
+      "class_symbol_id": "auto_ontology/connectors/trino.py::TrinoDatabase",
+      "method_name": "qualify"
+    }
+  ],
+  "source_record": "run/responses/10i_ask_with_key/ask_q1.json"
+}

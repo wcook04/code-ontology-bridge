@@ -1,0 +1,203 @@
+{
+  "request": {
+    "question": "Consider the agent classes defined in non-test code that directly subclass BaseAgent from auto_ontology/retrieval/text_to_sql/base.py (every file under a tests/ folder, conftest.py and helpers included, is test code). Which of these agent classes are constructed (the class is called by name, e.g. ResponseAgent()) somewhere in non-test code but are never constructed anywhere in test code? Count only direct constructor calls written in a function or method body; patching or referencing a class without calling it does not count, and a test that calls a function which constructs the class does not count as constructing it. Return their class symbol IDs.\n\nRequested output columns: class_symbol_id (string).\nReturn exactly the requested output columns, using each requested name as the column alias, in the requested order. Return complete repository-relative file paths and complete symbol IDs exactly as stored. When the question asks which files, symbols or modules, return each distinct one once unless it asks for occurrences.",
+    "calculation_only": true
+  },
+  "status": 200,
+  "elapsed_s": 193.1,
+  "events": [
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "question_intent",
+      "thought": null,
+      "label": "Classifying the question"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "question_intent",
+      "thought": null,
+      "label": "Classifying the question"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "question_extraction",
+      "thought": null,
+      "label": "Understanding the question"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "question_extraction",
+      "thought": null,
+      "label": "Understanding the question"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "retrieve_candidates",
+      "thought": null,
+      "label": "Retrieving candidates"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "retrieve_candidates",
+      "thought": null,
+      "label": "Retrieving candidates"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "prepare_candidates",
+      "thought": null,
+      "label": "Preparing candidates"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "prepare_candidates",
+      "thought": "The query needs class_bases to find direct BaseAgent subclasses, symbols for class_symbol_id and file path, files to distinguish test vs non-test, and inbound_call_counts to check construction in non-test but not test code. imports and untested_public_symbols are not needed for these predicates or output.",
+      "label": "Preparing candidates"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "refine_evidence",
+      "thought": null,
+      "label": "Refining evidence"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "refine_evidence",
+      "thought": "No certain repairs apply. The supplied constants and predicates match the verified value anchors and sample values: base_name 'BaseAgent', symbols.kind 'class', files.is_test booleans False/True, calls as construction evidence, and the file path auto_ontology/retrieval/text_to_sql/base.py are already consistent. No operator in the evidence conflicts with the question.",
+      "label": "Refining evidence"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "construct_sql_from_candidates",
+      "thought": null,
+      "label": "Constructing SQL"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "construct_sql_from_candidates",
+      "thought": "I start from direct subclass rows in the class base records whose base resolves to the BaseAgent class defined in auto_ontology/retrieval/text_to_sql/base.py, and require the subclass symbol itself to be a class in a non-test file. Construction is detected only through direct call records whose callee is that class symbol and whose caller symbol is a function or method, with test classification taken from the caller file's test flag. The class must have at least one such direct constructor call from a non-test caller and no such call from a test caller. Assumptions: BaseAgent is identified by the symbol named BaseAgent in that exact file; a class construction is represented by a call row to the class symbol with call kind direct; calls at module level or via callbacks are excluded because the question limits to function or method bodies; no time window applies; zero or missing values are handled with EXISTS and NOT EXISTS rather than counts; no ranking tie-break is needed.",
+      "label": "Constructing SQL"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "validate_sql_query",
+      "thought": null,
+      "label": "Validating SQL and intent"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "validate_sql_query",
+      "thought": "The SQL correctly identifies non-test classes directly subclassing BaseAgent from the specified file, checks for direct constructor calls in non-test function/method bodies, and excludes classes with any direct constructor calls in test code. Joins follow verified paths and projection matches the requested output.",
+      "label": "Validating SQL and intent"
+    },
+    {
+      "type": "sql",
+      "node": "validate_sql_query",
+      "sql": "SELECT DISTINCT cb.class_symbol_id AS class_symbol_id FROM auto_ontology_code.code.class_bases AS cb JOIN auto_ontology_code.code.symbols AS sub ON cb.class_symbol_id = sub.symbol_id JOIN auto_ontology_code.code.files AS sub_file ON sub.file_id = sub_file.file_id JOIN auto_ontology_code.code.symbols AS base ON cb.base_symbol_id = base.symbol_id JOIN auto_ontology_code.code.files AS base_file ON base.file_id = base_file.file_id WHERE cb.base_name = 'BaseAgent' AND base.name = 'BaseAgent' AND base.kind = 'class' AND base_file.file_id = 'auto_ontology/retrieval/text_to_sql/base.py' AND sub.kind = 'class' AND sub_file.is_test = FALSE AND EXISTS (SELECT 1 FROM auto_ontology_code.code.calls AS c_non JOIN auto_ontology_code.code.symbols AS caller_non ON c_non.caller_symbol_id = caller_non.symbol_id JOIN auto_ontology_code.code.files AS caller_file_non ON caller_non.file_id = caller_file_non.file_id WHERE c_non.callee_symbol_id = cb.class_symbol_id AND c_non.call_kind = 'direct' AND caller_non.kind IN ('function', 'method') AND caller_file_non.is_test = FALSE) AND NOT EXISTS (SELECT 1 FROM auto_ontology_code.code.calls AS c_test JOIN auto_ontology_code.code.symbols AS caller_test ON c_test.caller_symbol_id = caller_test.symbol_id JOIN auto_ontology_code.code.files AS caller_file_test ON caller_test.file_id = caller_file_test.file_id WHERE c_test.callee_symbol_id = cb.class_symbol_id AND c_test.call_kind = 'direct' AND caller_test.kind IN ('function', 'method') AND caller_file_test.is_test = TRUE) ORDER BY cb.class_symbol_id"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "execute_sql_query",
+      "thought": null,
+      "label": "Executing SQL"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "execute_sql_query",
+      "thought": null,
+      "label": "Executing SQL"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "check_empty_like_result",
+      "thought": null,
+      "label": "Checking results"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "check_empty_like_result",
+      "thought": null,
+      "label": "Checking results"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "check_value_repair",
+      "thought": null,
+      "label": "Checking values"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "check_value_repair",
+      "thought": null,
+      "label": "Checking values"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "format_and_respond",
+      "thought": null,
+      "label": "Formatting response"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "format_and_respond",
+      "thought": null,
+      "label": "Formatting response"
+    },
+    {
+      "type": "result",
+      "answer": {
+        "response": "This returns the class symbol IDs for direct BaseAgent subclasses that are defined in non-test files and are directly instantiated inside a non-test function or method, while having no direct instantiation inside any test function or method. It uses class base records to find the subclasses, symbol and file details to restrict to non-test class definitions, and call records to verify direct constructor calls. Results are distinct and ordered by class symbol ID.",
+        "sql_code": "SELECT DISTINCT cb.class_symbol_id AS class_symbol_id FROM auto_ontology_code.code.class_bases AS cb JOIN auto_ontology_code.code.symbols AS sub ON cb.class_symbol_id = sub.symbol_id JOIN auto_ontology_code.code.files AS sub_file ON sub.file_id = sub_file.file_id JOIN auto_ontology_code.code.symbols AS base ON cb.base_symbol_id = base.symbol_id JOIN auto_ontology_code.code.files AS base_file ON base.file_id = base_file.file_id WHERE cb.base_name = 'BaseAgent' AND base.name = 'BaseAgent' AND base.kind = 'class' AND base_file.file_id = 'auto_ontology/retrieval/text_to_sql/base.py' AND sub.kind = 'class' AND sub_file.is_test = FALSE AND EXISTS (SELECT 1 FROM auto_ontology_code.code.calls AS c_non JOIN auto_ontology_code.code.symbols AS caller_non ON c_non.caller_symbol_id = caller_non.symbol_id JOIN auto_ontology_code.code.files AS caller_file_non ON caller_non.file_id = caller_file_non.file_id WHERE c_non.callee_symbol_id = cb.class_symbol_id AND c_non.call_kind = 'direct' AND caller_non.kind IN ('function', 'method') AND caller_file_non.is_test = FALSE) AND NOT EXISTS (SELECT 1 FROM auto_ontology_code.code.calls AS c_test JOIN auto_ontology_code.code.symbols AS caller_test ON c_test.caller_symbol_id = caller_test.symbol_id JOIN auto_ontology_code.code.files AS caller_file_test ON caller_test.file_id = caller_file_test.file_id WHERE c_test.callee_symbol_id = cb.class_symbol_id AND c_test.call_kind = 'direct' AND caller_test.kind IN ('function', 'method') AND caller_file_test.is_test = TRUE) ORDER BY cb.class_symbol_id",
+        "sql_columns": [
+          "29b23bdb-33b7-40d1-a5ce-ae89df228d44",
+          "170a5784-99fa-452a-b892-3b87f3bbc28f",
+          "904dc6c1-eabe-4091-959c-0ed5b821401d",
+          "4df7f73b-62c4-480e-bfcf-8147d096b674",
+          "bd86b69a-4f59-40a7-88f1-421bae5a58ee",
+          "69ac4d92-b94f-430a-9a8a-1550f5bdaa21",
+          "19af8ac0-d084-49c6-8ecb-945fe896e1f5",
+          "0a782b1f-ef1f-4628-b4e7-57f2f28bdd5f",
+          "c081af33-9cf0-4610-8599-aabd9f3d3e1b",
+          "8b936837-e64b-4ce8-a6e3-eb03d9456875",
+          "2ddf984d-66e6-4cce-a7b2-85266ecbb8fd",
+          "fe2764ca-d4f4-42b2-8759-06e9bc2a937f"
+        ],
+        "custom_analyses_used": [],
+        "sql_response_from_db": [
+          "[{\"class_symbol_id\":\"auto_ontology\\/retrieval\\/entity_coverage\\/agents\\/coverage.py::CoverageGradeAgent\"},{\"class_symbol_id\":\"auto_ontology\\/retrieval\\/text_to_sql\\/agents\\/empty_like_result_check.py::EmptyLikeResultCheckAgent\"},{\"class_symbol_id\":\"auto_ontology\\/retrieval\\/text_to_sql\\/agents\\/join_path_check.py::JoinPathCheckAgent\"},{\"class_symbol_id\":\"auto_ontology\\/retrieval\\/text_to_sql\\/agents\\/jsonb_path_check.py::JsonbPathCheckAgent\"},{\"class_symbol_id\":\"auto_ontology\\/retrieval\\/text_to_sql\\/agents\\/kumo_prediction.py::KumoPredictionAgent\"},{\"class_symbol_id\":\"auto_ontology\\/retrieval\\/text_to_sql\\/agents\\/prediction_graph.py::PredictionGraphAgent\"},{\"class_symbol_id\":\"auto_ontology\\/retrieval\\/text_to_sql\\/agents\\/proactive_value_check.py::ProactiveValueCheckAgent\"},{\"class_symbol_id\":\"auto_ontology\\/retrieval\\/text_to_sql\\/agents\\/response.py::ResponseAgent\"}]"
+        ],
+        "thoughts": "- Preparing candidates: The question asks to return class_symbol_id for the qualifying agent classes. Among the available column attributes, code.symbols.symbol_id is the unique identifier for a code symbol and directly corresponds to the requested class_symbol_id.\n- Preparing candidates: The query needs class_bases to find direct BaseAgent subclasses, symbols for class_symbol_id and file path, files to distinguish test vs non-test, and inbound_call_counts to check construction in non-test but not test code. imports and untested_public_symbols are not needed for these predicates or output.\n- Refining evidence: No certain repairs apply. The supplied constants and predicates match the verified value anchors and sample values: base_name 'BaseAgent', symbols.kind 'class', files.is_test booleans False/True, calls as construction evidence, and the file path auto_ontology/retrieval/text_to_sql/base.py are already consistent. No operator in the evidence conflicts with the question.\n- Constructing SQL: I start from direct subclass rows in the class base records whose base resolves to the BaseAgent class defined in auto_ontology/retrieval/text_to_sql/base.py, and require the subclass symbol itself to be a class in a non-test file. Construction is detected only through direct call records whose callee is that class symbol and whose caller symbol is a function or method, with test classification taken from the caller file's test flag. The class must have at least one such direct constructor call from a non-test caller and no such call from a test caller. Assumptions: BaseAgent is identified by the symbol named BaseAgent in that exact file; a class construction is represented by a call row to the class symbol with call kind direct; calls at module level or via callbacks are excluded because the question limits to function or method bodies; no time window applies; zero or missing values are handled with EXISTS and NOT EXISTS rather than counts; no ranking tie-break is needed.\n- Validating SQL and intent: The SQL correctly identifies non-test classes directly subclassing BaseAgent from the specified file, checks for direct constructor calls in non-test function/method bodies, and excludes classes with any direct constructor calls in test code. Joins follow verified paths and projection matches the requested output."
+      }
+    }
+  ],
+  "question_id": 4,
+  "gold_sql": "SELECT b.class_symbol_id FROM code.class_bases b JOIN code.symbols s ON s.symbol_id = b.class_symbol_id JOIN code.files f ON f.file_id = s.file_id WHERE b.base_symbol_id = 'auto_ontology/retrieval/text_to_sql/base.py::BaseAgent' AND NOT f.is_test AND EXISTS (SELECT 1 FROM code.calls c JOIN code.symbols cs ON cs.symbol_id = c.caller_symbol_id JOIN code.files cf ON cf.file_id = cs.file_id WHERE c.callee_symbol_id = b.class_symbol_id AND c.call_kind = 'direct' AND NOT cf.is_test) AND NOT EXISTS (SELECT 1 FROM code.calls c JOIN code.symbols cs ON cs.symbol_id = c.caller_symbol_id JOIN code.files cf ON cf.file_id = cs.file_id WHERE c.callee_symbol_id = b.class_symbol_id AND c.call_kind = 'direct' AND cf.is_test) ORDER BY 1",
+  "gold_row_count": 1,
+  "agent_sql": "SELECT DISTINCT cb.class_symbol_id AS class_symbol_id FROM auto_ontology_code.code.class_bases AS cb JOIN auto_ontology_code.code.symbols AS sub ON cb.class_symbol_id = sub.symbol_id JOIN auto_ontology_code.code.files AS sub_file ON sub.file_id = sub_file.file_id JOIN auto_ontology_code.code.symbols AS base ON cb.base_symbol_id = base.symbol_id JOIN auto_ontology_code.code.files AS base_file ON base.file_id = base_file.file_id WHERE cb.base_name = 'BaseAgent' AND base.name = 'BaseAgent' AND base.kind = 'class' AND base_file.file_id = 'auto_ontology/retrieval/text_to_sql/base.py' AND sub.kind = 'class' AND sub_file.is_test = FALSE AND EXISTS (SELECT 1 FROM auto_ontology_code.code.calls AS c_non JOIN auto_ontology_code.code.symbols AS caller_non ON c_non.caller_symbol_id = caller_non.symbol_id JOIN auto_ontology_code.code.files AS caller_file_non ON caller_non.file_id = caller_file_non.file_id WHERE c_non.callee_symbol_id = cb.class_symbol_id AND c_non.call_kind = 'direct' AND caller_non.kind IN ('function', 'method') AND caller_file_non.is_test = FALSE) AND NOT EXISTS (SELECT 1 FROM auto_ontology_code.code.calls AS c_test JOIN auto_ontology_code.code.symbols AS caller_test ON c_test.caller_symbol_id = caller_test.symbol_id JOIN auto_ontology_code.code.files AS caller_file_test ON caller_test.file_id = caller_file_test.file_id WHERE c_test.callee_symbol_id = cb.class_symbol_id AND c_test.call_kind = 'direct' AND caller_test.kind IN ('function', 'method') AND caller_file_test.is_test = TRUE) ORDER BY cb.class_symbol_id",
+  "agent_answer": "This returns the class symbol IDs for direct BaseAgent subclasses that are defined in non-test files and are directly instantiated inside a non-test function or method, while having no direct instantiation inside any test function or method. It uses class base records to find the subclasses, symbol and file details to restrict to non-test class definitions, and call records to verify direct constructor calls. Results are distinct and ordered by class symbol ID.",
+  "agent_row_count": 8,
+  "correct_rows": false,
+  "error": null
+}

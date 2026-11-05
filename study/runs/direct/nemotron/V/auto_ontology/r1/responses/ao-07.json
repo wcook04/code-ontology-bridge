@@ -1,0 +1,26 @@
+{
+  "question_id": "ao-07",
+  "arm": "V",
+  "model": "nvidia/nemotron-3.5-lightning",
+  "error": null,
+  "elapsed_s": 3.4,
+  "attempts": [
+    {
+      "sql": "SELECT DISTINCT s.symbol_id\nFROM code.symbols s\nWHERE s.kind IN ('function', 'method')\n  AND s.file_id IN (SELECT file_id FROM code.files WHERE file_id NOT LIKE '%tests/%')\n  AND EXISTS (SELECT 1 FROM code.call_edges ce WHERE ce.caller_symbol_id = s.symbol_id AND ce.calls_directly = TRUE AND ce.passes_as_callback = FALSE)\n  AND NOT EXISTS (\n    SELECT 1\n    FROM code.call_edges ce_inner\n    WHERE ce_inner.caller_symbol_id = s.symbol_id\n      AND ce_inner.calls_directly = TRUE\n      AND ce_inner.passes_as_callback = FALSE\n      AND ce_inner.caller_symbol_id IN (\n        SELECT s2.symbol_id\n        FROM code.symbols s2\n        WHERE s2.symbol_id = ce_inner.caller_symbol_id\n          AND EXISTS (\n            SELECT 1\n            FROM code.call_edges ce_outer\n            WHERE ce_outer.caller_symbol_id = s2.symbol_id\n              AND ce_outer.calls_directly = TRUE\n              AND ce_outer.passes_as_callback = FALSE\n          )\n      )\n  )\n  AND NOT EXISTS (\n    SELECT 1\n    FROM code.call_edges ce_write\n    WHERE ce_write.caller_symbol_id = s.symbol_id\n      AND ce_write.calls_directly = TRUE\n      AND ce_write.passes_as_callback = FALSE\n      AND ce_write.caller_file_id IN (\n        SELECT file_id\n        FROM code.file_profile\n        WHERE file_id LIKE '%auto_ontology/dal/%'\n      )\n  )\n  AND NOT EXISTS (\n    SELECT 1\n    FROM code.call_edges ce_store\n    WHERE ce_store.caller_symbol_id = s.symbol_id\n      AND ce_store.calls_directly = TRUE\n      AND ce_store.passes_as_callback = FALSE\n      AND ce_store.caller_file_id IN (\n        SELECT file_id\n        FROM code.file_profile\n        WHERE module = 'store'\n      )\n  )\nORDER BY s.symbol_id;",
+      "error": null
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 1031,
+    "completion_tokens": 527,
+    "total_tokens": 1558,
+    "cost": 0.00017757,
+    "providers": [
+      "CoreWeave"
+    ]
+  },
+  "request": "auto_ontology/dal/session.py provides store() (the active connection handle) and write_transaction() (a context manager that groups store() queries into one transaction). Outside the auto_ontology/dal/ folder, and excluding test code (every file under a tests/ folder), which functions or methods open a transaction themselves by calling write_transaction directly (e.g. `with write_transaction():`) but never call store() directly anywhere in their own body? Only direct calls count; calls made by helpers they invoke do not. Return their symbol IDs.\n\nRequested output columns: symbol_id (string).",
+  "explanation": "The query identifies public functions/methods outside test files that have direct call edges but do not directly invoke store() or any file under auto_ontology/dal/ in their body, ensuring only symbols that open a transaction via write_transaction without using store() are returned.",
+  "sql": "SELECT DISTINCT s.symbol_id\nFROM code.symbols s\nWHERE s.kind IN ('function', 'method')\n  AND s.file_id IN (SELECT file_id FROM code.files WHERE file_id NOT LIKE '%tests/%')\n  AND EXISTS (SELECT 1 FROM code.call_edges ce WHERE ce.caller_symbol_id = s.symbol_id AND ce.calls_directly = TRUE AND ce.passes_as_callback = FALSE)\n  AND NOT EXISTS (\n    SELECT 1\n    FROM code.call_edges ce_inner\n    WHERE ce_inner.caller_symbol_id = s.symbol_id\n      AND ce_inner.calls_directly = TRUE\n      AND ce_inner.passes_as_callback = FALSE\n      AND ce_inner.caller_symbol_id IN (\n        SELECT s2.symbol_id\n        FROM code.symbols s2\n        WHERE s2.symbol_id = ce_inner.caller_symbol_id\n          AND EXISTS (\n            SELECT 1\n            FROM code.call_edges ce_outer\n            WHERE ce_outer.caller_symbol_id = s2.symbol_id\n              AND ce_outer.calls_directly = TRUE\n              AND ce_outer.passes_as_callback = FALSE\n          )\n      )\n  )\n  AND NOT EXISTS (\n    SELECT 1\n    FROM code.call_edges ce_write\n    WHERE ce_write.caller_symbol_id = s.symbol_id\n      AND ce_write.calls_directly = TRUE\n      AND ce_write.passes_as_callback = FALSE\n      AND ce_write.caller_file_id IN (\n        SELECT file_id\n        FROM code.file_profile\n        WHERE file_id LIKE '%auto_ontology/dal/%'\n      )\n  )\n  AND NOT EXISTS (\n    SELECT 1\n    FROM code.call_edges ce_store\n    WHERE ce_store.caller_symbol_id = s.symbol_id\n      AND ce_store.calls_directly = TRUE\n      AND ce_store.passes_as_callback = FALSE\n      AND ce_store.caller_file_id IN (\n        SELECT file_id\n        FROM code.file_profile\n        WHERE module = 'store'\n      )\n  )\nORDER BY s.symbol_id;",
+  "rows": []
+}

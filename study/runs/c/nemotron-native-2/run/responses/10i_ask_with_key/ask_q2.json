@@ -1,0 +1,196 @@
+{
+  "request": {
+    "question": "When the text-to-SQL LangGraph is assembled by create_graph in auto_ontology/retrieval/text_to_sql/text_to_sql_graph.py, which functions or methods of this repository does create_graph hand over by reference, i.e. pass the function object itself as an argument to another call (as with graph.add_conditional_edges(node, router_fn, ...)) rather than calling it? Count only plain names passed directly as call arguments; functions that create_graph calls itself, values that are the result of a call (such as _make_soft_check_router(...)), lambdas, and local variables holding nodes do not count. Functions passed only inside an if/else branch of create_graph count. Return each distinct function's symbol ID.\n\nRequested output columns: symbol_id (string).\nReturn exactly the requested output columns, using each requested name as the column alias, in the requested order. Return complete repository-relative file paths and complete symbol IDs exactly as stored. When the question asks which files, symbols or modules, return each distinct one once unless it asks for occurrences.",
+    "calculation_only": true
+  },
+  "status": 200,
+  "elapsed_s": 262.0,
+  "events": [
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "question_intent",
+      "thought": null,
+      "label": "Classifying the question"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "question_intent",
+      "thought": null,
+      "label": "Classifying the question"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "question_extraction",
+      "thought": null,
+      "label": "Understanding the question"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "question_extraction",
+      "thought": null,
+      "label": "Understanding the question"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "retrieve_candidates",
+      "thought": null,
+      "label": "Retrieving candidates"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "retrieve_candidates",
+      "thought": null,
+      "label": "Retrieving candidates"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "prepare_candidates",
+      "thought": null,
+      "label": "Preparing candidates"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "prepare_candidates",
+      "thought": "The question asks about functions that create_graph passes by reference and their symbol IDs. The table auto_ontology_code.code.symbols contains symbol_id, qualname, and kind - all of which could be needed to identify functions and their references. The table auto_ontology_code.code.calls contains callee_symbol_id and call_kind, which directly tracks function call relationships including references. The table auto_ontology_code.code.untested_public_symbols contains symbol_id and qualname, which might also be relevant for identifying functions. None of these tables can be confidently removed because each potentially supplies columns needed to answer the question about function symbol IDs and their reference relationships. Removing any of them could change which rows qualify or remove needed column data.",
+      "label": "Preparing candidates"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "refine_evidence",
+      "thought": null,
+      "label": "Refining evidence"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "refine_evidence",
+      "thought": "No certain mistakes were identified in the evidence relative to the sanitized question, verified database value anchors, or supplied column sample values. The evidence line (1) is a self-contained rule description with no string representation, constant value, or predicate operator that can be demonstrably corrected using value anchors or sample values from the provided schema. The question contains no scalar or operator errors. Therefore, no repairs apply, and both the evidence line and question remain unchanged.",
+      "label": "Refining evidence"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "construct_sql_from_candidates",
+      "thought": null,
+      "label": "Constructing SQL"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "construct_sql_from_candidates",
+      "thought": "The question asks for distinct function symbol IDs that `create_graph` passes by reference (i.e., as plain names directly passed as arguments to another call). In the available schema, the `code.calls` table records invocations with a `call_kind` column that distinguishes direct calls from callbacks (`direct` vs `callback`). I assume that `call_kind = 'callback'` denotes a function passed as a reference. I also assume that the symbol identity of `create_graph` can be found in `code.symbols` by matching `name = 'create_graph'`. Self‑calls (create_graph calling itself) are excluded per the instructions. The query selects distinct `callee_symbol_id` values from `code.calls` where the caller is `create_graph`, the call kind is `callback`, and the callee is not the `create_graph` symbol itself. The schema does not expose explicit if/else branch information, so all callbacks from `create_graph` are included; the question’s note about branches is acknowledged but cannot be filtered further with the given columns.",
+      "label": "Constructing SQL"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "validate_sql_query",
+      "thought": null,
+      "label": "Validating SQL and intent"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "validate_sql_query",
+      "thought": "The SQL query checks for critical issues as requested. Let me verify each aspect:\n\n1. **Joins**: The SQL uses no explicit JOINs - only the `auto_ontology_code.code.calls` table with subqueries. This is appropriate for the question structure.\n\n2. **Aggregations**: There are no aggregations in this query, so this check is not applicable.\n\n3. **Evidence compliance**:\n   - The SQL uses `auto_ontology_code.code.calls` and `auto_ontology_code.code.symbols` tables, which match the authoritative evidence tables.\n   - `call_kind = 'callback'` matches the evidence column description which lists values 'direct' and 'callback'.\n   - `name = 'create_graph'` correctly filters for the function in question.\n   - `callee_symbol_id AS symbol_id` matches the evidence definition of callee_symbol_id as a symbolic identifier.\n   - The filter `callee_symbol_id NOT IN (SELECT symbol_id FROM symbols WHERE name = 'create_graph')` correctly excludes functions named 'create_graph' per the evidence instruction: \"functions that create_graph calls itself... do not count.\"\n   - The `WHERE caller_symbol_id IN (SELECT symbol_id FROM symbols WHERE name = 'create_graph')` correctly identifies calls originating from create_graph.\n\nThe SQL correctly implements the question: \"Which functions does create_graph pass by reference?\" by finding all callee_symbol_ids from callback calls where create_graph is the caller, excluding create_graph itself. The DISTINCT keyword ensures unique symbol IDs are returned.\n\nNo critical issues are present. The SQL could reasonably answer the question and follows the authoritative evidence exactly.",
+      "label": "Validating SQL and intent"
+    },
+    {
+      "type": "sql",
+      "node": "validate_sql_query",
+      "sql": "SELECT DISTINCT callee_symbol_id AS symbol_id\nFROM auto_ontology_code.code.calls\nWHERE caller_symbol_id IN (\n    SELECT symbol_id\n    FROM auto_ontology_code.code.symbols\n    WHERE name = 'create_graph'\n)\nAND call_kind = 'callback'\nAND callee_symbol_id IS NOT NULL\nAND callee_symbol_id NOT IN (\n    SELECT symbol_id\n    FROM auto_ontology_code.code.symbols\n    WHERE name = 'create_graph'\n);"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "execute_sql_query",
+      "thought": null,
+      "label": "Executing SQL"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "execute_sql_query",
+      "thought": null,
+      "label": "Executing SQL"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "check_empty_like_result",
+      "thought": null,
+      "label": "Checking results"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "check_empty_like_result",
+      "thought": null,
+      "label": "Checking results"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "check_value_repair",
+      "thought": null,
+      "label": "Checking values"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "check_value_repair",
+      "thought": null,
+      "label": "Checking values"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "format_and_respond",
+      "thought": null,
+      "label": "Formatting response"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "format_and_respond",
+      "thought": null,
+      "label": "Formatting response"
+    },
+    {
+      "type": "result",
+      "answer": {
+        "response": "This query finds every function that `create_graph` hands over by reference by looking up calls with `call_kind = 'callback'` whose caller is `create_graph` and then returning the distinct symbol IDs of those callees, while excluding any self‑references. It uses the `code.calls` and `code.symbols` tables, filtering on the caller’s name and the callback call kind.",
+        "sql_code": "SELECT DISTINCT callee_symbol_id AS symbol_id\nFROM auto_ontology_code.code.calls\nWHERE caller_symbol_id IN (\n    SELECT symbol_id\n    FROM auto_ontology_code.code.symbols\n    WHERE name = 'create_graph'\n)\nAND call_kind = 'callback'\nAND callee_symbol_id IS NOT NULL\nAND callee_symbol_id NOT IN (\n    SELECT symbol_id\n    FROM auto_ontology_code.code.symbols\n    WHERE name = 'create_graph'\n);",
+        "sql_columns": [
+          "1bd71fef-b8f2-46ce-ba40-93140ff2ee52",
+          "bdb3c393-1f6b-41cf-8096-7f1b5ec04628",
+          "97ae8ab9-ccf3-41ef-a28d-9150d4070bf6",
+          "71e34243-67f1-41d2-a1d0-58f72743573a",
+          "193d206c-b206-4ec6-b7c1-de8bf2e91a3a"
+        ],
+        "custom_analyses_used": [],
+        "sql_response_from_db": [
+          "[{\"symbol_id\":\"auto_ontology\\/retrieval\\/text_to_sql\\/text_to_sql_graph.py::route_question_type_or_evidence\"},{\"symbol_id\":\"auto_ontology\\/retrieval\\/text_to_sql\\/text_to_sql_graph.py::route_evidence_refinement\"},{\"symbol_id\":\"auto_ontology\\/retrieval\\/text_to_sql\\/text_to_sql_graph.py::route_sql_execution\"},{\"symbol_id\":\"auto_ontology\\/retrieval\\/text_to_sql\\/text_to_sql_graph.py::route_reconstructed_sql\"},{\"symbol_id\":\"auto_ontology\\/retrieval\\/text_to_sql\\/text_to_sql_graph.py::_entry_router_fn\"},{\"symbol_id\":\"auto_ontology\\/retrieval\\/text_to_sql\\/text_to_sql_graph.py::route_sql_validation\"},{\"symbol_id\":\"auto_ontology\\/retrieval\\/text_to_sql\\/text_to_sql_graph.py::route_generated_sql\"},{\"symbol_id\":\"auto_ontology\\/retrieval\\/text_to_sql\\/text_to_sql_graph.py::route_after_candidate_retrieval\"},{\"symbol_id\":\"auto_ontology\\/retrieval\\/text_to_sql\\/text_to_sql_graph.py::route_decision\"}]"
+        ],
+        "thoughts": "- Preparing candidates: The user's question focuses on identifying functions passed by reference and specifically requests 'each distinct function's symbol ID.' Among the provided column attributes, 'code.symbols.symbol_id' directly corresponds to 'A unique symbolic identifier derived from the full path and function name of code modules,' which aligns with the request for symbol IDs. The other attributes relate to function names, call kinds, or untested public symbols, but the explicit mention of 'symbol ID' in the question makes this the primary subject.\n- Preparing candidates: The question asks about functions that create_graph passes by reference and their symbol IDs. The table auto_ontology_code.code.symbols contains symbol_id, qualname, and kind - all of which could be needed to identify functions and their references. The table auto_ontology_code.code.calls contains callee_symbol_id and call_kind, which directly tracks function call relationships including references. The table auto_ontology_code.code.untested_public_symbols contains symbol_id and qualname, which might also be relevant for identifying functions. None of these tables can be confidently removed because each potentially supplies columns needed to answer the question about function symbol IDs and their reference relationships. Removing any of them could change which rows qualify or remove needed column data.\n- Refining evidence: No certain mistakes were identified in the evidence relative to the sanitized question, verified database value anchors, or supplied column sample values. The evidence line (1) is a self-contained rule description with no string representation, constant value, or predicate operator that can be demonstrably corrected using value anchors or sample values from the provided schema. The question contains no scalar or operator errors. Therefore, no repairs apply, and both the evidence line and question remain unchanged.\n- Constructing SQL: The question asks for distinct function symbol IDs that `create_graph` passes by reference (i.e., as plain names directly passed as arguments to another call). In the available schema, the `code.calls` table records invocations with a `call_kind` column that distinguishes direct calls from callbacks (`direct` vs `callback`). I assume that `call_kind = 'callback'` denotes a function passed as a reference. I also assume that the symbol identity of `create_graph` can be found in `code.symbols` by matching `name = 'create_graph'`. Self‑calls (create_graph calling itself) are excluded per the instructions. The query selects distinct `callee_symbol_id` values from `code.calls` where the caller is `create_graph`, the call kind is `callback`, and the callee is not the `create_graph` symbol itself. The schema does not expose explicit if/else branch information, so all callbacks from `create_graph` are included; the question’s note about branches is acknowledged but cannot be filtered further with the given columns.\n- Validating SQL and intent: The SQL query checks for critical issues as requested. Let me verify each aspect:\n\n1. **Joins**: The SQL uses no explicit JOINs - only the `auto_ontology_code.code.calls` table with subqueries. This is appropriate for the question structure.\n\n2. **Aggregations**: There are no aggregations in this query, so this check is not applicable.\n\n3. **Evidence compliance**:\n   - The SQL uses `auto_ontology_code.code.calls` and `auto_ontology_code.code.symbols` tables, which match the authoritative evidence tables.\n   - `call_kind = 'callback'` matches the evidence column description which lists values 'direct' and 'callback'.\n   - `name = 'create_graph'` correctly filters for the function in question.\n   - `callee_symbol_id AS symbol_id` matches the evidence definition of callee_symbol_id as a symbolic identifier.\n   - The filter `callee_symbol_id NOT IN (SELECT symbol_id FROM symbols WHERE name = 'create_graph')` correctly excludes functions named 'create_graph' per the evidence instruction: \"functions that create_graph calls itself... do not count.\"\n   - The `WHERE caller_symbol_id IN (SELECT symbol_id FROM symbols WHERE name = 'create_graph')` correctly identifies calls originating from create_graph.\n\nThe SQL correctly implements the question: \"Which functions does create_graph pass by reference?\" by finding all callee_symbol_ids from callback calls where create_graph is the caller, excluding create_graph itself. The DISTINCT keyword ensures unique symbol IDs are returned.\n\nNo critical issues are present. The SQL could reasonably answer the question and follows the authoritative evidence exactly."
+      }
+    }
+  ],
+  "question_id": 2,
+  "gold_sql": "SELECT DISTINCT callee_symbol_id AS symbol_id FROM code.calls WHERE caller_symbol_id = 'auto_ontology/retrieval/text_to_sql/text_to_sql_graph.py::create_graph' AND call_kind = 'callback' ORDER BY 1",
+  "gold_row_count": 1,
+  "agent_sql": "SELECT DISTINCT callee_symbol_id AS symbol_id\nFROM auto_ontology_code.code.calls\nWHERE caller_symbol_id IN (\n    SELECT symbol_id\n    FROM auto_ontology_code.code.symbols\n    WHERE name = 'create_graph'\n)\nAND call_kind = 'callback'\nAND callee_symbol_id IS NOT NULL\nAND callee_symbol_id NOT IN (\n    SELECT symbol_id\n    FROM auto_ontology_code.code.symbols\n    WHERE name = 'create_graph'\n);",
+  "agent_answer": "This query finds every function that `create_graph` hands over by reference by looking up calls with `call_kind = 'callback'` whose caller is `create_graph` and then returning the distinct symbol IDs of those callees, while excluding any self‑references. It uses the `code.calls` and `code.symbols` tables, filtering on the caller’s name and the callback call kind.",
+  "agent_row_count": 9,
+  "correct_rows": false,
+  "error": null
+}

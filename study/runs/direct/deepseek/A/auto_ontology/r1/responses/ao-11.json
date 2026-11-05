@@ -1,0 +1,26 @@
+{
+  "question_id": "ao-11",
+  "arm": "A",
+  "model": "deepseek/deepseek-v4.1-flash-1017",
+  "error": null,
+  "elapsed_s": 5.55,
+  "attempts": [
+    {
+      "sql": "WITH pkg AS (SELECT file_id FROM code.files WHERE is_test = false AND (package = 'auto_ontology/retrieval/kumo' OR package LIKE 'auto_ontology/retrieval/kumo/%') AND file_id NOT LIKE '%/tests/%'), syms AS (SELECT s.symbol_id, s.kind, s.name, s.qualname, s.file_id FROM code.symbols s JOIN pkg p ON s.file_id = p.file_id WHERE s.is_public = true AND s.name NOT LIKE '\\_%' ESCAPE '\\'), cls AS (SELECT symbol_id, name FROM syms WHERE kind = 'class'), methods AS (SELECT s.symbol_id FROM syms s WHERE s.kind = 'method' AND NOT EXISTS (SELECT 1 FROM cls c WHERE s.qualname LIKE c.name || '.%' AND c.name LIKE '\\_%' ESCAPE '\\')), funcs AS (SELECT s.symbol_id FROM syms s WHERE s.kind = 'function' AND s.qualname NOT LIKE '%.%'), counted AS (SELECT 'class' AS kind, symbol_id FROM cls UNION ALL SELECT 'function', symbol_id FROM funcs UNION ALL SELECT 'method', symbol_id FROM methods) SELECT kind, COUNT(*)::INTEGER AS public_count FROM counted GROUP BY kind ORDER BY kind",
+      "error": null
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 614,
+    "completion_tokens": 361,
+    "total_tokens": 975,
+    "cost": 0.00034625,
+    "providers": [
+      "ModelRun"
+    ]
+  },
+  "request": "How many public classes, public module-level functions and public methods are defined in the non-test code of the auto_ontology/retrieval/kumo/ package (files under its tests/ folder excluded)? A name is public when it does not start with an underscore, so dunder methods such as __init__ are not public, and methods of a class whose name starts with an underscore are not public either. Nested functions and nested classes are not counted. Return one row per kind, with kind being 'class', 'function' or 'method'.\n\nRequested output columns: kind (string), public_count (integer).",
+  "explanation": "Filters to non-test files in the auto_ontology/retrieval/kumo package (excluding tests/ subfolders), then selects public symbols whose names don't start with an underscore. Classes and module-level functions are counted directly; methods are counted only when their enclosing class name is also public. Results are grouped by kind.",
+  "sql": "WITH pkg AS (SELECT file_id FROM code.files WHERE is_test = false AND (package = 'auto_ontology/retrieval/kumo' OR package LIKE 'auto_ontology/retrieval/kumo/%') AND file_id NOT LIKE '%/tests/%'), syms AS (SELECT s.symbol_id, s.kind, s.name, s.qualname, s.file_id FROM code.symbols s JOIN pkg p ON s.file_id = p.file_id WHERE s.is_public = true AND s.name NOT LIKE '\\_%' ESCAPE '\\'), cls AS (SELECT symbol_id, name FROM syms WHERE kind = 'class'), methods AS (SELECT s.symbol_id FROM syms s WHERE s.kind = 'method' AND NOT EXISTS (SELECT 1 FROM cls c WHERE s.qualname LIKE c.name || '.%' AND c.name LIKE '\\_%' ESCAPE '\\')), funcs AS (SELECT s.symbol_id FROM syms s WHERE s.kind = 'function' AND s.qualname NOT LIKE '%.%'), counted AS (SELECT 'class' AS kind, symbol_id FROM cls UNION ALL SELECT 'function', symbol_id FROM funcs UNION ALL SELECT 'method', symbol_id FROM methods) SELECT kind, COUNT(*)::INTEGER AS public_count FROM counted GROUP BY kind ORDER BY kind",
+  "rows": []
+}

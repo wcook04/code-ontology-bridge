@@ -1,0 +1,31 @@
+{
+  "question_id": "ao-11",
+  "arm": "C-base",
+  "model": "deepseek/deepseek-v4.1-flash-1017",
+  "error": null,
+  "elapsed_s": 102.3,
+  "attempts": [
+    {
+      "sql": "WITH kinds AS (SELECT 'class' AS kind UNION ALL SELECT 'function' UNION ALL SELECT 'method'), counts AS (SELECT s.kind AS kind, COUNT(*) AS public_count FROM auto_ontology_code.code.symbols AS s INNER JOIN auto_ontology_code.code.files AS f ON s.file_id = f.file_id WHERE s.is_public = TRUE AND f.is_test = FALSE AND f.file_id LIKE 'auto_ontology/retrieval/kumo/%' AND s.kind IN ('class', 'function', 'method') AND ((s.kind IN ('class', 'function') AND s.qualname = s.name) OR s.kind = 'method') GROUP BY s.kind) SELECT k.kind AS kind, COALESCE(c.public_count, 0) AS public_count FROM kinds AS k LEFT JOIN counts AS c ON k.kind = c.kind ORDER BY CASE k.kind WHEN 'class' THEN 1 WHEN 'function' THEN 2 WHEN 'method' THEN 3 END"
+    }
+  ],
+  "usage": {},
+  "request": "How many public classes, public module-level functions and public methods are defined in the non-test code of the auto_ontology/retrieval/kumo/ package (files under its tests/ folder excluded)? A name is public when it does not start with an underscore, so dunder methods such as __init__ are not public, and methods of a class whose name starts with an underscore are not public either. Nested functions and nested classes are not counted. Return one row per kind, with kind being 'class', 'function' or 'method'.\n\nRequested output columns: kind (string), public_count (integer).\nReturn exactly the requested output columns, using each requested name as the column alias, in the requested order. Return complete repository-relative file paths and complete symbol IDs exactly as stored. When the question asks which files, symbols or modules, return each distinct one once unless it asks for occurrences.",
+  "explanation": "This counts public classes, module-level functions, and public methods in the requested package, excluding test files. It joins symbol definitions to their files, filters to public symbols in the package path, excludes test-marked files, and groups the results by symbol kind.",
+  "sql": "WITH kinds AS (SELECT 'class' AS kind UNION ALL SELECT 'function' UNION ALL SELECT 'method'), counts AS (SELECT s.kind AS kind, COUNT(*) AS public_count FROM auto_ontology_code.code.symbols AS s INNER JOIN auto_ontology_code.code.files AS f ON s.file_id = f.file_id WHERE s.is_public = TRUE AND f.is_test = FALSE AND f.file_id LIKE 'auto_ontology/retrieval/kumo/%' AND s.kind IN ('class', 'function', 'method') AND ((s.kind IN ('class', 'function') AND s.qualname = s.name) OR s.kind = 'method') GROUP BY s.kind) SELECT k.kind AS kind, COALESCE(c.public_count, 0) AS public_count FROM kinds AS k LEFT JOIN counts AS c ON k.kind = c.kind ORDER BY CASE k.kind WHEN 'class' THEN 1 WHEN 'function' THEN 2 WHEN 'method' THEN 3 END",
+  "rows": [
+    {
+      "kind": "class",
+      "public_count": 17
+    },
+    {
+      "kind": "function",
+      "public_count": 32
+    },
+    {
+      "kind": "method",
+      "public_count": 13
+    }
+  ],
+  "source_record": "run/responses/10i_ask_with_key/ask_q11.json"
+}

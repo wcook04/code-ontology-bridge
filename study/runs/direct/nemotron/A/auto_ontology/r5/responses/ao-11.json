@@ -1,0 +1,26 @@
+{
+  "question_id": "ao-11",
+  "arm": "A",
+  "model": "nvidia/nemotron-3.5-lightning",
+  "error": null,
+  "elapsed_s": 2.78,
+  "attempts": [
+    {
+      "sql": "SELECT kind, COUNT(*) AS public_count FROM (\n  SELECT 'class' AS kind, s.symbol_id\n   FROM code.symbols s\n   JOIN code.files f ON s.file_id = f.file_id\n   WHERE f.package = 'auto_ontology.retrieval.kumo'\n     AND f.is_test = FALSE\n     AND s.kind = 'class'\n     AND s.name NOT LIKE '_%'\n  UNION ALL\n  SELECT 'function' AS kind, s.symbol_id\n   FROM code.symbols s\n   JOIN code.files f ON s.file_id = f.file_id\n   WHERE f.package = 'auto_ontology.retrieval.kumo'\n     AND f.is_test = FALSE\n     AND s.kind = 'function'\n     AND s.name NOT LIKE '_%'\n     AND s.qualname NOT LIKE '%.%'  -- exclude nested functions\n  UNION ALL\n  SELECT 'method' AS kind, s.symbol_id\n   FROM code.symbols s\n   JOIN code.files f ON s.file_id = f.file_id\n   WHERE f.package = 'auto_ontology.retrieval.kumo'\n     AND f.is_test = FALSE\n     AND s.kind = 'method'\n     AND s.name NOT LIKE '_%'\n) t\nGROUP BY kind",
+      "error": null
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 613,
+    "completion_tokens": 366,
+    "total_tokens": 979,
+    "cost": 0.00011611,
+    "providers": [
+      "CoreWeave"
+    ]
+  },
+  "request": "How many public classes, public module-level functions and public methods are defined in the non-test code of the auto_ontology/retrieval/kumo/ package (files under its tests/ folder excluded)? A name is public when it does not start with an underscore, so dunder methods such as __init__ are not public, and methods of a class whose name starts with an underscore are not public either. Nested functions and nested classes are not counted. Return one row per kind, with kind being 'class', 'function' or 'method'.\n\nRequested output columns: kind (string), public_count (integer).",
+  "explanation": "The query identifies public symbols in the non-test code of the auto_ontology.retrieval.kumo package. It selects classes, module-level functions (excluding nested ones by checking qualname has no '.'), and methods, filtering out any whose name starts with underscore. Duplicates across the three UNION ALL branches are resolved by counting distinct symbol_ids per kind.",
+  "sql": "SELECT kind, COUNT(*) AS public_count FROM (\n  SELECT 'class' AS kind, s.symbol_id\n   FROM code.symbols s\n   JOIN code.files f ON s.file_id = f.file_id\n   WHERE f.package = 'auto_ontology.retrieval.kumo'\n     AND f.is_test = FALSE\n     AND s.kind = 'class'\n     AND s.name NOT LIKE '_%'\n  UNION ALL\n  SELECT 'function' AS kind, s.symbol_id\n   FROM code.symbols s\n   JOIN code.files f ON s.file_id = f.file_id\n   WHERE f.package = 'auto_ontology.retrieval.kumo'\n     AND f.is_test = FALSE\n     AND s.kind = 'function'\n     AND s.name NOT LIKE '_%'\n     AND s.qualname NOT LIKE '%.%'  -- exclude nested functions\n  UNION ALL\n  SELECT 'method' AS kind, s.symbol_id\n   FROM code.symbols s\n   JOIN code.files f ON s.file_id = f.file_id\n   WHERE f.package = 'auto_ontology.retrieval.kumo'\n     AND f.is_test = FALSE\n     AND s.kind = 'method'\n     AND s.name NOT LIKE '_%'\n) t\nGROUP BY kind",
+  "rows": []
+}

@@ -1,0 +1,30 @@
+{
+  "question_id": "httpx-12",
+  "arm": "B",
+  "model": "nvidia/nemotron-3.5-lightning",
+  "error": null,
+  "elapsed_s": 1.38,
+  "attempts": [
+    {
+      "sql": "SELECT DISTINCT cb.caller_symbol_id AS symbol_id\nFROM code.calls cb\nWHERE cb.call_kind = 'callback'\n  AND cb.confidence = 'low'\n  AND cb.caller_symbol_id IN (\n    SELECT s.symbol_id\n    FROM code.symbols s\n    WHERE s.file_id = (SELECT file_id FROM code.files WHERE module = 'httpx._main')\n      AND s.qualname = 'main'\n  )\nORDER BY symbol_id;",
+      "error": null
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 2720,
+    "completion_tokens": 200,
+    "total_tokens": 2920,
+    "cost": 0.00016704,
+    "providers": [
+      "CoreWeave"
+    ]
+  },
+  "request": "Which functions in httpx/_main.py are handed over by name as a callback argument to another call (not called directly; a function given to functools.partial counts as handed over) in the CLI command function `main` in httpx/_main.py, counting the arguments of the click decorators applied to `main` as part of `main`? Give their symbol IDs.\n\nRequested output columns: symbol_id (string).",
+  "explanation": "The query finds callback rows in code.calls where the call kind is 'callback' and confidence is 'low' (as callbacks always have low confidence). It then filters those callbacks to only include ones whose caller is the `main` function defined in httpx/_main.py. The distinct caller_symbol_ids of such callback rows are returned as the symbol IDs of functions handed over by name as callback arguments.",
+  "sql": "SELECT DISTINCT cb.caller_symbol_id AS symbol_id\nFROM code.calls cb\nWHERE cb.call_kind = 'callback'\n  AND cb.confidence = 'low'\n  AND cb.caller_symbol_id IN (\n    SELECT s.symbol_id\n    FROM code.symbols s\n    WHERE s.file_id = (SELECT file_id FROM code.files WHERE module = 'httpx._main')\n      AND s.qualname = 'main'\n  )\nORDER BY symbol_id;",
+  "rows": [
+    {
+      "symbol_id": "httpx/_main.py::main"
+    }
+  ]
+}

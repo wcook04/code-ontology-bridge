@@ -1,0 +1,39 @@
+{
+  "question_id": "ao-11",
+  "arm": "A",
+  "model": "deepseek/deepseek-v4.1-flash-1017",
+  "error": null,
+  "elapsed_s": 1.97,
+  "attempts": [
+    {
+      "sql": "WITH pkg AS (\n  SELECT file_id FROM code.files\n  WHERE package = 'auto_ontology/retrieval/kumo'\n    AND NOT is_test\n    AND file_id NOT LIKE '%/tests/%'\n    AND file_id NOT LIKE 'tests/%'\n),\ncls AS (\n  SELECT s.symbol_id, s.name FROM code.symbols s JOIN pkg p ON s.file_id = p.file_id\n  WHERE s.kind = 'class' AND s.name NOT LIKE '\\_%' ESCAPE '\\'\n),\nfuncs AS (\n  SELECT s.symbol_id FROM code.symbols s JOIN pkg p ON s.file_id = p.file_id\n  WHERE s.kind = 'function' AND s.name NOT LIKE '\\_%' ESCAPE '\\'\n),\nmethods AS (\n  SELECT s.symbol_id FROM code.symbols s JOIN pkg p ON s.file_id = p.file_id\n  JOIN cls c ON s.qualname LIKE c.name || '.%'\n  WHERE s.kind = 'method' AND s.name NOT LIKE '\\_%' ESCAPE '\\'\n    AND s.qualname NOT LIKE c.name || '.%.%'\n)\nSELECT 'class' AS kind, COUNT(*)::INTEGER AS public_count FROM cls\nUNION ALL SELECT 'function', COUNT(*)::INTEGER FROM funcs\nUNION ALL SELECT 'method', COUNT(*)::INTEGER FROM methods",
+      "error": null
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 614,
+    "completion_tokens": 389,
+    "total_tokens": 1003,
+    "cost": 0.00020708,
+    "providers": [
+      "Wafer"
+    ]
+  },
+  "request": "How many public classes, public module-level functions and public methods are defined in the non-test code of the auto_ontology/retrieval/kumo/ package (files under its tests/ folder excluded)? A name is public when it does not start with an underscore, so dunder methods such as __init__ are not public, and methods of a class whose name starts with an underscore are not public either. Nested functions and nested classes are not counted. Return one row per kind, with kind being 'class', 'function' or 'method'.\n\nRequested output columns: kind (string), public_count (integer).",
+  "explanation": "Restricts to non-test files in the auto_ontology/retrieval/kumo package, excluding any tests/ paths. Counts public classes and public module-level functions by name prefix, and public methods whose enclosing class is public and which are not nested deeper than one level. Returns one row per kind.",
+  "sql": "WITH pkg AS (\n  SELECT file_id FROM code.files\n  WHERE package = 'auto_ontology/retrieval/kumo'\n    AND NOT is_test\n    AND file_id NOT LIKE '%/tests/%'\n    AND file_id NOT LIKE 'tests/%'\n),\ncls AS (\n  SELECT s.symbol_id, s.name FROM code.symbols s JOIN pkg p ON s.file_id = p.file_id\n  WHERE s.kind = 'class' AND s.name NOT LIKE '\\_%' ESCAPE '\\'\n),\nfuncs AS (\n  SELECT s.symbol_id FROM code.symbols s JOIN pkg p ON s.file_id = p.file_id\n  WHERE s.kind = 'function' AND s.name NOT LIKE '\\_%' ESCAPE '\\'\n),\nmethods AS (\n  SELECT s.symbol_id FROM code.symbols s JOIN pkg p ON s.file_id = p.file_id\n  JOIN cls c ON s.qualname LIKE c.name || '.%'\n  WHERE s.kind = 'method' AND s.name NOT LIKE '\\_%' ESCAPE '\\'\n    AND s.qualname NOT LIKE c.name || '.%.%'\n)\nSELECT 'class' AS kind, COUNT(*)::INTEGER AS public_count FROM cls\nUNION ALL SELECT 'function', COUNT(*)::INTEGER FROM funcs\nUNION ALL SELECT 'method', COUNT(*)::INTEGER FROM methods",
+  "rows": [
+    {
+      "kind": "class",
+      "public_count": 0
+    },
+    {
+      "kind": "function",
+      "public_count": 0
+    },
+    {
+      "kind": "method",
+      "public_count": 0
+    }
+  ]
+}

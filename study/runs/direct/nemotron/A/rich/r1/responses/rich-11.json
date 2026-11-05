@@ -1,0 +1,26 @@
+{
+  "question_id": "rich-11",
+  "arm": "A",
+  "model": "nvidia/nemotron-3.5-lightning",
+  "error": null,
+  "elapsed_s": 2.38,
+  "attempts": [
+    {
+      "sql": "WITH public_funcs AS (\n  SELECT s.file_id, s.symbol_id, s.name, s.kind\n  FROM code.symbols s\n  WHERE s.kind IN ('function', 'method')\n    AND s.is_public = TRUE\n    AND s.name NOT LIKE '_%'\n    AND COALESCE((SELECT c.class_symbol_id FROM code.class_bases c WHERE c.base_symbol_id = s.symbol_id AND c.ordinal = 1), '') NOT LIKE '_%'\n),\nundoc_count AS (\n  SELECT pf.file_id, COUNT(*) AS undocumented_count\n  FROM public_funcs pf\n  LEFT JOIN code.symbols s2\n    ON s2.file_id = pf.file_id\n    AND s2.symbol_id = pf.symbol_id\n    AND (s2.summary IS NULL OR s2.summary = '')\n  GROUP BY pf.file_id\n),\nrich_files AS (\n  SELECT file_id\n  FROM code.files\n  WHERE package LIKE 'rich%' OR module LIKE 'rich%' OR file_id LIKE 'rich/%'\n)\nSELECT uc.file_id, uc.undocumented_count\nFROM undoc_count uc\nJOIN rich_files rf ON uc.file_id = rf.file_id\nORDER BY uc.undocumented_count DESC, uc.file_id ASC\nLIMIT 5",
+      "error": null
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 608,
+    "completion_tokens": 368,
+    "total_tokens": 976,
+    "cost": 0.00011616,
+    "providers": [
+      "CoreWeave"
+    ]
+  },
+  "request": "Under the rich/ folder, which five files contain the most public functions and methods that have no docstring? A function or method is public when neither its own name nor the name of its enclosing class starts with an underscore (so dunder methods are not public); classes themselves are not counted, and every definition counts separately (each @overload stub and each property getter or setter). Give the file path and the count, ordered by count descending, ties broken by file path ascending.\n\nRequested output columns: file_id (string), undocumented_count (integer). Order the rows as the question asks.",
+  "explanation": "The query first identifies all public functions/methods whose own name and enclosing class name do not start with underscore. It then counts, per file, how many of those lack a non-empty summary (docstring). Finally it restricts to files under the rich/ folder and returns the top 5 by count, with ties broken by file path ascending.",
+  "sql": "WITH public_funcs AS (\n  SELECT s.file_id, s.symbol_id, s.name, s.kind\n  FROM code.symbols s\n  WHERE s.kind IN ('function', 'method')\n    AND s.is_public = TRUE\n    AND s.name NOT LIKE '_%'\n    AND COALESCE((SELECT c.class_symbol_id FROM code.class_bases c WHERE c.base_symbol_id = s.symbol_id AND c.ordinal = 1), '') NOT LIKE '_%'\n),\nundoc_count AS (\n  SELECT pf.file_id, COUNT(*) AS undocumented_count\n  FROM public_funcs pf\n  LEFT JOIN code.symbols s2\n    ON s2.file_id = pf.file_id\n    AND s2.symbol_id = pf.symbol_id\n    AND (s2.summary IS NULL OR s2.summary = '')\n  GROUP BY pf.file_id\n),\nrich_files AS (\n  SELECT file_id\n  FROM code.files\n  WHERE package LIKE 'rich%' OR module LIKE 'rich%' OR file_id LIKE 'rich/%'\n)\nSELECT uc.file_id, uc.undocumented_count\nFROM undoc_count uc\nJOIN rich_files rf ON uc.file_id = rf.file_id\nORDER BY uc.undocumented_count DESC, uc.file_id ASC\nLIMIT 5",
+  "rows": []
+}

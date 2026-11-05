@@ -1,0 +1,39 @@
+{
+  "question_id": "ao-12",
+  "arm": "C-base",
+  "model": "deepseek/deepseek-v4.1-flash-1017",
+  "error": null,
+  "elapsed_s": 591.9,
+  "attempts": [
+    {
+      "sql": "WITH RECURSIVE api AS (SELECT symbol_id FROM auto_ontology_code.code.symbols WHERE kind = 'class' AND name = 'ApiModel' AND file_id = 'auto_ontology/server/models.py'), bases AS (SELECT cb.class_symbol_id, cb.base_symbol_id, regexp_extract(split_part(cb.base_name, '[', 1), '[A-Za-z0-9_]+$') AS base_tail FROM auto_ontology_code.code.class_bases AS cb), edges AS (SELECT DISTINCT child, parent FROM (SELECT b.class_symbol_id AS child, b.base_symbol_id AS parent FROM bases AS b JOIN auto_ontology_code.code.symbols AS s ON s.symbol_id = b.base_symbol_id AND s.kind = 'class' WHERE b.base_symbol_id IS NOT NULL UNION ALL SELECT b.class_symbol_id AS child, s.symbol_id AS parent FROM bases AS b JOIN auto_ontology_code.code.symbols AS s ON s.name = b.base_tail AND s.kind = 'class' WHERE b.base_symbol_id IS NULL) AS e), paths AS (SELECT e.child AS class_symbol_id, 1 AS depth FROM edges AS e JOIN api ON e.parent = api.symbol_id UNION ALL SELECT e.child AS class_symbol_id, p.depth + 1 AS depth FROM edges AS e JOIN paths AS p ON e.parent = p.class_symbol_id WHERE p.depth < 25), direct AS (SELECT DISTINCT b.class_symbol_id FROM bases AS b WHERE b.base_symbol_id IN (SELECT symbol_id FROM api) OR b.base_tail IN ('ApiModel', '_Payload')) SELECT p.class_symbol_id AS class_symbol_id, MIN(p.depth) AS depth FROM paths AS p JOIN auto_ontology_code.code.symbols AS sy ON sy.symbol_id = p.class_symbol_id AND sy.kind = 'class' WHERE p.class_symbol_id NOT IN (SELECT class_symbol_id FROM direct) GROUP BY p.class_symbol_id ORDER BY depth, p.class_symbol_id"
+    }
+  ],
+  "usage": {},
+  "request": "Which classes inherit from ApiModel (auto_ontology/server/models.py) only indirectly, i.e. through at least one intermediate class of this repository, and do not name ApiModel directly in their class statement? An import alias of ApiModel (auto_ontology/server/responses.py imports it as _Payload) counts as naming ApiModel directly, and a subscripted base such as ListResponse[T] counts as its class. For each, give the class symbol ID and the length of the shortest inheritance chain to ApiModel (2 when the parent class directly subclasses ApiModel).\n\nRequested output columns: class_symbol_id (string), depth (integer).\nReturn exactly the requested output columns, using each requested name as the column alias, in the requested order. Return complete repository-relative file paths and complete symbol IDs exactly as stored. When the question asks which files, symbols or modules, return each distinct one once unless it asks for occurrences.",
+  "explanation": "The query builds the class inheritance graph from the class‑to‑base records and resolves each base either by its stored symbol ID or, when missing, by the trailing name component (stripping any subscript). It starts from classes that directly subclass ApiModel with depth 1, walks upward through intermediate classes, and then reports only indirect descendants (those not naming ApiModel or its alias `_Payload` directly) with their shortest chain depth. Results are grouped to the shortest depth per class and ordered by depth then class symbol ID.",
+  "sql": "WITH RECURSIVE api AS (SELECT symbol_id FROM auto_ontology_code.code.symbols WHERE kind = 'class' AND name = 'ApiModel' AND file_id = 'auto_ontology/server/models.py'), bases AS (SELECT cb.class_symbol_id, cb.base_symbol_id, regexp_extract(split_part(cb.base_name, '[', 1), '[A-Za-z0-9_]+$') AS base_tail FROM auto_ontology_code.code.class_bases AS cb), edges AS (SELECT DISTINCT child, parent FROM (SELECT b.class_symbol_id AS child, b.base_symbol_id AS parent FROM bases AS b JOIN auto_ontology_code.code.symbols AS s ON s.symbol_id = b.base_symbol_id AND s.kind = 'class' WHERE b.base_symbol_id IS NOT NULL UNION ALL SELECT b.class_symbol_id AS child, s.symbol_id AS parent FROM bases AS b JOIN auto_ontology_code.code.symbols AS s ON s.name = b.base_tail AND s.kind = 'class' WHERE b.base_symbol_id IS NULL) AS e), paths AS (SELECT e.child AS class_symbol_id, 1 AS depth FROM edges AS e JOIN api ON e.parent = api.symbol_id UNION ALL SELECT e.child AS class_symbol_id, p.depth + 1 AS depth FROM edges AS e JOIN paths AS p ON e.parent = p.class_symbol_id WHERE p.depth < 25), direct AS (SELECT DISTINCT b.class_symbol_id FROM bases AS b WHERE b.base_symbol_id IN (SELECT symbol_id FROM api) OR b.base_tail IN ('ApiModel', '_Payload')) SELECT p.class_symbol_id AS class_symbol_id, MIN(p.depth) AS depth FROM paths AS p JOIN auto_ontology_code.code.symbols AS sy ON sy.symbol_id = p.class_symbol_id AND sy.kind = 'class' WHERE p.class_symbol_id NOT IN (SELECT class_symbol_id FROM direct) GROUP BY p.class_symbol_id ORDER BY depth, p.class_symbol_id",
+  "rows": [
+    {
+      "class_symbol_id": "auto_ontology/server/models.py::TableExplorationTerm",
+      "depth": 2
+    },
+    {
+      "class_symbol_id": "auto_ontology/server/models.py::Term",
+      "depth": 2
+    },
+    {
+      "class_symbol_id": "auto_ontology/server/responses.py::PagedListResponse",
+      "depth": 2
+    },
+    {
+      "class_symbol_id": "auto_ontology/server/models.py::TermDetail",
+      "depth": 3
+    },
+    {
+      "class_symbol_id": "auto_ontology/server/models.py::TermListItem",
+      "depth": 3
+    }
+  ],
+  "source_record": "run/responses/10i_ask_with_key/ask_q12.json"
+}

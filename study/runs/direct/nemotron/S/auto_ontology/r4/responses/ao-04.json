@@ -1,0 +1,31 @@
+{
+  "question_id": "ao-04",
+  "arm": "S",
+  "model": "nvidia/nemotron-3.5-lightning",
+  "error": null,
+  "elapsed_s": 4.21,
+  "attempts": [
+    {
+      "sql": "SELECT DISTINCT c.class_symbol_id\nFROM code.symbols c\nWHERE c.kind = 'class'\n  AND c.file_id IN (SELECT file_id FROM code.files WHERE is_test = FALSE)\n  AND c.qualname LIKE 'BaseAgent'\n  AND c.symbol_id IN (\n    SELECT caller_symbol_id\n    FROM code.call_edges\n    WHERE callee_symbol_id IS NOT NULL\n      AND callee_kind = 'class'\n      AND calls_directly = TRUE\n  )\n  AND c.symbol_id NOT IN (\n    SELECT caller_symbol_id\n    FROM code.call_edges\n    WHERE callee_symbol_id IS NOT NULL\n      AND callee_kind = 'class'\n      AND calls_directly = TRUE\n      AND caller_file_id IN (SELECT file_id FROM code.files WHERE is_test = TRUE)\n  )\nORDER BY c.symbol_id;",
+      "error": "Binder Error: Table \"c\" does not have a column named \"class_symbol_id\""
+    },
+    {
+      "sql": "SELECT DISTINCT s.symbol_id AS class_symbol_id\nFROM code.symbols s\nWHERE s.kind = 'class'\n  AND s.file_id IN (SELECT file_id FROM code.files WHERE is_test = FALSE)\n  AND s.qualname LIKE 'BaseAgent'\n  AND s.symbol_id IN (\n    SELECT ce.caller_symbol_id\n    FROM code.call_edges ce\n    WHERE ce.callee_symbol_id IS NOT NULL\n      AND ce.callee_kind = 'class'\n      AND ce.calls_directly = TRUE\n  )\n  AND s.symbol_id NOT IN (\n    SELECT ce.caller_symbol_id\n    FROM code.call_edges ce\n    WHERE ce.callee_symbol_id IS NOT NULL\n      AND ce.callee_kind = 'class'\n      AND ce.calls_directly = TRUE\n      AND ce.caller_file_id IN (SELECT file_id FROM code.files WHERE is_test = TRUE)\n  )\nORDER BY s.symbol_id;",
+      "error": null
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 11200,
+    "completion_tokens": 552,
+    "total_tokens": 11752,
+    "cost": 0.0005775999999999999,
+    "providers": [
+      "CoreWeave",
+      "CoreWeave"
+    ]
+  },
+  "request": "Consider the agent classes defined in non-test code that directly subclass BaseAgent from auto_ontology/retrieval/text_to_sql/base.py (every file under a tests/ folder, conftest.py and helpers included, is test code). Which of these agent classes are constructed (the class is called by name, e.g. ResponseAgent()) somewhere in non-test code but are never constructed anywhere in test code? Count only direct constructor calls written in a function or method body; patching or referencing a class without calling it does not count, and a test that calls a function which constructs the class does not count as constructing it. Return their class symbol IDs.\n\nRequested output columns: class_symbol_id (string).",
+  "explanation": "The query selects class symbols named BaseAgent defined in non-test files, filters to those with a direct constructor call in non-test code, and excludes any that are also directly called in test files, yielding the desired class symbol IDs.",
+  "sql": "SELECT DISTINCT s.symbol_id AS class_symbol_id\nFROM code.symbols s\nWHERE s.kind = 'class'\n  AND s.file_id IN (SELECT file_id FROM code.files WHERE is_test = FALSE)\n  AND s.qualname LIKE 'BaseAgent'\n  AND s.symbol_id IN (\n    SELECT ce.caller_symbol_id\n    FROM code.call_edges ce\n    WHERE ce.callee_symbol_id IS NOT NULL\n      AND ce.callee_kind = 'class'\n      AND ce.calls_directly = TRUE\n  )\n  AND s.symbol_id NOT IN (\n    SELECT ce.caller_symbol_id\n    FROM code.call_edges ce\n    WHERE ce.callee_symbol_id IS NOT NULL\n      AND ce.callee_kind = 'class'\n      AND ce.calls_directly = TRUE\n      AND ce.caller_file_id IN (SELECT file_id FROM code.files WHERE is_test = TRUE)\n  )\nORDER BY s.symbol_id;",
+  "rows": []
+}

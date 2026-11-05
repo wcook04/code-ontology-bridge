@@ -1,0 +1,31 @@
+{
+  "question_id": "rich-09",
+  "arm": "V",
+  "model": "nvidia/nemotron-3.5-lightning",
+  "error": null,
+  "elapsed_s": 2.0,
+  "attempts": [
+    {
+      "sql": "SELECT caller_symbol_id, usage FROM (\n  SELECT caller_symbol_id, 'direct' AS usage\n  FROM code.call_edges\n  WHERE caller_symbol_id IN (\n    SELECT symbol_id FROM code.symbols WHERE name = 'get_renderable' AND file_id IN (\n      SELECT file_id FROM code.files WHERE module = 'progress'\n    )\n  )\n  AND callee_symbol_id IN (\n    SELECT symbol_id FROM code.symbols WHERE name = 'get_renderable'\n  )\n  UNION ALL\n  SELECT caller_symbol_id, 'callback' AS usage\n  FROM code.call_edges\n  WHERE callee_symbol_id IN (\n    SELECT symbol_id FROM code.symbols WHERE name = 'get_renderable'\n  )\n  AND passes_as_callback = TRUE\n) sub\nORDER BY caller_symbol_id, usage",
+      "error": null
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 988,
+    "completion_tokens": 250,
+    "total_tokens": 1238,
+    "cost": 0.00011916,
+    "providers": [
+      "CoreWeave"
+    ]
+  },
+  "request": "Progress.get_renderable in rich/progress.py builds what a progress display shows. Which functions or methods use it, either by calling it directly or by passing the method itself as an argument to another call (a callback reference)? Give the user's symbol ID and how it is used, as 'direct' or 'callback'.\n\nRequested output columns: caller_symbol_id (string), usage (string).",
+  "explanation": "The query first finds direct calls to get_renderable by matching caller and callee symbols with that name. It then finds callback usages where the method is passed as a callback reference via call_edges with passes_as_callback = TRUE. Results are combined and ordered by symbol ID and usage type.",
+  "sql": "SELECT caller_symbol_id, usage FROM (\n  SELECT caller_symbol_id, 'direct' AS usage\n  FROM code.call_edges\n  WHERE caller_symbol_id IN (\n    SELECT symbol_id FROM code.symbols WHERE name = 'get_renderable' AND file_id IN (\n      SELECT file_id FROM code.files WHERE module = 'progress'\n    )\n  )\n  AND callee_symbol_id IN (\n    SELECT symbol_id FROM code.symbols WHERE name = 'get_renderable'\n  )\n  UNION ALL\n  SELECT caller_symbol_id, 'callback' AS usage\n  FROM code.call_edges\n  WHERE callee_symbol_id IN (\n    SELECT symbol_id FROM code.symbols WHERE name = 'get_renderable'\n  )\n  AND passes_as_callback = TRUE\n) sub\nORDER BY caller_symbol_id, usage",
+  "rows": [
+    {
+      "caller_symbol_id": "rich/progress.py::Progress.__init__",
+      "usage": "callback"
+    }
+  ]
+}

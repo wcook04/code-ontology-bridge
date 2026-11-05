@@ -8,6 +8,7 @@ import { Outcomes } from "../views/Outcomes";
 import { Question } from "../views/Question";
 import { Source } from "../views/Source";
 import { Comparison } from "../views/Comparison";
+import { Study } from "../views/Study";
 import { Out } from "../components/parts";
 import { TermProvider } from "../components/Term";
 
@@ -43,7 +44,8 @@ export function App() {
       outcomes: "The 22 recorded questions | Code Ontology Bridge",
       question: route.view === "question" ? `Question ${route.id} | Code Ontology Bridge` : "",
       source: "Source excerpt | Code Ontology Bridge",
-      comparison: "What each layer adds | Code Ontology Bridge",
+      comparison: "Earlier experiment | Code Ontology Bridge",
+      study: "The study | Code Ontology Bridge",
       missing: "Page not found | Code Ontology Bridge",
     };
     document.title = titles[route.view];
@@ -58,6 +60,7 @@ export function App() {
         {route.view === "question" ? <Question key={route.id} id={route.id} total={pub?.manifest.question_count ?? 22} /> : null}
         {route.view === "source" ? <Source spanId={route.span} /> : null}
         {route.view === "comparison" ? <Comparison /> : null}
+        {route.view === "study" ? <Study /> : null}
         {route.view === "missing" ? (
           <section className="band page">
             <h1>Nothing at this address</h1>
@@ -102,8 +105,8 @@ function Header({ current }: { current: string }) {
           <a href="#/walkthrough/source" onClick={onLinkClick} aria-current={current === "home" ? "page" : undefined}>
             Caller example
           </a>
-          <a href="#/comparison" onClick={onLinkClick} aria-current={current === "comparison" ? "page" : undefined}>
-            Comparison
+          <a href="#/study" onClick={onLinkClick} aria-current={current === "study" ? "page" : undefined}>
+            Study
           </a>
           <a href="#/outcomes" onClick={onLinkClick} aria-current={current === "outcomes" || current === "question" ? "page" : undefined}>
             22 questions

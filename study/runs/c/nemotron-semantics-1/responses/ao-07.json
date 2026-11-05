@@ -1,0 +1,39 @@
+{
+  "question_id": "ao-07",
+  "arm": "C-semantics",
+  "model": "nvidia/nemotron-3.5-lightning",
+  "error": null,
+  "elapsed_s": 241.2,
+  "attempts": [
+    {
+      "sql": "SELECT DISTINCT sp.symbol_id, f.file_id AS repository_relative_file_path FROM auto_ontology_code.code.calls c JOIN auto_ontology_code.code.symbol_profile sp ON c.caller_symbol_id = sp.symbol_id JOIN auto_ontology_code.code.files f ON sp.file_id = f.file_id WHERE c.callee_name = 'write_transaction' AND c.call_kind = 'direct' AND f.is_test = false AND f.file_id NOT LIKE 'auto_ontology/dal/%' AND (sp.is_function = true OR sp.is_method = true) AND c.caller_symbol_id NOT IN (SELECT c2.caller_symbol_id FROM auto_ontology_code.code.calls c2 WHERE c2.callee_name = 'store' AND c2.call_kind = 'direct') ORDER BY sp.symbol_id;"
+    }
+  ],
+  "usage": {},
+  "request": "auto_ontology/dal/session.py provides store() (the active connection handle) and write_transaction() (a context manager that groups store() queries into one transaction). Outside the auto_ontology/dal/ folder, and excluding test code (every file under a tests/ folder), which functions or methods open a transaction themselves by calling write_transaction directly (e.g. `with write_transaction():`) but never call store() directly anywhere in their own body? Only direct calls count; calls made by helpers they invoke do not. Return their symbol IDs.\n\nRequested output columns: symbol_id (string).\nReturn exactly the requested output columns, using each requested name as the column alias, in the requested order. Return complete repository-relative file paths and complete symbol IDs exactly as stored. When the question asks which files, symbols or modules, return each distinct one once unless it asks for occurrences.",
+  "explanation": "This query finds all functions or methods that invoke write_transaction directly (call_kind = 'direct') but never call store() directly anywhere in their own body. It filters to files outside auto_ontology/dal/ by checking that the file_id does not start with that path, and excludes test files (is_test = false). The NOT IN subquery removes any symbols that have a direct call to store. Results are grouped by symbol_id and file_id to return each qualifying symbol with its complete repository-relative file path and symbol ID exactly as stored.",
+  "sql": "SELECT DISTINCT sp.symbol_id, f.file_id AS repository_relative_file_path FROM auto_ontology_code.code.calls c JOIN auto_ontology_code.code.symbol_profile sp ON c.caller_symbol_id = sp.symbol_id JOIN auto_ontology_code.code.files f ON sp.file_id = f.file_id WHERE c.callee_name = 'write_transaction' AND c.call_kind = 'direct' AND f.is_test = false AND f.file_id NOT LIKE 'auto_ontology/dal/%' AND (sp.is_function = true OR sp.is_method = true) AND c.caller_symbol_id NOT IN (SELECT c2.caller_symbol_id FROM auto_ontology_code.code.calls c2 WHERE c2.callee_name = 'store' AND c2.call_kind = 'direct') ORDER BY sp.symbol_id;",
+  "rows": [
+    {
+      "symbol_id": "auto_ontology/catalog/store/schemas.py::add_schemas_edge",
+      "repository_relative_file_path": "auto_ontology/catalog/store/schemas.py"
+    },
+    {
+      "symbol_id": "auto_ontology/catalog/write.py::populate_fks",
+      "repository_relative_file_path": "auto_ontology/catalog/write.py"
+    },
+    {
+      "symbol_id": "auto_ontology/catalog/write.py::populate_pks",
+      "repository_relative_file_path": "auto_ontology/catalog/write.py"
+    },
+    {
+      "symbol_id": "auto_ontology/server/rules/router.py::create_rule",
+      "repository_relative_file_path": "auto_ontology/server/rules/router.py"
+    },
+    {
+      "symbol_id": "auto_ontology/server/tags/router.py::detach_tag",
+      "repository_relative_file_path": "auto_ontology/server/tags/router.py"
+    }
+  ],
+  "source_record": "run/responses/10i_ask_with_key/ask_q7.json"
+}

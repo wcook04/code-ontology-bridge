@@ -1,0 +1,35 @@
+{
+  "question_id": "ao-12",
+  "arm": "C-base",
+  "model": "deepseek/deepseek-v4.1-flash-1017",
+  "error": null,
+  "elapsed_s": 393.2,
+  "attempts": [
+    {
+      "sql": "WITH RECURSIVE api_model AS (SELECT symbol_id FROM auto_ontology_code.code.symbols WHERE file_id = 'auto_ontology/server/models.py' AND name = 'ApiModel' AND kind = 'class'), ancestry AS (SELECT cb.class_symbol_id AS class_symbol_id, 1 AS depth FROM auto_ontology_code.code.class_bases AS cb INNER JOIN api_model AS am ON cb.base_symbol_id = am.symbol_id UNION SELECT cb.class_symbol_id AS class_symbol_id, a.depth + 1 AS depth FROM ancestry AS a INNER JOIN auto_ontology_code.code.class_bases AS cb ON cb.base_symbol_id = a.class_symbol_id) SELECT a.class_symbol_id, MIN(a.depth) AS depth FROM ancestry AS a INNER JOIN auto_ontology_code.code.symbols AS s ON a.class_symbol_id = s.symbol_id WHERE s.file_id = 'auto_ontology/server/models.py' AND s.kind = 'class' AND NOT EXISTS (SELECT 1 FROM auto_ontology_code.code.class_bases AS direct INNER JOIN api_model AS am2 ON direct.base_symbol_id = am2.symbol_id WHERE direct.class_symbol_id = a.class_symbol_id) AND NOT EXISTS (SELECT 1 FROM auto_ontology_code.code.class_bases AS direct_name WHERE direct_name.class_symbol_id = a.class_symbol_id AND direct_name.base_name IN ('ApiModel', '_Payload')) GROUP BY a.class_symbol_id ORDER BY a.class_symbol_id;"
+    }
+  ],
+  "usage": {},
+  "request": "Which classes inherit from ApiModel (auto_ontology/server/models.py) only indirectly, i.e. through at least one intermediate class of this repository, and do not name ApiModel directly in their class statement? An import alias of ApiModel (auto_ontology/server/responses.py imports it as _Payload) counts as naming ApiModel directly, and a subscripted base such as ListResponse[T] counts as its class. For each, give the class symbol ID and the length of the shortest inheritance chain to ApiModel (2 when the parent class directly subclasses ApiModel).\n\nRequested output columns: class_symbol_id (string), depth (integer).\nReturn exactly the requested output columns, using each requested name as the column alias, in the requested order. Return complete repository-relative file paths and complete symbol IDs exactly as stored. When the question asks which files, symbols or modules, return each distinct one once unless it asks for occurrences.",
+  "explanation": "This query finds class symbols in auto_ontology/server/models.py that reach ApiModel only through an intermediate class rather than by naming ApiModel directly. It uses the recorded class bases and resolved base symbols to walk inheritance paths, excludes any class with a direct ApiModel or _Payload base, and returns each qualifying class symbol once with its shortest inheritance depth.",
+  "sql": "WITH RECURSIVE api_model AS (SELECT symbol_id FROM auto_ontology_code.code.symbols WHERE file_id = 'auto_ontology/server/models.py' AND name = 'ApiModel' AND kind = 'class'), ancestry AS (SELECT cb.class_symbol_id AS class_symbol_id, 1 AS depth FROM auto_ontology_code.code.class_bases AS cb INNER JOIN api_model AS am ON cb.base_symbol_id = am.symbol_id UNION SELECT cb.class_symbol_id AS class_symbol_id, a.depth + 1 AS depth FROM ancestry AS a INNER JOIN auto_ontology_code.code.class_bases AS cb ON cb.base_symbol_id = a.class_symbol_id) SELECT a.class_symbol_id, MIN(a.depth) AS depth FROM ancestry AS a INNER JOIN auto_ontology_code.code.symbols AS s ON a.class_symbol_id = s.symbol_id WHERE s.file_id = 'auto_ontology/server/models.py' AND s.kind = 'class' AND NOT EXISTS (SELECT 1 FROM auto_ontology_code.code.class_bases AS direct INNER JOIN api_model AS am2 ON direct.base_symbol_id = am2.symbol_id WHERE direct.class_symbol_id = a.class_symbol_id) AND NOT EXISTS (SELECT 1 FROM auto_ontology_code.code.class_bases AS direct_name WHERE direct_name.class_symbol_id = a.class_symbol_id AND direct_name.base_name IN ('ApiModel', '_Payload')) GROUP BY a.class_symbol_id ORDER BY a.class_symbol_id;",
+  "rows": [
+    {
+      "class_symbol_id": "auto_ontology/server/models.py::TableExplorationTerm",
+      "depth": 2
+    },
+    {
+      "class_symbol_id": "auto_ontology/server/models.py::Term",
+      "depth": 2
+    },
+    {
+      "class_symbol_id": "auto_ontology/server/models.py::TermDetail",
+      "depth": 3
+    },
+    {
+      "class_symbol_id": "auto_ontology/server/models.py::TermListItem",
+      "depth": 3
+    }
+  ],
+  "source_record": "run/responses/10i_ask_with_key/ask_q12.json"
+}

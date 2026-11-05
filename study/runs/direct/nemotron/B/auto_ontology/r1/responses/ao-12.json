@@ -1,0 +1,43 @@
+{
+  "question_id": "ao-12",
+  "arm": "B",
+  "model": "nvidia/nemotron-3.5-lightning",
+  "error": null,
+  "elapsed_s": 2.02,
+  "attempts": [
+    {
+      "sql": "WITH RECURSIVE inheritance_tree AS (\n  -- Anchor: classes that directly name ApiModel in their class statement\n  SELECT\n    s.symbol_id AS class_symbol_id,\n    1 AS depth\n  FROM code.symbols s\n  JOIN code.class_bases cb ON s.symbol_id = cb.class_symbol_id\n  WHERE cb.base_name = 'ApiModel'\n  UNION ALL\n  -- Recursive step: find classes that inherit from a class already in the tree\n  SELECT\n    s.symbol_id AS class_symbol_id,\n    it.depth + 1 AS depth\n  FROM inheritance_tree it\n  JOIN code.class_bases cb ON cb.base_symbol_id = it.class_symbol_id\n  JOIN code.symbols s ON s.symbol_id = cb.class_symbol_id\n  WHERE cb.base_name != 'ApiModel'  -- exclude ApiModel itself from the recursive step\n),\nmin_depths AS (\n  SELECT\n    class_symbol_id,\n    MIN(depth) AS depth\n  FROM inheritance_tree\n  GROUP BY class_symbol_id\n)\nSELECT\n  class_symbol_id,\n  depth\nFROM min_depths\nWHERE depth > 1\nORDER BY depth, class_symbol_id;",
+      "error": null
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 2764,
+    "completion_tokens": 344,
+    "total_tokens": 3108,
+    "cost": 0.00019892,
+    "providers": [
+      "CoreWeave"
+    ]
+  },
+  "request": "Which classes inherit from ApiModel (auto_ontology/server/models.py) only indirectly, i.e. through at least one intermediate class of this repository, and do not name ApiModel directly in their class statement? An import alias of ApiModel (auto_ontology/server/responses.py imports it as _Payload) counts as naming ApiModel directly, and a subscripted base such as ListResponse[T] counts as its class. For each, give the class symbol ID and the length of the shortest inheritance chain to ApiModel (2 when the parent class directly subclasses ApiModel).\n\nRequested output columns: class_symbol_id (string), depth (integer).",
+  "explanation": "The query first identifies classes that directly name ApiModel in their class statement (depth 1). It then recursively traverses the inheritance graph to find all indirect subclasses, computing the minimum depth for each class. Finally, it filters to keep only classes with depth > 1 (i.e., indirect subclasses) and returns their symbol IDs and shortest chain length.",
+  "sql": "WITH RECURSIVE inheritance_tree AS (\n  -- Anchor: classes that directly name ApiModel in their class statement\n  SELECT\n    s.symbol_id AS class_symbol_id,\n    1 AS depth\n  FROM code.symbols s\n  JOIN code.class_bases cb ON s.symbol_id = cb.class_symbol_id\n  WHERE cb.base_name = 'ApiModel'\n  UNION ALL\n  -- Recursive step: find classes that inherit from a class already in the tree\n  SELECT\n    s.symbol_id AS class_symbol_id,\n    it.depth + 1 AS depth\n  FROM inheritance_tree it\n  JOIN code.class_bases cb ON cb.base_symbol_id = it.class_symbol_id\n  JOIN code.symbols s ON s.symbol_id = cb.class_symbol_id\n  WHERE cb.base_name != 'ApiModel'  -- exclude ApiModel itself from the recursive step\n),\nmin_depths AS (\n  SELECT\n    class_symbol_id,\n    MIN(depth) AS depth\n  FROM inheritance_tree\n  GROUP BY class_symbol_id\n)\nSELECT\n  class_symbol_id,\n  depth\nFROM min_depths\nWHERE depth > 1\nORDER BY depth, class_symbol_id;",
+  "rows": [
+    {
+      "class_symbol_id": "auto_ontology/server/models.py::TableExplorationTerm",
+      "depth": 2
+    },
+    {
+      "class_symbol_id": "auto_ontology/server/models.py::Term",
+      "depth": 2
+    },
+    {
+      "class_symbol_id": "auto_ontology/server/models.py::TermDetail",
+      "depth": 3
+    },
+    {
+      "class_symbol_id": "auto_ontology/server/models.py::TermListItem",
+      "depth": 3
+    }
+  ]
+}

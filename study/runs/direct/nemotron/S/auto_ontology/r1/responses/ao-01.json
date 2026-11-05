@@ -1,0 +1,31 @@
+{
+  "question_id": "ao-01",
+  "arm": "S",
+  "model": "nvidia/nemotron-3.5-lightning",
+  "error": null,
+  "elapsed_s": 5.55,
+  "attempts": [
+    {
+      "sql": "WITH connector_classes AS (\n  SELECT s.symbol_id AS class_symbol_id, s.qualname, s.file_id\n  FROM code.symbols s\n  JOIN code.class_bases b ON s.symbol_id = b.class_symbol_id\n  WHERE b.base_name = 'SQLDatabase'\n    AND s.file_id NOT IN (SELECT file_id FROM code.files WHERE is_test = TRUE)\n    AND s.kind = 'class'\n),\nconnector_methods AS (\n  SELECT s.symbol_id, s.name AS method_name, s.file_id\n  FROM code.symbols s\n  WHERE s.kind = 'method'\n    AND s.file_id IN (SELECT class_symbol_id FROM connector_classes)\n    AND s.name NOT LIKE '_%'\n),\nconnector_method_owners AS (\n  SELECT cm.symbol_id AS method_owner, cm.method_name\n  FROM connector_methods cm\n  WHERE NOT EXISTS (\n    SELECT 1\n    FROM code.class_bases cb\n    WHERE cb.class_symbol_id = cm.symbol_id\n      AND cb.base_name != 'SQLDatabase'\n  )\n    AND NOT EXISTS (\n      SELECT 1\n      FROM code.symbols parent\n      WHERE parent.symbol_id = (\n        SELECT cb.class_symbol_id\n        FROM code.class_bases cb2\n        WHERE cb2.base_symbol_id = parent.symbol_id\n          AND cb2.base_name != 'SQLDatabase'\n      )\n        AND cm.method_name = parent.name\n        AND parent.kind = 'class'\n        AND parent.file_id = cm.file_id\n        AND parent.line_start < cm.line_start\n        AND parent.line_end > cm.line_end\n    )\n)\nSELECT c.class_symbol_id, cm.method_name\nFROM connector_method_owners cm\nJOIN connector_classes c ON cm.method_owner = c.class_symbol_id\nORDER BY c.class_symbol_id, cm.method_name;",
+      "error": "Binder Error: Referenced table \"cb\" not found!"
+    },
+    {
+      "sql": "WITH connector_classes AS (\n  SELECT s.symbol_id AS class_symbol_id, s.qualname, s.file_id\n  FROM code.symbols s\n  JOIN code.class_bases b ON s.symbol_id = b.class_symbol_id\n  WHERE b.base_name = 'SQLDatabase'\n    AND s.file_id NOT IN (SELECT file_id FROM code.files WHERE is_test = TRUE)\n    AND s.kind = 'class'\n),\nconnector_methods AS (\n  SELECT s.symbol_id, s.name AS method_name, s.file_id, s.line_start, s.line_end\n  FROM code.symbols s\n  WHERE s.kind = 'method'\n    AND s.file_id IN (SELECT class_symbol_id FROM connector_classes)\n    AND s.name NOT LIKE '_%'\n),\nconnector_method_owners AS (\n  SELECT cm.symbol_id AS method_owner, cm.method_name, cm.file_id, cm.line_start, cm.line_end\n  FROM connector_methods cm\n  WHERE NOT EXISTS (\n    SELECT 1\n    FROM code.class_bases cb\n    WHERE cb.class_symbol_id = cm.symbol_id\n      AND cb.base_name != 'SQLDatabase'\n  )\n    AND NOT EXISTS (\n      SELECT 1\n      FROM code.symbols parent\n      WHERE parent.kind = 'class'\n        AND parent.file_id = cm.file_id\n        AND parent.line_start < cm.line_start\n        AND parent.line_end > cm.line_end\n        AND cm.method_name = parent.name\n    )\n)\nSELECT c.class_symbol_id, cm.method_name\nFROM connector_method_owners cm\nJOIN connector_classes c ON cm.method_owner = c.class_symbol_id\nORDER BY c.class_symbol_id, cm.method_name;",
+      "error": null
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 11449,
+    "completion_tokens": 961,
+    "total_tokens": 12410,
+    "cost": 0.00067683,
+    "providers": [
+      "CoreWeave",
+      "CoreWeave"
+    ]
+  },
+  "request": "The production database connectors are the classes that directly subclass SQLDatabase (defined in auto_ontology/connectors/base.py), excluding any class defined in test code (every file under a tests/ folder counts as test code). For each such connector class, which public methods does the class define in its own body that SQLDatabase itself does not define? A method is public when its name does not start with an underscore (so __init__ and other dunder methods are excluded); anything written with def directly in the class body counts as a method, including properties and context-manager methods. Methods inherited without being redefined do not count. Return one row per (connector class symbol ID, method name).\n\nRequested output columns: class_symbol_id (string), method_name (string).",
+  "explanation": "The corrected query removes the invalid self-reference to alias 'cb' in the first NOT EXISTS clause and replaces it with a direct check against code.class_bases. The second NOT EXISTS now correctly identifies parent classes by matching method names against class symbols in the same file that enclose the method's line range, excluding inherited methods.",
+  "sql": "WITH connector_classes AS (\n  SELECT s.symbol_id AS class_symbol_id, s.qualname, s.file_id\n  FROM code.symbols s\n  JOIN code.class_bases b ON s.symbol_id = b.class_symbol_id\n  WHERE b.base_name = 'SQLDatabase'\n    AND s.file_id NOT IN (SELECT file_id FROM code.files WHERE is_test = TRUE)\n    AND s.kind = 'class'\n),\nconnector_methods AS (\n  SELECT s.symbol_id, s.name AS method_name, s.file_id, s.line_start, s.line_end\n  FROM code.symbols s\n  WHERE s.kind = 'method'\n    AND s.file_id IN (SELECT class_symbol_id FROM connector_classes)\n    AND s.name NOT LIKE '_%'\n),\nconnector_method_owners AS (\n  SELECT cm.symbol_id AS method_owner, cm.method_name, cm.file_id, cm.line_start, cm.line_end\n  FROM connector_methods cm\n  WHERE NOT EXISTS (\n    SELECT 1\n    FROM code.class_bases cb\n    WHERE cb.class_symbol_id = cm.symbol_id\n      AND cb.base_name != 'SQLDatabase'\n  )\n    AND NOT EXISTS (\n      SELECT 1\n      FROM code.symbols parent\n      WHERE parent.kind = 'class'\n        AND parent.file_id = cm.file_id\n        AND parent.line_start < cm.line_start\n        AND parent.line_end > cm.line_end\n        AND cm.method_name = parent.name\n    )\n)\nSELECT c.class_symbol_id, cm.method_name\nFROM connector_method_owners cm\nJOIN connector_classes c ON cm.method_owner = c.class_symbol_id\nORDER BY c.class_symbol_id, cm.method_name;",
+  "rows": []
+}

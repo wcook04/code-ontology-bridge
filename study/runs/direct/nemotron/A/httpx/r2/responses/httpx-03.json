@@ -1,0 +1,96 @@
+{
+  "question_id": "httpx-03",
+  "arm": "A",
+  "model": "nvidia/nemotron-3.5-lightning",
+  "error": null,
+  "elapsed_s": 9.62,
+  "attempts": [
+    {
+      "sql": "SELECT DISTINCT f.file_id AS file_path\nFROM code.files f\nWHERE f.is_test = FALSE\n  AND f.file_id NOT IN (\n    SELECT DISTINCT i.imported_file_id\n    FROM code.imports i\n    WHERE i.module_name = 'httpx'\n      AND i.imported_file_id IN (SELECT file_id FROM code.files WHERE is_test = TRUE)\n  )\n  AND f.file_id NOT IN (\n    SELECT t.target_file_id\n    FROM code.test_links t\n    WHERE t.reason = 'import'\n  )\n  AND f.file_id NOT IN (\n    SELECT s.file_id\n    FROM code.symbols s\n    WHERE s.name LIKE 'test_%'\n      AND s.file_id = f.file_id\n  )\n  AND f.file_id NOT IN (\n    SELECT s.file_id\n    FROM code.symbols s\n    WHERE s.name LIKE 'test_%'\n      AND s.qualname LIKE '%' || f.file_id || '%'\n  )\n  AND f.file_id NOT IN (\n    SELECT t.target_file_id\n    FROM code.test_links t\n    WHERE t.reason = 'import' AND t.target_file_id LIKE 'test_%'\n  )\n  AND f.file_id NOT IN (\n    SELECT s.file_id\n    FROM code.symbols s\n    WHERE s.name LIKE 'test_%'\n      AND s.file_id IN (\n        SELECT target_file_id\n        FROM code.test_links t2\n        WHERE t2.reason = 'import'\n          AND t2.target_file_id LIKE 'test_%'\n      )\n  )\nORDER BY f.file_id;",
+      "error": null
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 624,
+    "completion_tokens": 453,
+    "total_tokens": 1077,
+    "cost": 6.996e-05,
+    "providers": [
+      "Darkbloom"
+    ]
+  },
+  "request": "Which Python files that are not test files (every file under tests/, including helpers such as tests/common.py and conftest.py, is a test file) have no associated test file at all, meaning no test file imports that module directly (importing only the top-level httpx package counts as importing httpx/__init__.py, not its submodules) and no test file's name is exactly test_ followed by the source file's name (e.g. test_asgi.py for asgi.py; test_decoders.py does not match _decoders.py)? Give the repository-relative file paths.\n\nRequested output columns: file_path (string).",
+  "explanation": "The query selects all non-test files that are not imported by any test file (only counting top-level httpx imports), not linked as test targets via test_links, and do not have a test file named test_<basename>. It excludes files whose basename matches a test_ prefixed symbol in the same file or across linked test files, ensuring only files with absolutely no test coverage are returned.",
+  "sql": "SELECT DISTINCT f.file_id AS file_path\nFROM code.files f\nWHERE f.is_test = FALSE\n  AND f.file_id NOT IN (\n    SELECT DISTINCT i.imported_file_id\n    FROM code.imports i\n    WHERE i.module_name = 'httpx'\n      AND i.imported_file_id IN (SELECT file_id FROM code.files WHERE is_test = TRUE)\n  )\n  AND f.file_id NOT IN (\n    SELECT t.target_file_id\n    FROM code.test_links t\n    WHERE t.reason = 'import'\n  )\n  AND f.file_id NOT IN (\n    SELECT s.file_id\n    FROM code.symbols s\n    WHERE s.name LIKE 'test_%'\n      AND s.file_id = f.file_id\n  )\n  AND f.file_id NOT IN (\n    SELECT s.file_id\n    FROM code.symbols s\n    WHERE s.name LIKE 'test_%'\n      AND s.qualname LIKE '%' || f.file_id || '%'\n  )\n  AND f.file_id NOT IN (\n    SELECT t.target_file_id\n    FROM code.test_links t\n    WHERE t.reason = 'import' AND t.target_file_id LIKE 'test_%'\n  )\n  AND f.file_id NOT IN (\n    SELECT s.file_id\n    FROM code.symbols s\n    WHERE s.name LIKE 'test_%'\n      AND s.file_id IN (\n        SELECT target_file_id\n        FROM code.test_links t2\n        WHERE t2.reason = 'import'\n          AND t2.target_file_id LIKE 'test_%'\n      )\n  )\nORDER BY f.file_id;",
+  "rows": [
+    {
+      "file_path": "httpx/__init__.py"
+    },
+    {
+      "file_path": "httpx/__version__.py"
+    },
+    {
+      "file_path": "httpx/_api.py"
+    },
+    {
+      "file_path": "httpx/_auth.py"
+    },
+    {
+      "file_path": "httpx/_client.py"
+    },
+    {
+      "file_path": "httpx/_config.py"
+    },
+    {
+      "file_path": "httpx/_content.py"
+    },
+    {
+      "file_path": "httpx/_decoders.py"
+    },
+    {
+      "file_path": "httpx/_exceptions.py"
+    },
+    {
+      "file_path": "httpx/_main.py"
+    },
+    {
+      "file_path": "httpx/_models.py"
+    },
+    {
+      "file_path": "httpx/_multipart.py"
+    },
+    {
+      "file_path": "httpx/_status_codes.py"
+    },
+    {
+      "file_path": "httpx/_transports/__init__.py"
+    },
+    {
+      "file_path": "httpx/_transports/asgi.py"
+    },
+    {
+      "file_path": "httpx/_transports/base.py"
+    },
+    {
+      "file_path": "httpx/_transports/default.py"
+    },
+    {
+      "file_path": "httpx/_transports/mock.py"
+    },
+    {
+      "file_path": "httpx/_transports/wsgi.py"
+    },
+    {
+      "file_path": "httpx/_types.py"
+    },
+    {
+      "file_path": "httpx/_urlparse.py"
+    },
+    {
+      "file_path": "httpx/_urls.py"
+    },
+    {
+      "file_path": "httpx/_utils.py"
+    }
+  ]
+}

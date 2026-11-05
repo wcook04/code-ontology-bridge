@@ -1,0 +1,47 @@
+{
+  "question_id": "rich-07",
+  "arm": "A",
+  "model": "deepseek/deepseek-v4.1-flash-1017",
+  "error": null,
+  "elapsed_s": 1.97,
+  "attempts": [
+    {
+      "sql": "SELECT s.symbol_id AS class_symbol_id, COUNT(m.symbol_id) AS method_count FROM code.symbols s JOIN code.files f ON f.file_id = s.file_id JOIN code.symbols m ON m.file_id = s.file_id AND m.qualname LIKE s.qualname || '.%' AND m.line_start >= s.line_start AND m.line_end <= s.line_end AND m.kind IN ('function','method') AND m.qualname NOT LIKE s.qualname || '.%.%' WHERE s.kind = 'class' AND f.is_test = FALSE GROUP BY s.symbol_id ORDER BY method_count DESC, class_symbol_id ASC LIMIT 5",
+      "error": null
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 580,
+    "completion_tokens": 221,
+    "total_tokens": 801,
+    "cost": 0.000196704,
+    "providers": [
+      "DigitalOcean"
+    ]
+  },
+  "request": "Which five classes outside the test suite define the most methods in their own class body? Count every method definition separately, so a property getter and its setter, or each @overload stub, count as separate methods. Give the class's symbol ID and the method count, ordered by count descending, ties broken by symbol ID ascending.\n\nRequested output columns: class_symbol_id (string), method_count (integer). Order the rows as the question asks.",
+  "explanation": "Joins each class to function/method symbols defined within its line range in the same file, excluding nested-class members by requiring the qualname be exactly one level below the class. Filters out test files and counts all method definitions (properties, overloads) separately, then returns the top five by count with symbol ID as tiebreaker.",
+  "sql": "SELECT s.symbol_id AS class_symbol_id, COUNT(m.symbol_id) AS method_count FROM code.symbols s JOIN code.files f ON f.file_id = s.file_id JOIN code.symbols m ON m.file_id = s.file_id AND m.qualname LIKE s.qualname || '.%' AND m.line_start >= s.line_start AND m.line_end <= s.line_end AND m.kind IN ('function','method') AND m.qualname NOT LIKE s.qualname || '.%.%' WHERE s.kind = 'class' AND f.is_test = FALSE GROUP BY s.symbol_id ORDER BY method_count DESC, class_symbol_id ASC LIMIT 5",
+  "rows": [
+    {
+      "class_symbol_id": "rich/console.py::Console",
+      "method_count": 71
+    },
+    {
+      "class_symbol_id": "rich/text.py::Text",
+      "method_count": 55
+    },
+    {
+      "class_symbol_id": "rich/style.py::Style",
+      "method_count": 33
+    },
+    {
+      "class_symbol_id": "rich/progress.py::Progress",
+      "method_count": 27
+    },
+    {
+      "class_symbol_id": "rich/segment.py::Segment",
+      "method_count": 24
+    }
+  ]
+}

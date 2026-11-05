@@ -1,0 +1,60 @@
+{
+  "question_id": "httpx-06",
+  "arm": "B",
+  "model": "deepseek/deepseek-v4.1-flash-1017",
+  "error": null,
+  "elapsed_s": 2.31,
+  "attempts": [
+    {
+      "sql": "SELECT s.symbol_id, COUNT(*)::INTEGER AS method_count FROM code.symbols s JOIN code.files f ON f.file_id = s.file_id WHERE s.kind = 'method' AND f.is_test = FALSE AND s.qualname LIKE '%\\_%' ESCAPE '\\\\' IS NOT NULL GROUP BY 1",
+      "error": "Syntax Error: Invalid escape string. Escape string must be empty or one character."
+    },
+    {
+      "sql": "SELECT c.symbol_id, COUNT(m.symbol_id)::INTEGER AS method_count FROM code.symbols c JOIN code.symbols m ON m.file_id = c.file_id AND m.kind = 'method' AND m.qualname LIKE c.qualname || '.%' AND m.qualname NOT LIKE c.qualname || '.%.%' JOIN code.files f ON f.file_id = c.file_id WHERE c.kind = 'class' AND f.is_test = FALSE GROUP BY c.symbol_id HAVING COUNT(m.symbol_id) >= 20 ORDER BY method_count DESC, c.symbol_id ASC",
+      "error": null
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 5593,
+    "completion_tokens": 290,
+    "total_tokens": 5883,
+    "cost": 0.000222728,
+    "providers": [
+      "Wafer",
+      "Wafer"
+    ]
+  },
+  "request": "Which classes in the non-test code define at least 20 methods directly in their own body? Count every method definition separately (a property getter and its setter count as two; inherited methods and methods of nested classes do not count). Return each class's symbol ID and its method count, largest count first, ties broken by symbol ID alphabetically.\n\nRequested output columns: symbol_id (string), method_count (integer). Order the rows as the question asks.",
+  "explanation": "Joins each class to methods in the same file whose qualname is the class qualname plus one dotted segment (direct methods only, excluding nested classes' methods), restricted to non-test files. Counts those methods per class, keeps classes with at least 20, and orders by count descending then symbol ID.",
+  "sql": "SELECT c.symbol_id, COUNT(m.symbol_id)::INTEGER AS method_count FROM code.symbols c JOIN code.symbols m ON m.file_id = c.file_id AND m.kind = 'method' AND m.qualname LIKE c.qualname || '.%' AND m.qualname NOT LIKE c.qualname || '.%.%' JOIN code.files f ON f.file_id = c.file_id WHERE c.kind = 'class' AND f.is_test = FALSE GROUP BY c.symbol_id HAVING COUNT(m.symbol_id) >= 20 ORDER BY method_count DESC, c.symbol_id ASC",
+  "rows": [
+    {
+      "symbol_id": "httpx/_models.py::Response",
+      "method_count": 42
+    },
+    {
+      "symbol_id": "httpx/_client.py::BaseClient",
+      "method_count": 32
+    },
+    {
+      "symbol_id": "httpx/_urls.py::URL",
+      "method_count": 28
+    },
+    {
+      "symbol_id": "httpx/_urls.py::QueryParams",
+      "method_count": 22
+    },
+    {
+      "symbol_id": "httpx/_client.py::AsyncClient",
+      "method_count": 20
+    },
+    {
+      "symbol_id": "httpx/_client.py::Client",
+      "method_count": 20
+    },
+    {
+      "symbol_id": "httpx/_models.py::Headers",
+      "method_count": 20
+    }
+  ]
+}

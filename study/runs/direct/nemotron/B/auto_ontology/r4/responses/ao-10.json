@@ -1,0 +1,31 @@
+{
+  "question_id": "ao-10",
+  "arm": "B",
+  "model": "nvidia/nemotron-3.5-lightning",
+  "error": null,
+  "elapsed_s": 1.85,
+  "attempts": [
+    {
+      "sql": "WITH RECURSIVE folder_tree AS (\n  SELECT file_id, package, module, is_test, line_count\n  FROM code.files\n  WHERE file_id LIKE 'auto_ontology/server/%'\n    AND file_id NOT LIKE 'auto_ontology/server/%/%'\n  UNION ALL\n  SELECT f.file_id, f.package, f.module, f.is_test, f.line_count\n  FROM code.files f\n  JOIN folder_tree ft ON f.file_id LIKE ft.file_id || '/%'\n  WHERE f.file_id NOT LIKE ft.file_id || '/%'\n    AND f.file_id NOT LIKE 'auto_ontology/server/%'\n),\nfolder_sums AS (\n  SELECT\n    CASE\n      WHEN file_id = 'auto_ontology/server' THEN NULL\n      ELSE SPLIT_PART(file_id, '/', 3) || '/' || SPLIT_PART(file_id, '/', 4)\n    END AS folder_path,\n    line_count\n  FROM folder_tree\n)\nSELECT folder_path, SUM(line_count) AS total_lines\nFROM folder_sums\nWHERE folder_path IS NOT NULL\nGROUP BY folder_path\nHAVING SUM(line_count) > 1000\nORDER BY total_lines DESC;",
+      "error": null
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 2736,
+    "completion_tokens": 346,
+    "total_tokens": 3082,
+    "cost": 0.00019736,
+    "providers": [
+      "CoreWeave"
+    ]
+  },
+  "request": "Within auto_ontology/server/, which immediate subfolders contain more than 1,000 lines of Python in total? Count every .py file anywhere inside the subfolder, including its test files and __init__.py; files directly in auto_ontology/server/ itself belong to no subfolder. Return the subfolder's repository-relative path (e.g. auto_ontology/server/chat) and its total line count.\n\nRequested output columns: folder_path (string), total_lines (integer).",
+  "explanation": "The query first identifies all Python files under auto_ontology/server/ using a recursive CTE to build the folder hierarchy. It then extracts the immediate subfolder (the first directory after server) for each file, sums the line counts per subfolder, and filters to only those exceeding 1,000 lines total.",
+  "sql": "WITH RECURSIVE folder_tree AS (\n  SELECT file_id, package, module, is_test, line_count\n  FROM code.files\n  WHERE file_id LIKE 'auto_ontology/server/%'\n    AND file_id NOT LIKE 'auto_ontology/server/%/%'\n  UNION ALL\n  SELECT f.file_id, f.package, f.module, f.is_test, f.line_count\n  FROM code.files f\n  JOIN folder_tree ft ON f.file_id LIKE ft.file_id || '/%'\n  WHERE f.file_id NOT LIKE ft.file_id || '/%'\n    AND f.file_id NOT LIKE 'auto_ontology/server/%'\n),\nfolder_sums AS (\n  SELECT\n    CASE\n      WHEN file_id = 'auto_ontology/server' THEN NULL\n      ELSE SPLIT_PART(file_id, '/', 3) || '/' || SPLIT_PART(file_id, '/', 4)\n    END AS folder_path,\n    line_count\n  FROM folder_tree\n)\nSELECT folder_path, SUM(line_count) AS total_lines\nFROM folder_sums\nWHERE folder_path IS NOT NULL\nGROUP BY folder_path\nHAVING SUM(line_count) > 1000\nORDER BY total_lines DESC;",
+  "rows": [
+    {
+      "folder_path": "models.py/",
+      "total_lines": 1180
+    }
+  ]
+}

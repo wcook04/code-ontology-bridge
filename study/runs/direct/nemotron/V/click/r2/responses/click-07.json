@@ -1,0 +1,43 @@
+{
+  "question_id": "click-07",
+  "arm": "V",
+  "model": "nvidia/nemotron-3.5-lightning",
+  "error": null,
+  "elapsed_s": 2.66,
+  "attempts": [
+    {
+      "sql": "WITH function_calls AS (\n  SELECT\n    caller_symbol_id AS passing_symbol_id,\n    callee_symbol_id AS passed_symbol_id\n  FROM code.call_edges\n  WHERE caller_kind = 'function' AND callee_kind = 'function'\n    AND caller_file_id LIKE 'src/click/%'\n    AND callee_file_id LIKE 'src/click/%'\n    AND passes_as_callback = TRUE\n),\nfiltered AS (\n  SELECT DISTINCT passing_symbol_id, passed_symbol_id\n  FROM function_calls\n  WHERE passing_symbol_id NOT IN (\n    SELECT symbol_id FROM code.symbols WHERE file_id LIKE 'src/click/%' AND kind = 'nested_function'\n  )\n)\nSELECT passing_symbol_id, passed_symbol_id FROM filtered",
+      "error": null
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 1026,
+    "completion_tokens": 270,
+    "total_tokens": 1296,
+    "cost": 0.00012582,
+    "providers": [
+      "CoreWeave"
+    ]
+  },
+  "request": "Inside the bodies of functions and methods in the click library (src/click/), where is a module-level function or a method defined in the repository passed by reference as an argument to another call (so the receiving call is expected to invoke it) rather than being called at that point? Module-level code outside any function, and nested helper functions, do not count. Give the symbol ID of the function or method containing the call and the symbol ID of the function passed, one row per distinct pair.\n\nRequested output columns: passing_symbol_id (string), passed_symbol_id (string).",
+  "explanation": "The query identifies function-to-function call edges where a function is passed as a callback (passes_as_callback = TRUE) within the click library's source files. It then filters out any pairs where the passed symbol is a nested function defined inside another function, ensuring only module-level functions and methods are considered. The result lists distinct symbol ID pairs of the caller (passing function/method) and the callee (passed function).",
+  "sql": "WITH function_calls AS (\n  SELECT\n    caller_symbol_id AS passing_symbol_id,\n    callee_symbol_id AS passed_symbol_id\n  FROM code.call_edges\n  WHERE caller_kind = 'function' AND callee_kind = 'function'\n    AND caller_file_id LIKE 'src/click/%'\n    AND callee_file_id LIKE 'src/click/%'\n    AND passes_as_callback = TRUE\n),\nfiltered AS (\n  SELECT DISTINCT passing_symbol_id, passed_symbol_id\n  FROM function_calls\n  WHERE passing_symbol_id NOT IN (\n    SELECT symbol_id FROM code.symbols WHERE file_id LIKE 'src/click/%' AND kind = 'nested_function'\n  )\n)\nSELECT passing_symbol_id, passed_symbol_id FROM filtered",
+  "rows": [
+    {
+      "passing_symbol_id": "src/click/_compat.py::_force_correct_text_reader",
+      "passed_symbol_id": "src/click/_compat.py::_find_binary_reader"
+    },
+    {
+      "passing_symbol_id": "src/click/_compat.py::_force_correct_text_writer",
+      "passed_symbol_id": "src/click/_compat.py::_find_binary_writer"
+    },
+    {
+      "passing_symbol_id": "src/click/_compat.py::_force_correct_text_reader",
+      "passed_symbol_id": "src/click/_compat.py::_is_binary_reader"
+    },
+    {
+      "passing_symbol_id": "src/click/_compat.py::_force_correct_text_writer",
+      "passed_symbol_id": "src/click/_compat.py::_is_binary_writer"
+    }
+  ]
+}

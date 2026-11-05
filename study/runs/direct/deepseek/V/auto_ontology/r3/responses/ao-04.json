@@ -1,0 +1,31 @@
+{
+  "question_id": "ao-04",
+  "arm": "V",
+  "model": "deepseek/deepseek-v4.1-flash-1017",
+  "error": null,
+  "elapsed_s": 3.57,
+  "attempts": [
+    {
+      "sql": "WITH base_classes AS (SELECT s.symbol_id FROM code.symbols s JOIN code.files f ON f.file_id = s.file_id WHERE f.file_id = 'auto_ontology/retrieval/text_to_sql/base.py' AND s.name = 'BaseAgent' AND s.kind = 'class'), direct_subclasses AS (SELECT DISTINCT cb.class_symbol_id FROM code.class_bases cb JOIN base_classes b ON cb.base_symbol_id = b.symbol_id), agent_classes AS (SELECT ds.class_symbol_id, s.file_id, s.name FROM direct_subclasses ds JOIN code.symbols s ON s.symbol_id = ds.class_symbol_id JOIN code.files f ON f.file_id = s.file_id WHERE NOT f.is_test), constructed_non_test AS (SELECT DISTINCT c.callee_symbol_id FROM code.calls c JOIN agent_classes ac ON c.callee_symbol_id = ac.class_symbol_id JOIN code.symbols caller ON caller.symbol_id = c.caller_symbol_id JOIN code.files cf ON cf.file_id = caller.file_id WHERE NOT cf.is_test AND c.kind = 'call' AND c.callee_name = ac.name), constructed_test AS (SELECT DISTINCT c.callee_symbol_id FROM code.calls c JOIN agent_classes ac ON c.callee_symbol_id = ac.class_symbol_id JOIN code.symbols caller ON caller.symbol_id = c.caller_symbol_id JOIN code.files cf ON cf.file_id = caller.file_id WHERE cf.is_test AND c.kind = 'call' AND c.callee_name = ac.name) SELECT ac.class_symbol_id FROM agent_classes ac JOIN constructed_non_test cnt ON cnt.callee_symbol_id = ac.class_symbol_id LEFT JOIN constructed_test ct ON ct.callee_symbol_id = ac.class_symbol_id WHERE ct.callee_symbol_id IS NULL ORDER BY ac.class_symbol_id",
+      "error": "Binder Error: Table \"c\" does not have a column named \"kind\""
+    },
+    {
+      "sql": "WITH base_classes AS (SELECT s.symbol_id FROM code.symbols s JOIN code.files f ON f.file_id = s.file_id WHERE f.file_id = 'auto_ontology/retrieval/text_to_sql/base.py' AND s.name = 'BaseAgent' AND s.kind = 'class'), direct_subclasses AS (SELECT DISTINCT cb.class_symbol_id FROM code.class_bases cb JOIN base_classes b ON cb.base_symbol_id = b.symbol_id), agent_classes AS (SELECT ds.class_symbol_id, s.file_id, s.name FROM direct_subclasses ds JOIN code.symbols s ON s.symbol_id = ds.class_symbol_id JOIN code.files f ON f.file_id = s.file_id WHERE NOT f.is_test), constructed_non_test AS (SELECT DISTINCT c.callee_symbol_id FROM code.calls c JOIN agent_classes ac ON c.callee_symbol_id = ac.class_symbol_id JOIN code.symbols caller ON caller.symbol_id = c.caller_symbol_id JOIN code.files cf ON cf.file_id = caller.file_id WHERE NOT cf.is_test AND c.call_kind = 'call' AND c.callee_name = ac.name), constructed_test AS (SELECT DISTINCT c.callee_symbol_id FROM code.calls c JOIN agent_classes ac ON c.callee_symbol_id = ac.class_symbol_id JOIN code.symbols caller ON caller.symbol_id = c.caller_symbol_id JOIN code.files cf ON cf.file_id = caller.file_id WHERE cf.is_test AND c.call_kind = 'call' AND c.callee_name = ac.name) SELECT ac.class_symbol_id FROM agent_classes ac JOIN constructed_non_test cnt ON cnt.callee_symbol_id = ac.class_symbol_id LEFT JOIN constructed_test ct ON ct.callee_symbol_id = ac.class_symbol_id WHERE ct.callee_symbol_id IS NULL ORDER BY ac.class_symbol_id",
+      "error": null
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 2633,
+    "completion_tokens": 906,
+    "total_tokens": 3539,
+    "cost": 0.000606051,
+    "providers": [
+      "Ionstream",
+      "Ionstream"
+    ]
+  },
+  "request": "Consider the agent classes defined in non-test code that directly subclass BaseAgent from auto_ontology/retrieval/text_to_sql/base.py (every file under a tests/ folder, conftest.py and helpers included, is test code). Which of these agent classes are constructed (the class is called by name, e.g. ResponseAgent()) somewhere in non-test code but are never constructed anywhere in test code? Count only direct constructor calls written in a function or method body; patching or referencing a class without calling it does not count, and a test that calls a function which constructs the class does not count as constructing it. Return their class symbol IDs.\n\nRequested output columns: class_symbol_id (string).",
+  "explanation": "Finds BaseAgent, finds direct subclasses in non-test files, then checks direct constructor calls in the calls table. Non-test construction is required, test construction is excluded, and the result is the class symbol IDs constructed only in non-test code.",
+  "sql": "WITH base_classes AS (SELECT s.symbol_id FROM code.symbols s JOIN code.files f ON f.file_id = s.file_id WHERE f.file_id = 'auto_ontology/retrieval/text_to_sql/base.py' AND s.name = 'BaseAgent' AND s.kind = 'class'), direct_subclasses AS (SELECT DISTINCT cb.class_symbol_id FROM code.class_bases cb JOIN base_classes b ON cb.base_symbol_id = b.symbol_id), agent_classes AS (SELECT ds.class_symbol_id, s.file_id, s.name FROM direct_subclasses ds JOIN code.symbols s ON s.symbol_id = ds.class_symbol_id JOIN code.files f ON f.file_id = s.file_id WHERE NOT f.is_test), constructed_non_test AS (SELECT DISTINCT c.callee_symbol_id FROM code.calls c JOIN agent_classes ac ON c.callee_symbol_id = ac.class_symbol_id JOIN code.symbols caller ON caller.symbol_id = c.caller_symbol_id JOIN code.files cf ON cf.file_id = caller.file_id WHERE NOT cf.is_test AND c.call_kind = 'call' AND c.callee_name = ac.name), constructed_test AS (SELECT DISTINCT c.callee_symbol_id FROM code.calls c JOIN agent_classes ac ON c.callee_symbol_id = ac.class_symbol_id JOIN code.symbols caller ON caller.symbol_id = c.caller_symbol_id JOIN code.files cf ON cf.file_id = caller.file_id WHERE cf.is_test AND c.call_kind = 'call' AND c.callee_name = ac.name) SELECT ac.class_symbol_id FROM agent_classes ac JOIN constructed_non_test cnt ON cnt.callee_symbol_id = ac.class_symbol_id LEFT JOIN constructed_test ct ON ct.callee_symbol_id = ac.class_symbol_id WHERE ct.callee_symbol_id IS NULL ORDER BY ac.class_symbol_id",
+  "rows": []
+}

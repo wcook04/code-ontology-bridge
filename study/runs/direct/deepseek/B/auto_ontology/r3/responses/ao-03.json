@@ -1,0 +1,48 @@
+{
+  "question_id": "ao-03",
+  "arm": "B",
+  "model": "deepseek/deepseek-v4.1-flash-1017",
+  "error": null,
+  "elapsed_s": 1.82,
+  "attempts": [
+    {
+      "sql": "WITH direct AS (SELECT DISTINCT c.caller_symbol_id AS sid FROM code.calls c JOIN code.symbols t ON t.symbol_id = c.callee_symbol_id WHERE t.file_id = 'auto_ontology/utils/llm_invoke.py' AND t.name = 'invoke_with_structured_output' AND c.call_kind = 'direct' AND c.resolution IN ('same_file','imported','method_on_self')), hop1 AS (SELECT DISTINCT c.caller_symbol_id AS sid FROM code.calls c JOIN direct d ON d.sid = c.callee_symbol_id WHERE c.call_kind = 'direct' AND c.resolution IN ('same_file','imported','method_on_self')), hop2 AS (SELECT DISTINCT c.caller_symbol_id AS sid FROM code.calls c JOIN hop1 h ON h.sid = c.callee_symbol_id WHERE c.call_kind = 'direct' AND c.resolution IN ('same_file','imported','method_on_self')) SELECT DISTINCT s.symbol_id FROM hop2 JOIN code.symbols s ON s.symbol_id = hop2.sid JOIN code.files f ON f.file_id = s.file_id WHERE NOT f.is_test AND s.symbol_id NOT IN (SELECT sid FROM direct) ORDER BY s.symbol_id",
+      "error": null
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 2833,
+    "completion_tokens": 359,
+    "total_tokens": 3192,
+    "cost": 0.00024366,
+    "providers": [
+      "Wafer"
+    ]
+  },
+  "request": "invoke_with_structured_output in auto_ontology/utils/llm_invoke.py is the main structured-LLM-call wrapper. Which functions or methods in non-test code (every file under a tests/ folder is test code) reach it at exactly two hops: they do not call invoke_with_structured_output directly themselves, but they directly call at least one function or method that does call it directly? Consider direct calls only on both hops, and follow only calls to a named function or to a method on self (a call through another object's attribute, such as self._backend.classify(), is not followed); a function passed as an argument (e.g. pool.submit(f)) does not count as calling it. The intermediate function may live anywhere, including test code, but the functions you list must be in non-test code. Return their symbol IDs.\n\nRequested output columns: symbol_id (string).",
+  "explanation": "Finds symbols that directly call invoke_with_structured_output (direct), then symbols that directly call those (hop1), then symbols that directly call hop1 symbols (hop2). Only direct calls resolved as same_file, imported, or method_on_self are followed, excluding callbacks. Results are restricted to non-test files and exclude direct callers.",
+  "sql": "WITH direct AS (SELECT DISTINCT c.caller_symbol_id AS sid FROM code.calls c JOIN code.symbols t ON t.symbol_id = c.callee_symbol_id WHERE t.file_id = 'auto_ontology/utils/llm_invoke.py' AND t.name = 'invoke_with_structured_output' AND c.call_kind = 'direct' AND c.resolution IN ('same_file','imported','method_on_self')), hop1 AS (SELECT DISTINCT c.caller_symbol_id AS sid FROM code.calls c JOIN direct d ON d.sid = c.callee_symbol_id WHERE c.call_kind = 'direct' AND c.resolution IN ('same_file','imported','method_on_self')), hop2 AS (SELECT DISTINCT c.caller_symbol_id AS sid FROM code.calls c JOIN hop1 h ON h.sid = c.callee_symbol_id WHERE c.call_kind = 'direct' AND c.resolution IN ('same_file','imported','method_on_self')) SELECT DISTINCT s.symbol_id FROM hop2 JOIN code.symbols s ON s.symbol_id = hop2.sid JOIN code.files f ON f.file_id = s.file_id WHERE NOT f.is_test AND s.symbol_id NOT IN (SELECT sid FROM direct) ORDER BY s.symbol_id",
+  "rows": [
+    {
+      "symbol_id": "auto_ontology/semantic/compile.py::_run_semantic_compilation"
+    },
+    {
+      "symbol_id": "auto_ontology/semantic/deterministic.py::column_attribute_specs"
+    },
+    {
+      "symbol_id": "auto_ontology/semantic/pipeline.py::compile_semantic_layer"
+    },
+    {
+      "symbol_id": "auto_ontology/semantic/semantic_fk.py::_resolve_semantic_fks"
+    },
+    {
+      "symbol_id": "auto_ontology/semantic/semantic_fk.py::resolve_semantic_fks"
+    },
+    {
+      "symbol_id": "auto_ontology/semantic/visit_enter.py::process_table"
+    },
+    {
+      "symbol_id": "auto_ontology/server/chat/router.py::_pump"
+    }
+  ]
+}

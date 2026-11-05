@@ -1,0 +1,26 @@
+{
+  "question_id": "httpx-03",
+  "arm": "B",
+  "model": "nvidia/nemotron-3.5-lightning",
+  "error": null,
+  "elapsed_s": 3.26,
+  "attempts": [
+    {
+      "sql": "SELECT file_id AS file_path FROM code.files WHERE is_test = FALSE AND file_id NOT IN (SELECT DISTINCT imported_file_id FROM code.imports WHERE imported_file_id IS NOT NULL AND is_internal = TRUE) AND file_id NOT IN (SELECT target_file_id FROM code.test_links WHERE reason = 'name_match')",
+      "error": null
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 2768,
+    "completion_tokens": 123,
+    "total_tokens": 2891,
+    "cost": 5.196e-05,
+    "providers": [
+      "Darkbloom"
+    ]
+  },
+  "request": "Which Python files that are not test files (every file under tests/, including helpers such as tests/common.py and conftest.py, is a test file) have no associated test file at all, meaning no test file imports that module directly (importing only the top-level httpx package counts as importing httpx/__init__.py, not its submodules) and no test file's name is exactly test_ followed by the source file's name (e.g. test_asgi.py for asgi.py; test_decoders.py does not match _decoders.py)? Give the repository-relative file paths.\n\nRequested output columns: file_path (string).",
+  "explanation": "The query selects all non-test files that are not referenced by any internal import from a test file and not matched by a test file name convention (test_<name>.py). This identifies files with no associated test file at all.",
+  "sql": "SELECT file_id AS file_path FROM code.files WHERE is_test = FALSE AND file_id NOT IN (SELECT DISTINCT imported_file_id FROM code.imports WHERE imported_file_id IS NOT NULL AND is_internal = TRUE) AND file_id NOT IN (SELECT target_file_id FROM code.test_links WHERE reason = 'name_match')",
+  "rows": []
+}

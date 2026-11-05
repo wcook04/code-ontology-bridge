@@ -1,0 +1,26 @@
+{
+  "question_id": "ao-04",
+  "arm": "V",
+  "model": "deepseek/deepseek-v4.1-flash-1017",
+  "error": null,
+  "elapsed_s": 3.49,
+  "attempts": [
+    {
+      "sql": "WITH base AS (\n  SELECT s.symbol_id\n  FROM code.symbols s\n  JOIN code.files f ON f.file_id = s.file_id\n  WHERE s.kind = 'class' AND s.name = 'BaseAgent'\n    AND f.file_id = 'auto_ontology/retrieval/text_to_sql/base.py'\n),\nagents AS (\n  SELECT DISTINCT cb.class_symbol_id\n  FROM code.class_bases cb\n  JOIN base b ON cb.base_symbol_id = b.symbol_id\n  JOIN code.symbols cs ON cs.symbol_id = cb.class_symbol_id\n  JOIN code.files cf ON cf.file_id = cs.file_id\n  WHERE NOT cf.is_test\n    AND cf.file_id NOT LIKE '%/tests/%'\n    AND cf.file_id NOT LIKE 'tests/%'\n    AND cf.file_id NOT LIKE '%conftest.py'\n    AND cf.file_id NOT LIKE '%/helpers/%'\n),\nconstructed AS (\n  SELECT c.callee_symbol_id AS class_symbol_id,\n         bool_or(NOT f.is_test AND f.file_id NOT LIKE '%/tests/%' AND f.file_id NOT LIKE 'tests/%' AND f.file_id NOT LIKE '%conftest.py' AND f.file_id NOT LIKE '%/helpers/%') AS in_non_test,\n         bool_or(f.is_test OR f.file_id LIKE '%/tests/%' OR f.file_id LIKE 'tests/%' OR f.file_id LIKE '%conftest.py' OR f.file_id LIKE '%/helpers/%') AS in_test\n  FROM code.calls c\n  JOIN code.symbols caller ON caller.symbol_id = c.caller_symbol_id\n  JOIN code.files f ON f.file_id = caller.file_id\n  WHERE c.call_kind = 'constructor'\n    AND caller.kind IN ('function','method')\n  GROUP BY c.callee_symbol_id\n)\nSELECT a.class_symbol_id\nFROM agents a\nJOIN constructed c ON c.class_symbol_id = a.class_symbol_id\nWHERE c.in_non_test AND NOT c.in_test\nORDER BY a.class_symbol_id",
+      "error": null
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 1076,
+    "completion_tokens": 533,
+    "total_tokens": 1609,
+    "cost": 0.000278716,
+    "providers": [
+      "Wafer"
+    ]
+  },
+  "request": "Consider the agent classes defined in non-test code that directly subclass BaseAgent from auto_ontology/retrieval/text_to_sql/base.py (every file under a tests/ folder, conftest.py and helpers included, is test code). Which of these agent classes are constructed (the class is called by name, e.g. ResponseAgent()) somewhere in non-test code but are never constructed anywhere in test code? Count only direct constructor calls written in a function or method body; patching or referencing a class without calling it does not count, and a test that calls a function which constructs the class does not count as constructing it. Return their class symbol IDs.\n\nRequested output columns: class_symbol_id (string).",
+  "explanation": "Finds the BaseAgent class in auto_ontology/retrieval/text_to_sql/base.py, then finds non-test classes that directly subclass it via class_bases. It joins those to constructor calls (call_kind='constructor') made from function/method bodies, keeping classes constructed in non-test code but never constructed in test code.",
+  "sql": "WITH base AS (\n  SELECT s.symbol_id\n  FROM code.symbols s\n  JOIN code.files f ON f.file_id = s.file_id\n  WHERE s.kind = 'class' AND s.name = 'BaseAgent'\n    AND f.file_id = 'auto_ontology/retrieval/text_to_sql/base.py'\n),\nagents AS (\n  SELECT DISTINCT cb.class_symbol_id\n  FROM code.class_bases cb\n  JOIN base b ON cb.base_symbol_id = b.symbol_id\n  JOIN code.symbols cs ON cs.symbol_id = cb.class_symbol_id\n  JOIN code.files cf ON cf.file_id = cs.file_id\n  WHERE NOT cf.is_test\n    AND cf.file_id NOT LIKE '%/tests/%'\n    AND cf.file_id NOT LIKE 'tests/%'\n    AND cf.file_id NOT LIKE '%conftest.py'\n    AND cf.file_id NOT LIKE '%/helpers/%'\n),\nconstructed AS (\n  SELECT c.callee_symbol_id AS class_symbol_id,\n         bool_or(NOT f.is_test AND f.file_id NOT LIKE '%/tests/%' AND f.file_id NOT LIKE 'tests/%' AND f.file_id NOT LIKE '%conftest.py' AND f.file_id NOT LIKE '%/helpers/%') AS in_non_test,\n         bool_or(f.is_test OR f.file_id LIKE '%/tests/%' OR f.file_id LIKE 'tests/%' OR f.file_id LIKE '%conftest.py' OR f.file_id LIKE '%/helpers/%') AS in_test\n  FROM code.calls c\n  JOIN code.symbols caller ON caller.symbol_id = c.caller_symbol_id\n  JOIN code.files f ON f.file_id = caller.file_id\n  WHERE c.call_kind = 'constructor'\n    AND caller.kind IN ('function','method')\n  GROUP BY c.callee_symbol_id\n)\nSELECT a.class_symbol_id\nFROM agents a\nJOIN constructed c ON c.class_symbol_id = a.class_symbol_id\nWHERE c.in_non_test AND NOT c.in_test\nORDER BY a.class_symbol_id",
+  "rows": []
+}

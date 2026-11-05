@@ -1,0 +1,72 @@
+{
+  "question_id": "rich-04",
+  "arm": "A",
+  "model": "deepseek/deepseek-v4.1-flash-1017",
+  "error": null,
+  "elapsed_s": 3.35,
+  "attempts": [
+    {
+      "sql": "WITH render_sym AS (\n  SELECT s.symbol_id\n  FROM code.symbols s\n  JOIN code.files f ON f.file_id = s.file_id\n  WHERE f.file_id = 'rich/markup.py' AND s.name = 'render'\n),\ndirect_callers AS (\n  SELECT DISTINCT c.caller_symbol_id AS sym\n  FROM code.calls c\n  JOIN render_sym r ON c.callee_symbol_id = r.symbol_id\n  WHERE c.call_kind <> 'callback'\n),\nsecond_level AS (\n  SELECT DISTINCT c.caller_symbol_id AS sym\n  FROM code.calls c\n  JOIN direct_callers d ON c.callee_symbol_id = d.sym\n  WHERE c.call_kind <> 'callback'\n)\nSELECT DISTINCT s.symbol_id\nFROM second_level sl\nJOIN code.symbols s ON s.symbol_id = sl.sym\nJOIN code.files f ON f.file_id = s.file_id\nWHERE f.file_id LIKE 'rich/%'\n  AND s.symbol_id NOT IN (SELECT sym FROM direct_callers)\nORDER BY s.symbol_id",
+      "error": null
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 575,
+    "completion_tokens": 315,
+    "total_tokens": 890,
+    "cost": 0.000225705,
+    "providers": [
+      "Decart"
+    ]
+  },
+  "request": "The markup parser's entry point is the render function in rich/markup.py. Which functions and methods defined under the rich/ folder reach it through exactly one intermediate step (they directly call some function or method that itself directly calls rich/markup.py's render) but do not call render directly themselves? Direct calls only; callback references do not count. Give their symbol IDs.\n\nRequested output columns: symbol_id (string).",
+  "explanation": "Finds the render symbol in rich/markup.py, then computes its direct callers (excluding callback references) and the callers of those callers. It returns symbols defined under rich/ that are in the second level but not direct callers of render.",
+  "sql": "WITH render_sym AS (\n  SELECT s.symbol_id\n  FROM code.symbols s\n  JOIN code.files f ON f.file_id = s.file_id\n  WHERE f.file_id = 'rich/markup.py' AND s.name = 'render'\n),\ndirect_callers AS (\n  SELECT DISTINCT c.caller_symbol_id AS sym\n  FROM code.calls c\n  JOIN render_sym r ON c.callee_symbol_id = r.symbol_id\n  WHERE c.call_kind <> 'callback'\n),\nsecond_level AS (\n  SELECT DISTINCT c.caller_symbol_id AS sym\n  FROM code.calls c\n  JOIN direct_callers d ON c.callee_symbol_id = d.sym\n  WHERE c.call_kind <> 'callback'\n)\nSELECT DISTINCT s.symbol_id\nFROM second_level sl\nJOIN code.symbols s ON s.symbol_id = sl.sym\nJOIN code.files f ON f.file_id = s.file_id\nWHERE f.file_id LIKE 'rich/%'\n  AND s.symbol_id NOT IN (SELECT sym FROM direct_callers)\nORDER BY s.symbol_id",
+  "rows": [
+    {
+      "symbol_id": "rich/__main__.py::make_test_card"
+    },
+    {
+      "symbol_id": "rich/_inspect.py::Inspect._render"
+    },
+    {
+      "symbol_id": "rich/console.py::Console._collect_renderables"
+    },
+    {
+      "symbol_id": "rich/console.py::Console.render"
+    },
+    {
+      "symbol_id": "rich/logging.py::RichHandler.render_message"
+    },
+    {
+      "symbol_id": "rich/panel.py::Panel._subtitle"
+    },
+    {
+      "symbol_id": "rich/panel.py::Panel._title"
+    },
+    {
+      "symbol_id": "rich/progress.py::SpinnerColumn.__init__"
+    },
+    {
+      "symbol_id": "rich/progress.py::TaskProgressColumn.render"
+    },
+    {
+      "symbol_id": "rich/progress.py::TextColumn.render"
+    },
+    {
+      "symbol_id": "rich/prompt.py::PromptBase.__init__"
+    },
+    {
+      "symbol_id": "rich/spinner.py::Spinner.__init__"
+    },
+    {
+      "symbol_id": "rich/spinner.py::Spinner.update"
+    },
+    {
+      "symbol_id": "rich/traceback.py::Traceback.__rich_console__"
+    },
+    {
+      "symbol_id": "rich/traceback.py::Traceback._render_syntax_error"
+    }
+  ]
+}

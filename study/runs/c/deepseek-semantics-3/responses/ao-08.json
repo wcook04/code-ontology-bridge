@@ -1,0 +1,39 @@
+{
+  "question_id": "ao-08",
+  "arm": "C-semantics",
+  "model": "deepseek/deepseek-v4.1-flash-1017",
+  "error": null,
+  "elapsed_s": 307.3,
+  "attempts": [
+    {
+      "sql": "SELECT s.symbol_id AS symbol_id, COUNT(DISTINCT ce.caller_symbol_id) AS caller_count FROM code.symbols AS s JOIN code.files AS f ON s.file_id = f.file_id JOIN code.call_edges AS ce ON ce.callee_symbol_id = s.symbol_id WHERE s.kind = 'function' AND s.qualname NOT LIKE '%.%' AND f.is_test = FALSE AND s.file_id LIKE 'auto_ontology/dal/%' AND s.file_id <> 'auto_ontology/dal/session.py' AND ce.calls_directly = TRUE AND ce.caller_kind IN ('function', 'method') AND ce.caller_in_test_file = FALSE AND ce.caller_file_id NOT LIKE 'auto_ontology/dal/%' GROUP BY s.symbol_id ORDER BY caller_count DESC, s.symbol_id ASC LIMIT 5;"
+    }
+  ],
+  "usage": {},
+  "request": "Which five functions in the data-access layer are used most widely by the rest of the codebase? Consider module-level functions (not methods or classes) defined in non-test files under auto_ontology/dal/, excluding auto_ontology/dal/session.py. Rank them by the number of distinct functions or methods that call them directly, counting only callers that are in non-test files (every file under a tests/ folder is test code) located outside auto_ontology/dal/. Calls through a module alias (e.g. `dal.fetch_databases()` after `from auto_ontology.dal import datasources as dal`) or an import alias count; a function passed by reference without being called does not. Highest count first; break ties by symbol ID ascending and return exactly five rows. Return the symbol ID and the caller count.\n\nRequested output columns: symbol_id (string), caller_count (integer).\nReturn exactly the requested output columns, using each requested name as the column alias, in the requested order. Return complete repository-relative file paths and complete symbol IDs exactly as stored. When the question asks which files, symbols or modules, return each distinct one once unless it asks for occurrences.\nOrder the rows as the question asks.",
+  "explanation": "This ranks the module-level functions defined in the data-access layer (excluding the session module) by how many distinct functions or methods elsewhere in the non-test codebase call them directly. Call records are used to keep only direct calls made by functions or methods in non-test files outside the data-access package, then the distinct callers are counted per function. The results show the five most widely used functions, highest caller count first, with ties broken by symbol ID.",
+  "sql": "SELECT s.symbol_id AS symbol_id, COUNT(DISTINCT ce.caller_symbol_id) AS caller_count FROM code.symbols AS s JOIN code.files AS f ON s.file_id = f.file_id JOIN code.call_edges AS ce ON ce.callee_symbol_id = s.symbol_id WHERE s.kind = 'function' AND s.qualname NOT LIKE '%.%' AND f.is_test = FALSE AND s.file_id LIKE 'auto_ontology/dal/%' AND s.file_id <> 'auto_ontology/dal/session.py' AND ce.calls_directly = TRUE AND ce.caller_kind IN ('function', 'method') AND ce.caller_in_test_file = FALSE AND ce.caller_file_id NOT LIKE 'auto_ontology/dal/%' GROUP BY s.symbol_id ORDER BY caller_count DESC, s.symbol_id ASC LIMIT 5;",
+  "rows": [
+    {
+      "symbol_id": "auto_ontology/dal/owners.py::edit_subject",
+      "caller_count": 9
+    },
+    {
+      "symbol_id": "auto_ontology/dal/connections.py::list_connections",
+      "caller_count": 8
+    },
+    {
+      "symbol_id": "auto_ontology/dal/datasources.py::fetch_databases",
+      "caller_count": 8
+    },
+    {
+      "symbol_id": "auto_ontology/dal/datasources.py::fetch_schemas_for_database",
+      "caller_count": 7
+    },
+    {
+      "symbol_id": "auto_ontology/dal/datasources.py::fetch_schemas_by_ids",
+      "caller_count": 6
+    }
+  ],
+  "source_record": "run/responses/10i_ask_with_key/ask_q8.json"
+}

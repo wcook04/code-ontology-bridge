@@ -1,0 +1,75 @@
+{
+  "question_id": "ao-03",
+  "arm": "B",
+  "model": "nvidia/nemotron-3.5-lightning",
+  "error": null,
+  "elapsed_s": 2.79,
+  "attempts": [
+    {
+      "sql": "SELECT DISTINCT s.symbol_id\nFROM code.symbols s\nWHERE s.is_public = TRUE\n  AND s.kind IN ('function', 'method')\n  AND s.file_id NOT LIKE '%tests/%'\n  AND s.symbol_id IN (\n    SELECT c.caller_symbol_id\n    FROM code.calls c\n    WHERE c.callee_symbol_id IN (\n      SELECT s2.symbol_id\n      FROM code.symbols s2\n      WHERE s2.is_public = TRUE\n        AND s2.kind IN ('function', 'method')\n        AND s2.symbol_id LIKE '%invoke_with_structured_output%'\n    )\n    AND c.resolution IN ('same_file', 'imported', 'method_on_self')\n    AND c.confidence = 'high'\n    AND c.call_kind = 'direct'\n  )\nORDER BY s.symbol_id;",
+      "error": null
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 2816,
+    "completion_tokens": 277,
+    "total_tokens": 3093,
+    "cost": 0.00018916,
+    "providers": [
+      "CoreWeave"
+    ]
+  },
+  "request": "invoke_with_structured_output in auto_ontology/utils/llm_invoke.py is the main structured-LLM-call wrapper. Which functions or methods in non-test code (every file under a tests/ folder is test code) reach it at exactly two hops: they do not call invoke_with_structured_output directly themselves, but they directly call at least one function or method that does call it directly? Consider direct calls only on both hops, and follow only calls to a named function or to a method on self (a call through another object's attribute, such as self._backend.classify(), is not followed); a function passed as an argument (e.g. pool.submit(f)) does not count as calling it. The intermediate function may live anywhere, including test code, but the functions you list must be in non-test code. Return their symbol IDs.\n\nRequested output columns: symbol_id (string).",
+  "explanation": "The query finds all public functions/methods in non-test files that are called by another public function/method in non-test code, where the intermediate function directly calls invoke_with_structured_output (via same_file, imported, or method_on_self resolution with high confidence and direct call kind), and the outer function does not call it directly itself.",
+  "sql": "SELECT DISTINCT s.symbol_id\nFROM code.symbols s\nWHERE s.is_public = TRUE\n  AND s.kind IN ('function', 'method')\n  AND s.file_id NOT LIKE '%tests/%'\n  AND s.symbol_id IN (\n    SELECT c.caller_symbol_id\n    FROM code.calls c\n    WHERE c.callee_symbol_id IN (\n      SELECT s2.symbol_id\n      FROM code.symbols s2\n      WHERE s2.is_public = TRUE\n        AND s2.kind IN ('function', 'method')\n        AND s2.symbol_id LIKE '%invoke_with_structured_output%'\n    )\n    AND c.resolution IN ('same_file', 'imported', 'method_on_self')\n    AND c.confidence = 'high'\n    AND c.call_kind = 'direct'\n  )\nORDER BY s.symbol_id;",
+  "rows": [
+    {
+      "symbol_id": "auto_ontology/pii_detection/detector.py::LlmPiiClassifier.classify"
+    },
+    {
+      "symbol_id": "auto_ontology/retrieval/entity_coverage/agents/question_extraction.py::QuestionExtractionAgent.execute"
+    },
+    {
+      "symbol_id": "auto_ontology/retrieval/text_to_sql/agents/empty_like_result_check.py::EmptyLikeResultCheckAgent.execute"
+    },
+    {
+      "symbol_id": "auto_ontology/retrieval/text_to_sql/agents/information_agent.py::InformationAgent.execute"
+    },
+    {
+      "symbol_id": "auto_ontology/retrieval/text_to_sql/agents/question_intent.py::QuestionIntentAgent.execute"
+    },
+    {
+      "symbol_id": "auto_ontology/retrieval/text_to_sql/agents/sql_from_semantic.py::SQLFromCandidatesAgent.execute"
+    },
+    {
+      "symbol_id": "auto_ontology/retrieval/text_to_sql/agents/sql_from_tables.py::SQLFromTablesAgent.execute"
+    },
+    {
+      "symbol_id": "auto_ontology/retrieval/text_to_sql/agents/sql_reconstruction.py::SQLReconstructionAgent.execute"
+    },
+    {
+      "symbol_id": "auto_ontology/retrieval/text_to_sql/agents/sql_value_validation.py::SQLValueValidationAgent.execute"
+    },
+    {
+      "symbol_id": "auto_ontology/retrieval/text_to_sql/follow_up.py::resolve_follow_up"
+    },
+    {
+      "symbol_id": "auto_ontology/retrieval/text_to_sql/visualization/analyze.py::analyze_and_visualize"
+    },
+    {
+      "symbol_id": "auto_ontology/semantic/fk_suggester.py::suggest_potential_foreign_keys"
+    },
+    {
+      "symbol_id": "auto_ontology/semantic/term_extractor.py::extract_term"
+    },
+    {
+      "symbol_id": "auto_ontology/server/sql_attributes/description_suggester.py::suggest_sql_attribute_description"
+    },
+    {
+      "symbol_id": "auto_ontology/utils/llm_invoke.py::invoke_with_structured_output"
+    },
+    {
+      "symbol_id": "auto_ontology/utils/llm_invoke.py::safe_invoke_structured_nr"
+    }
+  ]
+}

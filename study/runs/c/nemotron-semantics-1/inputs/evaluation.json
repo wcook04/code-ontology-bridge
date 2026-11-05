@@ -1,0 +1,86 @@
+[
+  {
+    "question_id": 1,
+    "question": "The production database connectors are the classes that directly subclass SQLDatabase (defined in auto_ontology/connectors/base.py), excluding any class defined in test code (every file under a tests/ folder counts as test code). For each such connector class, which public methods does the class define in its own body that SQLDatabase itself does not define? A method is public when its name does not start with an underscore (so __init__ and other dunder methods are excluded); anything written with def directly in the class body counts as a method, including properties and context-manager methods. Methods inherited without being redefined do not count. Return one row per (connector class symbol ID, method name).",
+    "evidence": "",
+    "SQL": "SELECT b.class_symbol_id, m.name AS method_name FROM code.class_bases b JOIN code.symbols c ON c.symbol_id = b.class_symbol_id JOIN code.files f ON f.file_id = c.file_id JOIN code.symbols m ON m.file_id = c.file_id AND m.kind = 'method' AND m.qualname = c.qualname || '.' || m.name WHERE b.base_symbol_id = 'auto_ontology/connectors/base.py::SQLDatabase' AND NOT f.is_test AND m.is_public AND m.name NOT IN (SELECT bm.name FROM code.symbols bm WHERE bm.file_id = 'auto_ontology/connectors/base.py' AND bm.kind = 'method' AND bm.qualname LIKE 'SQLDatabase.%') ORDER BY 1, 2",
+    "difficulty": "hard"
+  },
+  {
+    "question_id": 2,
+    "question": "When the text-to-SQL LangGraph is assembled by create_graph in auto_ontology/retrieval/text_to_sql/text_to_sql_graph.py, which functions or methods of this repository does create_graph hand over by reference, i.e. pass the function object itself as an argument to another call (as with graph.add_conditional_edges(node, router_fn, ...)) rather than calling it? Count only plain names passed directly as call arguments; functions that create_graph calls itself, values that are the result of a call (such as _make_soft_check_router(...)), lambdas, and local variables holding nodes do not count. Functions passed only inside an if/else branch of create_graph count. Return each distinct function's symbol ID.",
+    "evidence": "",
+    "SQL": "SELECT DISTINCT callee_symbol_id AS symbol_id FROM code.calls WHERE caller_symbol_id = 'auto_ontology/retrieval/text_to_sql/text_to_sql_graph.py::create_graph' AND call_kind = 'callback' ORDER BY 1",
+    "difficulty": "medium"
+  },
+  {
+    "question_id": 3,
+    "question": "invoke_with_structured_output in auto_ontology/utils/llm_invoke.py is the main structured-LLM-call wrapper. Which functions or methods in non-test code (every file under a tests/ folder is test code) reach it at exactly two hops: they do not call invoke_with_structured_output directly themselves, but they directly call at least one function or method that does call it directly? Consider direct calls only on both hops, and follow only calls to a named function or to a method on self (a call through another object's attribute, such as self._backend.classify(), is not followed); a function passed as an argument (e.g. pool.submit(f)) does not count as calling it. The intermediate function may live anywhere, including test code, but the functions you list must be in non-test code. Return their symbol IDs.",
+    "evidence": "",
+    "SQL": "WITH d AS (SELECT DISTINCT caller_symbol_id AS s FROM code.calls WHERE call_kind = 'direct' AND callee_symbol_id = 'auto_ontology/utils/llm_invoke.py::invoke_with_structured_output') SELECT DISTINCT c.caller_symbol_id AS symbol_id FROM code.calls c JOIN code.symbols x ON x.symbol_id = c.caller_symbol_id JOIN code.files f ON f.file_id = x.file_id WHERE c.call_kind = 'direct' AND c.callee_symbol_id IN (SELECT s FROM d) AND c.caller_symbol_id NOT IN (SELECT s FROM d) AND NOT f.is_test ORDER BY 1",
+    "difficulty": "hard"
+  },
+  {
+    "question_id": 4,
+    "question": "Consider the agent classes defined in non-test code that directly subclass BaseAgent from auto_ontology/retrieval/text_to_sql/base.py (every file under a tests/ folder, conftest.py and helpers included, is test code). Which of these agent classes are constructed (the class is called by name, e.g. ResponseAgent()) somewhere in non-test code but are never constructed anywhere in test code? Count only direct constructor calls written in a function or method body; patching or referencing a class without calling it does not count, and a test that calls a function which constructs the class does not count as constructing it. Return their class symbol IDs.",
+    "evidence": "",
+    "SQL": "SELECT b.class_symbol_id FROM code.class_bases b JOIN code.symbols s ON s.symbol_id = b.class_symbol_id JOIN code.files f ON f.file_id = s.file_id WHERE b.base_symbol_id = 'auto_ontology/retrieval/text_to_sql/base.py::BaseAgent' AND NOT f.is_test AND EXISTS (SELECT 1 FROM code.calls c JOIN code.symbols cs ON cs.symbol_id = c.caller_symbol_id JOIN code.files cf ON cf.file_id = cs.file_id WHERE c.callee_symbol_id = b.class_symbol_id AND c.call_kind = 'direct' AND NOT cf.is_test) AND NOT EXISTS (SELECT 1 FROM code.calls c JOIN code.symbols cs ON cs.symbol_id = c.caller_symbol_id JOIN code.files cf ON cf.file_id = cs.file_id WHERE c.callee_symbol_id = b.class_symbol_id AND c.call_kind = 'direct' AND cf.is_test) ORDER BY 1",
+    "difficulty": "hard"
+  },
+  {
+    "question_id": 5,
+    "question": "Which non-test Python files anywhere in the repository (including folders outside the auto_ontology package, such as dev_tools/) but outside the auto_ontology/connectors/ folder import anything from the connectors package (auto_ontology.connectors itself or any of its modules)? Count every import statement, including imports placed inside functions and imports under an `if TYPE_CHECKING:` guard; mentions in comments or docstrings are not imports. Every file under a tests/ folder is test code and is excluded. Return repository-relative file paths.",
+    "evidence": "",
+    "SQL": "SELECT DISTINCT i.file_id AS file_path FROM code.imports i JOIN code.files f ON f.file_id = i.file_id WHERE i.imported_file_id LIKE 'auto_ontology/connectors/%' AND i.file_id NOT LIKE 'auto_ontology/connectors/%' AND NOT f.is_test ORDER BY 1",
+    "difficulty": "medium"
+  },
+  {
+    "question_id": 6,
+    "question": "Among the production database connector classes that directly subclass SQLDatabase (auto_ontology/connectors/base.py), excluding classes in test code (any file under a tests/ folder), which ones override get_columns with their own get_columns method that has no docstring of its own (a leading # comment is not a docstring)? Return the symbol ID of each such get_columns method.",
+    "evidence": "",
+    "SQL": "SELECT m.symbol_id FROM code.class_bases b JOIN code.symbols c ON c.symbol_id = b.class_symbol_id JOIN code.files f ON f.file_id = c.file_id JOIN code.symbols m ON m.file_id = c.file_id AND m.qualname = c.qualname || '.get_columns' AND m.kind = 'method' WHERE b.base_symbol_id = 'auto_ontology/connectors/base.py::SQLDatabase' AND NOT f.is_test AND m.summary_source = 'none' ORDER BY 1",
+    "difficulty": "medium"
+  },
+  {
+    "question_id": 7,
+    "question": "auto_ontology/dal/session.py provides store() (the active connection handle) and write_transaction() (a context manager that groups store() queries into one transaction). Outside the auto_ontology/dal/ folder, and excluding test code (every file under a tests/ folder), which functions or methods open a transaction themselves by calling write_transaction directly (e.g. `with write_transaction():`) but never call store() directly anywhere in their own body? Only direct calls count; calls made by helpers they invoke do not. Return their symbol IDs.",
+    "evidence": "",
+    "SQL": "SELECT DISTINCT c.caller_symbol_id AS symbol_id FROM code.calls c JOIN code.symbols s ON s.symbol_id = c.caller_symbol_id JOIN code.files f ON f.file_id = s.file_id WHERE c.callee_symbol_id = 'auto_ontology/dal/session.py::write_transaction' AND c.call_kind = 'direct' AND NOT f.is_test AND s.file_id NOT LIKE 'auto_ontology/dal/%' AND c.caller_symbol_id NOT IN (SELECT caller_symbol_id FROM code.calls WHERE callee_symbol_id = 'auto_ontology/dal/session.py::store' AND call_kind = 'direct') ORDER BY 1",
+    "difficulty": "hard"
+  },
+  {
+    "question_id": 8,
+    "question": "Which five functions in the data-access layer are used most widely by the rest of the codebase? Consider module-level functions (not methods or classes) defined in non-test files under auto_ontology/dal/, excluding auto_ontology/dal/session.py. Rank them by the number of distinct functions or methods that call them directly, counting only callers that are in non-test files (every file under a tests/ folder is test code) located outside auto_ontology/dal/. Calls through a module alias (e.g. `dal.fetch_databases()` after `from auto_ontology.dal import datasources as dal`) or an import alias count; a function passed by reference without being called does not. Highest count first; break ties by symbol ID ascending and return exactly five rows. Return the symbol ID and the caller count.",
+    "evidence": "",
+    "SQL": "SELECT c.callee_symbol_id AS symbol_id, COUNT(DISTINCT c.caller_symbol_id) AS caller_count FROM code.calls c JOIN code.symbols cs ON cs.symbol_id = c.caller_symbol_id JOIN code.files cf ON cf.file_id = cs.file_id JOIN code.symbols t ON t.symbol_id = c.callee_symbol_id JOIN code.files tf ON tf.file_id = t.file_id WHERE c.call_kind = 'direct' AND NOT cf.is_test AND cs.kind IN ('function', 'method') AND cs.file_id NOT LIKE 'auto_ontology/dal/%' AND t.kind = 'function' AND t.file_id LIKE 'auto_ontology/dal/%' AND NOT tf.is_test AND t.file_id <> 'auto_ontology/dal/session.py' GROUP BY 1 ORDER BY 2 DESC, 1 LIMIT 5",
+    "difficulty": "hard"
+  },
+  {
+    "question_id": 9,
+    "question": "Which test files are statically associated with auto_ontology/semantic/visit_enter.py, meaning the test file imports that module (anywhere in the file, including inside a test function) or is named test_visit_enter.py? Mentions in comments or patch target strings do not count. Return each test file's repository-relative path once.",
+    "evidence": "",
+    "SQL": "SELECT DISTINCT test_file_id AS test_file_path FROM code.test_links WHERE target_file_id = 'auto_ontology/semantic/visit_enter.py' ORDER BY 1",
+    "difficulty": "easy"
+  },
+  {
+    "question_id": 10,
+    "question": "Within auto_ontology/server/, which immediate subfolders contain more than 1,000 lines of Python in total? Count every .py file anywhere inside the subfolder, including its test files and __init__.py; files directly in auto_ontology/server/ itself belong to no subfolder. Return the subfolder's repository-relative path (e.g. auto_ontology/server/chat) and its total line count.",
+    "evidence": "",
+    "SQL": "SELECT 'auto_ontology/server/' || split_part(file_id, '/', 3) AS folder_path, SUM(line_count) AS total_lines FROM code.files WHERE file_id LIKE 'auto_ontology/server/%/%' GROUP BY 1 HAVING SUM(line_count) > 1000 ORDER BY 1",
+    "difficulty": "medium"
+  },
+  {
+    "question_id": 11,
+    "question": "How many public classes, public module-level functions and public methods are defined in the non-test code of the auto_ontology/retrieval/kumo/ package (files under its tests/ folder excluded)? A name is public when it does not start with an underscore, so dunder methods such as __init__ are not public, and methods of a class whose name starts with an underscore are not public either. Nested functions and nested classes are not counted. Return one row per kind, with kind being 'class', 'function' or 'method'.",
+    "evidence": "",
+    "SQL": "SELECT s.kind, COUNT(*) AS public_count FROM code.symbols s JOIN code.files f ON f.file_id = s.file_id WHERE s.file_id LIKE 'auto_ontology/retrieval/kumo/%' AND NOT f.is_test AND s.is_public GROUP BY 1 ORDER BY 1",
+    "difficulty": "easy"
+  },
+  {
+    "question_id": 12,
+    "question": "Which classes inherit from ApiModel (auto_ontology/server/models.py) only indirectly, i.e. through at least one intermediate class of this repository, and do not name ApiModel directly in their class statement? An import alias of ApiModel (auto_ontology/server/responses.py imports it as _Payload) counts as naming ApiModel directly, and a subscripted base such as ListResponse[T] counts as its class. For each, give the class symbol ID and the length of the shortest inheritance chain to ApiModel (2 when the parent class directly subclasses ApiModel).",
+    "evidence": "",
+    "SQL": "WITH RECURSIVE anc(cls, base, depth) AS (SELECT class_symbol_id, base_symbol_id, 1 FROM code.class_bases WHERE base_symbol_id IS NOT NULL UNION ALL SELECT a.cls, b.base_symbol_id, a.depth + 1 FROM anc a JOIN code.class_bases b ON b.class_symbol_id = a.base WHERE b.base_symbol_id IS NOT NULL) SELECT cls AS class_symbol_id, MIN(depth) AS depth FROM anc WHERE base = 'auto_ontology/server/models.py::ApiModel' GROUP BY cls HAVING MIN(depth) >= 2 ORDER BY 1",
+    "difficulty": "hard"
+  }
+]

@@ -1,0 +1,26 @@
+{
+  "question_id": "ao-12",
+  "arm": "V",
+  "model": "nvidia/nemotron-3.5-lightning",
+  "error": null,
+  "elapsed_s": 1.76,
+  "attempts": [
+    {
+      "sql": "WITH RECURSIVE ancestry AS (\n  SELECT\n    c.class_symbol_id,\n    c.base_symbol_id,\n    1 AS depth\n  FROM code.class_bases c\n  WHERE c.base_name = 'ApiModel'\n  UNION ALL\n  SELECT\n    a.class_symbol_id,\n    c.base_symbol_id,\n    a.depth + 1\n  FROM ancestry a\n  JOIN code.class_bases c ON a.class_symbol_id = c.class_symbol_id AND c.base_name != 'ApiModel'\n),\nmin_depths AS (\n  SELECT class_symbol_id, MIN(depth) AS depth\n  FROM ancestry\n  GROUP BY class_symbol_id\n)\nSELECT class_symbol_id, depth\nFROM min_depths\nWHERE depth >= 2\nORDER BY depth, class_symbol_id;",
+      "error": null
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 1041,
+    "completion_tokens": 262,
+    "total_tokens": 1303,
+    "cost": 0.00012527,
+    "providers": [
+      "CoreWeave"
+    ]
+  },
+  "request": "Which classes inherit from ApiModel (auto_ontology/server/models.py) only indirectly, i.e. through at least one intermediate class of this repository, and do not name ApiModel directly in their class statement? An import alias of ApiModel (auto_ontology/server/responses.py imports it as _Payload) counts as naming ApiModel directly, and a subscripted base such as ListResponse[T] counts as its class. For each, give the class symbol ID and the length of the shortest inheritance chain to ApiModel (2 when the parent class directly subclasses ApiModel).\n\nRequested output columns: class_symbol_id (string), depth (integer).",
+  "explanation": "The query first finds all direct bases named ApiModel (depth 1). It then recursively follows further bases that are not ApiModel, incrementing depth. Finally it selects the minimum depth for each class and filters to those whose shortest chain is at least 2 (i.e., they do not directly name ApiModel in their class statement, but inherit through at least one intermediate class).",
+  "sql": "WITH RECURSIVE ancestry AS (\n  SELECT\n    c.class_symbol_id,\n    c.base_symbol_id,\n    1 AS depth\n  FROM code.class_bases c\n  WHERE c.base_name = 'ApiModel'\n  UNION ALL\n  SELECT\n    a.class_symbol_id,\n    c.base_symbol_id,\n    a.depth + 1\n  FROM ancestry a\n  JOIN code.class_bases c ON a.class_symbol_id = c.class_symbol_id AND c.base_name != 'ApiModel'\n),\nmin_depths AS (\n  SELECT class_symbol_id, MIN(depth) AS depth\n  FROM ancestry\n  GROUP BY class_symbol_id\n)\nSELECT class_symbol_id, depth\nFROM min_depths\nWHERE depth >= 2\nORDER BY depth, class_symbol_id;",
+  "rows": []
+}

@@ -1,0 +1,31 @@
+{
+  "question_id": "ao-11",
+  "arm": "A",
+  "model": "deepseek/deepseek-v4.1-flash-1017",
+  "error": null,
+  "elapsed_s": 4.41,
+  "attempts": [
+    {
+      "sql": "WITH base AS (SELECT s.symbol_id, s.kind, s.name, s.qualname, s.file_id FROM code.symbols s JOIN code.files f ON f.file_id = s.file_id WHERE f.package = 'auto_ontology/retrieval/kumo/' AND NOT f.is_test AND f.module NOT LIKE '%/tests/%'), agg AS (SELECT kind, COUNT(*) AS public_count FROM base WHERE is_public AND name NOT LIKE '\\_%' ESCAPE '\\' AND kind IN ('class','function','method') AND (kind <> 'method' OR (qualname NOT LIKE '%._%' AND (qualname NOT LIKE '%.%' OR NOT regexp_matches(qualname, '\\._[^.]*\\.[^.]*$')))) GROUP BY kind) SELECT * FROM agg",
+      "error": "Binder Error: Referenced column \"is_public\" not found in FROM clause!"
+    },
+    {
+      "sql": "WITH base AS (SELECT s.symbol_id, s.kind, s.name, s.qualname, s.file_id, s.is_public FROM code.symbols s JOIN code.files f ON f.file_id = s.file_id WHERE f.package = 'auto_ontology/retrieval/kumo/' AND NOT f.is_test AND f.module NOT LIKE '%/tests/%'), agg AS (SELECT kind, COUNT(*) AS public_count FROM base WHERE is_public AND name NOT LIKE '\\_%' ESCAPE '\\' AND kind IN ('class','function','method') AND (kind <> 'method' OR NOT regexp_matches(qualname, '(^|\\.)_[^.]*\\.[^.]*$')) GROUP BY kind) SELECT kind, public_count FROM agg",
+      "error": null
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 1516,
+    "completion_tokens": 501,
+    "total_tokens": 2017,
+    "cost": 0.000433152,
+    "providers": [
+      "DigitalOcean",
+      "DigitalOcean"
+    ]
+  },
+  "request": "How many public classes, public module-level functions and public methods are defined in the non-test code of the auto_ontology/retrieval/kumo/ package (files under its tests/ folder excluded)? A name is public when it does not start with an underscore, so dunder methods such as __init__ are not public, and methods of a class whose name starts with an underscore are not public either. Nested functions and nested classes are not counted. Return one row per kind, with kind being 'class', 'function' or 'method'.\n\nRequested output columns: kind (string), public_count (integer).",
+  "explanation": "Selects symbols from files in the auto_ontology/retrieval/kumo/ package, excluding test files and files under tests/ folders. It keeps public classes, functions and methods whose names don't start with an underscore, and for methods excludes those whose enclosing class name starts with an underscore. Results are grouped by kind with a count.",
+  "sql": "WITH base AS (SELECT s.symbol_id, s.kind, s.name, s.qualname, s.file_id, s.is_public FROM code.symbols s JOIN code.files f ON f.file_id = s.file_id WHERE f.package = 'auto_ontology/retrieval/kumo/' AND NOT f.is_test AND f.module NOT LIKE '%/tests/%'), agg AS (SELECT kind, COUNT(*) AS public_count FROM base WHERE is_public AND name NOT LIKE '\\_%' ESCAPE '\\' AND kind IN ('class','function','method') AND (kind <> 'method' OR NOT regexp_matches(qualname, '(^|\\.)_[^.]*\\.[^.]*$')) GROUP BY kind) SELECT kind, public_count FROM agg",
+  "rows": []
+}

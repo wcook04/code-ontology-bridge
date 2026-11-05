@@ -1,0 +1,57 @@
+{
+  "question_id": "rich-11",
+  "arm": "V",
+  "model": "deepseek/deepseek-v4.1-flash-1017",
+  "error": null,
+  "elapsed_s": 4.25,
+  "attempts": [
+    {
+      "sql": "SELECT s.file_id, COUNT(*)::INTEGER AS undocumented_count FROM code.symbols s JOIN code.file_profile f ON f.file_id = s.file_id WHERE (s.kind = 'function' OR s.kind = 'method') AND s.is_public AND NOT s.has_docstring AND f.top_directory = 'rich' AND (s.enclosing_class_symbol_id IS NULL OR NOT EXISTS (SELECT 1 FROM code.symbols c WHERE c.symbol_id = s.enclosing_class_symbol_id AND c.name LIKE '\\_%' ESCAPE '\\\\')) GROUP BY s.file_id ORDER BY undocumented_count DESC, s.file_id ASC LIMIT 5",
+      "error": "Binder Error: Table \"s\" does not have a column named \"enclosing_class_symbol_id\""
+    },
+    {
+      "sql": "SELECT sp.file_id, COUNT(*)::INTEGER AS undocumented_count FROM code.symbol_profile sp JOIN code.file_profile f ON f.file_id = sp.file_id WHERE (sp.kind = 'function' OR sp.kind = 'method') AND sp.is_public AND NOT sp.has_docstring AND f.top_directory = 'rich' AND (sp.enclosing_class_symbol_id IS NULL OR NOT EXISTS (SELECT 1 FROM code.symbols c WHERE c.symbol_id = sp.enclosing_class_symbol_id AND c.name LIKE '\\_%' ESCAPE '\\\\')) GROUP BY sp.file_id ORDER BY undocumented_count DESC, sp.file_id ASC LIMIT 5",
+      "error": "Syntax Error: Invalid escape string. Escape string must be empty or one character."
+    },
+    {
+      "sql": "SELECT sp.file_id, COUNT(*)::INTEGER AS undocumented_count FROM code.symbol_profile sp JOIN code.file_profile f ON f.file_id = sp.file_id WHERE (sp.kind = 'function' OR sp.kind = 'method') AND sp.is_public AND NOT sp.has_docstring AND f.top_directory = 'rich' AND (sp.enclosing_class_symbol_id IS NULL OR NOT EXISTS (SELECT 1 FROM code.symbols c WHERE c.symbol_id = sp.enclosing_class_symbol_id AND left(c.name, 1) = '_')) GROUP BY sp.file_id ORDER BY undocumented_count DESC, sp.file_id ASC LIMIT 5",
+      "error": null
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 3926,
+    "completion_tokens": 662,
+    "total_tokens": 4588,
+    "cost": 0.000537432,
+    "providers": [
+      "DigitalOcean",
+      "DigitalOcean",
+      "DigitalOcean"
+    ]
+  },
+  "request": "Under the rich/ folder, which five files contain the most public functions and methods that have no docstring? A function or method is public when neither its own name nor the name of its enclosing class starts with an underscore (so dunder methods are not public); classes themselves are not counted, and every definition counts separately (each @overload stub and each property getter or setter). Give the file path and the count, ordered by count descending, ties broken by file path ascending.\n\nRequested output columns: file_id (string), undocumented_count (integer). Order the rows as the question asks.",
+  "explanation": "Counts public functions and methods without docstrings per file under the rich/ top directory using symbol_profile, which exposes has_docstring and enclosing_class_symbol_id. Methods whose enclosing class name begins with an underscore are excluded via left(name, 1) = '_'. Results are ranked by count descending, ties by ascending file path, limited to five.",
+  "sql": "SELECT sp.file_id, COUNT(*)::INTEGER AS undocumented_count FROM code.symbol_profile sp JOIN code.file_profile f ON f.file_id = sp.file_id WHERE (sp.kind = 'function' OR sp.kind = 'method') AND sp.is_public AND NOT sp.has_docstring AND f.top_directory = 'rich' AND (sp.enclosing_class_symbol_id IS NULL OR NOT EXISTS (SELECT 1 FROM code.symbols c WHERE c.symbol_id = sp.enclosing_class_symbol_id AND left(c.name, 1) = '_')) GROUP BY sp.file_id ORDER BY undocumented_count DESC, sp.file_id ASC LIMIT 5",
+  "rows": [
+    {
+      "file_id": "rich/markdown.py",
+      "undocumented_count": 21
+    },
+    {
+      "file_id": "rich/_null_file.py",
+      "undocumented_count": 15
+    },
+    {
+      "file_id": "rich/progress.py",
+      "undocumented_count": 9
+    },
+    {
+      "file_id": "rich/repr.py",
+      "undocumented_count": 5
+    },
+    {
+      "file_id": "rich/containers.py",
+      "undocumented_count": 4
+    }
+  ]
+}

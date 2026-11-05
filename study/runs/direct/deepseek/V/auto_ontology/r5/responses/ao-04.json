@@ -1,0 +1,36 @@
+{
+  "question_id": "ao-04",
+  "arm": "V",
+  "model": "deepseek/deepseek-v4.1-flash-1017",
+  "error": null,
+  "elapsed_s": 6.04,
+  "attempts": [
+    {
+      "sql": "WITH base AS (\n  SELECT s.symbol_id\n  FROM code.symbols s JOIN code.files f ON f.file_id = s.file_id\n  WHERE f.file_id = 'auto_ontology/retrieval/text_to_sql/base.py'\n    AND s.name = 'BaseAgent' AND s.kind = 'class'\n), agents AS (\n  SELECT s.symbol_id\n  FROM code.class_bases cb\n  JOIN code.symbols s ON s.symbol_id = cb.class_symbol_id\n  JOIN code.files f ON f.file_id = s.file_id\n  WHERE cb.base_symbol_id IN (SELECT symbol_id FROM base)\n    AND s.kind = 'class'\n    AND NOT f.is_test\n    AND f.file_name <> 'conftest.py'\n), ctor_calls AS (\n  SELECT s.symbol_id AS class_symbol_id,\n         cf.is_test AS in_test\n  FROM code.calls c\n  JOIN code.symbols s ON s.name = c.callee_name AND s.kind = 'class'\n  JOIN code.files cf ON cf.file_id = c.caller_file\n  JOIN code.symbols caller ON caller.symbol_id = c.caller_symbol_id\n  WHERE c.call_kind = 'constructor'\n    AND (caller.kind = 'function' OR caller.kind = 'method')\n)\nSELECT DISTINCT a.symbol_id AS class_symbol_id\nFROM agents a\nWHERE EXISTS (SELECT 1 FROM ctor_calls cc WHERE cc.class_symbol_id = a.symbol_id AND NOT cc.in_test)\n  AND NOT EXISTS (SELECT 1 FROM ctor_calls cc WHERE cc.class_symbol_id = a.symbol_id AND cc.in_test)",
+      "error": "Binder Error: Table \"f\" does not have a column named \"file_name\""
+    },
+    {
+      "sql": "WITH base AS (\n  SELECT s.symbol_id\n  FROM code.symbols s JOIN code.files f ON f.file_id = s.file_id\n  WHERE f.file_id = 'auto_ontology/retrieval/text_to_sql/base.py'\n    AND s.name = 'BaseAgent' AND s.kind = 'class'\n), agents AS (\n  SELECT s.symbol_id\n  FROM code.class_bases cb\n  JOIN code.symbols s ON s.symbol_id = cb.class_symbol_id\n  JOIN code.file_profile fp ON fp.file_id = s.file_id\n  WHERE cb.base_symbol_id IN (SELECT symbol_id FROM base)\n    AND s.kind = 'class'\n    AND NOT fp.is_test\n    AND fp.file_name <> 'conftest.py'\n), ctor_calls AS (\n  SELECT s.symbol_id AS class_symbol_id,\n         fp.is_test AS in_test\n  FROM code.calls c\n  JOIN code.symbols s ON s.name = c.callee_name AND s.kind = 'class'\n  JOIN code.file_profile fp ON fp.file_id = c.caller_file_id\n  JOIN code.symbols caller ON caller.symbol_id = c.caller_symbol_id\n  WHERE c.call_kind = 'constructor'\n    AND (caller.kind = 'function' OR caller.kind = 'method')\n)\nSELECT DISTINCT a.symbol_id AS class_symbol_id\nFROM agents a\nWHERE EXISTS (SELECT 1 FROM ctor_calls cc WHERE cc.class_symbol_id = a.symbol_id AND NOT cc.in_test)\n  AND NOT EXISTS (SELECT 1 FROM ctor_calls cc WHERE cc.class_symbol_id = a.symbol_id AND cc.in_test)",
+      "error": "Binder Error: Table \"c\" does not have a column named \"caller_file_id\""
+    },
+    {
+      "sql": "WITH base AS (\n  SELECT s.symbol_id\n  FROM code.symbols s JOIN code.files f ON f.file_id = s.file_id\n  WHERE f.file_id = 'auto_ontology/retrieval/text_to_sql/base.py'\n    AND s.name = 'BaseAgent' AND s.kind = 'class'\n), agents AS (\n  SELECT s.symbol_id\n  FROM code.class_bases cb\n  JOIN code.symbols s ON s.symbol_id = cb.class_symbol_id\n  JOIN code.file_profile fp ON fp.file_id = s.file_id\n  WHERE cb.base_symbol_id IN (SELECT symbol_id FROM base)\n    AND s.kind = 'class'\n    AND NOT fp.is_test\n    AND fp.file_name <> 'conftest.py'\n), ctor_calls AS (\n  SELECT s.symbol_id AS class_symbol_id,\n         fp.is_test AS in_test\n  FROM code.calls c\n  JOIN code.symbols s ON s.name = c.callee_name AND s.kind = 'class'\n  JOIN code.symbols caller ON caller.symbol_id = c.caller_symbol_id\n  JOIN code.file_profile fp ON fp.file_id = caller.file_id\n  WHERE c.call_kind = 'constructor'\n    AND (caller.kind = 'function' OR caller.kind = 'method')\n)\nSELECT DISTINCT a.symbol_id AS class_symbol_id\nFROM agents a\nWHERE EXISTS (SELECT 1 FROM ctor_calls cc WHERE cc.class_symbol_id = a.symbol_id AND NOT cc.in_test)\n  AND NOT EXISTS (SELECT 1 FROM ctor_calls cc WHERE cc.class_symbol_id = a.symbol_id AND cc.in_test)",
+      "error": null
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 4612,
+    "completion_tokens": 1289,
+    "total_tokens": 5901,
+    "cost": 0.001023264,
+    "providers": [
+      "DigitalOcean",
+      "DigitalOcean",
+      "DigitalOcean"
+    ]
+  },
+  "request": "Consider the agent classes defined in non-test code that directly subclass BaseAgent from auto_ontology/retrieval/text_to_sql/base.py (every file under a tests/ folder, conftest.py and helpers included, is test code). Which of these agent classes are constructed (the class is called by name, e.g. ResponseAgent()) somewhere in non-test code but are never constructed anywhere in test code? Count only direct constructor calls written in a function or method body; patching or referencing a class without calling it does not count, and a test that calls a function which constructs the class does not count as constructing it. Return their class symbol IDs.\n\nRequested output columns: class_symbol_id (string).",
+  "explanation": "Finds non-test classes directly subclassing BaseAgent from the base module, then examines constructor call sites in function or method bodies. It returns classes constructed at least once in non-test code but never constructed in test code.",
+  "sql": "WITH base AS (\n  SELECT s.symbol_id\n  FROM code.symbols s JOIN code.files f ON f.file_id = s.file_id\n  WHERE f.file_id = 'auto_ontology/retrieval/text_to_sql/base.py'\n    AND s.name = 'BaseAgent' AND s.kind = 'class'\n), agents AS (\n  SELECT s.symbol_id\n  FROM code.class_bases cb\n  JOIN code.symbols s ON s.symbol_id = cb.class_symbol_id\n  JOIN code.file_profile fp ON fp.file_id = s.file_id\n  WHERE cb.base_symbol_id IN (SELECT symbol_id FROM base)\n    AND s.kind = 'class'\n    AND NOT fp.is_test\n    AND fp.file_name <> 'conftest.py'\n), ctor_calls AS (\n  SELECT s.symbol_id AS class_symbol_id,\n         fp.is_test AS in_test\n  FROM code.calls c\n  JOIN code.symbols s ON s.name = c.callee_name AND s.kind = 'class'\n  JOIN code.symbols caller ON caller.symbol_id = c.caller_symbol_id\n  JOIN code.file_profile fp ON fp.file_id = caller.file_id\n  WHERE c.call_kind = 'constructor'\n    AND (caller.kind = 'function' OR caller.kind = 'method')\n)\nSELECT DISTINCT a.symbol_id AS class_symbol_id\nFROM agents a\nWHERE EXISTS (SELECT 1 FROM ctor_calls cc WHERE cc.class_symbol_id = a.symbol_id AND NOT cc.in_test)\n  AND NOT EXISTS (SELECT 1 FROM ctor_calls cc WHERE cc.class_symbol_id = a.symbol_id AND cc.in_test)",
+  "rows": []
+}

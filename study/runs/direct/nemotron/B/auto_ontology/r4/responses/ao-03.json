@@ -1,0 +1,1695 @@
+{
+  "question_id": "ao-03",
+  "arm": "B",
+  "model": "nvidia/nemotron-3.5-lightning",
+  "error": null,
+  "elapsed_s": 2.08,
+  "attempts": [
+    {
+      "sql": "SELECT DISTINCT s.symbol_id\nFROM code.symbols s\nWHERE s.is_public = TRUE\n  AND s.kind IN ('function', 'method')\n  AND s.file_id NOT IN (SELECT file_id FROM code.files WHERE is_test = TRUE)\n  AND EXISTS (\n    SELECT 1\n    FROM code.calls c\n    WHERE c.caller_symbol_id = s.symbol_id\n      AND c.resolution IN ('same_file', 'imported', 'method_on_self')\n      AND c.call_kind = 'direct'\n      AND c.confidence != 'low'\n      AND EXISTS (\n        SELECT 1\n        FROM code.calls c2\n        WHERE c2.caller_symbol_id != s.symbol_id\n          AND c2.callee_symbol_id = s.symbol_id\n          AND c2.resolution IN ('same_file', 'imported', 'method_on_self')\n          AND c2.call_kind = 'direct'\n          AND c2.confidence != 'low'\n      )\n  )\nORDER BY s.symbol_id;",
+      "error": null
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 2816,
+    "completion_tokens": 339,
+    "total_tokens": 3155,
+    "cost": 0.00020156,
+    "providers": [
+      "CoreWeave"
+    ]
+  },
+  "request": "invoke_with_structured_output in auto_ontology/utils/llm_invoke.py is the main structured-LLM-call wrapper. Which functions or methods in non-test code (every file under a tests/ folder is test code) reach it at exactly two hops: they do not call invoke_with_structured_output directly themselves, but they directly call at least one function or method that does call it directly? Consider direct calls only on both hops, and follow only calls to a named function or to a method on self (a call through another object's attribute, such as self._backend.classify(), is not followed); a function passed as an argument (e.g. pool.submit(f)) does not count as calling it. The intermediate function may live anywhere, including test code, but the functions you list must be in non-test code. Return their symbol IDs.\n\nRequested output columns: symbol_id (string).",
+  "explanation": "The query finds all public functions/methods in non-test files that have at least one direct call from another symbol (the intermediate), and that intermediate symbol in turn has a direct call to invoke_with_structured_output. It excludes calls with low confidence (which include callbacks and unresolved) and only follows direct call edges (same_file, imported, method_on_self). The intermediate function may be in test code, but the returned symbols are all from non-test files.",
+  "sql": "SELECT DISTINCT s.symbol_id\nFROM code.symbols s\nWHERE s.is_public = TRUE\n  AND s.kind IN ('function', 'method')\n  AND s.file_id NOT IN (SELECT file_id FROM code.files WHERE is_test = TRUE)\n  AND EXISTS (\n    SELECT 1\n    FROM code.calls c\n    WHERE c.caller_symbol_id = s.symbol_id\n      AND c.resolution IN ('same_file', 'imported', 'method_on_self')\n      AND c.call_kind = 'direct'\n      AND c.confidence != 'low'\n      AND EXISTS (\n        SELECT 1\n        FROM code.calls c2\n        WHERE c2.caller_symbol_id != s.symbol_id\n          AND c2.callee_symbol_id = s.symbol_id\n          AND c2.resolution IN ('same_file', 'imported', 'method_on_self')\n          AND c2.call_kind = 'direct'\n          AND c2.confidence != 'low'\n      )\n  )\nORDER BY s.symbol_id;",
+  "rows": [
+    {
+      "symbol_id": "auto_ontology/catalog/diff.py::update_diff_from_existing_schema"
+    },
+    {
+      "symbol_id": "auto_ontology/catalog/extract.py::create_dataframe"
+    },
+    {
+      "symbol_id": "auto_ontology/catalog/extract.py::data_for_populate_tabular"
+    },
+    {
+      "symbol_id": "auto_ontology/catalog/extract.py::extract_tabular_db_data"
+    },
+    {
+      "symbol_id": "auto_ontology/catalog/ingest.py::ingest_catalog"
+    },
+    {
+      "symbol_id": "auto_ontology/catalog/model/schema.py::Schema.create_column_node"
+    },
+    {
+      "symbol_id": "auto_ontology/catalog/model/schema.py::Schema.create_table_node"
+    },
+    {
+      "symbol_id": "auto_ontology/catalog/model/schema.py::Schema.get_table_node"
+    },
+    {
+      "symbol_id": "auto_ontology/catalog/parsers/query_comparator.py::compare_queries"
+    },
+    {
+      "symbol_id": "auto_ontology/catalog/parsers/query_comparator.py::normalize_sql"
+    },
+    {
+      "symbol_id": "auto_ontology/catalog/parsers/schemas_parser.py::parse_df"
+    },
+    {
+      "symbol_id": "auto_ontology/catalog/parsers/sqlglot_extractor.py::extract_tables_and_columns"
+    },
+    {
+      "symbol_id": "auto_ontology/catalog/services/schema.py::add_schema"
+    },
+    {
+      "symbol_id": "auto_ontology/catalog/sql_parse.py::parse_queries_df"
+    },
+    {
+      "symbol_id": "auto_ontology/catalog/sql_parse.py::parse_query_single"
+    },
+    {
+      "symbol_id": "auto_ontology/catalog/sql_parse.py::parse_query_slim"
+    },
+    {
+      "symbol_id": "auto_ontology/catalog/sql_parse.py::populate_queries"
+    },
+    {
+      "symbol_id": "auto_ontology/catalog/store/db.py::add_schemas_edge_batch"
+    },
+    {
+      "symbol_id": "auto_ontology/catalog/store/db.py::db_exists"
+    },
+    {
+      "symbol_id": "auto_ontology/catalog/store/db.py::delete_columns_batch"
+    },
+    {
+      "symbol_id": "auto_ontology/catalog/store/db.py::delete_schema"
+    },
+    {
+      "symbol_id": "auto_ontology/catalog/store/db.py::delete_table"
+    },
+    {
+      "symbol_id": "auto_ontology/catalog/store/db.py::update_node_property"
+    },
+    {
+      "symbol_id": "auto_ontology/catalog/store/db.py::update_properties_in_graph_batch"
+    },
+    {
+      "symbol_id": "auto_ontology/catalog/store/queries.py::add_query"
+    },
+    {
+      "symbol_id": "auto_ontology/catalog/store/queries.py::get_sql_by_full_query"
+    },
+    {
+      "symbol_id": "auto_ontology/catalog/store/queries.py::load_sqls_to_tables"
+    },
+    {
+      "symbol_id": "auto_ontology/catalog/store/queries.py::update_counters_and_timestamps_for_query_and_affected_data"
+    },
+    {
+      "symbol_id": "auto_ontology/catalog/store/registry.py::entity_spec"
+    },
+    {
+      "symbol_id": "auto_ontology/catalog/store/registry.py::link_spec"
+    },
+    {
+      "symbol_id": "auto_ontology/catalog/store/registry.py::projected"
+    },
+    {
+      "symbol_id": "auto_ontology/catalog/store/rows.py::resolve_id"
+    },
+    {
+      "symbol_id": "auto_ontology/catalog/store/rows.py::upsert_row"
+    },
+    {
+      "symbol_id": "auto_ontology/catalog/store/schemas.py::add_fks"
+    },
+    {
+      "symbol_id": "auto_ontology/catalog/store/schemas.py::add_pks"
+    },
+    {
+      "symbol_id": "auto_ontology/catalog/store/schemas.py::add_schemas_edge"
+    },
+    {
+      "symbol_id": "auto_ontology/catalog/store/schemas.py::delete_old_fks"
+    },
+    {
+      "symbol_id": "auto_ontology/catalog/store/schemas.py::get_column_ids"
+    },
+    {
+      "symbol_id": "auto_ontology/catalog/store/schemas.py::get_schema_columns"
+    },
+    {
+      "symbol_id": "auto_ontology/catalog/store/schemas.py::get_schema_tables"
+    },
+    {
+      "symbol_id": "auto_ontology/catalog/store/schemas.py::get_schemas_ids_and_names"
+    },
+    {
+      "symbol_id": "auto_ontology/catalog/store/schemas.py::get_table_ids"
+    },
+    {
+      "symbol_id": "auto_ontology/catalog/store/schemas.py::load_schema_from_graph"
+    },
+    {
+      "symbol_id": "auto_ontology/catalog/store/schemas.py::merge_schema_edges"
+    },
+    {
+      "symbol_id": "auto_ontology/catalog/store/schemas.py::merge_schema_nodes"
+    },
+    {
+      "symbol_id": "auto_ontology/catalog/store/schemas.py::reset_pks"
+    },
+    {
+      "symbol_id": "auto_ontology/catalog/table_filter.py::apply"
+    },
+    {
+      "symbol_id": "auto_ontology/catalog/table_filter.py::compile_pattern"
+    },
+    {
+      "symbol_id": "auto_ontology/catalog/table_filter.py::from_connection"
+    },
+    {
+      "symbol_id": "auto_ontology/catalog/write.py::populate_db"
+    },
+    {
+      "symbol_id": "auto_ontology/catalog/write.py::populate_fks"
+    },
+    {
+      "symbol_id": "auto_ontology/catalog/write.py::populate_pks"
+    },
+    {
+      "symbol_id": "auto_ontology/catalog/write.py::populate_tabular_data"
+    },
+    {
+      "symbol_id": "auto_ontology/connectors/clickhouse.py::ClickHouseDatabase.execute"
+    },
+    {
+      "symbol_id": "auto_ontology/connectors/connection_string_factory.py::build_connection_string"
+    },
+    {
+      "symbol_id": "auto_ontology/connectors/databricks.py::DatabricksDatabase.execute"
+    },
+    {
+      "symbol_id": "auto_ontology/connectors/databricks_oauth.py::any_connection_uses_sso_federation"
+    },
+    {
+      "symbol_id": "auto_ontology/connectors/databricks_oauth.py::exchange_subject_token"
+    },
+    {
+      "symbol_id": "auto_ontology/connectors/db_errors.py::is_infrastructure_error"
+    },
+    {
+      "symbol_id": "auto_ontology/connectors/db_errors.py::is_session_lost"
+    },
+    {
+      "symbol_id": "auto_ontology/connectors/duckdb.py::DuckDBDatabase.execute"
+    },
+    {
+      "symbol_id": "auto_ontology/connectors/kyuubi.py::KyuubiDatabase.execute"
+    },
+    {
+      "symbol_id": "auto_ontology/connectors/kyuubi.py::KyuubiDatabase.get_schemas"
+    },
+    {
+      "symbol_id": "auto_ontology/connectors/mysql.py::MySQLDatabase.execute"
+    },
+    {
+      "symbol_id": "auto_ontology/connectors/postgres.py::PostgresDatabase.execute"
+    },
+    {
+      "symbol_id": "auto_ontology/connectors/registry.py::create_connector"
+    },
+    {
+      "symbol_id": "auto_ontology/connectors/registry.py::get_connectors"
+    },
+    {
+      "symbol_id": "auto_ontology/connectors/registry.py::get_connectors_for_subject_token"
+    },
+    {
+      "symbol_id": "auto_ontology/connectors/snowflake.py::SnowflakeDatabase.execute"
+    },
+    {
+      "symbol_id": "auto_ontology/connectors/sqlite.py::SQLiteDatabase.execute"
+    },
+    {
+      "symbol_id": "auto_ontology/connectors/sqlite.py::SQLiteDatabase.get_tables"
+    },
+    {
+      "symbol_id": "auto_ontology/connectors/trino.py::TrinoDatabase.execute"
+    },
+    {
+      "symbol_id": "auto_ontology/connectors/vault.py::delete_secrets"
+    },
+    {
+      "symbol_id": "auto_ontology/connectors/vault.py::read_secret"
+    },
+    {
+      "symbol_id": "auto_ontology/connectors/vault.py::write_secret"
+    },
+    {
+      "symbol_id": "auto_ontology/dal/__init__.py::close_store"
+    },
+    {
+      "symbol_id": "auto_ontology/dal/attributes.py::column_participates_in_semantic_fk"
+    },
+    {
+      "symbol_id": "auto_ontology/dal/attributes.py::delete_semantic_fk"
+    },
+    {
+      "symbol_id": "auto_ontology/dal/attributes.py::fetch_attr_column_contexts"
+    },
+    {
+      "symbol_id": "auto_ontology/dal/attributes.py::fetch_column_attribute_column"
+    },
+    {
+      "symbol_id": "auto_ontology/dal/attributes.py::fetch_column_attribute_columns_map"
+    },
+    {
+      "symbol_id": "auto_ontology/dal/attributes.py::fetch_semantic_fk_join_groups"
+    },
+    {
+      "symbol_id": "auto_ontology/dal/attributes.py::find_anchor_hub_siblings"
+    },
+    {
+      "symbol_id": "auto_ontology/dal/attributes.py::find_column_attribute_by_column_id"
+    },
+    {
+      "symbol_id": "auto_ontology/dal/attributes.py::find_connected_junction_tables"
+    },
+    {
+      "symbol_id": "auto_ontology/dal/attributes.py::find_join_path"
+    },
+    {
+      "symbol_id": "auto_ontology/dal/attributes.py::find_kept_table_bridges"
+    },
+    {
+      "symbol_id": "auto_ontology/dal/attributes.py::find_shared_hub_bridge"
+    },
+    {
+      "symbol_id": "auto_ontology/dal/attributes.py::find_table_bridge"
+    },
+    {
+      "symbol_id": "auto_ontology/dal/attributes.py::find_unlinked_fk_columns"
+    },
+    {
+      "symbol_id": "auto_ontology/dal/attributes.py::merge_column_attribute"
+    },
+    {
+      "symbol_id": "auto_ontology/dal/attributes.py::merge_semantic_fk"
+    },
+    {
+      "symbol_id": "auto_ontology/dal/attributes.py::set_semantic_fk_join_default"
+    },
+    {
+      "symbol_id": "auto_ontology/dal/attributes.py::update_column_attribute"
+    },
+    {
+      "symbol_id": "auto_ontology/dal/candidates.py::expand_info"
+    },
+    {
+      "symbol_id": "auto_ontology/dal/connections.py::clear_connection"
+    },
+    {
+      "symbol_id": "auto_ontology/dal/connections.py::insert_connection"
+    },
+    {
+      "symbol_id": "auto_ontology/dal/connections.py::list_connections"
+    },
+    {
+      "symbol_id": "auto_ontology/dal/connections.py::verify_connectivity"
+    },
+    {
+      "symbol_id": "auto_ontology/dal/custom_analyses.py::count_custom_analyses"
+    },
+    {
+      "symbol_id": "auto_ontology/dal/custom_analyses.py::custom_analysis_exists"
+    },
+    {
+      "symbol_id": "auto_ontology/dal/custom_analyses.py::delete_custom_analysis_node"
+    },
+    {
+      "symbol_id": "auto_ontology/dal/custom_analyses.py::detach_existing_sql_edges"
+    },
+    {
+      "symbol_id": "auto_ontology/dal/custom_analyses.py::embed_custom_analyses"
+    },
+    {
+      "symbol_id": "auto_ontology/dal/custom_analyses.py::fetch_custom_analyses"
+    },
+    {
+      "symbol_id": "auto_ontology/dal/custom_analyses.py::fetch_custom_analyses_with_sql"
+    },
+    {
+      "symbol_id": "auto_ontology/dal/custom_analyses.py::fetch_database_name_for_analysis"
+    },
+    {
+      "symbol_id": "auto_ontology/dal/custom_analyses.py::fetch_tables_from_custom_analyses"
+    },
+    {
+      "symbol_id": "auto_ontology/dal/custom_analyses.py::find_analysis_by_name"
+    },
+    {
+      "symbol_id": "auto_ontology/dal/custom_analyses.py::find_analysis_by_sql"
+    },
+    {
+      "symbol_id": "auto_ontology/dal/custom_analyses.py::get_custom_analysis_by_id"
+    },
+    {
+      "symbol_id": "auto_ontology/dal/custom_analyses.py::list_custom_analyses"
+    },
+    {
+      "symbol_id": "auto_ontology/dal/datasources.py::apply_metadata_batch"
+    },
+    {
+      "symbol_id": "auto_ontology/dal/datasources.py::count_columns_for_table"
+    },
+    {
+      "symbol_id": "auto_ontology/dal/datasources.py::fetch_all_schema_ids"
+    },
+    {
+      "symbol_id": "auto_ontology/dal/datasources.py::fetch_all_tables_without_term"
+    },
+    {
+      "symbol_id": "auto_ontology/dal/datasources.py::fetch_bridge_table_candidates"
+    },
+    {
+      "symbol_id": "auto_ontology/dal/datasources.py::fetch_col_table_contexts"
+    },
+    {
+      "symbol_id": "auto_ontology/dal/datasources.py::fetch_columns_for_table"
+    },
+    {
+      "symbol_id": "auto_ontology/dal/datasources.py::fetch_databases"
+    },
+    {
+      "symbol_id": "auto_ontology/dal/datasources.py::fetch_item_by_id"
+    },
+    {
+      "symbol_id": "auto_ontology/dal/datasources.py::fetch_join_neighbors"
+    },
+    {
+      "symbol_id": "auto_ontology/dal/datasources.py::fetch_node_properties_by_id"
+    },
+    {
+      "symbol_id": "auto_ontology/dal/datasources.py::fetch_parent_table_id_for_column"
+    },
+    {
+      "symbol_id": "auto_ontology/dal/datasources.py::fetch_schema_ids_for_database"
+    },
+    {
+      "symbol_id": "auto_ontology/dal/datasources.py::fetch_schemas_by_ids"
+    },
+    {
+      "symbol_id": "auto_ontology/dal/datasources.py::fetch_schemas_for_database"
+    },
+    {
+      "symbol_id": "auto_ontology/dal/datasources.py::fetch_sorted_tables"
+    },
+    {
+      "symbol_id": "auto_ontology/dal/datasources.py::fetch_table_by_id"
+    },
+    {
+      "symbol_id": "auto_ontology/dal/datasources.py::fetch_table_by_name"
+    },
+    {
+      "symbol_id": "auto_ontology/dal/datasources.py::fetch_table_context"
+    },
+    {
+      "symbol_id": "auto_ontology/dal/datasources.py::fetch_tables_and_columns_by_node_ids"
+    },
+    {
+      "symbol_id": "auto_ontology/dal/datasources.py::fetch_tables_by_ids"
+    },
+    {
+      "symbol_id": "auto_ontology/dal/datasources.py::fetch_tables_for_schema"
+    },
+    {
+      "symbol_id": "auto_ontology/dal/datasources.py::find_column_id_by_table_and_name"
+    },
+    {
+      "symbol_id": "auto_ontology/dal/datasources.py::find_table_id_by_name"
+    },
+    {
+      "symbol_id": "auto_ontology/dal/datasources.py::find_table_key_columns"
+    },
+    {
+      "symbol_id": "auto_ontology/dal/datasources.py::mark_table_as_junction"
+    },
+    {
+      "symbol_id": "auto_ontology/dal/datasources.py::patch_catalog_node"
+    },
+    {
+      "symbol_id": "auto_ontology/dal/datasources.py::store_column_date_formats"
+    },
+    {
+      "symbol_id": "auto_ontology/dal/datasources.py::store_column_sample_values"
+    },
+    {
+      "symbol_id": "auto_ontology/dal/datasources.py::store_column_uniqueness"
+    },
+    {
+      "symbol_id": "auto_ontology/dal/exploration.py::fetch_column_attribute_exploration_details"
+    },
+    {
+      "symbol_id": "auto_ontology/dal/exploration.py::fetch_column_exploration_details"
+    },
+    {
+      "symbol_id": "auto_ontology/dal/exploration.py::fetch_data_exploration_edges"
+    },
+    {
+      "symbol_id": "auto_ontology/dal/exploration.py::fetch_data_exploration_graph"
+    },
+    {
+      "symbol_id": "auto_ontology/dal/exploration.py::fetch_exploration_related_nodes"
+    },
+    {
+      "symbol_id": "auto_ontology/dal/exploration.py::fetch_semantic_exploration_graph"
+    },
+    {
+      "symbol_id": "auto_ontology/dal/exploration.py::fetch_semantic_link_path"
+    },
+    {
+      "symbol_id": "auto_ontology/dal/exploration.py::fetch_sql_attribute_exploration_details"
+    },
+    {
+      "symbol_id": "auto_ontology/dal/exploration.py::fetch_sql_exploration_details"
+    },
+    {
+      "symbol_id": "auto_ontology/dal/exploration.py::fetch_table_exploration_details"
+    },
+    {
+      "symbol_id": "auto_ontology/dal/exploration.py::fetch_term_exploration_details"
+    },
+    {
+      "symbol_id": "auto_ontology/dal/groups.py::create_group"
+    },
+    {
+      "symbol_id": "auto_ontology/dal/groups.py::delete_group"
+    },
+    {
+      "symbol_id": "auto_ontology/dal/groups.py::get_account"
+    },
+    {
+      "symbol_id": "auto_ontology/dal/groups.py::get_group"
+    },
+    {
+      "symbol_id": "auto_ontology/dal/groups.py::groups_for_user"
+    },
+    {
+      "symbol_id": "auto_ontology/dal/groups.py::list_groups"
+    },
+    {
+      "symbol_id": "auto_ontology/dal/groups.py::list_users_and_groups"
+    },
+    {
+      "symbol_id": "auto_ontology/dal/groups.py::update_group"
+    },
+    {
+      "symbol_id": "auto_ontology/dal/model_interchange.py::apply_import_model"
+    },
+    {
+      "symbol_id": "auto_ontology/dal/model_interchange.py::assemble_export_document"
+    },
+    {
+      "symbol_id": "auto_ontology/dal/model_interchange.py::fetch_export_rows"
+    },
+    {
+      "symbol_id": "auto_ontology/dal/model_interchange.py::resolve_sql_column_ids"
+    },
+    {
+      "symbol_id": "auto_ontology/dal/model_interchange.py::validate_database_ids"
+    },
+    {
+      "symbol_id": "auto_ontology/dal/owners.py::edit_subject"
+    },
+    {
+      "symbol_id": "auto_ontology/dal/pii.py::mark_columns_pii_processed"
+    },
+    {
+      "symbol_id": "auto_ontology/dal/pii.py::realign_sql_attribute_pii"
+    },
+    {
+      "symbol_id": "auto_ontology/dal/pii.py::tag_attributes_of_tagged_columns"
+    },
+    {
+      "symbol_id": "auto_ontology/dal/pii.py::untag_attributes_of_column"
+    },
+    {
+      "symbol_id": "auto_ontology/dal/pii.py::untag_attributes_of_columns_being_deleted"
+    },
+    {
+      "symbol_id": "auto_ontology/dal/pql_analyses.py::count_pql_analyses"
+    },
+    {
+      "symbol_id": "auto_ontology/dal/pql_analyses.py::delete_pql_analysis_node"
+    },
+    {
+      "symbol_id": "auto_ontology/dal/pql_analyses.py::embed_pql_analyses"
+    },
+    {
+      "symbol_id": "auto_ontology/dal/pql_analyses.py::fetch_pql_analyses_by_ids"
+    },
+    {
+      "symbol_id": "auto_ontology/dal/pql_analyses.py::find_pql_analysis_by_name"
+    },
+    {
+      "symbol_id": "auto_ontology/dal/pql_analyses.py::find_pql_analysis_by_pql"
+    },
+    {
+      "symbol_id": "auto_ontology/dal/pql_analyses.py::get_pql_analysis_by_id"
+    },
+    {
+      "symbol_id": "auto_ontology/dal/pql_analyses.py::list_pql_analyses"
+    },
+    {
+      "symbol_id": "auto_ontology/dal/pql_analyses.py::upsert_pql_analysis_node"
+    },
+    {
+      "symbol_id": "auto_ontology/dal/reset.py::delete_all_data"
+    },
+    {
+      "symbol_id": "auto_ontology/dal/reset.py::delete_data_layer"
+    },
+    {
+      "symbol_id": "auto_ontology/dal/reset.py::delete_semantic_layer"
+    },
+    {
+      "symbol_id": "auto_ontology/dal/rules.py::count_rules"
+    },
+    {
+      "symbol_id": "auto_ontology/dal/rules.py::create_rule"
+    },
+    {
+      "symbol_id": "auto_ontology/dal/rules.py::delete_rule"
+    },
+    {
+      "symbol_id": "auto_ontology/dal/rules.py::list_rules"
+    },
+    {
+      "symbol_id": "auto_ontology/dal/rules.py::update_rule"
+    },
+    {
+      "symbol_id": "auto_ontology/dal/schema_version.py::applied_revision"
+    },
+    {
+      "symbol_id": "auto_ontology/dal/schema_version.py::require_current_schema"
+    },
+    {
+      "symbol_id": "auto_ontology/dal/schema_version.py::schema_state"
+    },
+    {
+      "symbol_id": "auto_ontology/dal/search.py::count_global_search"
+    },
+    {
+      "symbol_id": "auto_ontology/dal/search.py::fetch_global_search"
+    },
+    {
+      "symbol_id": "auto_ontology/dal/search.py::matching_id_selects"
+    },
+    {
+      "symbol_id": "auto_ontology/dal/search.py::search_object_type"
+    },
+    {
+      "symbol_id": "auto_ontology/dal/search.py::search_tokens"
+    },
+    {
+      "symbol_id": "auto_ontology/dal/search.py::synonym_word_tokens"
+    },
+    {
+      "symbol_id": "auto_ontology/dal/session.py::StoreConn.query"
+    },
+    {
+      "symbol_id": "auto_ontology/dal/session.py::get_engine"
+    },
+    {
+      "symbol_id": "auto_ontology/dal/session.py::sqlalchemy_url"
+    },
+    {
+      "symbol_id": "auto_ontology/dal/session.py::store"
+    },
+    {
+      "symbol_id": "auto_ontology/dal/session.py::write_transaction"
+    },
+    {
+      "symbol_id": "auto_ontology/dal/sql_attributes.py::clear_sql_attribute_description_suggestion"
+    },
+    {
+      "symbol_id": "auto_ontology/dal/sql_attributes.py::clear_sql_attribute_description_suggestions_for_term"
+    },
+    {
+      "symbol_id": "auto_ontology/dal/sql_attributes.py::count_sql_attributes_by_term_id"
+    },
+    {
+      "symbol_id": "auto_ontology/dal/sql_attributes.py::delete_sql_attribute_node"
+    },
+    {
+      "symbol_id": "auto_ontology/dal/sql_attributes.py::detach_existing_sql_edges"
+    },
+    {
+      "symbol_id": "auto_ontology/dal/sql_attributes.py::fetch_sql_attribute_counts"
+    },
+    {
+      "symbol_id": "auto_ontology/dal/sql_attributes.py::fetch_sql_attribute_docs"
+    },
+    {
+      "symbol_id": "auto_ontology/dal/sql_attributes.py::fetch_sql_attributes_by_term_id"
+    },
+    {
+      "symbol_id": "auto_ontology/dal/sql_attributes.py::fetch_sql_attributes_with_sql"
+    },
+    {
+      "symbol_id": "auto_ontology/dal/sql_attributes.py::fetch_tables_from_sql_attributes"
+    },
+    {
+      "symbol_id": "auto_ontology/dal/sql_attributes.py::find_attr_by_expression"
+    },
+    {
+      "symbol_id": "auto_ontology/dal/sql_attributes.py::find_attr_by_name"
+    },
+    {
+      "symbol_id": "auto_ontology/dal/sql_attributes.py::get_full_sql_attribute_by_id"
+    },
+    {
+      "symbol_id": "auto_ontology/dal/sql_attributes.py::get_sql_attribute_by_id"
+    },
+    {
+      "symbol_id": "auto_ontology/dal/sql_attributes.py::link_to_term"
+    },
+    {
+      "symbol_id": "auto_ontology/dal/sql_attributes.py::list_sql_attributes"
+    },
+    {
+      "symbol_id": "auto_ontology/dal/sql_attributes.py::set_sql_attribute_description_suggestion"
+    },
+    {
+      "symbol_id": "auto_ontology/dal/sql_attributes.py::update_sql_attribute"
+    },
+    {
+      "symbol_id": "auto_ontology/dal/sql_fragments.py::column_description_expr"
+    },
+    {
+      "symbol_id": "auto_ontology/dal/sql_fragments.py::table_description_expr"
+    },
+    {
+      "symbol_id": "auto_ontology/dal/tags.py::apply_labels_now_matched"
+    },
+    {
+      "symbol_id": "auto_ontology/dal/tags.py::attach_tag"
+    },
+    {
+      "symbol_id": "auto_ontology/dal/tags.py::attach_tags_by_rule"
+    },
+    {
+      "symbol_id": "auto_ontology/dal/tags.py::count_tag_targets"
+    },
+    {
+      "symbol_id": "auto_ontology/dal/tags.py::count_tags"
+    },
+    {
+      "symbol_id": "auto_ontology/dal/tags.py::create_tag"
+    },
+    {
+      "symbol_id": "auto_ontology/dal/tags.py::delete_tag"
+    },
+    {
+      "symbol_id": "auto_ontology/dal/tags.py::detach_tag"
+    },
+    {
+      "symbol_id": "auto_ontology/dal/tags.py::existing_tag_ids"
+    },
+    {
+      "symbol_id": "auto_ontology/dal/tags.py::fetch_tags_map"
+    },
+    {
+      "symbol_id": "auto_ontology/dal/tags.py::get_or_create_tag"
+    },
+    {
+      "symbol_id": "auto_ontology/dal/tags.py::get_tag"
+    },
+    {
+      "symbol_id": "auto_ontology/dal/tags.py::get_tag_by_name"
+    },
+    {
+      "symbol_id": "auto_ontology/dal/tags.py::list_tag_targets"
+    },
+    {
+      "symbol_id": "auto_ontology/dal/tags.py::list_tags"
+    },
+    {
+      "symbol_id": "auto_ontology/dal/tags.py::remove_labels_no_longer_matched"
+    },
+    {
+      "symbol_id": "auto_ontology/dal/tags.py::update_tag"
+    },
+    {
+      "symbol_id": "auto_ontology/dal/terms.py::count_column_attributes_by_term_id"
+    },
+    {
+      "symbol_id": "auto_ontology/dal/terms.py::count_terms"
+    },
+    {
+      "symbol_id": "auto_ontology/dal/terms.py::fetch_all_terms"
+    },
+    {
+      "symbol_id": "auto_ontology/dal/terms.py::fetch_all_terms_and_attributes"
+    },
+    {
+      "symbol_id": "auto_ontology/dal/terms.py::fetch_column_attribute_counts"
+    },
+    {
+      "symbol_id": "auto_ontology/dal/terms.py::fetch_column_attribute_embedding_contexts_by_column_id"
+    },
+    {
+      "symbol_id": "auto_ontology/dal/terms.py::fetch_column_attributes_by_term_id"
+    },
+    {
+      "symbol_id": "auto_ontology/dal/terms.py::fetch_related_term_ids"
+    },
+    {
+      "symbol_id": "auto_ontology/dal/terms.py::fetch_related_terms"
+    },
+    {
+      "symbol_id": "auto_ontology/dal/terms.py::fetch_related_terms_counts"
+    },
+    {
+      "symbol_id": "auto_ontology/dal/terms.py::fetch_table_schema_map"
+    },
+    {
+      "symbol_id": "auto_ontology/dal/terms.py::fetch_term_and_column_attributes_for_embedding"
+    },
+    {
+      "symbol_id": "auto_ontology/dal/terms.py::fetch_term_synonyms"
+    },
+    {
+      "symbol_id": "auto_ontology/dal/terms.py::fetch_term_table_pairs"
+    },
+    {
+      "symbol_id": "auto_ontology/dal/terms.py::fetch_term_zones_map"
+    },
+    {
+      "symbol_id": "auto_ontology/dal/terms.py::fetch_terms_and_attributes_for_table"
+    },
+    {
+      "symbol_id": "auto_ontology/dal/terms.py::fetch_terms_by_ids"
+    },
+    {
+      "symbol_id": "auto_ontology/dal/terms.py::fetch_terms_with_sqls"
+    },
+    {
+      "symbol_id": "auto_ontology/dal/terms.py::find_column_attribute_by_column_id"
+    },
+    {
+      "symbol_id": "auto_ontology/dal/terms.py::find_term_link_path"
+    },
+    {
+      "symbol_id": "auto_ontology/dal/terms.py::get_full_term_by_id"
+    },
+    {
+      "symbol_id": "auto_ontology/dal/terms.py::get_slim_term_by_id"
+    },
+    {
+      "symbol_id": "auto_ontology/dal/terms.py::get_term_certification"
+    },
+    {
+      "symbol_id": "auto_ontology/dal/terms.py::get_term_record_for_table"
+    },
+    {
+      "symbol_id": "auto_ontology/dal/terms.py::semantic_layer_calculated"
+    },
+    {
+      "symbol_id": "auto_ontology/dal/terms.py::term_is_in_scope"
+    },
+    {
+      "symbol_id": "auto_ontology/dal/terms.py::update_term"
+    },
+    {
+      "symbol_id": "auto_ontology/dal/terms.py::upsert_table_term"
+    },
+    {
+      "symbol_id": "auto_ontology/dal/users.py::get_accessible_catalog_ids_for_zones"
+    },
+    {
+      "symbol_id": "auto_ontology/dal/users.py::resolve_accessible_catalog_ids"
+    },
+    {
+      "symbol_id": "auto_ontology/dal/users.py::resolve_table_filter"
+    },
+    {
+      "symbol_id": "auto_ontology/dal/zones.py::create_zone"
+    },
+    {
+      "symbol_id": "auto_ontology/dal/zones.py::delete_zone"
+    },
+    {
+      "symbol_id": "auto_ontology/dal/zones.py::fetch_table_zones_map"
+    },
+    {
+      "symbol_id": "auto_ontology/dal/zones.py::get_zone_by_id"
+    },
+    {
+      "symbol_id": "auto_ontology/dal/zones.py::list_zones"
+    },
+    {
+      "symbol_id": "auto_ontology/dal/zones.py::set_zone_enabled"
+    },
+    {
+      "symbol_id": "auto_ontology/dal/zones.py::update_zone"
+    },
+    {
+      "symbol_id": "auto_ontology/infra/feature_flags.py::get_sql_query_timeout_seconds"
+    },
+    {
+      "symbol_id": "auto_ontology/infra/feature_flags.py::is_distinct_value_probing_enabled"
+    },
+    {
+      "symbol_id": "auto_ontology/infra/feature_flags.py::is_pii_detection_enabled"
+    },
+    {
+      "symbol_id": "auto_ontology/infra/feature_flags.py::read_configuration_flag"
+    },
+    {
+      "symbol_id": "auto_ontology/infra/feature_flags.py::read_configuration_int"
+    },
+    {
+      "symbol_id": "auto_ontology/ingestion_service/config.py::is_semantic_compilation_enabled"
+    },
+    {
+      "symbol_id": "auto_ontology/ingestion_service/connections.py::resolve_connection_strings"
+    },
+    {
+      "symbol_id": "auto_ontology/ingestion_service/connections.py::resolve_database_names"
+    },
+    {
+      "symbol_id": "auto_ontology/ingestion_service/history.py::get_last_failure_if_most_recent"
+    },
+    {
+      "symbol_id": "auto_ontology/ingestion_service/history.py::get_last_successful_run"
+    },
+    {
+      "symbol_id": "auto_ontology/ingestion_service/history.py::record_run_finish"
+    },
+    {
+      "symbol_id": "auto_ontology/ingestion_service/history.py::record_run_start"
+    },
+    {
+      "symbol_id": "auto_ontology/ingestion_service/ingest.py::reset_semantic_layer_and_recompile"
+    },
+    {
+      "symbol_id": "auto_ontology/ingestion_service/ingest.py::run_ingest"
+    },
+    {
+      "symbol_id": "auto_ontology/ingestion_service/ingest.py::trigger_delete_ingest"
+    },
+    {
+      "symbol_id": "auto_ontology/ingestion_service/ingest.py::trigger_ingest"
+    },
+    {
+      "symbol_id": "auto_ontology/ingestion_service/ingest.py::trigger_reset_semantic"
+    },
+    {
+      "symbol_id": "auto_ontology/ingestion_service/pii.py::run_pii_propagation"
+    },
+    {
+      "symbol_id": "auto_ontology/ingestion_service/rules.py::replay_rules"
+    },
+    {
+      "symbol_id": "auto_ontology/pii_detection/detector.py::PiiDetector.detect"
+    },
+    {
+      "symbol_id": "auto_ontology/pii_detection/rules.py::evaluate_rules"
+    },
+    {
+      "symbol_id": "auto_ontology/pii_detection/service.py::detect_and_tag_pii"
+    },
+    {
+      "symbol_id": "auto_ontology/pii_detection/service.py::propagate_pii_to_attributes"
+    },
+    {
+      "symbol_id": "auto_ontology/retrieval/data_access/graph_schemas.py::get_schemas_by_ids"
+    },
+    {
+      "symbol_id": "auto_ontology/retrieval/data_access/relevant_tables.py::dedupe_merge_relevant_tables"
+    },
+    {
+      "symbol_id": "auto_ontology/retrieval/data_access/relevant_tables.py::get_relevant_tables"
+    },
+    {
+      "symbol_id": "auto_ontology/retrieval/data_access/relevant_tables.py::get_relevant_tables_from_candidates"
+    },
+    {
+      "symbol_id": "auto_ontology/retrieval/data_access/response_formatting.py::format_response"
+    },
+    {
+      "symbol_id": "auto_ontology/retrieval/data_access/semantic_search.py::search_semantic_index"
+    },
+    {
+      "symbol_id": "auto_ontology/retrieval/entity_coverage/main.py::get_coverage_response"
+    },
+    {
+      "symbol_id": "auto_ontology/retrieval/entity_coverage/prompts.py::create_question_extraction_prompt"
+    },
+    {
+      "symbol_id": "auto_ontology/retrieval/interactive/clarify.py::prune_resolved_terms"
+    },
+    {
+      "symbol_id": "auto_ontology/retrieval/interactive/clarify.py::refresh_grounded_knowledge"
+    },
+    {
+      "symbol_id": "auto_ontology/retrieval/interactive/clarify.py::should_clarify"
+    },
+    {
+      "symbol_id": "auto_ontology/retrieval/interactive/completeness.py::detect_incomplete_formulas"
+    },
+    {
+      "symbol_id": "auto_ontology/retrieval/interactive/conditional_output.py::get_conditional_output_hint"
+    },
+    {
+      "symbol_id": "auto_ontology/retrieval/interactive/coordinator.py::apply_user_answer"
+    },
+    {
+      "symbol_id": "auto_ontology/retrieval/interactive/coordinator.py::create_session"
+    },
+    {
+      "symbol_id": "auto_ontology/retrieval/interactive/coordinator.py::step"
+    },
+    {
+      "symbol_id": "auto_ontology/retrieval/interactive/entity_resolution.py::resolve_ambiguous_entities"
+    },
+    {
+      "symbol_id": "auto_ontology/retrieval/interactive/entity_resolution.py::resolve_pending_ambiguities"
+    },
+    {
+      "symbol_id": "auto_ontology/retrieval/interactive/evidence.py::generate_evidence"
+    },
+    {
+      "symbol_id": "auto_ontology/retrieval/interactive/followup_merge.py::merge_follow_up_question"
+    },
+    {
+      "symbol_id": "auto_ontology/retrieval/interactive/grounding.py::ground_external_knowledge"
+    },
+    {
+      "symbol_id": "auto_ontology/retrieval/interactive/kb_coverage.py::expand_kb_with_children"
+    },
+    {
+      "symbol_id": "auto_ontology/retrieval/kumo/budget.py::Budget.from_env"
+    },
+    {
+      "symbol_id": "auto_ontology/retrieval/kumo/column_reference.py::build_column_reference"
+    },
+    {
+      "symbol_id": "auto_ontology/retrieval/kumo/column_reference.py::is_safe_value"
+    },
+    {
+      "symbol_id": "auto_ontology/retrieval/kumo/column_reference.py::is_sensitive_column"
+    },
+    {
+      "symbol_id": "auto_ontology/retrieval/kumo/column_reference.py::safe_values"
+    },
+    {
+      "symbol_id": "auto_ontology/retrieval/kumo/graph_cache.py::GraphCache.from_env"
+    },
+    {
+      "symbol_id": "auto_ontology/retrieval/kumo/graph_cache.py::built_graph_fingerprint"
+    },
+    {
+      "symbol_id": "auto_ontology/retrieval/kumo/graph_cache.py::catalog_fingerprint"
+    },
+    {
+      "symbol_id": "auto_ontology/retrieval/kumo/graph_cache.py::join_fingerprint"
+    },
+    {
+      "symbol_id": "auto_ontology/retrieval/kumo/kumo_model.py::build_graph_context"
+    },
+    {
+      "symbol_id": "auto_ontology/retrieval/kumo/kumo_model.py::key_columns"
+    },
+    {
+      "symbol_id": "auto_ontology/retrieval/kumo/pql_gen.py::aggregate_prediction_by"
+    },
+    {
+      "symbol_id": "auto_ontology/retrieval/kumo/pql_gen.py::canonicalize_pql_identifiers"
+    },
+    {
+      "symbol_id": "auto_ontology/retrieval/kumo/pql_gen.py::generate_pql"
+    },
+    {
+      "symbol_id": "auto_ontology/retrieval/kumo/pql_gen.py::parse_entity"
+    },
+    {
+      "symbol_id": "auto_ontology/retrieval/kumo/pql_gen.py::predict_all"
+    },
+    {
+      "symbol_id": "auto_ontology/retrieval/kumo/pql_gen.py::prefer_explicit_change_targets"
+    },
+    {
+      "symbol_id": "auto_ontology/retrieval/kumo/pql_gen.py::validate_pql_static"
+    },
+    {
+      "symbol_id": "auto_ontology/retrieval/kumo/predictor.py::build_prediction_context"
+    },
+    {
+      "symbol_id": "auto_ontology/retrieval/kumo/predictor.py::run_prediction"
+    },
+    {
+      "symbol_id": "auto_ontology/retrieval/kumo/rag.py::fetch_pql_examples"
+    },
+    {
+      "symbol_id": "auto_ontology/retrieval/kumo/telemetry.py::redact_error"
+    },
+    {
+      "symbol_id": "auto_ontology/retrieval/text_to_sql/agents/evidence_refinement.py::apply_evidence_repairs"
+    },
+    {
+      "symbol_id": "auto_ontology/retrieval/text_to_sql/agents/evidence_refinement.py::validate_schema_grounding"
+    },
+    {
+      "symbol_id": "auto_ontology/retrieval/text_to_sql/agents/information_tools.py::get_column"
+    },
+    {
+      "symbol_id": "auto_ontology/retrieval/text_to_sql/agents/information_tools.py::get_column_attribute"
+    },
+    {
+      "symbol_id": "auto_ontology/retrieval/text_to_sql/agents/information_tools.py::get_dataset"
+    },
+    {
+      "symbol_id": "auto_ontology/retrieval/text_to_sql/agents/information_tools.py::get_sql_attribute"
+    },
+    {
+      "symbol_id": "auto_ontology/retrieval/text_to_sql/agents/information_tools.py::get_table"
+    },
+    {
+      "symbol_id": "auto_ontology/retrieval/text_to_sql/agents/information_tools.py::get_table_semantic_fks"
+    },
+    {
+      "symbol_id": "auto_ontology/retrieval/text_to_sql/agents/information_tools.py::get_term"
+    },
+    {
+      "symbol_id": "auto_ontology/retrieval/text_to_sql/agents/information_tools.py::list_columns"
+    },
+    {
+      "symbol_id": "auto_ontology/retrieval/text_to_sql/agents/information_tools.py::list_databases"
+    },
+    {
+      "symbol_id": "auto_ontology/retrieval/text_to_sql/agents/information_tools.py::list_schemas"
+    },
+    {
+      "symbol_id": "auto_ontology/retrieval/text_to_sql/agents/information_tools.py::list_tables"
+    },
+    {
+      "symbol_id": "auto_ontology/retrieval/text_to_sql/agents/information_tools.py::list_terms"
+    },
+    {
+      "symbol_id": "auto_ontology/retrieval/text_to_sql/agents/information_tools.py::run_information_tool"
+    },
+    {
+      "symbol_id": "auto_ontology/retrieval/text_to_sql/agents/sql_parse_validation.py::detect_degenerate_sql"
+    },
+    {
+      "symbol_id": "auto_ontology/retrieval/text_to_sql/agents/sql_parse_validation.py::detect_missing_aggregation"
+    },
+    {
+      "symbol_id": "auto_ontology/retrieval/text_to_sql/agents/sql_parse_validation.py::detect_vacuous_group_by"
+    },
+    {
+      "symbol_id": "auto_ontology/retrieval/text_to_sql/agents/sql_value_validation.py::extract_value_checks"
+    },
+    {
+      "symbol_id": "auto_ontology/retrieval/text_to_sql/chat_sql.py::execute_chat_sql"
+    },
+    {
+      "symbol_id": "auto_ontology/retrieval/text_to_sql/chat_sql.py::log_chat_sql"
+    },
+    {
+      "symbol_id": "auto_ontology/retrieval/text_to_sql/db_probe/join_path_check.py::find_case_dirty_join_mismatches"
+    },
+    {
+      "symbol_id": "auto_ontology/retrieval/text_to_sql/db_probe/join_path_check.py::find_join_path_mismatches"
+    },
+    {
+      "symbol_id": "auto_ontology/retrieval/text_to_sql/db_probe/join_path_check.py::try_self_apply_missing_bridge_fixes"
+    },
+    {
+      "symbol_id": "auto_ontology/retrieval/text_to_sql/db_probe/join_path_check.py::try_self_apply_wrong_column_fixes"
+    },
+    {
+      "symbol_id": "auto_ontology/retrieval/text_to_sql/db_probe/jsonb_path_check.py::find_jsonb_path_mismatches"
+    },
+    {
+      "symbol_id": "auto_ontology/retrieval/text_to_sql/db_probe/jsonb_path_check.py::try_self_apply_fixes"
+    },
+    {
+      "symbol_id": "auto_ontology/retrieval/text_to_sql/db_probe/literal_check.py::build_value_repair_error"
+    },
+    {
+      "symbol_id": "auto_ontology/retrieval/text_to_sql/db_probe/literal_check.py::find_integer_division_mismatches"
+    },
+    {
+      "symbol_id": "auto_ontology/retrieval/text_to_sql/db_probe/literal_check.py::find_literal_mismatches"
+    },
+    {
+      "symbol_id": "auto_ontology/retrieval/text_to_sql/db_probe/literal_check.py::find_numeric_scale_mismatches"
+    },
+    {
+      "symbol_id": "auto_ontology/retrieval/text_to_sql/db_probe/literal_check.py::try_self_apply_integer_division_fixes"
+    },
+    {
+      "symbol_id": "auto_ontology/retrieval/text_to_sql/follow_up.py::resolve_follow_up"
+    },
+    {
+      "symbol_id": "auto_ontology/retrieval/text_to_sql/formatters_util.py::format_important_columns_for_prompt"
+    },
+    {
+      "symbol_id": "auto_ontology/retrieval/text_to_sql/formatters_util.py::format_semantic_context"
+    },
+    {
+      "symbol_id": "auto_ontology/retrieval/text_to_sql/formatters_util.py::format_tables_for_prompt"
+    },
+    {
+      "symbol_id": "auto_ontology/retrieval/text_to_sql/formatters_util.py::format_used_schema_for_prompt"
+    },
+    {
+      "symbol_id": "auto_ontology/retrieval/text_to_sql/main.py::get_agent_response"
+    },
+    {
+      "symbol_id": "auto_ontology/retrieval/text_to_sql/main.py::get_agent_response_with_state"
+    },
+    {
+      "symbol_id": "auto_ontology/retrieval/text_to_sql/main.py::stream_agent_response"
+    },
+    {
+      "symbol_id": "auto_ontology/retrieval/text_to_sql/numeric_types.py::cast_jsonb_numeric_projections"
+    },
+    {
+      "symbol_id": "auto_ontology/retrieval/text_to_sql/numeric_types.py::flip_numeric_output_types"
+    },
+    {
+      "symbol_id": "auto_ontology/retrieval/text_to_sql/numeric_types.py::float_casts_to_numeric"
+    },
+    {
+      "symbol_id": "auto_ontology/retrieval/text_to_sql/numeric_types.py::float_json_arithmetic"
+    },
+    {
+      "symbol_id": "auto_ontology/retrieval/text_to_sql/numeric_types.py::has_avg_expression"
+    },
+    {
+      "symbol_id": "auto_ontology/retrieval/text_to_sql/numeric_types.py::order_by_leading_aggregate"
+    },
+    {
+      "symbol_id": "auto_ontology/retrieval/text_to_sql/numeric_types.py::order_groups_by_identifier"
+    },
+    {
+      "symbol_id": "auto_ontology/retrieval/text_to_sql/numeric_types.py::order_periods_chronologically"
+    },
+    {
+      "symbol_id": "auto_ontology/retrieval/text_to_sql/numeric_types.py::order_string_aggregates"
+    },
+    {
+      "symbol_id": "auto_ontology/retrieval/text_to_sql/numeric_types.py::result_values_digest"
+    },
+    {
+      "symbol_id": "auto_ontology/retrieval/text_to_sql/numeric_types.py::sum_decimal_casts_to_integer"
+    },
+    {
+      "symbol_id": "auto_ontology/retrieval/text_to_sql/prompts.py::create_intent_validation_prompt"
+    },
+    {
+      "symbol_id": "auto_ontology/retrieval/text_to_sql/state.py::get_question_for_processing"
+    },
+    {
+      "symbol_id": "auto_ontology/retrieval/text_to_sql/text_to_sql_graph.py::create_graph"
+    },
+    {
+      "symbol_id": "auto_ontology/retrieval/text_to_sql/text_to_sql_graph.py::route_generated_sql"
+    },
+    {
+      "symbol_id": "auto_ontology/retrieval/text_to_sql/text_to_sql_graph.py::route_question_type_or_evidence"
+    },
+    {
+      "symbol_id": "auto_ontology/retrieval/text_to_sql/text_to_sql_graph.py::route_sql_execution"
+    },
+    {
+      "symbol_id": "auto_ontology/retrieval/text_to_sql/value_anchors.py::anchor_tables_missing_from_scope"
+    },
+    {
+      "symbol_id": "auto_ontology/retrieval/text_to_sql/value_anchors.py::split_schema_named_anchors"
+    },
+    {
+      "symbol_id": "auto_ontology/retrieval/text_to_sql/visualization/analyze.py::analyze_and_visualize"
+    },
+    {
+      "symbol_id": "auto_ontology/retrieval/text_to_sql/visualization/chart_specs.py::build_chart_spec"
+    },
+    {
+      "symbol_id": "auto_ontology/retrieval/text_to_sql/visualization/chart_specs.py::generate_chart_specs"
+    },
+    {
+      "symbol_id": "auto_ontology/retrieval/text_to_sql/visualization/helpers.py::map_column"
+    },
+    {
+      "symbol_id": "auto_ontology/retrieval/text_to_sql/visualization/helpers.py::parse_sql_response_to_dataframe"
+    },
+    {
+      "symbol_id": "auto_ontology/semantic/bridge_tables.py::build_bridge_tables_sql_attributes"
+    },
+    {
+      "symbol_id": "auto_ontology/semantic/compile.py::run_semantic_compilation"
+    },
+    {
+      "symbol_id": "auto_ontology/semantic/date_format.py::infer_date_format"
+    },
+    {
+      "symbol_id": "auto_ontology/semantic/deterministic.py::column_attribute_specs"
+    },
+    {
+      "symbol_id": "auto_ontology/semantic/embed.py::SemanticEmbedder.embed_term"
+    },
+    {
+      "symbol_id": "auto_ontology/semantic/embed.py::build_semantic_embedder"
+    },
+    {
+      "symbol_id": "auto_ontology/semantic/fk_suggester.py::suggest_potential_foreign_keys"
+    },
+    {
+      "symbol_id": "auto_ontology/semantic/pipeline.py::compile_semantic_layer"
+    },
+    {
+      "symbol_id": "auto_ontology/semantic/semantic_fk.py::prune_disjoint_semantic_fks"
+    },
+    {
+      "symbol_id": "auto_ontology/semantic/semantic_fk.py::resolve_semantic_fks"
+    },
+    {
+      "symbol_id": "auto_ontology/semantic/semantic_fk.py::select_semantic_fk_join_defaults"
+    },
+    {
+      "symbol_id": "auto_ontology/semantic/sql_attribute_suggester.py::suggest_sql_attributes"
+    },
+    {
+      "symbol_id": "auto_ontology/semantic/term_extractor.py::extract_term"
+    },
+    {
+      "symbol_id": "auto_ontology/semantic/visit_enter.py::calculate_columns_profiling"
+    },
+    {
+      "symbol_id": "auto_ontology/semantic/visit_enter.py::process_table"
+    },
+    {
+      "symbol_id": "auto_ontology/server/chat/conversation_dal.py::persist_analytics_result"
+    },
+    {
+      "symbol_id": "auto_ontology/server/chat/conversation_dal.py::persist_assistant_result"
+    },
+    {
+      "symbol_id": "auto_ontology/server/chat/conversation_dal.py::persist_result_message"
+    },
+    {
+      "symbol_id": "auto_ontology/server/chat/helpers.py::build_result_message"
+    },
+    {
+      "symbol_id": "auto_ontology/server/chat/settings_dal.py::fetch_acronyms"
+    },
+    {
+      "symbol_id": "auto_ontology/server/chat/settings_dal.py::fetch_custom_prompts"
+    },
+    {
+      "symbol_id": "auto_ontology/server/chat/settings_dal.py::is_visualization_enabled"
+    },
+    {
+      "symbol_id": "auto_ontology/server/chat/worker.py::get_pool"
+    },
+    {
+      "symbol_id": "auto_ontology/server/connections/service.py::create_connection"
+    },
+    {
+      "symbol_id": "auto_ontology/server/connections/service.py::delete_connection"
+    },
+    {
+      "symbol_id": "auto_ontology/server/connections/service.py::set_sso_federation"
+    },
+    {
+      "symbol_id": "auto_ontology/server/connections/service.py::test_connection"
+    },
+    {
+      "symbol_id": "auto_ontology/server/connections/service.py::update_connection"
+    },
+    {
+      "symbol_id": "auto_ontology/server/custom_analyses/service.py::create_custom_analysis"
+    },
+    {
+      "symbol_id": "auto_ontology/server/custom_analyses/service.py::delete_custom_analysis"
+    },
+    {
+      "symbol_id": "auto_ontology/server/custom_analyses/service.py::update_custom_analysis"
+    },
+    {
+      "symbol_id": "auto_ontology/server/custom_analyses/service.py::validate_custom_analysis_sql"
+    },
+    {
+      "symbol_id": "auto_ontology/server/datasources/service.py::update_node_properties"
+    },
+    {
+      "symbol_id": "auto_ontology/server/health/checks.py::check_schema"
+    },
+    {
+      "symbol_id": "auto_ontology/server/health/checks.py::check_store"
+    },
+    {
+      "symbol_id": "auto_ontology/server/ingestion/proxy.py::is_semantic_compilation_running"
+    },
+    {
+      "symbol_id": "auto_ontology/server/ingestion/proxy.py::trigger_ingest"
+    },
+    {
+      "symbol_id": "auto_ontology/server/ingestion/proxy.py::trigger_reset"
+    },
+    {
+      "symbol_id": "auto_ontology/server/ingestion/proxy.py::trigger_semantic_compile"
+    },
+    {
+      "symbol_id": "auto_ontology/server/ingestion/proxy.py::trigger_semantic_reset"
+    },
+    {
+      "symbol_id": "auto_ontology/server/metadata/service.py::entity_coverage"
+    },
+    {
+      "symbol_id": "auto_ontology/server/model_interchange/embed.py::build_column_attribute_semantic_rows"
+    },
+    {
+      "symbol_id": "auto_ontology/server/model_interchange/embed.py::build_column_data_row"
+    },
+    {
+      "symbol_id": "auto_ontology/server/model_interchange/embed.py::build_custom_analysis_semantic_row"
+    },
+    {
+      "symbol_id": "auto_ontology/server/model_interchange/embed.py::build_sql_attribute_semantic_row"
+    },
+    {
+      "symbol_id": "auto_ontology/server/model_interchange/embed.py::build_table_data_row"
+    },
+    {
+      "symbol_id": "auto_ontology/server/model_interchange/embed.py::build_term_semantic_rows"
+    },
+    {
+      "symbol_id": "auto_ontology/server/model_interchange/embed.py::flush_import_embeddings"
+    },
+    {
+      "symbol_id": "auto_ontology/server/model_interchange/service.py::export_model"
+    },
+    {
+      "symbol_id": "auto_ontology/server/model_interchange/service.py::export_ossie_documents"
+    },
+    {
+      "symbol_id": "auto_ontology/server/model_interchange/service.py::import_model"
+    },
+    {
+      "symbol_id": "auto_ontology/server/owners.py::can_edit_entity"
+    },
+    {
+      "symbol_id": "auto_ontology/server/owners.py::decide_edit"
+    },
+    {
+      "symbol_id": "auto_ontology/server/owners.py::enforce_edit"
+    },
+    {
+      "symbol_id": "auto_ontology/server/owners.py::owner_from_body"
+    },
+    {
+      "symbol_id": "auto_ontology/server/owners.py::require_assignable"
+    },
+    {
+      "symbol_id": "auto_ontology/server/pql_analyses/service.py::create_pql_analysis"
+    },
+    {
+      "symbol_id": "auto_ontology/server/pql_analyses/service.py::delete_pql_analysis"
+    },
+    {
+      "symbol_id": "auto_ontology/server/pql_analyses/service.py::update_pql_analysis"
+    },
+    {
+      "symbol_id": "auto_ontology/server/rules/service.py::find_targets"
+    },
+    {
+      "symbol_id": "auto_ontology/server/rules/service.py::label_targets"
+    },
+    {
+      "symbol_id": "auto_ontology/server/rules/service.py::reapply_rules"
+    },
+    {
+      "symbol_id": "auto_ontology/server/rules/service.py::replay_search"
+    },
+    {
+      "symbol_id": "auto_ontology/server/search/service.py::global_search"
+    },
+    {
+      "symbol_id": "auto_ontology/server/search/service.py::global_search_count"
+    },
+    {
+      "symbol_id": "auto_ontology/server/search/service.py::match_selects"
+    },
+    {
+      "symbol_id": "auto_ontology/server/search/service.py::rank_key"
+    },
+    {
+      "symbol_id": "auto_ontology/server/search/service.py::resolve_object_types"
+    },
+    {
+      "symbol_id": "auto_ontology/server/sql_attributes/description_suggester.py::suggest_sql_attribute_description"
+    },
+    {
+      "symbol_id": "auto_ontology/server/sql_attributes/service.py::create_sql_attribute"
+    },
+    {
+      "symbol_id": "auto_ontology/server/sql_attributes/service.py::delete_sql_attribute"
+    },
+    {
+      "symbol_id": "auto_ontology/server/sql_attributes/service.py::update_sql_attribute"
+    },
+    {
+      "symbol_id": "auto_ontology/server/sql_attributes/service.py::validate_sql_attribute"
+    },
+    {
+      "symbol_id": "auto_ontology/server/sql_utils.py::get_dialects"
+    },
+    {
+      "symbol_id": "auto_ontology/server/sql_utils.py::get_schemas"
+    },
+    {
+      "symbol_id": "auto_ontology/server/sql_utils.py::validate_sql"
+    },
+    {
+      "symbol_id": "auto_ontology/server/tags/router.py::delete_tag"
+    },
+    {
+      "symbol_id": "auto_ontology/server/tags/router.py::detach_tag"
+    },
+    {
+      "symbol_id": "auto_ontology/server/tags/router.py::update_tag"
+    },
+    {
+      "symbol_id": "auto_ontology/server/terms/service.py::list_terms_page"
+    },
+    {
+      "symbol_id": "auto_ontology/server/terms/service.py::refresh_term_embeddings"
+    },
+    {
+      "symbol_id": "auto_ontology/server/terms/service.py::update_column_attribute"
+    },
+    {
+      "symbol_id": "auto_ontology/server/users/postgres_dal.py::get_user_role"
+    },
+    {
+      "symbol_id": "auto_ontology/server/users/postgres_dal.py::is_admin"
+    },
+    {
+      "symbol_id": "auto_ontology/server/users/router.py::create_group"
+    },
+    {
+      "symbol_id": "auto_ontology/server/users/router.py::delete_group"
+    },
+    {
+      "symbol_id": "auto_ontology/server/users/router.py::get_group"
+    },
+    {
+      "symbol_id": "auto_ontology/server/users/router.py::list_groups"
+    },
+    {
+      "symbol_id": "auto_ontology/server/users/router.py::list_owners"
+    },
+    {
+      "symbol_id": "auto_ontology/server/users/router.py::update_group"
+    },
+    {
+      "symbol_id": "auto_ontology/utils/column_types.py::sample_values_edit_error"
+    },
+    {
+      "symbol_id": "auto_ontology/utils/embedding.py::batch_embed"
+    },
+    {
+      "symbol_id": "auto_ontology/utils/embedding.py::batch_embed_chunks"
+    },
+    {
+      "symbol_id": "auto_ontology/utils/embedding.py::embed_docs_into_vdb"
+    },
+    {
+      "symbol_id": "auto_ontology/utils/embedding.py::embed_rows"
+    },
+    {
+      "symbol_id": "auto_ontology/utils/embedding.py::embed_rows_into_vdb"
+    },
+    {
+      "symbol_id": "auto_ontology/utils/embedding.py::embed_texts"
+    },
+    {
+      "symbol_id": "auto_ontology/utils/embedding.py::get_embed_params"
+    },
+    {
+      "symbol_id": "auto_ontology/utils/embedding_rows.py::CatalogEmbeddingRowsOp.process"
+    },
+    {
+      "symbol_id": "auto_ontology/utils/llm_invoke.py::get_llm_client"
+    },
+    {
+      "symbol_id": "auto_ontology/utils/llm_invoke.py::get_non_reasoning_llm_client"
+    },
+    {
+      "symbol_id": "auto_ontology/utils/llm_invoke.py::invoke_text"
+    },
+    {
+      "symbol_id": "auto_ontology/utils/llm_invoke.py::invoke_with_structured_output"
+    },
+    {
+      "symbol_id": "auto_ontology/utils/llm_invoke.py::limit_inflight"
+    },
+    {
+      "symbol_id": "auto_ontology/utils/llm_invoke.py::safe_invoke_structured_nr"
+    },
+    {
+      "symbol_id": "auto_ontology/utils/llm_invoke.py::safe_invoke_text"
+    },
+    {
+      "symbol_id": "auto_ontology/utils/llm_invoke.py::safe_invoke_text_nr"
+    },
+    {
+      "symbol_id": "auto_ontology/utils/llm_invoke.py::safe_invoke_with_structured_output"
+    },
+    {
+      "symbol_id": "auto_ontology/utils/model_config.py::resolve"
+    },
+    {
+      "symbol_id": "auto_ontology/utils/rerank.py::rerank_hits"
+    },
+    {
+      "symbol_id": "auto_ontology/utils/retriever.py::get_data_objects_retriever"
+    },
+    {
+      "symbol_id": "auto_ontology/utils/retriever.py::get_semantic_objects_retriever"
+    },
+    {
+      "symbol_id": "auto_ontology/utils/sample_values.py::stringify_sample_values"
+    },
+    {
+      "symbol_id": "auto_ontology/utils/sql_identifiers.py::qualified_name"
+    },
+    {
+      "symbol_id": "auto_ontology/vdb/__init__.py::get_data_vdb"
+    },
+    {
+      "symbol_id": "auto_ontology/vdb/__init__.py::get_semantic_vdb"
+    },
+    {
+      "symbol_id": "auto_ontology/vdb/__init__.py::get_vdb"
+    },
+    {
+      "symbol_id": "auto_ontology/vdb/postgres.py::PostgresVDB.create_index"
+    },
+    {
+      "symbol_id": "auto_ontology/vdb/postgres.py::PostgresVDB.delete_by_database"
+    },
+    {
+      "symbol_id": "auto_ontology/vdb/postgres.py::PostgresVDB.write_to_index"
+    },
+    {
+      "symbol_id": "auto_ontology/vdb/records.py::to_vdb_records"
+    },
+    {
+      "symbol_id": "auto_ontology/vdb/records.py::write_embedded_rows"
+    },
+    {
+      "symbol_id": "dev_tools/_add_spdx_headers.py::insert_header"
+    },
+    {
+      "symbol_id": "dev_tools/fixtures/build_sqlite_fixtures.py::build"
+    },
+    {
+      "symbol_id": "dev_tools/fixtures/build_sqlite_fixtures.py::build_all"
+    },
+    {
+      "symbol_id": "dev_tools/fixtures/capture_dal_golden.py::build_id_map"
+    },
+    {
+      "symbol_id": "dev_tools/fixtures/capture_dal_golden.py::capture_all"
+    },
+    {
+      "symbol_id": "dev_tools/fixtures/capture_dal_golden.py::capture_arg_reads"
+    },
+    {
+      "symbol_id": "dev_tools/fixtures/capture_dal_golden.py::normalise"
+    },
+    {
+      "symbol_id": "dev_tools/fixtures/seed_graph_fixture.py::ingest_catalog"
+    },
+    {
+      "symbol_id": "dev_tools/fixtures/seed_graph_fixture.py::reset_graph"
+    },
+    {
+      "symbol_id": "dev_tools/fixtures/seed_graph_fixture.py::seed_column_attributes"
+    },
+    {
+      "symbol_id": "dev_tools/fixtures/seed_graph_fixture.py::seed_custom_analyses"
+    },
+    {
+      "symbol_id": "dev_tools/fixtures/seed_graph_fixture.py::seed_pql_analyses"
+    },
+    {
+      "symbol_id": "dev_tools/fixtures/seed_graph_fixture.py::seed_semantic_fks"
+    },
+    {
+      "symbol_id": "dev_tools/fixtures/seed_graph_fixture.py::seed_sql_attributes"
+    },
+    {
+      "symbol_id": "dev_tools/fixtures/seed_graph_fixture.py::seed_terms"
+    },
+    {
+      "symbol_id": "dev_tools/fixtures/seed_graph_fixture.py::seed_zones"
+    },
+    {
+      "symbol_id": "dev_tools/fixtures/seed_local_postgres.py::seed"
+    },
+    {
+      "symbol_id": "mcp/auto_ontology_mcp/auto_ontology_auth.py::build_auto_ontology_auth"
+    },
+    {
+      "symbol_id": "mcp/auto_ontology_mcp/config.py::load_settings"
+    },
+    {
+      "symbol_id": "mcp/auto_ontology_mcp/server.py::build_client"
+    },
+    {
+      "symbol_id": "mcp/auto_ontology_mcp/server.py::build_server"
+    },
+    {
+      "symbol_id": "mcp/auto_ontology_mcp/server.py::load_spec"
+    },
+    {
+      "symbol_id": "mcp/auto_ontology_mcp/tools.py::apply_description"
+    },
+    {
+      "symbol_id": "mcp/auto_ontology_mcp/tools.py::names_by_operation_id"
+    },
+    {
+      "symbol_id": "mcp/auto_ontology_mcp/tools.py::route_maps"
+    }
+  ]
+}

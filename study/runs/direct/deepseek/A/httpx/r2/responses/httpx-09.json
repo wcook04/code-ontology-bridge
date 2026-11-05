@@ -1,0 +1,99 @@
+{
+  "question_id": "httpx-09",
+  "arm": "A",
+  "model": "deepseek/deepseek-v4.1-flash-1017",
+  "error": null,
+  "elapsed_s": 1.26,
+  "attempts": [
+    {
+      "sql": "WITH RECURSIVE edges AS (\n  SELECT caller_symbol_id AS src, callee_symbol_id AS dst\n  FROM code.calls c\n  JOIN code.symbols s1 ON s1.symbol_id = c.caller_symbol_id\n  JOIN code.symbols s2 ON s2.symbol_id = c.callee_symbol_id\n  WHERE s1.file_id = 'httpx/_client.py' AND s2.file_id = 'httpx/_client.py'\n    AND c.call_kind <> 'callback'\n), target AS (\n  SELECT symbol_id FROM code.symbols\n  WHERE file_id = 'httpx/_client.py' AND name = '_send_single_request'\n), reach(symbol_id) AS (\n  SELECT src FROM edges WHERE dst IN (SELECT symbol_id FROM target)\n  UNION\n  SELECT e.src FROM edges e JOIN reach r ON e.dst = r.symbol_id\n)\nSELECT DISTINCT r.symbol_id\nFROM reach r\nWHERE r.symbol_id NOT IN (SELECT symbol_id FROM target)\nORDER BY r.symbol_id",
+      "error": null
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 568,
+    "completion_tokens": 302,
+    "total_tokens": 870,
+    "cost": 0.00023976,
+    "providers": [
+      "StepFun"
+    ]
+  },
+  "request": "Within httpx/_client.py, which functions or methods eventually lead to a call of `Client._send_single_request`, through a chain of one or more direct calls whose every step is inside httpx/_client.py? Count direct calls only (no callbacks) and exclude `_send_single_request` itself. Give their symbol IDs.\n\nRequested output columns: symbol_id (string).",
+  "explanation": "Builds a call graph restricted to edges where both caller and callee are defined in httpx/_client.py, excluding callback references. It then walks backwards from Client._send_single_request to find all symbols that can reach it through one or more direct calls, excluding the target itself.",
+  "sql": "WITH RECURSIVE edges AS (\n  SELECT caller_symbol_id AS src, callee_symbol_id AS dst\n  FROM code.calls c\n  JOIN code.symbols s1 ON s1.symbol_id = c.caller_symbol_id\n  JOIN code.symbols s2 ON s2.symbol_id = c.callee_symbol_id\n  WHERE s1.file_id = 'httpx/_client.py' AND s2.file_id = 'httpx/_client.py'\n    AND c.call_kind <> 'callback'\n), target AS (\n  SELECT symbol_id FROM code.symbols\n  WHERE file_id = 'httpx/_client.py' AND name = '_send_single_request'\n), reach(symbol_id) AS (\n  SELECT src FROM edges WHERE dst IN (SELECT symbol_id FROM target)\n  UNION\n  SELECT e.src FROM edges e JOIN reach r ON e.dst = r.symbol_id\n)\nSELECT DISTINCT r.symbol_id\nFROM reach r\nWHERE r.symbol_id NOT IN (SELECT symbol_id FROM target)\nORDER BY r.symbol_id",
+  "rows": [
+    {
+      "symbol_id": "httpx/_client.py::AsyncClient._send_handling_auth"
+    },
+    {
+      "symbol_id": "httpx/_client.py::AsyncClient._send_handling_redirects"
+    },
+    {
+      "symbol_id": "httpx/_client.py::AsyncClient.delete"
+    },
+    {
+      "symbol_id": "httpx/_client.py::AsyncClient.get"
+    },
+    {
+      "symbol_id": "httpx/_client.py::AsyncClient.head"
+    },
+    {
+      "symbol_id": "httpx/_client.py::AsyncClient.options"
+    },
+    {
+      "symbol_id": "httpx/_client.py::AsyncClient.patch"
+    },
+    {
+      "symbol_id": "httpx/_client.py::AsyncClient.post"
+    },
+    {
+      "symbol_id": "httpx/_client.py::AsyncClient.put"
+    },
+    {
+      "symbol_id": "httpx/_client.py::AsyncClient.request"
+    },
+    {
+      "symbol_id": "httpx/_client.py::AsyncClient.send"
+    },
+    {
+      "symbol_id": "httpx/_client.py::AsyncClient.stream"
+    },
+    {
+      "symbol_id": "httpx/_client.py::Client._send_handling_auth"
+    },
+    {
+      "symbol_id": "httpx/_client.py::Client._send_handling_redirects"
+    },
+    {
+      "symbol_id": "httpx/_client.py::Client.delete"
+    },
+    {
+      "symbol_id": "httpx/_client.py::Client.get"
+    },
+    {
+      "symbol_id": "httpx/_client.py::Client.head"
+    },
+    {
+      "symbol_id": "httpx/_client.py::Client.options"
+    },
+    {
+      "symbol_id": "httpx/_client.py::Client.patch"
+    },
+    {
+      "symbol_id": "httpx/_client.py::Client.post"
+    },
+    {
+      "symbol_id": "httpx/_client.py::Client.put"
+    },
+    {
+      "symbol_id": "httpx/_client.py::Client.request"
+    },
+    {
+      "symbol_id": "httpx/_client.py::Client.send"
+    },
+    {
+      "symbol_id": "httpx/_client.py::Client.stream"
+    }
+  ]
+}

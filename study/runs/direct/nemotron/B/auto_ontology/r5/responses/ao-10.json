@@ -1,0 +1,36 @@
+{
+  "question_id": "ao-10",
+  "arm": "B",
+  "model": "nvidia/nemotron-3.5-lightning",
+  "error": null,
+  "elapsed_s": 2.58,
+  "attempts": [
+    {
+      "sql": "SELECT folder_path, SUM(line_count) AS total_lines\nFROM (\n  SELECT\n    CASE\n      WHEN file_id LIKE 'auto_ontology/server/%' THEN SUBSTRING(file_id, 1, INSTR(file_id, '/', -1) - 1)\n      ELSE NULL\n    END AS folder_path,\n    line_count\n  FROM code.files\n  WHERE file_id LIKE 'auto_ontology/server/%'\n)\nGROUP BY folder_path\nHAVING total_lines > 1000\nORDER BY total_lines DESC;",
+      "error": "Binder Error: No function matches the given name and argument types 'instr(VARCHAR, STRING_LITERAL, INTEGER_LITERAL)'. You might need to add explicit type casts."
+    },
+    {
+      "sql": "SELECT folder_path, SUM(line_count) AS total_lines\nFROM (\n  SELECT\n    CASE\n      WHEN file_id LIKE 'auto_ontology/server/%' THEN SUBSTRING(file_id, 1, LENGTH(file_id) - INSTR(REVERSE(file_id), '/') + 2)\n      ELSE NULL\n    END AS folder_path,\n    line_count\n  FROM code.files\n  WHERE file_id LIKE 'auto_ontology/server/%'\n)\nGROUP BY folder_path\nHAVING total_lines > 1000\nORDER BY total_lines DESC;",
+      "error": null
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 5722,
+    "completion_tokens": 370,
+    "total_tokens": 6092,
+    "cost": 0.00034782,
+    "providers": [
+      "CoreWeave",
+      "CoreWeave"
+    ]
+  },
+  "request": "Within auto_ontology/server/, which immediate subfolders contain more than 1,000 lines of Python in total? Count every .py file anywhere inside the subfolder, including its test files and __init__.py; files directly in auto_ontology/server/ itself belong to no subfolder. Return the subfolder's repository-relative path (e.g. auto_ontology/server/chat) and its total line count.\n\nRequested output columns: folder_path (string), total_lines (integer).",
+  "explanation": "The query extracts the immediate subfolder by measuring from the rightmost slash using string reversal, avoiding the missing INSTR function. It then aggregates line counts per folder and filters to those exceeding 1,000 lines.",
+  "sql": "SELECT folder_path, SUM(line_count) AS total_lines\nFROM (\n  SELECT\n    CASE\n      WHEN file_id LIKE 'auto_ontology/server/%' THEN SUBSTRING(file_id, 1, LENGTH(file_id) - INSTR(REVERSE(file_id), '/') + 2)\n      ELSE NULL\n    END AS folder_path,\n    line_count\n  FROM code.files\n  WHERE file_id LIKE 'auto_ontology/server/%'\n)\nGROUP BY folder_path\nHAVING total_lines > 1000\nORDER BY total_lines DESC;",
+  "rows": [
+    {
+      "folder_path": "auto_ontology/server/m",
+      "total_lines": 1180
+    }
+  ]
+}

@@ -1,0 +1,201 @@
+{
+  "request": {
+    "question": "The production database connectors are the classes that directly subclass SQLDatabase (defined in auto_ontology/connectors/base.py), excluding any class defined in test code (every file under a tests/ folder counts as test code). For each such connector class, which public methods does the class define in its own body that SQLDatabase itself does not define? A method is public when its name does not start with an underscore (so __init__ and other dunder methods are excluded); anything written with def directly in the class body counts as a method, including properties and context-manager methods. Methods inherited without being redefined do not count. Return one row per (connector class symbol ID, method name).\n\nRequested output columns: class_symbol_id (string), method_name (string).\nReturn exactly the requested output columns, using each requested name as the column alias, in the requested order. Return complete repository-relative file paths and complete symbol IDs exactly as stored. When the question asks which files, symbols or modules, return each distinct one once unless it asks for occurrences.",
+    "calculation_only": true
+  },
+  "status": 200,
+  "elapsed_s": 545.1,
+  "events": [
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "question_intent",
+      "thought": null,
+      "label": "Classifying the question"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "question_intent",
+      "thought": null,
+      "label": "Classifying the question"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "question_extraction",
+      "thought": null,
+      "label": "Understanding the question"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "question_extraction",
+      "thought": null,
+      "label": "Understanding the question"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "retrieve_candidates",
+      "thought": null,
+      "label": "Retrieving candidates"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "retrieve_candidates",
+      "thought": null,
+      "label": "Retrieving candidates"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "prepare_candidates",
+      "thought": null,
+      "label": "Preparing candidates"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "prepare_candidates",
+      "thought": "Keep code.symbols because it directly supplies class/method symbols, file paths, symbol IDs, names, and is_public, and it is needed to compare methods against SQLDatabase. Keep code.class_bases as a safe inclusion because identifying 'database connector classes' may depend on inheritance; removing it is not confidently safe. The other tables are not required for method-definition and method-name comparison queries.",
+      "label": "Preparing candidates"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "refine_evidence",
+      "thought": null,
+      "label": "Refining evidence"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "refine_evidence",
+      "thought": "No certain repair applies: SQLDatabase is explicitly supplied by the sanitized question, and no value anchor or sample value proves a different stored representation or operator.",
+      "label": "Refining evidence"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "construct_sql_from_candidates",
+      "thought": null,
+      "label": "Constructing SQL"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "construct_sql_from_candidates",
+      "thought": "Connector classes are class symbols (kind='class') in a non-test file whose class_bases row has base_name='SQLDatabase' or base_symbol_id='auto_ontology/connectors/base.py::SQLDatabase'. Test code is excluded by requiring the file path not to contain a 'tests/' segment. Because the symbols table exposes no explicit parent column, a method is treated as defined in a class body when it is a kind='method' symbol in the same file whose line_start falls between the class's line_start and line_end; inherited methods are never inside the subclass body, so they are naturally excluded. Public means is_public is true (equivalently the name does not start with an underscore). Methods that SQLDatabase itself defines in its own body are collected by the same line-range rule against the symbol auto_ontology/connectors/base.py::SQLDatabase and excluded by method name. DISTINCT is applied because the question asks for one row per class/method pair.",
+      "label": "Constructing SQL"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "validate_sql_query",
+      "thought": null,
+      "label": "Validating SQL and intent"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "validate_sql_query",
+      "thought": "The query follows the required logic: it locates SQLDatabase by the exact symbol ID in `auto_ontology/connectors/base.py`, captures methods defined within SQLDatabase’s line range, identifies direct subclasses via `class_bases` using either `base_name = 'SQLDatabase'` or the authoritative `base_symbol_id`, excludes test files under `tests/`, and returns public methods defined within each connector class’s own line range that are not already defined by SQLDatabase. The requested output columns and aliases are correct, and there are no clearly incorrect joins or aggregations. The use of `is_public = TRUE` is a reasonable equivalent to the stated public-method rule.",
+      "label": "Validating SQL and intent"
+    },
+    {
+      "type": "sql",
+      "node": "validate_sql_query",
+      "sql": "WITH sql_db AS (SELECT symbol_id, file_id, line_start, line_end FROM code.symbols WHERE symbol_id = 'auto_ontology/connectors/base.py::SQLDatabase'), db_methods AS (SELECT DISTINCT s.name AS name FROM code.symbols AS s INNER JOIN sql_db AS d ON s.file_id = d.file_id AND s.kind = 'method' AND s.line_start >= d.line_start AND s.line_start <= d.line_end), connectors AS (SELECT s.symbol_id AS symbol_id, s.file_id AS file_id, s.line_start AS line_start, s.line_end AS line_end FROM code.symbols AS s INNER JOIN code.class_bases AS cb ON cb.class_symbol_id = s.symbol_id WHERE s.kind = 'class' AND (cb.base_name = 'SQLDatabase' OR cb.base_symbol_id = 'auto_ontology/connectors/base.py::SQLDatabase') AND s.file_id NOT LIKE '%tests/%') SELECT DISTINCT c.symbol_id AS class_symbol_id, m.name AS method_name FROM connectors AS c INNER JOIN code.symbols AS m ON m.file_id = c.file_id AND m.kind = 'method' AND m.line_start >= c.line_start AND m.line_start <= c.line_end WHERE m.is_public = TRUE AND m.name NOT IN (SELECT name FROM db_methods) ORDER BY class_symbol_id, method_name;"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "execute_sql_query",
+      "thought": null,
+      "label": "Executing SQL"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "execute_sql_query",
+      "thought": null,
+      "label": "Executing SQL"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "check_empty_like_result",
+      "thought": null,
+      "label": "Checking results"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "check_empty_like_result",
+      "thought": null,
+      "label": "Checking results"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "check_value_repair",
+      "thought": null,
+      "label": "Checking values"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "check_value_repair",
+      "thought": null,
+      "label": "Checking values"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "format_and_respond",
+      "thought": null,
+      "label": "Formatting response"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "format_and_respond",
+      "thought": null,
+      "label": "Formatting response"
+    },
+    {
+      "type": "result",
+      "answer": {
+        "response": "This lists, for every production database connector class that directly inherits from SQLDatabase, the public methods written directly in that class body which SQLDatabase does not itself define. Connector classes are identified through the base-class records and limited to non-test files, and a method is attributed to a class when its definition lines fall inside that class's span in the same file. The result returns one row per connector class and method name, sorted by class symbol ID and method name.",
+        "sql_code": "WITH sql_db AS (SELECT symbol_id, file_id, line_start, line_end FROM code.symbols WHERE symbol_id = 'auto_ontology/connectors/base.py::SQLDatabase'), db_methods AS (SELECT DISTINCT s.name AS name FROM code.symbols AS s INNER JOIN sql_db AS d ON s.file_id = d.file_id AND s.kind = 'method' AND s.line_start >= d.line_start AND s.line_start <= d.line_end), connectors AS (SELECT s.symbol_id AS symbol_id, s.file_id AS file_id, s.line_start AS line_start, s.line_end AS line_end FROM code.symbols AS s INNER JOIN code.class_bases AS cb ON cb.class_symbol_id = s.symbol_id WHERE s.kind = 'class' AND (cb.base_name = 'SQLDatabase' OR cb.base_symbol_id = 'auto_ontology/connectors/base.py::SQLDatabase') AND s.file_id NOT LIKE '%tests/%') SELECT DISTINCT c.symbol_id AS class_symbol_id, m.name AS method_name FROM connectors AS c INNER JOIN code.symbols AS m ON m.file_id = c.file_id AND m.kind = 'method' AND m.line_start >= c.line_start AND m.line_start <= c.line_end WHERE m.is_public = TRUE AND m.name NOT IN (SELECT name FROM db_methods) ORDER BY class_symbol_id, method_name;",
+        "sql_columns": [
+          "904dc6c1-eabe-4091-959c-0ed5b821401d",
+          "8b936837-e64b-4ce8-a6e3-eb03d9456875",
+          "bd86b69a-4f59-40a7-88f1-421bae5a58ee",
+          "5912811c-0c8b-4699-a3ab-926b5a068ccc",
+          "29ee5f66-696e-4129-8122-08f2a6f8f1ae",
+          "0a782b1f-ef1f-4628-b4e7-57f2f28bdd5f",
+          "c081af33-9cf0-4610-8599-aabd9f3d3e1b",
+          "1483656d-6403-41ec-91d2-4c7207a690bb",
+          "170a5784-99fa-452a-b892-3b87f3bbc28f",
+          "2ddf984d-66e6-4cce-a7b2-85266ecbb8fd"
+        ],
+        "custom_analyses_used": [],
+        "sql_response_from_db": [
+          "[{\"class_symbol_id\":\"auto_ontology\\/connectors\\/clickhouse.py::ClickHouseDatabase\",\"method_name\":\"ping\"},{\"class_symbol_id\":\"auto_ontology\\/connectors\\/databricks.py::DatabricksDatabase\",\"method_name\":\"auth_mode\"},{\"class_symbol_id\":\"auto_ontology\\/connectors\\/databricks.py::DatabricksDatabase\",\"method_name\":\"get_schemas\"},{\"class_symbol_id\":\"auto_ontology\\/connectors\\/databricks.py::DatabricksDatabase\",\"method_name\":\"ping\"},{\"class_symbol_id\":\"auto_ontology\\/connectors\\/databricks.py::DatabricksDatabase\",\"method_name\":\"reuse_connection\"},{\"class_symbol_id\":\"auto_ontology\\/connectors\\/heavydb.py::HeavyDBDatabase\",\"method_name\":\"ping\"},{\"class_symbol_id\":\"auto_ontology\\/connectors\\/kyuubi.py::KyuubiDatabase\",\"method_name\":\"get_schemas\"},{\"class_symbol_id\":\"auto_ontology\\/connectors\\/kyuubi.py::KyuubiDatabase\",\"method_name\":\"ping\"},{\"class_symbol_id\":\"auto_ontology\\/connectors\\/mysql.py::MySQLDatabase\",\"method_name\":\"ping\"},{\"class_symbol_id\":\"auto_ontology\\/connectors\\/postgres.py::PostgresDatabase\",\"method_name\":\"ping\"},{\"class_symbol_id\":\"auto_ontology\\/connectors\\/snowflake.py::SnowflakeDatabase\",\"method_name\":\"get_schemas\"},{\"class_symbol_id\":\"auto_ontology\\/connectors\\/snowflake.py::SnowflakeDatabase\",\"method_name\":\"ping\"},{\"class_symbol_id\":\"auto_ontology\\/connectors\\/trino.py::TrinoDatabase\",\"method_name\":\"get_schemas\"},{\"class_symbol_id\":\"auto_ontology\\/connectors\\/trino.py::TrinoDatabase\",\"method_name\":\"ping\"}]"
+        ],
+        "thoughts": "- Preparing candidates: The question's primary output item is the method name (`method_name`), which maps to `code.symbols.name`, the short name of a code symbol such as a method name.\n- Preparing candidates: Keep code.symbols because it directly supplies class/method symbols, file paths, symbol IDs, names, and is_public, and it is needed to compare methods against SQLDatabase. Keep code.class_bases as a safe inclusion because identifying 'database connector classes' may depend on inheritance; removing it is not confidently safe. The other tables are not required for method-definition and method-name comparison queries.\n- Refining evidence: No certain repair applies: SQLDatabase is explicitly supplied by the sanitized question, and no value anchor or sample value proves a different stored representation or operator.\n- Constructing SQL: Connector classes are class symbols (kind='class') in a non-test file whose class_bases row has base_name='SQLDatabase' or base_symbol_id='auto_ontology/connectors/base.py::SQLDatabase'. Test code is excluded by requiring the file path not to contain a 'tests/' segment. Because the symbols table exposes no explicit parent column, a method is treated as defined in a class body when it is a kind='method' symbol in the same file whose line_start falls between the class's line_start and line_end; inherited methods are never inside the subclass body, so they are naturally excluded. Public means is_public is true (equivalently the name does not start with an underscore). Methods that SQLDatabase itself defines in its own body are collected by the same line-range rule against the symbol auto_ontology/connectors/base.py::SQLDatabase and excluded by method name. DISTINCT is applied because the question asks for one row per class/method pair.\n- Validating SQL and intent: The query follows the required logic: it locates SQLDatabase by the exact symbol ID in `auto_ontology/connectors/base.py`, captures methods defined within SQLDatabase’s line range, identifies direct subclasses via `class_bases` using either `base_name = 'SQLDatabase'` or the authoritative `base_symbol_id`, excludes test files under `tests/`, and returns public methods defined within each connector class’s own line range that are not already defined by SQLDatabase. The requested output columns and aliases are correct, and there are no clearly incorrect joins or aggregations. The use of `is_public = TRUE` is a reasonable equivalent to the stated public-method rule."
+      }
+    }
+  ],
+  "question_id": 1,
+  "gold_sql": "SELECT b.class_symbol_id, m.name AS method_name FROM code.class_bases b JOIN code.symbols c ON c.symbol_id = b.class_symbol_id JOIN code.files f ON f.file_id = c.file_id JOIN code.symbols m ON m.file_id = c.file_id AND m.kind = 'method' AND m.qualname = c.qualname || '.' || m.name WHERE b.base_symbol_id = 'auto_ontology/connectors/base.py::SQLDatabase' AND NOT f.is_test AND m.is_public AND m.name NOT IN (SELECT bm.name FROM code.symbols bm WHERE bm.file_id = 'auto_ontology/connectors/base.py' AND bm.kind = 'method' AND bm.qualname LIKE 'SQLDatabase.%') ORDER BY 1, 2",
+  "gold_row_count": 1,
+  "agent_sql": "WITH sql_db AS (SELECT symbol_id, file_id, line_start, line_end FROM code.symbols WHERE symbol_id = 'auto_ontology/connectors/base.py::SQLDatabase'), db_methods AS (SELECT DISTINCT s.name AS name FROM code.symbols AS s INNER JOIN sql_db AS d ON s.file_id = d.file_id AND s.kind = 'method' AND s.line_start >= d.line_start AND s.line_start <= d.line_end), connectors AS (SELECT s.symbol_id AS symbol_id, s.file_id AS file_id, s.line_start AS line_start, s.line_end AS line_end FROM code.symbols AS s INNER JOIN code.class_bases AS cb ON cb.class_symbol_id = s.symbol_id WHERE s.kind = 'class' AND (cb.base_name = 'SQLDatabase' OR cb.base_symbol_id = 'auto_ontology/connectors/base.py::SQLDatabase') AND s.file_id NOT LIKE '%tests/%') SELECT DISTINCT c.symbol_id AS class_symbol_id, m.name AS method_name FROM connectors AS c INNER JOIN code.symbols AS m ON m.file_id = c.file_id AND m.kind = 'method' AND m.line_start >= c.line_start AND m.line_start <= c.line_end WHERE m.is_public = TRUE AND m.name NOT IN (SELECT name FROM db_methods) ORDER BY class_symbol_id, method_name;",
+  "agent_answer": "This lists, for every production database connector class that directly inherits from SQLDatabase, the public methods written directly in that class body which SQLDatabase does not itself define. Connector classes are identified through the base-class records and limited to non-test files, and a method is attributed to a class when its definition lines fall inside that class's span in the same file. The result returns one row per connector class and method name, sorted by class symbol ID and method name.",
+  "agent_row_count": 14,
+  "correct_rows": false,
+  "error": null
+}

@@ -1,0 +1,58 @@
+{
+  "question_id": "ao-03",
+  "arm": "C-semantics",
+  "model": "nvidia/nemotron-3.5-lightning",
+  "error": null,
+  "elapsed_s": 319.1,
+  "attempts": [
+    {
+      "sql": "WITH target_sym AS (\n    SELECT symbol_id\n    FROM auto_ontology_code.code.symbol_profile\n    WHERE name = 'invoke_with_structured_output'\n    AND module = 'auto_ontology.utils.llm_invoke'\n),\nintermediates AS (\n    SELECT DISTINCT ce1.caller_symbol_id AS intermediate_id\n    FROM auto_ontology_code.code.calls ce1\n    WHERE ce1.call_kind = 'direct'\n    AND ce1.callee_symbol_id IN (SELECT symbol_id FROM target_sym)\n),\ncallers_to_intermediates AS (\n    SELECT DISTINCT ce2.caller_symbol_id\n    FROM auto_ontology_code.code.calls ce2\n    WHERE ce2.call_kind = 'direct'\n    AND ce2.callee_symbol_id IN (SELECT intermediate_id FROM intermediates)\n),\ndirect_to_target AS (\n    SELECT DISTINCT ce3.caller_symbol_id\n    FROM auto_ontology_code.code.calls ce3\n    WHERE ce3.call_kind = 'direct'\n    AND ce3.callee_symbol_id IN (SELECT symbol_id FROM target_sym)\n),\nnon_test_excluding_direct AS (\n    SELECT DISTINCT c.caller_symbol_id\n    FROM auto_ontology_code.code.calls c\n    WHERE c.call_kind = 'direct'\n    AND c.caller_symbol_id IN (SELECT caller_symbol_id FROM callers_to_intermediates)\n    AND c.caller_symbol_id NOT IN (SELECT caller_symbol_id FROM direct_to_target)\n)\nSELECT DISTINCT sp.symbol_id\nFROM auto_ontology_code.code.symbol_profile sp\nWHERE sp.in_test_file = FALSE\nAND sp.symbol_id IN (SELECT caller_symbol_id FROM non_test_excluding_direct)"
+    }
+  ],
+  "usage": {},
+  "request": "invoke_with_structured_output in auto_ontology/utils/llm_invoke.py is the main structured-LLM-call wrapper. Which functions or methods in non-test code (every file under a tests/ folder is test code) reach it at exactly two hops: they do not call invoke_with_structured_output directly themselves, but they directly call at least one function or method that does call it directly? Consider direct calls only on both hops, and follow only calls to a named function or to a method on self (a call through another object's attribute, such as self._backend.classify(), is not followed); a function passed as an argument (e.g. pool.submit(f)) does not count as calling it. The intermediate function may live anywhere, including test code, but the functions you list must be in non-test code. Return their symbol IDs.\n\nRequested output columns: symbol_id (string).\nReturn exactly the requested output columns, using each requested name as the column alias, in the requested order. Return complete repository-relative file paths and complete symbol IDs exactly as stored. When the question asks which files, symbols or modules, return each distinct one once unless it asks for occurrences.",
+  "explanation": "This query identifies functions/methods in non-test code that reach invoke_with_structured_output via exactly two direct call hops. It first resolves the target symbol_id from symbol_profile, then finds intermediates that directly call the target (call_kind='direct'). Next, it identifies non-test callers that directly call those intermediates but excludes any that also directly call the target. Finally, it returns the symbol_ids of qualifying non-test callers from symbol_profile, ensuring only entries with in_test_file=FALSE are included.",
+  "sql": "WITH target_sym AS (\n    SELECT symbol_id\n    FROM auto_ontology_code.code.symbol_profile\n    WHERE name = 'invoke_with_structured_output'\n    AND module = 'auto_ontology.utils.llm_invoke'\n),\nintermediates AS (\n    SELECT DISTINCT ce1.caller_symbol_id AS intermediate_id\n    FROM auto_ontology_code.code.calls ce1\n    WHERE ce1.call_kind = 'direct'\n    AND ce1.callee_symbol_id IN (SELECT symbol_id FROM target_sym)\n),\ncallers_to_intermediates AS (\n    SELECT DISTINCT ce2.caller_symbol_id\n    FROM auto_ontology_code.code.calls ce2\n    WHERE ce2.call_kind = 'direct'\n    AND ce2.callee_symbol_id IN (SELECT intermediate_id FROM intermediates)\n),\ndirect_to_target AS (\n    SELECT DISTINCT ce3.caller_symbol_id\n    FROM auto_ontology_code.code.calls ce3\n    WHERE ce3.call_kind = 'direct'\n    AND ce3.callee_symbol_id IN (SELECT symbol_id FROM target_sym)\n),\nnon_test_excluding_direct AS (\n    SELECT DISTINCT c.caller_symbol_id\n    FROM auto_ontology_code.code.calls c\n    WHERE c.call_kind = 'direct'\n    AND c.caller_symbol_id IN (SELECT caller_symbol_id FROM callers_to_intermediates)\n    AND c.caller_symbol_id NOT IN (SELECT caller_symbol_id FROM direct_to_target)\n)\nSELECT DISTINCT sp.symbol_id\nFROM auto_ontology_code.code.symbol_profile sp\nWHERE sp.in_test_file = FALSE\nAND sp.symbol_id IN (SELECT caller_symbol_id FROM non_test_excluding_direct)",
+  "rows": [
+    {
+      "symbol_id": "auto_ontology/semantic/bridge_tables.py::build_bridge_tables_sql_attributes"
+    },
+    {
+      "symbol_id": "auto_ontology/server/chat/router.py::_build_charts_event"
+    },
+    {
+      "symbol_id": "auto_ontology/retrieval/text_to_sql/agents/candidates_retrieval.py::CandidateRetrievalAgent.execute"
+    },
+    {
+      "symbol_id": "auto_ontology/server/chat/worker.py::_worker_loop"
+    },
+    {
+      "symbol_id": "auto_ontology/retrieval/text_to_sql/agents/sql_parse_validation.py::SQLValidationAgent.execute"
+    },
+    {
+      "symbol_id": "auto_ontology/retrieval/text_to_sql/agents/candidates_preparation.py::CandidatePreparationAgent.execute"
+    },
+    {
+      "symbol_id": "auto_ontology/semantic/sql_attribute_suggester.py::suggest_sql_attributes"
+    },
+    {
+      "symbol_id": "auto_ontology/server/sql_attributes/router.py::get_sql_attribute_description_suggestion"
+    },
+    {
+      "symbol_id": "auto_ontology/semantic/semantic_fk.py::_resolve_via_vdb"
+    },
+    {
+      "symbol_id": "auto_ontology/semantic/deterministic.py::_generate_column_descriptions"
+    },
+    {
+      "symbol_id": "auto_ontology/semantic/semantic_fk.py::select_semantic_fk_join_defaults"
+    },
+    {
+      "symbol_id": "auto_ontology/retrieval/text_to_sql/agents/evidence_refinement.py::EvidenceRefinementAgent.execute"
+    },
+    {
+      "symbol_id": "auto_ontology/semantic/visit_enter.py::process_table"
+    }
+  ],
+  "source_record": "run/responses/10i_ask_with_key/ask_q3.json"
+}

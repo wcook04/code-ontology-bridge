@@ -1,0 +1,51 @@
+{
+  "question_id": "ao-04",
+  "arm": "V",
+  "model": "deepseek/deepseek-v4.1-flash-1017",
+  "error": null,
+  "elapsed_s": 2.98,
+  "attempts": [
+    {
+      "sql": "WITH base AS (SELECT symbol_id FROM code.symbols WHERE name = 'BaseAgent' AND file_id = 'auto_ontology/retrieval/text_to_sql/base.py'), direct_subclasses AS (SELECT cb.class_symbol_id FROM code.class_bases cb JOIN base b ON cb.base_symbol_id = b.symbol_id), agent_classes AS (SELECT s.symbol_id, s.file_id FROM direct_subclasses ds JOIN code.symbols s ON s.symbol_id = ds.class_symbol_id WHERE s.file_id NOT LIKE '%tests/%' AND s.file_id NOT LIKE '%/tests/%' AND s.file_id NOT LIKE 'tests/%' AND s.file_id NOT LIKE '%conftest.py' AND s.file_id NOT LIKE '%/helpers/%' AND s.file_id NOT LIKE 'helpers/%'), constructed AS (SELECT DISTINCT c.callee_symbol_id AS symbol_id, c.caller_symbol_id FROM code.calls c WHERE c.call_kind = 'direct' AND c.callee_symbol_id IN (SELECT symbol_id FROM agent_classes)), non_test_constructed AS (SELECT DISTINCT ct.symbol_id FROM constructed ct JOIN code.symbols caller ON caller.symbol_id = ct.caller_symbol_id WHERE caller.file_id NOT LIKE '%tests/%' AND caller.file_id NOT LIKE '%/tests/%' AND caller.file_id NOT LIKE 'tests/%' AND caller.file_id NOT LIKE '%conftest.py' AND caller.file_id NOT LIKE '%/helpers/%' AND caller.file_id NOT LIKE 'helpers/%'), test_constructed AS (SELECT DISTINCT ct.symbol_id FROM constructed ct JOIN code.symbols caller ON caller.symbol_id = ct.caller_symbol_id WHERE caller.file_id LIKE '%tests/%' OR caller.file_id LIKE 'tests/%' OR caller.file_id LIKE '%conftest.py' OR caller.file_id LIKE '%/helpers/%' OR caller.file_id LIKE 'helpers/%') SELECT ac.symbol_id AS class_symbol_id FROM agent_classes ac JOIN non_test_constructed ntc ON ntc.symbol_id = ac.symbol_id LEFT JOIN test_constructed tc ON tc.symbol_id = ac.symbol_id WHERE tc.symbol_id IS NULL ORDER BY ac.symbol_id",
+      "error": null
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 1076,
+    "completion_tokens": 524,
+    "total_tokens": 1600,
+    "cost": 0.000611,
+    "providers": [
+      "SiliconFlow"
+    ]
+  },
+  "request": "Consider the agent classes defined in non-test code that directly subclass BaseAgent from auto_ontology/retrieval/text_to_sql/base.py (every file under a tests/ folder, conftest.py and helpers included, is test code). Which of these agent classes are constructed (the class is called by name, e.g. ResponseAgent()) somewhere in non-test code but are never constructed anywhere in test code? Count only direct constructor calls written in a function or method body; patching or referencing a class without calling it does not count, and a test that calls a function which constructs the class does not count as constructing it. Return their class symbol IDs.\n\nRequested output columns: class_symbol_id (string).",
+  "explanation": "Finds BaseAgent in the specified file, gets its direct subclasses via class_bases, and filters to non-test files. It then finds classes with direct constructor calls from non-test callers and excludes any that also have direct constructor calls from test code, returning the remaining class symbol IDs.",
+  "sql": "WITH base AS (SELECT symbol_id FROM code.symbols WHERE name = 'BaseAgent' AND file_id = 'auto_ontology/retrieval/text_to_sql/base.py'), direct_subclasses AS (SELECT cb.class_symbol_id FROM code.class_bases cb JOIN base b ON cb.base_symbol_id = b.symbol_id), agent_classes AS (SELECT s.symbol_id, s.file_id FROM direct_subclasses ds JOIN code.symbols s ON s.symbol_id = ds.class_symbol_id WHERE s.file_id NOT LIKE '%tests/%' AND s.file_id NOT LIKE '%/tests/%' AND s.file_id NOT LIKE 'tests/%' AND s.file_id NOT LIKE '%conftest.py' AND s.file_id NOT LIKE '%/helpers/%' AND s.file_id NOT LIKE 'helpers/%'), constructed AS (SELECT DISTINCT c.callee_symbol_id AS symbol_id, c.caller_symbol_id FROM code.calls c WHERE c.call_kind = 'direct' AND c.callee_symbol_id IN (SELECT symbol_id FROM agent_classes)), non_test_constructed AS (SELECT DISTINCT ct.symbol_id FROM constructed ct JOIN code.symbols caller ON caller.symbol_id = ct.caller_symbol_id WHERE caller.file_id NOT LIKE '%tests/%' AND caller.file_id NOT LIKE '%/tests/%' AND caller.file_id NOT LIKE 'tests/%' AND caller.file_id NOT LIKE '%conftest.py' AND caller.file_id NOT LIKE '%/helpers/%' AND caller.file_id NOT LIKE 'helpers/%'), test_constructed AS (SELECT DISTINCT ct.symbol_id FROM constructed ct JOIN code.symbols caller ON caller.symbol_id = ct.caller_symbol_id WHERE caller.file_id LIKE '%tests/%' OR caller.file_id LIKE 'tests/%' OR caller.file_id LIKE '%conftest.py' OR caller.file_id LIKE '%/helpers/%' OR caller.file_id LIKE 'helpers/%') SELECT ac.symbol_id AS class_symbol_id FROM agent_classes ac JOIN non_test_constructed ntc ON ntc.symbol_id = ac.symbol_id LEFT JOIN test_constructed tc ON tc.symbol_id = ac.symbol_id WHERE tc.symbol_id IS NULL ORDER BY ac.symbol_id",
+  "rows": [
+    {
+      "class_symbol_id": "auto_ontology/retrieval/entity_coverage/agents/coverage.py::CoverageGradeAgent"
+    },
+    {
+      "class_symbol_id": "auto_ontology/retrieval/text_to_sql/agents/empty_like_result_check.py::EmptyLikeResultCheckAgent"
+    },
+    {
+      "class_symbol_id": "auto_ontology/retrieval/text_to_sql/agents/join_path_check.py::JoinPathCheckAgent"
+    },
+    {
+      "class_symbol_id": "auto_ontology/retrieval/text_to_sql/agents/jsonb_path_check.py::JsonbPathCheckAgent"
+    },
+    {
+      "class_symbol_id": "auto_ontology/retrieval/text_to_sql/agents/kumo_prediction.py::KumoPredictionAgent"
+    },
+    {
+      "class_symbol_id": "auto_ontology/retrieval/text_to_sql/agents/prediction_graph.py::PredictionGraphAgent"
+    },
+    {
+      "class_symbol_id": "auto_ontology/retrieval/text_to_sql/agents/proactive_value_check.py::ProactiveValueCheckAgent"
+    },
+    {
+      "class_symbol_id": "auto_ontology/retrieval/text_to_sql/agents/response.py::ResponseAgent"
+    }
+  ]
+}

@@ -1,0 +1,160 @@
+[
+  {
+    "id": "ao-01",
+    "sql": "SELECT b.class_symbol_id, s.name AS method_name\nFROM code.class_bases b\nJOIN code.symbols c ON c.symbol_id = b.class_symbol_id\nJOIN code.symbols s ON s.file_id = c.file_id AND s.kind = 'method' AND s.qualname = c.qualname || '.' || s.name\nWHERE b.base_symbol_id = 'auto_ontology/connectors/base.py::SQLDatabase'\n  AND c.file_id NOT LIKE '%tests/%'\n  AND s.name NOT LIKE '\\_%' ESCAPE '\\'\n  AND s.name NOT IN (SELECT name FROM code.symbols WHERE kind = 'method' AND qualname LIKE 'SQLDatabase.%' AND file_id = 'auto_ontology/connectors/base.py')\nGROUP BY 1, 2",
+    "row_count": 14,
+    "ambiguities": [
+      {
+        "issue": "Whether the test-only subclass auto_ontology/connectors/tests/test_base.py::_Fake would contribute rows if test code were not excluded",
+        "chosen": "Excluded as instructed",
+        "alternative_row_count": 14
+      },
+      {
+        "issue": "'SQLDatabase does not define' compared by method name against SQLDatabase's own methods (incl. abstract and properties); private SQLDatabase helpers irrelevant since only public names are listed",
+        "chosen": "Name comparison against SQLDatabase.* methods",
+        "alternative_row_count": 14
+      }
+    ]
+  },
+  {
+    "id": "ao-02",
+    "sql": "SELECT DISTINCT callee_symbol_id AS symbol_id\nFROM code.calls\nWHERE caller_symbol_id = 'auto_ontology/retrieval/text_to_sql/text_to_sql_graph.py::create_graph'\n  AND call_kind = 'callback' AND callee_symbol_id IS NOT NULL",
+    "row_count": 9,
+    "ambiguities": [
+      {
+        "issue": "Some router functions are passed only inside the prediction_enabled if/else branches (route_question_type_or_evidence, route_decision, route_evidence_refinement); a reader could list only those passed unconditionally",
+        "chosen": "All branches of create_graph's source (9)",
+        "alternative_row_count": 6
+      }
+    ]
+  },
+  {
+    "id": "ao-03",
+    "sql": "WITH h1 AS (\n  SELECT DISTINCT caller_symbol_id AS s FROM code.calls\n  WHERE callee_symbol_id = 'auto_ontology/utils/llm_invoke.py::invoke_with_structured_output' AND call_kind = 'direct'),\nh2 AS (\n  SELECT DISTINCT c.caller_symbol_id AS s FROM code.calls c JOIN h1 ON c.callee_symbol_id = h1.s\n  WHERE c.call_kind = 'direct')\nSELECT h2.s AS symbol_id\nFROM h2 JOIN code.symbols sy ON sy.symbol_id = h2.s JOIN code.files f ON f.file_id = sy.file_id\nWHERE NOT f.is_test AND h2.s NOT IN (SELECT s FROM h1)",
+    "row_count": 13,
+    "ambiguities": [
+      {
+        "issue": "PiiDetector.detect calls self._backend.classify, which at runtime is LlmPiiClassifier.classify (a direct caller of the wrapper); statically this is a dynamic_attribute call with no resolved callee",
+        "chosen": "Only statically resolved direct call edges",
+        "alternative_row_count": 14
+      },
+      {
+        "issue": "Second hop including callback edges, or only high-confidence edges, or only non-test intermediates",
+        "chosen": "Direct edges of any confidence, intermediates anywhere",
+        "alternative_row_count": 13
+      }
+    ]
+  },
+  {
+    "id": "ao-04",
+    "sql": "WITH agents AS (\n  SELECT b.class_symbol_id AS c FROM code.class_bases b\n  JOIN code.symbols s ON s.symbol_id = b.class_symbol_id JOIN code.files f ON f.file_id = s.file_id\n  WHERE b.base_symbol_id = 'auto_ontology/retrieval/text_to_sql/base.py::BaseAgent' AND NOT f.is_test),\nctor AS (\n  SELECT k.callee_symbol_id AS c, f.is_test FROM code.calls k\n  JOIN code.symbols cs ON cs.symbol_id = k.caller_symbol_id JOIN code.files f ON f.file_id = cs.file_id\n  WHERE k.call_kind = 'direct')\nSELECT a.c AS class_symbol_id FROM agents a\nWHERE EXISTS (SELECT 1 FROM ctor WHERE ctor.c = a.c AND NOT ctor.is_test)\n  AND NOT EXISTS (SELECT 1 FROM ctor WHERE ctor.c = a.c AND ctor.is_test)",
+    "row_count": 8,
+    "ambiguities": [
+      {
+        "issue": "'Constructed anywhere in test code' read transitively: tests call text_to_sql create_graph() and CombinedPrecheckAgent(), which construct ResponseAgent, EmptyLikeResultCheckAgent, KumoPredictionAgent, PredictionGraphAgent, JoinPathCheckAgent, JsonbPathCheckAgent and ProactiveValueCheckAgent",
+        "chosen": "Direct constructor calls only (as the wording 'called by name' implies)",
+        "alternative_row_count": 1
+      }
+    ]
+  },
+  {
+    "id": "ao-05",
+    "sql": "SELECT DISTINCT i.file_id AS file_path\nFROM code.imports i JOIN code.files f ON f.file_id = i.file_id\nWHERE NOT f.is_test\n  AND i.file_id NOT LIKE 'auto_ontology/connectors/%'\n  AND (i.module_name = 'auto_ontology.connectors' OR i.module_name LIKE 'auto_ontology.connectors.%'\n       OR i.imported_file_id LIKE 'auto_ontology/connectors/%')",
+    "row_count": 23,
+    "ambiguities": [
+      {
+        "issue": "Whether files outside the auto_ontology package (dev_tools/fixtures/seed_graph_fixture.py, dev_tools/local_ingest.py) count as 'files outside the connectors folder'",
+        "chosen": "Included (whole repository)",
+        "alternative_row_count": 21
+      }
+    ]
+  },
+  {
+    "id": "ao-06",
+    "sql": "SELECT s.symbol_id\nFROM code.class_bases b\nJOIN code.symbols c ON c.symbol_id = b.class_symbol_id\nJOIN code.symbols s ON s.file_id = c.file_id AND s.kind = 'method' AND s.qualname = c.qualname || '.get_columns'\nWHERE b.base_symbol_id = 'auto_ontology/connectors/base.py::SQLDatabase'\n  AND c.file_id NOT LIKE '%tests/%'\n  AND (s.summary IS NULL OR s.summary = '')",
+    "row_count": 7,
+    "ambiguities": [
+      {
+        "issue": "SnowflakeDatabase.get_columns begins with a # comment block but has no docstring; a reader treating a leading comment as documentation would drop it",
+        "chosen": "Only a docstring counts; comment ignored",
+        "alternative_row_count": 6
+      }
+    ]
+  },
+  {
+    "id": "ao-07",
+    "sql": "SELECT DISTINCT k.caller_symbol_id AS symbol_id\nFROM code.calls k JOIN code.symbols sy ON sy.symbol_id = k.caller_symbol_id JOIN code.files f ON f.file_id = sy.file_id\nWHERE k.callee_symbol_id = 'auto_ontology/dal/session.py::write_transaction' AND k.call_kind = 'direct'\n  AND NOT f.is_test AND sy.file_id NOT LIKE 'auto_ontology/dal/%'\n  AND NOT EXISTS (SELECT 1 FROM code.calls k2 WHERE k2.caller_symbol_id = k.caller_symbol_id\n                  AND k2.callee_symbol_id = 'auto_ontology/dal/session.py::store' AND k2.call_kind = 'direct')",
+    "row_count": 5,
+    "ambiguities": [
+      {
+        "issue": "store()/write_transaction called through the module alias pg_session.store / pg_session.write_transaction",
+        "chosen": "Counted as direct calls (resolved by import)",
+        "alternative_row_count": 5
+      }
+    ]
+  },
+  {
+    "id": "ao-08",
+    "sql": "SELECT s.symbol_id, COUNT(DISTINCT k.caller_symbol_id)::INTEGER AS caller_count\nFROM code.symbols s JOIN code.files f ON f.file_id = s.file_id\nJOIN code.calls k ON k.callee_symbol_id = s.symbol_id AND k.call_kind = 'direct'\nJOIN code.symbols cs ON cs.symbol_id = k.caller_symbol_id JOIN code.files cf ON cf.file_id = cs.file_id\nWHERE s.kind = 'function' AND s.file_id LIKE 'auto_ontology/dal/%' AND NOT f.is_test\n  AND s.file_id <> 'auto_ontology/dal/session.py'\n  AND NOT cf.is_test AND cs.file_id NOT LIKE 'auto_ontology/dal/%'\nGROUP BY s.symbol_id\nORDER BY caller_count DESC, s.symbol_id ASC\nLIMIT 5",
+    "row_count": 5,
+    "ambiguities": [
+      {
+        "issue": "Tie at the 5th place: fetch_schemas_by_ids, fetch_all_terms and fetch_column_attributes_by_term_id all have 6 callers; 'five' with the symbol-ID tie-break keeps only fetch_schemas_by_ids, while a with-ties reading returns all three",
+        "chosen": "Strict top 5 by count desc, symbol_id asc",
+        "alternative_row_count": 7
+      },
+      {
+        "issue": "Including callback references as callers, or including test callers (assemble_export_document jumps to 12 with tests)",
+        "chosen": "Direct calls from non-test callers only (as worded)",
+        "alternative_row_count": 5
+      }
+    ]
+  },
+  {
+    "id": "ao-09",
+    "sql": "SELECT DISTINCT test_file_id AS test_file_path\nFROM code.test_links WHERE target_file_id = 'auto_ontology/semantic/visit_enter.py'",
+    "row_count": 3,
+    "ambiguities": [
+      {
+        "issue": "Distinct test files vs one row per (file, association reason): test_visit_enter.py is linked both by import and by name match",
+        "chosen": "Distinct file paths",
+        "alternative_row_count": 4
+      },
+      {
+        "issue": "auto_ontology/dal/tests/test_column_properties.py mentions visit_enter only in its docstring",
+        "chosen": "Excluded (not an import)",
+        "alternative_row_count": 3
+      }
+    ]
+  },
+  {
+    "id": "ao-10",
+    "sql": "SELECT 'auto_ontology/server/' || split_part(file_id, '/', 3) AS folder_path, SUM(line_count)::INTEGER AS total_lines\nFROM code.files WHERE file_id LIKE 'auto_ontology/server/%/%'\nGROUP BY 1 HAVING SUM(line_count) > 1000",
+    "row_count": 4,
+    "ambiguities": [
+      {
+        "issue": "Counting only non-test lines would drop model_interchange (812), rules (874) and search (563)",
+        "chosen": "All .py files including tests, as worded",
+        "alternative_row_count": 1
+      }
+    ]
+  },
+  {
+    "id": "ao-11",
+    "sql": "SELECT s.kind, COUNT(*)::INTEGER AS public_count\nFROM code.symbols s JOIN code.files f ON f.file_id = s.file_id\nWHERE s.file_id LIKE 'auto_ontology/retrieval/kumo/%' AND NOT f.is_test AND s.is_public\nGROUP BY s.kind",
+    "row_count": 3,
+    "ambiguities": []
+  },
+  {
+    "id": "ao-12",
+    "sql": "WITH RECURSIVE chain(c, d) AS (\n  SELECT class_symbol_id, 1 FROM code.class_bases WHERE base_symbol_id = 'auto_ontology/server/models.py::ApiModel'\n  UNION ALL\n  SELECT b.class_symbol_id, chain.d + 1 FROM code.class_bases b JOIN chain ON b.base_symbol_id = chain.c WHERE chain.d < 20)\nSELECT c AS class_symbol_id, MIN(d)::INTEGER AS depth FROM chain GROUP BY c HAVING MIN(d) >= 2",
+    "row_count": 5,
+    "ambiguities": [
+      {
+        "issue": "Classes whose only path is via an unresolved/external base; generic subscript ListResponse[T] resolved to ListResponse",
+        "chosen": "Static base resolution; subscripted base counted as its class",
+        "alternative_row_count": 5
+      }
+    ]
+  }
+]

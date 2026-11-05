@@ -1,0 +1,42 @@
+{
+  "question_id": "ao-07",
+  "arm": "B",
+  "model": "deepseek/deepseek-v4.1-flash-1017",
+  "error": null,
+  "elapsed_s": 1.53,
+  "attempts": [
+    {
+      "sql": "SELECT DISTINCT s.symbol_id FROM code.symbols s WHERE s.kind IN ('function','method') AND s.file_id NOT LIKE 'auto_ontology/dal/%' AND s.file_id NOT LIKE '%tests/%' AND s.file_id NOT LIKE 'tests/%' AND EXISTS (SELECT 1 FROM code.calls c WHERE c.caller_symbol_id = s.symbol_id AND c.callee_name LIKE '%write_transaction%') AND NOT EXISTS (SELECT 1 FROM code.calls c2 WHERE c2.caller_symbol_id = s.symbol_id AND c2.callee_name LIKE '%store%')",
+      "error": null
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 2771,
+    "completion_tokens": 181,
+    "total_tokens": 2952,
+    "cost": 0.000124118,
+    "providers": [
+      "Wafer"
+    ]
+  },
+  "request": "auto_ontology/dal/session.py provides store() (the active connection handle) and write_transaction() (a context manager that groups store() queries into one transaction). Outside the auto_ontology/dal/ folder, and excluding test code (every file under a tests/ folder), which functions or methods open a transaction themselves by calling write_transaction directly (e.g. `with write_transaction():`) but never call store() directly anywhere in their own body? Only direct calls count; calls made by helpers they invoke do not. Return their symbol IDs.\n\nRequested output columns: symbol_id (string).",
+  "explanation": "Finds functions/methods outside auto_ontology/dal and outside tests/ that have a direct call to write_transaction but no direct call to store in their own body. Returns their symbol IDs.",
+  "sql": "SELECT DISTINCT s.symbol_id FROM code.symbols s WHERE s.kind IN ('function','method') AND s.file_id NOT LIKE 'auto_ontology/dal/%' AND s.file_id NOT LIKE '%tests/%' AND s.file_id NOT LIKE 'tests/%' AND EXISTS (SELECT 1 FROM code.calls c WHERE c.caller_symbol_id = s.symbol_id AND c.callee_name LIKE '%write_transaction%') AND NOT EXISTS (SELECT 1 FROM code.calls c2 WHERE c2.caller_symbol_id = s.symbol_id AND c2.callee_name LIKE '%store%')",
+  "rows": [
+    {
+      "symbol_id": "auto_ontology/server/tags/router.py::detach_tag"
+    },
+    {
+      "symbol_id": "auto_ontology/server/rules/router.py::create_rule"
+    },
+    {
+      "symbol_id": "auto_ontology/catalog/write.py::populate_pks"
+    },
+    {
+      "symbol_id": "auto_ontology/catalog/store/schemas.py::add_schemas_edge"
+    },
+    {
+      "symbol_id": "auto_ontology/catalog/write.py::populate_fks"
+    }
+  ]
+}

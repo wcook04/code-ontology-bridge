@@ -1,0 +1,88 @@
+{
+  "question_id": "ao-01",
+  "arm": "S",
+  "model": "deepseek/deepseek-v4.1-flash-1017",
+  "error": null,
+  "elapsed_s": 5.55,
+  "attempts": [
+    {
+      "sql": "SELECT DISTINCT cb.class_symbol_id, s.name AS method_name\nFROM code.class_bases cb\nJOIN code.symbols base ON base.symbol_id = cb.base_symbol_id\nJOIN code.symbols cls ON cls.symbol_id = cb.class_symbol_id\nJOIN code.files cf ON cf.file_id = cls.file_id\nJOIN code.symbols s ON s.enclosing_class_symbol_id = cb.class_symbol_id\nWHERE base.qualname = 'SQLDatabase'\n  AND base.file_id = 'auto_ontology/connectors/base.py'\n  AND base.kind = 'class'\n  AND cls.kind = 'class'\n  AND cf.is_test = FALSE\n  AND cf.file_id NOT LIKE '%/tests/%'\n  AND cf.file_id NOT LIKE 'tests/%'\n  AND s.kind = 'method'\n  AND s.name NOT LIKE '\\_%' ESCAPE '\\'\n  AND NOT EXISTS (\n    SELECT 1 FROM code.symbols m\n    WHERE m.enclosing_class_symbol_id = base.symbol_id\n      AND m.kind = 'method'\n      AND m.name = s.name\n  )\nORDER BY cb.class_symbol_id, s.name",
+      "error": "Binder Error: Table \"s\" does not have a column named \"enclosing_class_symbol_id\""
+    },
+    {
+      "sql": "SELECT DISTINCT cb.class_symbol_id, m.name AS method_name\nFROM code.class_bases cb\nJOIN code.symbols base ON base.symbol_id = cb.base_symbol_id\nJOIN code.symbols cls ON cls.symbol_id = cb.class_symbol_id\nJOIN code.files cf ON cf.file_id = cls.file_id\nJOIN code.symbol_profile m ON m.enclosing_class_symbol_id = cb.class_symbol_id\nWHERE base.qualname = 'SQLDatabase'\n  AND base.file_id = 'auto_ontology/connectors/base.py'\n  AND base.kind = 'class'\n  AND cls.kind = 'class'\n  AND cf.is_test = FALSE\n  AND cf.file_id NOT LIKE '%/tests/%'\n  AND cf.file_id NOT LIKE 'tests/%'\n  AND m.kind = 'method'\n  AND m.name NOT LIKE '\\_%' ESCAPE '\\'\n  AND NOT EXISTS (\n    SELECT 1 FROM code.symbol_profile bm\n    WHERE bm.enclosing_class_symbol_id = base.symbol_id\n      AND bm.kind = 'method'\n      AND bm.name = m.name\n  )\nORDER BY cb.class_symbol_id, m.name",
+      "error": null
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 11399,
+    "completion_tokens": 698,
+    "total_tokens": 12097,
+    "cost": 0.00044944692,
+    "providers": [
+      "Decart",
+      "Decart"
+    ]
+  },
+  "request": "The production database connectors are the classes that directly subclass SQLDatabase (defined in auto_ontology/connectors/base.py), excluding any class defined in test code (every file under a tests/ folder counts as test code). For each such connector class, which public methods does the class define in its own body that SQLDatabase itself does not define? A method is public when its name does not start with an underscore (so __init__ and other dunder methods are excluded); anything written with def directly in the class body counts as a method, including properties and context-manager methods. Methods inherited without being redefined do not count. Return one row per (connector class symbol ID, method name).\n\nRequested output columns: class_symbol_id (string), method_name (string).",
+  "explanation": "Finds classes whose direct base resolves to the SQLDatabase class defined in auto_ontology/connectors/base.py, restricted to non-test files (excluding any path under a tests/ folder). For each such class it lists methods defined directly in the class body whose names do not start with an underscore and that SQLDatabase does not itself define as a method.",
+  "sql": "SELECT DISTINCT cb.class_symbol_id, m.name AS method_name\nFROM code.class_bases cb\nJOIN code.symbols base ON base.symbol_id = cb.base_symbol_id\nJOIN code.symbols cls ON cls.symbol_id = cb.class_symbol_id\nJOIN code.files cf ON cf.file_id = cls.file_id\nJOIN code.symbol_profile m ON m.enclosing_class_symbol_id = cb.class_symbol_id\nWHERE base.qualname = 'SQLDatabase'\n  AND base.file_id = 'auto_ontology/connectors/base.py'\n  AND base.kind = 'class'\n  AND cls.kind = 'class'\n  AND cf.is_test = FALSE\n  AND cf.file_id NOT LIKE '%/tests/%'\n  AND cf.file_id NOT LIKE 'tests/%'\n  AND m.kind = 'method'\n  AND m.name NOT LIKE '\\_%' ESCAPE '\\'\n  AND NOT EXISTS (\n    SELECT 1 FROM code.symbol_profile bm\n    WHERE bm.enclosing_class_symbol_id = base.symbol_id\n      AND bm.kind = 'method'\n      AND bm.name = m.name\n  )\nORDER BY cb.class_symbol_id, m.name",
+  "rows": [
+    {
+      "class_symbol_id": "auto_ontology/connectors/clickhouse.py::ClickHouseDatabase",
+      "method_name": "ping"
+    },
+    {
+      "class_symbol_id": "auto_ontology/connectors/databricks.py::DatabricksDatabase",
+      "method_name": "auth_mode"
+    },
+    {
+      "class_symbol_id": "auto_ontology/connectors/databricks.py::DatabricksDatabase",
+      "method_name": "get_schemas"
+    },
+    {
+      "class_symbol_id": "auto_ontology/connectors/databricks.py::DatabricksDatabase",
+      "method_name": "ping"
+    },
+    {
+      "class_symbol_id": "auto_ontology/connectors/databricks.py::DatabricksDatabase",
+      "method_name": "reuse_connection"
+    },
+    {
+      "class_symbol_id": "auto_ontology/connectors/heavydb.py::HeavyDBDatabase",
+      "method_name": "ping"
+    },
+    {
+      "class_symbol_id": "auto_ontology/connectors/kyuubi.py::KyuubiDatabase",
+      "method_name": "get_schemas"
+    },
+    {
+      "class_symbol_id": "auto_ontology/connectors/kyuubi.py::KyuubiDatabase",
+      "method_name": "ping"
+    },
+    {
+      "class_symbol_id": "auto_ontology/connectors/mysql.py::MySQLDatabase",
+      "method_name": "ping"
+    },
+    {
+      "class_symbol_id": "auto_ontology/connectors/postgres.py::PostgresDatabase",
+      "method_name": "ping"
+    },
+    {
+      "class_symbol_id": "auto_ontology/connectors/snowflake.py::SnowflakeDatabase",
+      "method_name": "get_schemas"
+    },
+    {
+      "class_symbol_id": "auto_ontology/connectors/snowflake.py::SnowflakeDatabase",
+      "method_name": "ping"
+    },
+    {
+      "class_symbol_id": "auto_ontology/connectors/trino.py::TrinoDatabase",
+      "method_name": "get_schemas"
+    },
+    {
+      "class_symbol_id": "auto_ontology/connectors/trino.py::TrinoDatabase",
+      "method_name": "ping"
+    }
+  ]
+}

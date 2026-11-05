@@ -1,0 +1,26 @@
+{
+  "question_id": "ao-12",
+  "arm": "S",
+  "model": "nvidia/nemotron-3.5-lightning",
+  "error": null,
+  "elapsed_s": 1.27,
+  "attempts": [
+    {
+      "sql": "WITH RECURSIVE ancestry AS (\n  SELECT class_symbol_id, base_symbol_id AS ancestor, 1 AS depth\n  FROM code.class_bases\n  WHERE base_name = 'ApiModel'\n\n  UNION ALL\n\n  SELECT a.class_symbol_id, c.base_symbol_id, a.depth + 1\n  FROM ancestry a\n  JOIN code.class_bases c ON a.ancestor = c.class_symbol_id\n  WHERE c.base_name != 'ApiModel'\n)\nSELECT class_symbol_id, MIN(depth) AS depth\nFROM ancestry\nGROUP BY class_symbol_id\nHAVING MIN(depth) > 1\nORDER BY depth, class_symbol_id",
+      "error": null
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 5430,
+    "completion_tokens": 233,
+    "total_tokens": 5663,
+    "cost": 0.0002683,
+    "providers": [
+      "CoreWeave"
+    ]
+  },
+  "request": "Which classes inherit from ApiModel (auto_ontology/server/models.py) only indirectly, i.e. through at least one intermediate class of this repository, and do not name ApiModel directly in their class statement? An import alias of ApiModel (auto_ontology/server/responses.py imports it as _Payload) counts as naming ApiModel directly, and a subscripted base such as ListResponse[T] counts as its class. For each, give the class symbol ID and the length of the shortest inheritance chain to ApiModel (2 when the parent class directly subclasses ApiModel).\n\nRequested output columns: class_symbol_id (string), depth (integer).",
+  "explanation": "The recursive CTE starts from class_bases where base_name is 'ApiModel' (depth 1), then follows further base classes that are not ApiModel itself. The final HAVING clause filters to classes whose shortest path to ApiModel is longer than 1, meaning they inherit indirectly through at least one intermediate class. The MIN(depth) gives the shortest chain length.",
+  "sql": "WITH RECURSIVE ancestry AS (\n  SELECT class_symbol_id, base_symbol_id AS ancestor, 1 AS depth\n  FROM code.class_bases\n  WHERE base_name = 'ApiModel'\n\n  UNION ALL\n\n  SELECT a.class_symbol_id, c.base_symbol_id, a.depth + 1\n  FROM ancestry a\n  JOIN code.class_bases c ON a.ancestor = c.class_symbol_id\n  WHERE c.base_name != 'ApiModel'\n)\nSELECT class_symbol_id, MIN(depth) AS depth\nFROM ancestry\nGROUP BY class_symbol_id\nHAVING MIN(depth) > 1\nORDER BY depth, class_symbol_id",
+  "rows": []
+}

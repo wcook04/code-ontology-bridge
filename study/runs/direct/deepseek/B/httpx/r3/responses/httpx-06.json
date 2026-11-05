@@ -1,0 +1,26 @@
+{
+  "question_id": "httpx-06",
+  "arm": "B",
+  "model": "deepseek/deepseek-v4.1-flash-1017",
+  "error": null,
+  "elapsed_s": 4.26,
+  "attempts": [
+    {
+      "sql": "SELECT s.symbol_id, COUNT(*) AS method_count FROM code.symbols s JOIN code.files f ON f.file_id = s.file_id WHERE s.kind = 'class' AND f.is_test = FALSE AND EXISTS (SELECT 1 FROM code.symbols m WHERE m.file_id = s.file_id AND m.kind = 'method' AND m.qualname LIKE s.qualname || '.%' AND m.qualname NOT LIKE s.qualname || '.%' || '.%') GROUP BY s.symbol_id HAVING COUNT(*) >= 20 ORDER BY method_count DESC, s.symbol_id ASC",
+      "error": null
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 2741,
+    "completion_tokens": 192,
+    "total_tokens": 2933,
+    "cost": 0.00012341,
+    "providers": [
+      "OpenInference"
+    ]
+  },
+  "request": "Which classes in the non-test code define at least 20 methods directly in their own body? Count every method definition separately (a property getter and its setter count as two; inherited methods and methods of nested classes do not count). Return each class's symbol ID and its method count, largest count first, ties broken by symbol ID alphabetically.\n\nRequested output columns: symbol_id (string), method_count (integer). Order the rows as the question asks.",
+  "explanation": "Counts method symbols whose qualname is directly under each class's qualname (one extra dot segment), excluding nested-class methods, in non-test files. Keeps classes with at least 20 such methods and orders by count descending then symbol ID.",
+  "sql": "SELECT s.symbol_id, COUNT(*) AS method_count FROM code.symbols s JOIN code.files f ON f.file_id = s.file_id WHERE s.kind = 'class' AND f.is_test = FALSE AND EXISTS (SELECT 1 FROM code.symbols m WHERE m.file_id = s.file_id AND m.kind = 'method' AND m.qualname LIKE s.qualname || '.%' AND m.qualname NOT LIKE s.qualname || '.%' || '.%') GROUP BY s.symbol_id HAVING COUNT(*) >= 20 ORDER BY method_count DESC, s.symbol_id ASC",
+  "rows": []
+}

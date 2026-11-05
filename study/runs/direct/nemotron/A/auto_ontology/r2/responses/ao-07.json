@@ -1,0 +1,26 @@
+{
+  "question_id": "ao-07",
+  "arm": "A",
+  "model": "nvidia/nemotron-3.5-lightning",
+  "error": null,
+  "elapsed_s": 2.8,
+  "attempts": [
+    {
+      "sql": "SELECT DISTINCT s.symbol_id FROM code.symbols s WHERE s.file_id IN (SELECT f.file_id FROM code.files f WHERE f.package = 'auto_ontology.dal.session' AND f.module = 'session') AND s.kind IN ('function', 'method') AND s.symbol_id NOT IN (SELECT DISTINCT caller_symbol_id FROM code.calls WHERE callee_symbol_id IN (SELECT symbol_id FROM code.symbols WHERE file_id IN (SELECT file_id FROM code.files WHERE package = 'auto_ontology.dal.session' AND module = 'session'))) AND s.symbol_id NOT IN (SELECT DISTINCT caller_symbol_id FROM code.calls WHERE callee_name = 'store' AND callee_symbol_id IN (SELECT symbol_id FROM code.symbols WHERE file_id IN (SELECT file_id FROM code.files WHERE package = 'auto_ontology.dal.session' AND module = 'session'))) AND s.symbol_id NOT IN (SELECT DISTINCT caller_symbol_id FROM code.calls WHERE callee_name = 'write_transaction' AND callee_symbol_id IN (SELECT symbol_id FROM code.symbols WHERE file_id IN (SELECT file_id FROM code.files WHERE package = 'auto_ontology.dal.session' AND module = 'session')))",
+      "error": null
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 610,
+    "completion_tokens": 338,
+    "total_tokens": 948,
+    "cost": 0.0001103,
+    "providers": [
+      "CoreWeave"
+    ]
+  },
+  "request": "auto_ontology/dal/session.py provides store() (the active connection handle) and write_transaction() (a context manager that groups store() queries into one transaction). Outside the auto_ontology/dal/ folder, and excluding test code (every file under a tests/ folder), which functions or methods open a transaction themselves by calling write_transaction directly (e.g. `with write_transaction():`) but never call store() directly anywhere in their own body? Only direct calls count; calls made by helpers they invoke do not. Return their symbol IDs.\n\nRequested output columns: symbol_id (string).",
+  "explanation": "The query identifies symbols in auto_ontology/dal/session.py that are functions or methods, then filters out any that call store() or write_transaction() directly within their own body, excluding helpers they invoke. It ensures only symbols that open a transaction via write_transaction but never call store() themselves are returned.",
+  "sql": "SELECT DISTINCT s.symbol_id FROM code.symbols s WHERE s.file_id IN (SELECT f.file_id FROM code.files f WHERE f.package = 'auto_ontology.dal.session' AND f.module = 'session') AND s.kind IN ('function', 'method') AND s.symbol_id NOT IN (SELECT DISTINCT caller_symbol_id FROM code.calls WHERE callee_symbol_id IN (SELECT symbol_id FROM code.symbols WHERE file_id IN (SELECT file_id FROM code.files WHERE package = 'auto_ontology.dal.session' AND module = 'session'))) AND s.symbol_id NOT IN (SELECT DISTINCT caller_symbol_id FROM code.calls WHERE callee_name = 'store' AND callee_symbol_id IN (SELECT symbol_id FROM code.symbols WHERE file_id IN (SELECT file_id FROM code.files WHERE package = 'auto_ontology.dal.session' AND module = 'session'))) AND s.symbol_id NOT IN (SELECT DISTINCT caller_symbol_id FROM code.calls WHERE callee_name = 'write_transaction' AND callee_symbol_id IN (SELECT symbol_id FROM code.symbols WHERE file_id IN (SELECT file_id FROM code.files WHERE package = 'auto_ontology.dal.session' AND module = 'session')))",
+  "rows": []
+}

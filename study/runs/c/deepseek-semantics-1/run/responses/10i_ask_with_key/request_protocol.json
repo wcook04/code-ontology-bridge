@@ -1,0 +1,178 @@
+{
+  "contracts": {
+    "protocol": "study-v1",
+    "instruction": "Return exactly the requested output columns, using each requested name as the column alias, in the requested order. Return complete repository-relative file paths and complete symbol IDs exactly as stored. When the question asks which files, symbols or modules, return each distinct one once unless it asks for occurrences.",
+    "questions": {
+      "1": {
+        "fields": [
+          {
+            "name": "class_symbol_id",
+            "type": "string"
+          },
+          {
+            "name": "method_name",
+            "type": "string"
+          }
+        ],
+        "ordered": false,
+        "guidance": ""
+      },
+      "2": {
+        "fields": [
+          {
+            "name": "symbol_id",
+            "type": "string"
+          }
+        ],
+        "ordered": false,
+        "guidance": ""
+      },
+      "3": {
+        "fields": [
+          {
+            "name": "symbol_id",
+            "type": "string"
+          }
+        ],
+        "ordered": false,
+        "guidance": ""
+      },
+      "4": {
+        "fields": [
+          {
+            "name": "class_symbol_id",
+            "type": "string"
+          }
+        ],
+        "ordered": false,
+        "guidance": ""
+      },
+      "5": {
+        "fields": [
+          {
+            "name": "file_path",
+            "type": "string"
+          }
+        ],
+        "ordered": false,
+        "guidance": ""
+      },
+      "6": {
+        "fields": [
+          {
+            "name": "symbol_id",
+            "type": "string"
+          }
+        ],
+        "ordered": false,
+        "guidance": ""
+      },
+      "7": {
+        "fields": [
+          {
+            "name": "symbol_id",
+            "type": "string"
+          }
+        ],
+        "ordered": false,
+        "guidance": ""
+      },
+      "8": {
+        "fields": [
+          {
+            "name": "symbol_id",
+            "type": "string"
+          },
+          {
+            "name": "caller_count",
+            "type": "integer"
+          }
+        ],
+        "ordered": true,
+        "guidance": "Order the rows as the question asks."
+      },
+      "9": {
+        "fields": [
+          {
+            "name": "test_file_path",
+            "type": "string"
+          }
+        ],
+        "ordered": false,
+        "guidance": ""
+      },
+      "10": {
+        "fields": [
+          {
+            "name": "folder_path",
+            "type": "string"
+          },
+          {
+            "name": "total_lines",
+            "type": "integer"
+          }
+        ],
+        "ordered": false,
+        "guidance": ""
+      },
+      "11": {
+        "fields": [
+          {
+            "name": "kind",
+            "type": "string"
+          },
+          {
+            "name": "public_count",
+            "type": "integer"
+          }
+        ],
+        "ordered": false,
+        "guidance": ""
+      },
+      "12": {
+        "fields": [
+          {
+            "name": "class_symbol_id",
+            "type": "string"
+          },
+          {
+            "name": "depth",
+            "type": "integer"
+          }
+        ],
+        "ordered": false,
+        "guidance": ""
+      }
+    }
+  },
+  "calculation_only": true,
+  "workers": 3,
+  "question_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9,
+    10,
+    11,
+    12
+  ],
+  "questions": {
+    "1": "The production database connectors are the classes that directly subclass SQLDatabase (defined in auto_ontology/connectors/base.py), excluding any class defined in test code (every file under a tests/ folder counts as test code). For each such connector class, which public methods does the class define in its own body that SQLDatabase itself does not define? A method is public when its name does not start with an underscore (so __init__ and other dunder methods are excluded); anything written with def directly in the class body counts as a method, including properties and context-manager methods. Methods inherited without being redefined do not count. Return one row per (connector class symbol ID, method name).\n\nRequested output columns: class_symbol_id (string), method_name (string).\nReturn exactly the requested output columns, using each requested name as the column alias, in the requested order. Return complete repository-relative file paths and complete symbol IDs exactly as stored. When the question asks which files, symbols or modules, return each distinct one once unless it asks for occurrences.",
+    "2": "When the text-to-SQL LangGraph is assembled by create_graph in auto_ontology/retrieval/text_to_sql/text_to_sql_graph.py, which functions or methods of this repository does create_graph hand over by reference, i.e. pass the function object itself as an argument to another call (as with graph.add_conditional_edges(node, router_fn, ...)) rather than calling it? Count only plain names passed directly as call arguments; functions that create_graph calls itself, values that are the result of a call (such as _make_soft_check_router(...)), lambdas, and local variables holding nodes do not count. Functions passed only inside an if/else branch of create_graph count. Return each distinct function's symbol ID.\n\nRequested output columns: symbol_id (string).\nReturn exactly the requested output columns, using each requested name as the column alias, in the requested order. Return complete repository-relative file paths and complete symbol IDs exactly as stored. When the question asks which files, symbols or modules, return each distinct one once unless it asks for occurrences.",
+    "3": "invoke_with_structured_output in auto_ontology/utils/llm_invoke.py is the main structured-LLM-call wrapper. Which functions or methods in non-test code (every file under a tests/ folder is test code) reach it at exactly two hops: they do not call invoke_with_structured_output directly themselves, but they directly call at least one function or method that does call it directly? Consider direct calls only on both hops, and follow only calls to a named function or to a method on self (a call through another object's attribute, such as self._backend.classify(), is not followed); a function passed as an argument (e.g. pool.submit(f)) does not count as calling it. The intermediate function may live anywhere, including test code, but the functions you list must be in non-test code. Return their symbol IDs.\n\nRequested output columns: symbol_id (string).\nReturn exactly the requested output columns, using each requested name as the column alias, in the requested order. Return complete repository-relative file paths and complete symbol IDs exactly as stored. When the question asks which files, symbols or modules, return each distinct one once unless it asks for occurrences.",
+    "4": "Consider the agent classes defined in non-test code that directly subclass BaseAgent from auto_ontology/retrieval/text_to_sql/base.py (every file under a tests/ folder, conftest.py and helpers included, is test code). Which of these agent classes are constructed (the class is called by name, e.g. ResponseAgent()) somewhere in non-test code but are never constructed anywhere in test code? Count only direct constructor calls written in a function or method body; patching or referencing a class without calling it does not count, and a test that calls a function which constructs the class does not count as constructing it. Return their class symbol IDs.\n\nRequested output columns: class_symbol_id (string).\nReturn exactly the requested output columns, using each requested name as the column alias, in the requested order. Return complete repository-relative file paths and complete symbol IDs exactly as stored. When the question asks which files, symbols or modules, return each distinct one once unless it asks for occurrences.",
+    "5": "Which non-test Python files anywhere in the repository (including folders outside the auto_ontology package, such as dev_tools/) but outside the auto_ontology/connectors/ folder import anything from the connectors package (auto_ontology.connectors itself or any of its modules)? Count every import statement, including imports placed inside functions and imports under an `if TYPE_CHECKING:` guard; mentions in comments or docstrings are not imports. Every file under a tests/ folder is test code and is excluded. Return repository-relative file paths.\n\nRequested output columns: file_path (string).\nReturn exactly the requested output columns, using each requested name as the column alias, in the requested order. Return complete repository-relative file paths and complete symbol IDs exactly as stored. When the question asks which files, symbols or modules, return each distinct one once unless it asks for occurrences.",
+    "6": "Among the production database connector classes that directly subclass SQLDatabase (auto_ontology/connectors/base.py), excluding classes in test code (any file under a tests/ folder), which ones override get_columns with their own get_columns method that has no docstring of its own (a leading # comment is not a docstring)? Return the symbol ID of each such get_columns method.\n\nRequested output columns: symbol_id (string).\nReturn exactly the requested output columns, using each requested name as the column alias, in the requested order. Return complete repository-relative file paths and complete symbol IDs exactly as stored. When the question asks which files, symbols or modules, return each distinct one once unless it asks for occurrences.",
+    "7": "auto_ontology/dal/session.py provides store() (the active connection handle) and write_transaction() (a context manager that groups store() queries into one transaction). Outside the auto_ontology/dal/ folder, and excluding test code (every file under a tests/ folder), which functions or methods open a transaction themselves by calling write_transaction directly (e.g. `with write_transaction():`) but never call store() directly anywhere in their own body? Only direct calls count; calls made by helpers they invoke do not. Return their symbol IDs.\n\nRequested output columns: symbol_id (string).\nReturn exactly the requested output columns, using each requested name as the column alias, in the requested order. Return complete repository-relative file paths and complete symbol IDs exactly as stored. When the question asks which files, symbols or modules, return each distinct one once unless it asks for occurrences.",
+    "8": "Which five functions in the data-access layer are used most widely by the rest of the codebase? Consider module-level functions (not methods or classes) defined in non-test files under auto_ontology/dal/, excluding auto_ontology/dal/session.py. Rank them by the number of distinct functions or methods that call them directly, counting only callers that are in non-test files (every file under a tests/ folder is test code) located outside auto_ontology/dal/. Calls through a module alias (e.g. `dal.fetch_databases()` after `from auto_ontology.dal import datasources as dal`) or an import alias count; a function passed by reference without being called does not. Highest count first; break ties by symbol ID ascending and return exactly five rows. Return the symbol ID and the caller count.\n\nRequested output columns: symbol_id (string), caller_count (integer).\nReturn exactly the requested output columns, using each requested name as the column alias, in the requested order. Return complete repository-relative file paths and complete symbol IDs exactly as stored. When the question asks which files, symbols or modules, return each distinct one once unless it asks for occurrences.\nOrder the rows as the question asks.",
+    "9": "Which test files are statically associated with auto_ontology/semantic/visit_enter.py, meaning the test file imports that module (anywhere in the file, including inside a test function) or is named test_visit_enter.py? Mentions in comments or patch target strings do not count. Return each test file's repository-relative path once.\n\nRequested output columns: test_file_path (string).\nReturn exactly the requested output columns, using each requested name as the column alias, in the requested order. Return complete repository-relative file paths and complete symbol IDs exactly as stored. When the question asks which files, symbols or modules, return each distinct one once unless it asks for occurrences.",
+    "10": "Within auto_ontology/server/, which immediate subfolders contain more than 1,000 lines of Python in total? Count every .py file anywhere inside the subfolder, including its test files and __init__.py; files directly in auto_ontology/server/ itself belong to no subfolder. Return the subfolder's repository-relative path (e.g. auto_ontology/server/chat) and its total line count.\n\nRequested output columns: folder_path (string), total_lines (integer).\nReturn exactly the requested output columns, using each requested name as the column alias, in the requested order. Return complete repository-relative file paths and complete symbol IDs exactly as stored. When the question asks which files, symbols or modules, return each distinct one once unless it asks for occurrences.",
+    "11": "How many public classes, public module-level functions and public methods are defined in the non-test code of the auto_ontology/retrieval/kumo/ package (files under its tests/ folder excluded)? A name is public when it does not start with an underscore, so dunder methods such as __init__ are not public, and methods of a class whose name starts with an underscore are not public either. Nested functions and nested classes are not counted. Return one row per kind, with kind being 'class', 'function' or 'method'.\n\nRequested output columns: kind (string), public_count (integer).\nReturn exactly the requested output columns, using each requested name as the column alias, in the requested order. Return complete repository-relative file paths and complete symbol IDs exactly as stored. When the question asks which files, symbols or modules, return each distinct one once unless it asks for occurrences.",
+    "12": "Which classes inherit from ApiModel (auto_ontology/server/models.py) only indirectly, i.e. through at least one intermediate class of this repository, and do not name ApiModel directly in their class statement? An import alias of ApiModel (auto_ontology/server/responses.py imports it as _Payload) counts as naming ApiModel directly, and a subscripted base such as ListResponse[T] counts as its class. For each, give the class symbol ID and the length of the shortest inheritance chain to ApiModel (2 when the parent class directly subclasses ApiModel).\n\nRequested output columns: class_symbol_id (string), depth (integer).\nReturn exactly the requested output columns, using each requested name as the column alias, in the requested order. Return complete repository-relative file paths and complete symbol IDs exactly as stored. When the question asks which files, symbols or modules, return each distinct one once unless it asks for occurrences."
+  }
+}

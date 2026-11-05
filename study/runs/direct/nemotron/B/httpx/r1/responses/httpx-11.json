@@ -1,0 +1,26 @@
+{
+  "question_id": "httpx-11",
+  "arm": "B",
+  "model": "nvidia/nemotron-3.5-lightning",
+  "error": null,
+  "elapsed_s": 2.48,
+  "attempts": [
+    {
+      "sql": "SELECT s.symbol_id\nFROM code.symbols s\nJOIN code.files f ON s.file_id = f.file_id\nJOIN code.imports imp ON f.file_id = imp.file_id\nJOIN code.calls c ON s.symbol_id = c.caller_symbol_id\nWHERE f.file_id = 'tests/client/test_redirects.py'\n  AND s.kind = 'function'\n  AND s.name = 'redirects'\n  AND c.call_kind = 'callback'\n  AND c.confidence = 'low'\n  AND EXISTS (SELECT 1\n               FROM code.symbols client\n               WHERE client.file_id = f.file_id\n                 AND client.name = 'AsyncClient'\n                 AND client.kind = 'class')\nGROUP BY s.symbol_id\nHAVING COUNT(DISTINCT c.call_id) > 0",
+      "error": null
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 2690,
+    "completion_tokens": 279,
+    "total_tokens": 2969,
+    "cost": 0.00018074,
+    "providers": [
+      "CoreWeave"
+    ]
+  },
+  "request": "In tests/client/test_redirects.py, which test functions both pass that module's `redirects` handler function as an argument (for example to a mock transport) and create an `httpx.AsyncClient`? Give their symbol IDs.\n\nRequested output columns: symbol_id (string).",
+  "explanation": "The query finds the `redirects` function in tests/client/test_redirects.py, then looks for callback call sites where that function is passed as an argument (call_kind='callback' and confidence='low'). It also checks that the same file defines an `httpx.AsyncClient` class, ensuring both conditions are met, and returns the symbol IDs of the `redirects` function that satisfy both.",
+  "sql": "SELECT s.symbol_id\nFROM code.symbols s\nJOIN code.files f ON s.file_id = f.file_id\nJOIN code.imports imp ON f.file_id = imp.file_id\nJOIN code.calls c ON s.symbol_id = c.caller_symbol_id\nWHERE f.file_id = 'tests/client/test_redirects.py'\n  AND s.kind = 'function'\n  AND s.name = 'redirects'\n  AND c.call_kind = 'callback'\n  AND c.confidence = 'low'\n  AND EXISTS (SELECT 1\n               FROM code.symbols client\n               WHERE client.file_id = f.file_id\n                 AND client.name = 'AsyncClient'\n                 AND client.kind = 'class')\nGROUP BY s.symbol_id\nHAVING COUNT(DISTINCT c.call_id) > 0",
+  "rows": []
+}

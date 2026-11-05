@@ -1,0 +1,43 @@
+{
+  "question_id": "ao-04",
+  "arm": "C-semantics",
+  "model": "deepseek/deepseek-v4.1-flash-1017",
+  "error": null,
+  "elapsed_s": 279.7,
+  "attempts": [
+    {
+      "sql": "SELECT DISTINCT sp.symbol_id AS class_symbol_id\nFROM auto_ontology_code.code.symbol_profile AS sp\nJOIN auto_ontology_code.code.class_bases AS cb\n  ON cb.class_symbol_id = sp.symbol_id\nJOIN auto_ontology_code.code.symbol_profile AS bs\n  ON bs.symbol_id = cb.base_symbol_id\nWHERE sp.is_class = TRUE\n  AND sp.in_test_file = FALSE\n  AND bs.is_class = TRUE\n  AND bs.name = 'BaseAgent'\n  AND bs.file_id = 'auto_ontology/retrieval/text_to_sql/base.py'\n  AND EXISTS (\n    SELECT 1\n    FROM auto_ontology_code.code.calls AS c\n    JOIN auto_ontology_code.code.symbol_profile AS caller\n      ON caller.symbol_id = c.caller_symbol_id\n    WHERE c.callee_symbol_id = sp.symbol_id\n      AND c.call_kind = 'direct'\n      AND caller.in_test_file = FALSE\n      AND caller.kind IN ('function', 'method')\n  )\n  AND NOT EXISTS (\n    SELECT 1\n    FROM auto_ontology_code.code.calls AS tc\n    JOIN auto_ontology_code.code.symbol_profile AS test_caller\n      ON test_caller.symbol_id = tc.caller_symbol_id\n    WHERE tc.callee_symbol_id = sp.symbol_id\n      AND tc.call_kind = 'direct'\n      AND test_caller.in_test_file = TRUE\n      AND test_caller.kind IN ('function', 'method')\n  )\nORDER BY class_symbol_id"
+    }
+  ],
+  "usage": {},
+  "request": "Consider the agent classes defined in non-test code that directly subclass BaseAgent from auto_ontology/retrieval/text_to_sql/base.py (every file under a tests/ folder, conftest.py and helpers included, is test code). Which of these agent classes are constructed (the class is called by name, e.g. ResponseAgent()) somewhere in non-test code but are never constructed anywhere in test code? Count only direct constructor calls written in a function or method body; patching or referencing a class without calling it does not count, and a test that calls a function which constructs the class does not count as constructing it. Return their class symbol IDs.\n\nRequested output columns: class_symbol_id (string).\nReturn exactly the requested output columns, using each requested name as the column alias, in the requested order. Return complete repository-relative file paths and complete symbol IDs exactly as stored. When the question asks which files, symbols or modules, return each distinct one once unless it asks for occurrences.",
+  "explanation": "This lists the agent classes that inherit directly from BaseAgent in the text-to-SQL base module and are instantiated inside a function or method of non-test code, while having no direct instantiation anywhere in test code. Class definitions and their base relationships are matched through the code symbol and class-base records, and constructor calls are counted only when they are direct calls (not callbacks or patched references) originating from a function or method. Test code is identified by the test-file flag on the containing file. Each qualifying class is returned once by its complete symbol ID.",
+  "sql": "SELECT DISTINCT sp.symbol_id AS class_symbol_id\nFROM auto_ontology_code.code.symbol_profile AS sp\nJOIN auto_ontology_code.code.class_bases AS cb\n  ON cb.class_symbol_id = sp.symbol_id\nJOIN auto_ontology_code.code.symbol_profile AS bs\n  ON bs.symbol_id = cb.base_symbol_id\nWHERE sp.is_class = TRUE\n  AND sp.in_test_file = FALSE\n  AND bs.is_class = TRUE\n  AND bs.name = 'BaseAgent'\n  AND bs.file_id = 'auto_ontology/retrieval/text_to_sql/base.py'\n  AND EXISTS (\n    SELECT 1\n    FROM auto_ontology_code.code.calls AS c\n    JOIN auto_ontology_code.code.symbol_profile AS caller\n      ON caller.symbol_id = c.caller_symbol_id\n    WHERE c.callee_symbol_id = sp.symbol_id\n      AND c.call_kind = 'direct'\n      AND caller.in_test_file = FALSE\n      AND caller.kind IN ('function', 'method')\n  )\n  AND NOT EXISTS (\n    SELECT 1\n    FROM auto_ontology_code.code.calls AS tc\n    JOIN auto_ontology_code.code.symbol_profile AS test_caller\n      ON test_caller.symbol_id = tc.caller_symbol_id\n    WHERE tc.callee_symbol_id = sp.symbol_id\n      AND tc.call_kind = 'direct'\n      AND test_caller.in_test_file = TRUE\n      AND test_caller.kind IN ('function', 'method')\n  )\nORDER BY class_symbol_id",
+  "rows": [
+    {
+      "class_symbol_id": "auto_ontology/retrieval/entity_coverage/agents/coverage.py::CoverageGradeAgent"
+    },
+    {
+      "class_symbol_id": "auto_ontology/retrieval/text_to_sql/agents/empty_like_result_check.py::EmptyLikeResultCheckAgent"
+    },
+    {
+      "class_symbol_id": "auto_ontology/retrieval/text_to_sql/agents/join_path_check.py::JoinPathCheckAgent"
+    },
+    {
+      "class_symbol_id": "auto_ontology/retrieval/text_to_sql/agents/jsonb_path_check.py::JsonbPathCheckAgent"
+    },
+    {
+      "class_symbol_id": "auto_ontology/retrieval/text_to_sql/agents/kumo_prediction.py::KumoPredictionAgent"
+    },
+    {
+      "class_symbol_id": "auto_ontology/retrieval/text_to_sql/agents/prediction_graph.py::PredictionGraphAgent"
+    },
+    {
+      "class_symbol_id": "auto_ontology/retrieval/text_to_sql/agents/proactive_value_check.py::ProactiveValueCheckAgent"
+    },
+    {
+      "class_symbol_id": "auto_ontology/retrieval/text_to_sql/agents/response.py::ResponseAgent"
+    }
+  ],
+  "source_record": "run/responses/10i_ask_with_key/ask_q4.json"
+}

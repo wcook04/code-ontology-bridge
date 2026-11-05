@@ -1,0 +1,66 @@
+{
+  "question_id": "ao-03",
+  "arm": "V",
+  "model": "deepseek/deepseek-v4.1-flash-1017",
+  "error": null,
+  "elapsed_s": 2.3,
+  "attempts": [
+    {
+      "sql": "WITH target AS (\n  SELECT s.symbol_id\n  FROM code.symbols s\n  WHERE s.name = 'invoke_with_structured_output'\n    AND s.file_id LIKE '%auto_ontology/utils/llm_invoke.py'\n),\ndirect_callers AS (\n  SELECT DISTINCT c.caller_symbol_id AS sym\n  FROM code.calls c\n  JOIN target t ON c.callee_symbol_id = t.symbol_id\n  WHERE c.call_kind = 'direct'\n    AND (c.callee_name IS NULL OR c.callee_name = 'invoke_with_structured_output')\n),\ntwo_hop AS (\n  SELECT DISTINCT c.caller_symbol_id AS sym\n  FROM code.calls c\n  JOIN direct_callers d ON c.callee_symbol_id = d.sym\n  WHERE c.call_kind = 'direct'\n    AND c.caller_symbol_id NOT IN (SELECT sym FROM direct_callers)\n)\nSELECT DISTINCT sp.symbol_id\nFROM two_hop th\nJOIN code.symbol_profile sp ON sp.symbol_id = th.sym\nWHERE sp.in_test_file = FALSE\nORDER BY sp.symbol_id",
+      "error": null
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 1117,
+    "completion_tokens": 330,
+    "total_tokens": 1447,
+    "cost": 0.000253176,
+    "providers": [
+      "SiliconFlow"
+    ]
+  },
+  "request": "invoke_with_structured_output in auto_ontology/utils/llm_invoke.py is the main structured-LLM-call wrapper. Which functions or methods in non-test code (every file under a tests/ folder is test code) reach it at exactly two hops: they do not call invoke_with_structured_output directly themselves, but they directly call at least one function or method that does call it directly? Consider direct calls only on both hops, and follow only calls to a named function or to a method on self (a call through another object's attribute, such as self._backend.classify(), is not followed); a function passed as an argument (e.g. pool.submit(f)) does not count as calling it. The intermediate function may live anywhere, including test code, but the functions you list must be in non-test code. Return their symbol IDs.\n\nRequested output columns: symbol_id (string).",
+  "explanation": "Finds the symbol for invoke_with_structured_output in auto_ontology/utils/llm_invoke.py, then its direct callers via direct calls, then callers of those intermediates at exactly two hops. Excludes symbols that call the target directly and restricts results to non-test files, returning distinct symbol IDs.",
+  "sql": "WITH target AS (\n  SELECT s.symbol_id\n  FROM code.symbols s\n  WHERE s.name = 'invoke_with_structured_output'\n    AND s.file_id LIKE '%auto_ontology/utils/llm_invoke.py'\n),\ndirect_callers AS (\n  SELECT DISTINCT c.caller_symbol_id AS sym\n  FROM code.calls c\n  JOIN target t ON c.callee_symbol_id = t.symbol_id\n  WHERE c.call_kind = 'direct'\n    AND (c.callee_name IS NULL OR c.callee_name = 'invoke_with_structured_output')\n),\ntwo_hop AS (\n  SELECT DISTINCT c.caller_symbol_id AS sym\n  FROM code.calls c\n  JOIN direct_callers d ON c.callee_symbol_id = d.sym\n  WHERE c.call_kind = 'direct'\n    AND c.caller_symbol_id NOT IN (SELECT sym FROM direct_callers)\n)\nSELECT DISTINCT sp.symbol_id\nFROM two_hop th\nJOIN code.symbol_profile sp ON sp.symbol_id = th.sym\nWHERE sp.in_test_file = FALSE\nORDER BY sp.symbol_id",
+  "rows": [
+    {
+      "symbol_id": "auto_ontology/retrieval/text_to_sql/agents/candidates_preparation.py::CandidatePreparationAgent.execute"
+    },
+    {
+      "symbol_id": "auto_ontology/retrieval/text_to_sql/agents/candidates_retrieval.py::CandidateRetrievalAgent.execute"
+    },
+    {
+      "symbol_id": "auto_ontology/retrieval/text_to_sql/agents/evidence_refinement.py::EvidenceRefinementAgent.execute"
+    },
+    {
+      "symbol_id": "auto_ontology/retrieval/text_to_sql/agents/sql_parse_validation.py::SQLValidationAgent.execute"
+    },
+    {
+      "symbol_id": "auto_ontology/semantic/bridge_tables.py::build_bridge_tables_sql_attributes"
+    },
+    {
+      "symbol_id": "auto_ontology/semantic/deterministic.py::_generate_column_descriptions"
+    },
+    {
+      "symbol_id": "auto_ontology/semantic/semantic_fk.py::_resolve_via_vdb"
+    },
+    {
+      "symbol_id": "auto_ontology/semantic/semantic_fk.py::select_semantic_fk_join_defaults"
+    },
+    {
+      "symbol_id": "auto_ontology/semantic/sql_attribute_suggester.py::suggest_sql_attributes"
+    },
+    {
+      "symbol_id": "auto_ontology/semantic/visit_enter.py::process_table"
+    },
+    {
+      "symbol_id": "auto_ontology/server/chat/router.py::_build_charts_event"
+    },
+    {
+      "symbol_id": "auto_ontology/server/chat/worker.py::_worker_loop"
+    },
+    {
+      "symbol_id": "auto_ontology/server/sql_attributes/router.py::get_sql_attribute_description_suggestion"
+    }
+  ]
+}

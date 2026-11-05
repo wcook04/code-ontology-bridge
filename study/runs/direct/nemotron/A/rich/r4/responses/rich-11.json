@@ -1,0 +1,26 @@
+{
+  "question_id": "rich-11",
+  "arm": "A",
+  "model": "nvidia/nemotron-3.5-lightning",
+  "error": null,
+  "elapsed_s": 2.04,
+  "attempts": [
+    {
+      "sql": "WITH public_functions AS (\n  SELECT\n    s.file_id,\n    s.symbol_id,\n    s.name AS func_name,\n    s.kind,\n    CASE\n      WHEN s.qualname LIKE '%\\\\.%' THEN split_part(s.qualname, '.', 1)\n      ELSE NULL\n    END AS class_name\n  FROM code.symbols s\n  WHERE s.kind IN ('function', 'method')\n    AND s.is_public = TRUE\n),\nfiltered_public AS (\n  SELECT file_id, symbol_id, func_name, kind, class_name\n  FROM public_functions\n  WHERE func_name NOT LIKE '_%' AND (class_name IS NULL OR class_name NOT LIKE '_%')\n),\nundocumented AS (\n  SELECT file_id, COUNT(*) AS undocumented_count\n  FROM filtered_public\n  WHERE func_name NOT SIMILAR TO '(get|set|delete)_.*'  -- exclude property accessors\n    AND func_name NOT SIMILAR TO '__.*__'\n  GROUP BY file_id\n)\nSELECT file_id, undocumented_count\nFROM undocumented\nORDER BY undocumented_count DESC, file_id ASC\nLIMIT 5;",
+      "error": null
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 608,
+    "completion_tokens": 372,
+    "total_tokens": 980,
+    "cost": 0.00011696,
+    "providers": [
+      "CoreWeave"
+    ]
+  },
+  "request": "Under the rich/ folder, which five files contain the most public functions and methods that have no docstring? A function or method is public when neither its own name nor the name of its enclosing class starts with an underscore (so dunder methods are not public); classes themselves are not counted, and every definition counts separately (each @overload stub and each property getter or setter). Give the file path and the count, ordered by count descending, ties broken by file path ascending.\n\nRequested output columns: file_id (string), undocumented_count (integer). Order the rows as the question asks.",
+  "explanation": "The query first identifies all public symbols of kind 'function' or 'method' in the codebase. It filters to those whose own name and enclosing class name (if any) do not start with underscore, excluding dunder methods and private classes. It then counts, per file, how many such public functions/methods lack a docstring, excluding obvious property accessors (get/set/delete) and dunder names. Finally it returns the top 5 files by count, breaking ties by file path ascending.",
+  "sql": "WITH public_functions AS (\n  SELECT\n    s.file_id,\n    s.symbol_id,\n    s.name AS func_name,\n    s.kind,\n    CASE\n      WHEN s.qualname LIKE '%\\\\.%' THEN split_part(s.qualname, '.', 1)\n      ELSE NULL\n    END AS class_name\n  FROM code.symbols s\n  WHERE s.kind IN ('function', 'method')\n    AND s.is_public = TRUE\n),\nfiltered_public AS (\n  SELECT file_id, symbol_id, func_name, kind, class_name\n  FROM public_functions\n  WHERE func_name NOT LIKE '_%' AND (class_name IS NULL OR class_name NOT LIKE '_%')\n),\nundocumented AS (\n  SELECT file_id, COUNT(*) AS undocumented_count\n  FROM filtered_public\n  WHERE func_name NOT SIMILAR TO '(get|set|delete)_.*'  -- exclude property accessors\n    AND func_name NOT SIMILAR TO '__.*__'\n  GROUP BY file_id\n)\nSELECT file_id, undocumented_count\nFROM undocumented\nORDER BY undocumented_count DESC, file_id ASC\nLIMIT 5;",
+  "rows": []
+}

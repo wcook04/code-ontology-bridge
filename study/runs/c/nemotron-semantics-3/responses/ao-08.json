@@ -1,0 +1,39 @@
+{
+  "question_id": "ao-08",
+  "arm": "C-semantics",
+  "model": "nvidia/nemotron-3.5-lightning",
+  "error": null,
+  "elapsed_s": 86.1,
+  "attempts": [
+    {
+      "sql": "WITH candidate_functions AS (\n    SELECT symbol_id\n    FROM auto_ontology_code.code.symbol_profile\n    WHERE kind = 'function'\n      AND is_function = true\n      AND is_method = false\n      AND is_class = false\n      AND in_test_file = false\n      AND file_id LIKE 'auto_ontology/dal/%'\n      AND file_id != 'auto_ontology/dal/session.py'\n),\ncaller_counts AS (\n    SELECT e.callee_symbol_id, COUNT(DISTINCT e.caller_symbol_id) AS caller_count\n    FROM auto_ontology_code.code.call_edges e\n    JOIN candidate_functions c ON e.callee_symbol_id = c.symbol_id\n    WHERE e.caller_in_test_file = false\n      AND e.caller_file_id NOT LIKE 'auto_ontology/dal/%'\n      AND e.caller_kind IN ('function', 'method')\n      AND e.calls_directly = true\n    GROUP BY e.callee_symbol_id\n)\nSELECT callee_symbol_id AS symbol_id, caller_count\nFROM caller_counts\nORDER BY caller_count DESC, symbol_id ASC\nLIMIT 5;"
+    }
+  ],
+  "usage": {},
+  "request": "Which five functions in the data-access layer are used most widely by the rest of the codebase? Consider module-level functions (not methods or classes) defined in non-test files under auto_ontology/dal/, excluding auto_ontology/dal/session.py. Rank them by the number of distinct functions or methods that call them directly, counting only callers that are in non-test files (every file under a tests/ folder is test code) located outside auto_ontology/dal/. Calls through a module alias (e.g. `dal.fetch_databases()` after `from auto_ontology.dal import datasources as dal`) or an import alias count; a function passed by reference without being called does not. Highest count first; break ties by symbol ID ascending and return exactly five rows. Return the symbol ID and the caller count.\n\nRequested output columns: symbol_id (string), caller_count (integer).\nReturn exactly the requested output columns, using each requested name as the column alias, in the requested order. Return complete repository-relative file paths and complete symbol IDs exactly as stored. When the question asks which files, symbols or modules, return each distinct one once unless it asks for occurrences.\nOrder the rows as the question asks.",
+  "explanation": "This query identifies the five module‑level functions in the data‑access layer (excluding session.py) that receive the most direct calls from non‑test code outside auto_ontology/dal, returning each function’s symbol ID and its caller count, ordered by call count descending and symbol ID ascending for ties.",
+  "sql": "WITH candidate_functions AS (\n    SELECT symbol_id\n    FROM auto_ontology_code.code.symbol_profile\n    WHERE kind = 'function'\n      AND is_function = true\n      AND is_method = false\n      AND is_class = false\n      AND in_test_file = false\n      AND file_id LIKE 'auto_ontology/dal/%'\n      AND file_id != 'auto_ontology/dal/session.py'\n),\ncaller_counts AS (\n    SELECT e.callee_symbol_id, COUNT(DISTINCT e.caller_symbol_id) AS caller_count\n    FROM auto_ontology_code.code.call_edges e\n    JOIN candidate_functions c ON e.callee_symbol_id = c.symbol_id\n    WHERE e.caller_in_test_file = false\n      AND e.caller_file_id NOT LIKE 'auto_ontology/dal/%'\n      AND e.caller_kind IN ('function', 'method')\n      AND e.calls_directly = true\n    GROUP BY e.callee_symbol_id\n)\nSELECT callee_symbol_id AS symbol_id, caller_count\nFROM caller_counts\nORDER BY caller_count DESC, symbol_id ASC\nLIMIT 5;",
+  "rows": [
+    {
+      "symbol_id": "auto_ontology/dal/owners.py::edit_subject",
+      "caller_count": 9
+    },
+    {
+      "symbol_id": "auto_ontology/dal/connections.py::list_connections",
+      "caller_count": 8
+    },
+    {
+      "symbol_id": "auto_ontology/dal/datasources.py::fetch_databases",
+      "caller_count": 8
+    },
+    {
+      "symbol_id": "auto_ontology/dal/datasources.py::fetch_schemas_for_database",
+      "caller_count": 7
+    },
+    {
+      "symbol_id": "auto_ontology/dal/datasources.py::fetch_schemas_by_ids",
+      "caller_count": 6
+    }
+  ],
+  "source_record": "run/responses/10i_ask_with_key/ask_q8.json"
+}

@@ -1,0 +1,26 @@
+{
+  "question_id": "httpx-09",
+  "arm": "B",
+  "model": "nvidia/nemotron-3.5-lightning",
+  "error": null,
+  "elapsed_s": 1.81,
+  "attempts": [
+    {
+      "sql": "WITH RECURSIVE call_chain AS (\n  -- Seed: direct calls to _send_single_request from within httpx/_client.py\n  SELECT caller_symbol_id\n  FROM code.calls\n  WHERE callee_symbol_id = 'httpx/_client.py::Client._send_single_request'\n    AND resolution = 'same_file'\n  UNION ALL\n  -- Recurse: find callers of symbols already in the chain\n  SELECT c.caller_symbol_id\n  FROM code.calls c\n  JOIN call_chain cc ON c.callee_symbol_id = cc.caller_symbol_id\n  WHERE c.resolution = 'same_file'\n    AND c.caller_symbol_id NOT LIKE '%_send_single_request'\n)\nSELECT DISTINCT caller_symbol_id\nFROM call_chain\nWHERE caller_symbol_id IS NOT NULL\nORDER BY caller_symbol_id;",
+      "error": null
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 2709,
+    "completion_tokens": 257,
+    "total_tokens": 2966,
+    "cost": 0.00017767,
+    "providers": [
+      "CoreWeave"
+    ]
+  },
+  "request": "Within httpx/_client.py, which functions or methods eventually lead to a call of `Client._send_single_request`, through a chain of one or more direct calls whose every step is inside httpx/_client.py? Count direct calls only (no callbacks) and exclude `_send_single_request` itself. Give their symbol IDs.\n\nRequested output columns: symbol_id (string).",
+  "explanation": "The query starts from all direct same-file calls to Client._send_single_request, then recursively follows callers of those callers within httpx/_client.py, collecting every symbol that sits on a call chain ending at _send_single_request. Duplicates are removed and _send_single_request itself is excluded.",
+  "sql": "WITH RECURSIVE call_chain AS (\n  -- Seed: direct calls to _send_single_request from within httpx/_client.py\n  SELECT caller_symbol_id\n  FROM code.calls\n  WHERE callee_symbol_id = 'httpx/_client.py::Client._send_single_request'\n    AND resolution = 'same_file'\n  UNION ALL\n  -- Recurse: find callers of symbols already in the chain\n  SELECT c.caller_symbol_id\n  FROM code.calls c\n  JOIN call_chain cc ON c.callee_symbol_id = cc.caller_symbol_id\n  WHERE c.resolution = 'same_file'\n    AND c.caller_symbol_id NOT LIKE '%_send_single_request'\n)\nSELECT DISTINCT caller_symbol_id\nFROM call_chain\nWHERE caller_symbol_id IS NOT NULL\nORDER BY caller_symbol_id;",
+  "rows": []
+}

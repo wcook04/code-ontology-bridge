@@ -1,0 +1,47 @@
+{
+  "question_id": "ao-08",
+  "arm": "A",
+  "model": "deepseek/deepseek-v4.1-flash-1017",
+  "error": null,
+  "elapsed_s": 2.13,
+  "attempts": [
+    {
+      "sql": "WITH dal_funcs AS (\n  SELECT s.symbol_id, s.file_id\n  FROM code.symbols s\n  JOIN code.files f ON f.file_id = s.file_id\n  WHERE s.kind = 'function'\n    AND f.is_test = FALSE\n    AND f.file_id LIKE 'auto_ontology/dal/%'\n    AND f.file_id <> 'auto_ontology/dal/session.py'\n),\ncallers AS (\n  SELECT c.callee_symbol_id AS symbol_id,\n         COUNT(DISTINCT c.caller_symbol_id) AS caller_count\n  FROM code.calls c\n  JOIN code.symbols cs ON cs.symbol_id = c.caller_symbol_id\n  JOIN code.files cf ON cf.file_id = cs.file_id\n  WHERE cf.is_test = FALSE\n    AND cf.file_id NOT LIKE 'auto_ontology/dal/%'\n    AND c.call_kind = 'call'\n  GROUP BY c.callee_symbol_id\n)\nSELECT d.symbol_id, COALESCE(k.caller_count, 0) AS caller_count\nFROM dal_funcs d\nLEFT JOIN callers k ON k.symbol_id = d.symbol_id\nORDER BY caller_count DESC, d.symbol_id ASC\nLIMIT 5;",
+      "error": null
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 679,
+    "completion_tokens": 364,
+    "total_tokens": 1043,
+    "cost": 0.0002543562,
+    "providers": [
+      "StepFun"
+    ]
+  },
+  "request": "Which five functions in the data-access layer are used most widely by the rest of the codebase? Consider module-level functions (not methods or classes) defined in non-test files under auto_ontology/dal/, excluding auto_ontology/dal/session.py. Rank them by the number of distinct functions or methods that call them directly, counting only callers that are in non-test files (every file under a tests/ folder is test code) located outside auto_ontology/dal/. Calls through a module alias (e.g. `dal.fetch_databases()` after `from auto_ontology.dal import datasources as dal`) or an import alias count; a function passed by reference without being called does not. Highest count first; break ties by symbol ID ascending and return exactly five rows. Return the symbol ID and the caller count.\n\nRequested output columns: symbol_id (string), caller_count (integer). Order the rows as the question asks.",
+  "explanation": "Selects module-level functions defined in non-test files under auto_ontology/dal/ excluding session.py, then counts distinct caller symbols that are functions/methods in non-test files outside auto_ontology/dal/ and that call them directly (call_kind = 'call', excluding reference-only). Results are ordered by caller count descending with symbol_id ascending as tiebreaker, limited to five.",
+  "sql": "WITH dal_funcs AS (\n  SELECT s.symbol_id, s.file_id\n  FROM code.symbols s\n  JOIN code.files f ON f.file_id = s.file_id\n  WHERE s.kind = 'function'\n    AND f.is_test = FALSE\n    AND f.file_id LIKE 'auto_ontology/dal/%'\n    AND f.file_id <> 'auto_ontology/dal/session.py'\n),\ncallers AS (\n  SELECT c.callee_symbol_id AS symbol_id,\n         COUNT(DISTINCT c.caller_symbol_id) AS caller_count\n  FROM code.calls c\n  JOIN code.symbols cs ON cs.symbol_id = c.caller_symbol_id\n  JOIN code.files cf ON cf.file_id = cs.file_id\n  WHERE cf.is_test = FALSE\n    AND cf.file_id NOT LIKE 'auto_ontology/dal/%'\n    AND c.call_kind = 'call'\n  GROUP BY c.callee_symbol_id\n)\nSELECT d.symbol_id, COALESCE(k.caller_count, 0) AS caller_count\nFROM dal_funcs d\nLEFT JOIN callers k ON k.symbol_id = d.symbol_id\nORDER BY caller_count DESC, d.symbol_id ASC\nLIMIT 5;",
+  "rows": [
+    {
+      "symbol_id": "auto_ontology/dal/__init__.py::close_store",
+      "caller_count": 0
+    },
+    {
+      "symbol_id": "auto_ontology/dal/attributes.py::_column_path_dict",
+      "caller_count": 0
+    },
+    {
+      "symbol_id": "auto_ontology/dal/attributes.py::_column_path_select",
+      "caller_count": 0
+    },
+    {
+      "symbol_id": "auto_ontology/dal/attributes.py::_find_table_join_hops",
+      "caller_count": 0
+    },
+    {
+      "symbol_id": "auto_ontology/dal/attributes.py::_name_columns",
+      "caller_count": 0
+    }
+  ]
+}

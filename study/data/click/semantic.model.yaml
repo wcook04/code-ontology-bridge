@@ -1,0 +1,1490 @@
+# Auto Ontology model-import document for schema `code` (POST /api/model/import, replace=false).
+# source: code_registry   id namespace: cob:click_code:
+# repo_url: https://github.com/pallets/click
+# commit_sha: 2247b35ea1c47c727d7a06e51fa280e12a863ff6
+# source_fingerprint: c3899c2f861308e1
+# snapshot_id: 2247b35ea1c4-c3899c2f8613
+# builder_version: code-ontology-bridge 0.1.0   built_at: 2026-10-04T22:19:53Z
+# known_limits:
+#   - Only Python files are analysed; other languages in the repository are not represented.
+#   - Dynamic imports (importlib, __import__) and imports executed through strings are not resolved.
+#   - Internal callees are resolved only through plain dotted names: same-file definitions, import bindings (following re-exports up to 3 levels), and self/cls methods of the enclosing class. Every other call keeps a null callee and is classified, never guessed: builtin (an unshadowed builtin name), external (rooted in a non-internal import or a module-level name assigned from one), dynamic_attribute (a method on an object whose type this analysis does not infer), or unresolved (parameters, local callables, super() and anything left).
+#   - Functions passed by reference are recorded as call_kind callback (low confidence) only when a plain dotted name appears directly as a positional or keyword argument of a call inside a function and resolves, by the same rules, to an internal function or method: asyncio.to_thread(f, x), loop.run_in_executor(None, f), executor.submit(f), Thread(target=f), functools.partial(f), Depends(f). References held in lists, dicts, assignments, return values or decorators without a call are not recorded, a name the enclosing function binds locally is skipped, properties passed as values are skipped, arguments of inspect.* and of builtins that only examine a value (getattr, isinstance, print, repr and the like) are skipped, and every other receiving call is assumed, not proven, to invoke the reference.
+#   - Builtin classification does not see local variables or parameters that shadow a builtin name.
+#   - Inherited methods resolve only when the base class is statically resolvable to a definition in the repository; such calls are marked low confidence.
+#   - Imports inside a function bind only there. Other local variables that shadow a module-level name are not tracked, so such a call may resolve to the module-level definition.
+#   - Nested functions and classes are not symbols. A nested function's calls count for the enclosing symbol only when it calls that function or passes it on by name.
+#   - Test links are static: a test that exercises a file without importing it, and without a matching file name, is not linked.
+#   - Descriptions and summaries are verbatim docstring text; no description is generated or inferred.
+#   - Calls at module level, outside any function or class, are not recorded (180 in this snapshot).
+#   - Calls in nested functions the enclosing function never runs (registered handlers, returned closures) are not recorded (191 in this snapshot).
+#   - 70 definitions share a qualified name. Their IDs include @L<definition-line>; ambiguous call targets are not resolved.
+# Certified flags are not part of this document; they are set by PATCH from certification events.
+data_layer:
+  databases:
+  - id: cob:click_code:database
+    dialect: duckdb
+    schemas:
+    - id: cob:click_code:schema:code
+      name: code
+      database_name: click_code
+      tables:
+      - id: cob:click_code:table:code.snapshot
+        name: snapshot
+        description: 'One row identifying the analysed source: repository, commit, content fingerprint, builder and its known
+          limits.'
+        pk:
+        - cob:click_code:column:code.snapshot.snapshot_id
+        type: BASE TABLE
+        columns:
+        - id: cob:click_code:column:code.snapshot.snapshot_id
+          name: snapshot_id
+          description: 'Stable id of this snapshot: commit prefix and fingerprint prefix.'
+          type: VARCHAR
+          sample_values: []
+          is_nullable: false
+          is_unique: true
+        - id: cob:click_code:column:code.snapshot.repo_url
+          name: repo_url
+          description: URL of the analysed repository.
+          type: VARCHAR
+          sample_values: []
+          is_nullable: false
+          is_unique: false
+        - id: cob:click_code:column:code.snapshot.commit_sha
+          name: commit_sha
+          description: Commit SHA of the analysed checkout.
+          type: VARCHAR
+          sample_values: []
+          is_nullable: true
+          is_unique: false
+        - id: cob:click_code:column:code.snapshot.built_at
+          name: built_at
+          description: UTC time the map was built, ISO 8601 (SOURCE_DATE_EPOCH when set).
+          type: VARCHAR
+          sample_values: []
+          is_nullable: false
+          is_unique: false
+        - id: cob:click_code:column:code.snapshot.builder_version
+          name: builder_version
+          description: Name and version of the builder that produced the rows.
+          type: VARCHAR
+          sample_values: []
+          is_nullable: false
+          is_unique: false
+        - id: cob:click_code:column:code.snapshot.source_fingerprint
+          name: source_fingerprint
+          description: 16-hex SHA-256 digest over sorted 'path NUL file-sha256' lines of every analysed file.
+          type: VARCHAR
+          sample_values: []
+          is_nullable: false
+          is_unique: false
+        - id: cob:click_code:column:code.snapshot.file_count
+          name: file_count
+          description: Number of Python files analysed.
+          type: INTEGER
+          sample_values: []
+          is_nullable: false
+          is_unique: false
+        - id: cob:click_code:column:code.snapshot.omitted_file_count
+          name: omitted_file_count
+          description: Number of Python files found but not analysed (excluded or unparseable).
+          type: INTEGER
+          sample_values: []
+          is_nullable: false
+          is_unique: false
+        - id: cob:click_code:column:code.snapshot.known_limits
+          name: known_limits
+          description: JSON array of plain-language limits of the static analysis.
+          type: VARCHAR
+          sample_values: []
+          is_nullable: false
+          is_unique: false
+      - id: cob:click_code:table:code.files
+        name: files
+        description: One row per analysed Python source file. Module and package descriptions are in files.description; a
+          package description belongs to its __init__.py row.
+        pk:
+        - cob:click_code:column:code.files.file_id
+        type: BASE TABLE
+        columns:
+        - id: cob:click_code:column:code.files.file_id
+          name: file_id
+          description: Repository-relative path of the file, with forward slashes.
+          type: VARCHAR
+          sample_values: []
+          is_nullable: false
+          is_unique: true
+        - id: cob:click_code:column:code.files.package
+          name: package
+          description: Dotted name of the package that contains the module; empty for a top-level module.
+          type: VARCHAR
+          sample_values: []
+          is_nullable: false
+          is_unique: false
+        - id: cob:click_code:column:code.files.module
+          name: module
+          description: Dotted import name of the module (a package's __init__.py has the package's name).
+          type: VARCHAR
+          sample_values: []
+          is_nullable: false
+          is_unique: false
+        - id: cob:click_code:column:code.files.is_test
+          name: is_test
+          description: True when the path or file name marks the file as a test (tests/ or test/ directory, test_*.py, *_test.py,
+            conftest.py).
+          type: BOOLEAN
+          sample_values: []
+          is_nullable: false
+          is_unique: false
+        - id: cob:click_code:column:code.files.line_count
+          name: line_count
+          description: Number of lines in the file.
+          type: INTEGER
+          sample_values: []
+          is_nullable: false
+          is_unique: false
+        - id: cob:click_code:column:code.files.sha256
+          name: sha256
+          description: SHA-256 of the file's bytes; used to detect stale certifications.
+          type: VARCHAR
+          sample_values: []
+          is_nullable: false
+          is_unique: false
+        - id: cob:click_code:column:code.files.description
+          name: description
+          description: Verbatim description from the module docstring; empty when the file has none.
+          type: VARCHAR
+          sample_values: []
+          is_nullable: false
+          is_unique: false
+        - id: cob:click_code:column:code.files.description_source
+          name: description_source
+          description: 'Where the description came from: heading_purpose, module_docstring or none.'
+          type: VARCHAR
+          sample_values:
+          - module_docstring
+          - none
+          is_nullable: false
+          is_unique: false
+        - id: cob:click_code:column:code.files.has_fixed_headings
+          name: has_fixed_headings
+          description: True when the module docstring uses the fixed headings [PURPOSE], [INTERFACE], [FLOW], [DEPENDENCIES]
+            or [CONSTRAINTS].
+          type: BOOLEAN
+          sample_values: []
+          is_nullable: false
+          is_unique: false
+      - id: cob:click_code:table:code.headings
+        name: headings
+        description: Optional fixed sections and contract atoms from module docstrings only. This table can be empty even
+          when ordinary module and function docstrings exist. Function docstrings are in symbols.summary, not this table.
+        pk:
+        - cob:click_code:column:code.headings.file_id
+        - cob:click_code:column:code.headings.ordinal
+        type: BASE TABLE
+        columns:
+        - id: cob:click_code:column:code.headings.file_id
+          name: file_id
+          description: File whose module docstring holds the heading.
+          type: VARCHAR
+          sample_values: []
+          is_nullable: false
+          is_unique: false
+        - id: cob:click_code:column:code.headings.heading
+          name: heading
+          description: Heading name such as [PURPOSE], or an atom name such as Teleology or Fails.
+          type: VARCHAR
+          sample_values: []
+          is_nullable: false
+          is_unique: false
+        - id: cob:click_code:column:code.headings.value
+          name: value
+          description: Verbatim text under the heading or after the atom.
+          type: VARCHAR
+          sample_values: []
+          is_nullable: false
+          is_unique: false
+        - id: cob:click_code:column:code.headings.ordinal
+          name: ordinal
+          description: Position of the heading within the file's docstring, from 1.
+          type: INTEGER
+          sample_values: []
+          is_nullable: false
+          is_unique: false
+      - id: cob:click_code:table:code.symbols
+        name: symbols
+        description: Functions, methods and classes, their definition locations and extracted docstring summaries. Use this
+          table for function definitions and function docstring questions.
+        pk:
+        - cob:click_code:column:code.symbols.symbol_id
+        type: BASE TABLE
+        columns:
+        - id: cob:click_code:column:code.symbols.symbol_id
+          name: symbol_id
+          description: 'ID: file path, ''::'', qualified name; repeated qualified definitions append @L<definition-line>.'
+          type: VARCHAR
+          sample_values: []
+          is_nullable: false
+          is_unique: true
+        - id: cob:click_code:column:code.symbols.file_id
+          name: file_id
+          description: File that defines the symbol.
+          type: VARCHAR
+          sample_values: []
+          is_nullable: false
+          is_unique: false
+        - id: cob:click_code:column:code.symbols.name
+          name: name
+          description: Bare name of the symbol.
+          type: VARCHAR
+          sample_values: []
+          is_nullable: false
+          is_unique: false
+        - id: cob:click_code:column:code.symbols.qualname
+          name: qualname
+          description: Dotted name within the module, e.g. Class.method.
+          type: VARCHAR
+          sample_values: []
+          is_nullable: false
+          is_unique: false
+        - id: cob:click_code:column:code.symbols.kind
+          name: kind
+          description: function, method or class.
+          type: VARCHAR
+          sample_values:
+          - class
+          - function
+          - method
+          is_nullable: false
+          is_unique: false
+        - id: cob:click_code:column:code.symbols.line_start
+          name: line_start
+          description: First line of the definition, decorators excluded.
+          type: INTEGER
+          sample_values: []
+          is_nullable: false
+          is_unique: false
+        - id: cob:click_code:column:code.symbols.line_end
+          name: line_end
+          description: Last line of the definition.
+          type: INTEGER
+          sample_values: []
+          is_nullable: false
+          is_unique: false
+        - id: cob:click_code:column:code.symbols.is_public
+          name: is_public
+          description: True when neither the name nor any enclosing class name starts with an underscore.
+          type: BOOLEAN
+          sample_values: []
+          is_nullable: false
+          is_unique: false
+        - id: cob:click_code:column:code.symbols.summary
+          name: summary
+          description: First paragraph (or Teleology atom) of this function, method or class docstring, with whitespace normalized;
+            empty when absent. This is the function documentation, unlike optional module headings.
+          type: VARCHAR
+          sample_values: []
+          is_nullable: false
+          is_unique: false
+        - id: cob:click_code:column:code.symbols.summary_source
+          name: summary_source
+          description: docstring or none.
+          type: VARCHAR
+          sample_values:
+          - docstring
+          - none
+          is_nullable: false
+          is_unique: false
+      - id: cob:click_code:table:code.class_bases
+        name: class_bases
+        description: Base classes named in each class statement, in order, with the internal class each one resolves to.
+        pk:
+        - cob:click_code:column:code.class_bases.class_symbol_id
+        - cob:click_code:column:code.class_bases.ordinal
+        type: BASE TABLE
+        columns:
+        - id: cob:click_code:column:code.class_bases.class_symbol_id
+          name: class_symbol_id
+          description: Class whose statement names the base.
+          type: VARCHAR
+          sample_values: []
+          is_nullable: false
+          is_unique: false
+        - id: cob:click_code:column:code.class_bases.ordinal
+          name: ordinal
+          description: Position of the base in the class statement, from 1.
+          type: INTEGER
+          sample_values: []
+          is_nullable: false
+          is_unique: false
+        - id: cob:click_code:column:code.class_bases.base_name
+          name: base_name
+          description: Base expression as written, e.g. SQLDatabase, base.SQLDatabase or Generic[T].
+          type: VARCHAR
+          sample_values: []
+          is_nullable: false
+          is_unique: false
+        - id: cob:click_code:column:code.class_bases.base_symbol_id
+          name: base_symbol_id
+          description: Internal class the base resolves to by the same static rules as calls; null for external, builtin or
+            unresolvable bases.
+          type: VARCHAR
+          sample_values: []
+          is_nullable: true
+          is_unique: false
+      - id: cob:click_code:table:code.calls
+        name: calls
+        description: Call edges inside functions, methods and class bodies, with how the callee was resolved. Direct call
+          sites are all kept; those without an internal callee have a null callee and are classified as builtin, external,
+          dynamic_attribute or unresolved. Callback rows record an internal function or method passed by reference as an argument
+          to another call, e.g. asyncio.to_thread(f, x).
+        pk:
+        - cob:click_code:column:code.calls.call_id
+        type: BASE TABLE
+        columns:
+        - id: cob:click_code:column:code.calls.call_id
+          name: call_id
+          description: 'Stable id: file path, line, column and a sequence number (for a callback row, the position of the
+            argument).'
+          type: VARCHAR
+          sample_values: []
+          is_nullable: false
+          is_unique: true
+        - id: cob:click_code:column:code.calls.caller_symbol_id
+          name: caller_symbol_id
+          description: Symbol whose body contains the call.
+          type: VARCHAR
+          sample_values: []
+          is_nullable: false
+          is_unique: false
+        - id: cob:click_code:column:code.calls.callee_symbol_id
+          name: callee_symbol_id
+          description: Internal callee symbol; set only for same_file, imported and method_on_self, null otherwise.
+          type: VARCHAR
+          sample_values: []
+          is_nullable: true
+          is_unique: false
+        - id: cob:click_code:column:code.calls.callee_name
+          name: callee_name
+          description: Callee as written at the call site, e.g. self.save or pd.read_csv; for a callback row, the reference
+            as written in the argument.
+          type: VARCHAR
+          sample_values: []
+          is_nullable: false
+          is_unique: false
+        - id: cob:click_code:column:code.calls.line
+          name: line
+          description: Line of the call.
+          type: INTEGER
+          sample_values: []
+          is_nullable: false
+          is_unique: false
+        - id: cob:click_code:column:code.calls.resolution
+          name: resolution
+          description: same_file, imported or method_on_self (internal callee found); builtin (a Python builtin such as len);
+            external (rooted in a third-party or standard-library import, or a module-level name assigned from one, e.g. logger);
+            dynamic_attribute (a method on an object whose type is not statically known, e.g. row.get); unresolved (anything
+            else).
+          type: VARCHAR
+          sample_values:
+          - builtin
+          - dynamic_attribute
+          - external
+          - imported
+          - method_on_self
+          - same_file
+          - unresolved
+          is_nullable: false
+          is_unique: false
+        - id: cob:click_code:column:code.calls.confidence
+          name: confidence
+          description: 'high or low: low for inherited methods, callback rows, dynamic_attribute and unresolved.'
+          type: VARCHAR
+          sample_values:
+          - high
+          - low
+          is_nullable: false
+          is_unique: false
+        - id: cob:click_code:column:code.calls.call_kind
+          name: call_kind
+          description: direct (the call site invokes the callee) or callback (an internal function or method passed as an
+            argument, e.g. asyncio.to_thread(f, x), executor.submit(f) or Thread(target=f), which the receiving call is expected
+            to invoke). Callback rows always carry a callee and low confidence.
+          type: VARCHAR
+          sample_values:
+          - callback
+          - direct
+          is_nullable: false
+          is_unique: false
+      - id: cob:click_code:table:code.imports
+        name: imports
+        description: Import statements, one row per imported name, with the internal file each resolves to.
+        pk:
+        - cob:click_code:column:code.imports.import_id
+        type: BASE TABLE
+        columns:
+        - id: cob:click_code:column:code.imports.import_id
+          name: import_id
+          description: 'Stable id: file path, line and a sequence number.'
+          type: VARCHAR
+          sample_values: []
+          is_nullable: false
+          is_unique: true
+        - id: cob:click_code:column:code.imports.file_id
+          name: file_id
+          description: File containing the import.
+          type: VARCHAR
+          sample_values: []
+          is_nullable: false
+          is_unique: false
+        - id: cob:click_code:column:code.imports.imported_file_id
+          name: imported_file_id
+          description: Internal file the import resolves to; null for external or unresolvable imports.
+          type: VARCHAR
+          sample_values: []
+          is_nullable: true
+          is_unique: false
+        - id: cob:click_code:column:code.imports.module_name
+          name: module_name
+          description: Absolute dotted module name imported (relative imports resolved).
+          type: VARCHAR
+          sample_values: []
+          is_nullable: false
+          is_unique: false
+        - id: cob:click_code:column:code.imports.line
+          name: line
+          description: Line of the import statement.
+          type: INTEGER
+          sample_values: []
+          is_nullable: false
+          is_unique: false
+        - id: cob:click_code:column:code.imports.is_internal
+          name: is_internal
+          description: True when the module belongs to the analysed repository.
+          type: BOOLEAN
+          sample_values: []
+          is_nullable: false
+          is_unique: false
+      - id: cob:click_code:table:code.test_links
+        name: test_links
+        description: Static associations between a test file and a source file, inferred because the test imports the file
+          or its name matches. They are not measured test execution or coverage.
+        pk:
+        - cob:click_code:column:code.test_links.test_file_id
+        - cob:click_code:column:code.test_links.target_file_id
+        - cob:click_code:column:code.test_links.reason
+        type: BASE TABLE
+        columns:
+        - id: cob:click_code:column:code.test_links.test_file_id
+          name: test_file_id
+          description: Test file.
+          type: VARCHAR
+          sample_values: []
+          is_nullable: false
+          is_unique: false
+        - id: cob:click_code:column:code.test_links.target_file_id
+          name: target_file_id
+          description: Non-test file the test is linked to.
+          type: VARCHAR
+          sample_values: []
+          is_nullable: false
+          is_unique: false
+        - id: cob:click_code:column:code.test_links.reason
+          name: reason
+          description: imports_target (the test imports the file) or name_match (test_<name>.py matches <name>.py).
+          type: VARCHAR
+          sample_values:
+          - imports_target
+          - name_match
+          is_nullable: false
+          is_unique: false
+      - id: cob:click_code:table:code.inbound_call_counts
+        name: inbound_call_counts
+        description: Every symbol with the number of resolved direct call sites that target it, the number of callback references
+          to it, and the number of distinct callers of either kind.
+        pk: []
+        type: VIEW
+        columns:
+        - id: cob:click_code:column:code.inbound_call_counts.symbol_id
+          name: symbol_id
+          description: 'ID: file path, ''::'', qualified name; repeated qualified definitions append @L<definition-line>.'
+          type: VARCHAR
+          sample_values: []
+          is_nullable: true
+          is_unique: false
+        - id: cob:click_code:column:code.inbound_call_counts.file_id
+          name: file_id
+          description: File that defines the symbol.
+          type: VARCHAR
+          sample_values: []
+          is_nullable: true
+          is_unique: false
+        - id: cob:click_code:column:code.inbound_call_counts.name
+          name: name
+          description: Bare name of the symbol.
+          type: VARCHAR
+          sample_values: []
+          is_nullable: true
+          is_unique: false
+        - id: cob:click_code:column:code.inbound_call_counts.qualname
+          name: qualname
+          description: Dotted name within the module, e.g. Class.method.
+          type: VARCHAR
+          sample_values: []
+          is_nullable: true
+          is_unique: false
+        - id: cob:click_code:column:code.inbound_call_counts.kind
+          name: kind
+          description: function, method or class.
+          type: VARCHAR
+          sample_values: []
+          is_nullable: true
+          is_unique: false
+        - id: cob:click_code:column:code.inbound_call_counts.is_public
+          name: is_public
+          description: True when neither the name nor any enclosing class name starts with an underscore.
+          type: BOOLEAN
+          sample_values: []
+          is_nullable: true
+          is_unique: false
+        - id: cob:click_code:column:code.inbound_call_counts.inbound_calls
+          name: inbound_calls
+          description: Number of resolved direct call sites whose callee is this symbol.
+          type: HUGEINT
+          sample_values: []
+          is_nullable: true
+          is_unique: false
+        - id: cob:click_code:column:code.inbound_call_counts.callback_references
+          name: callback_references
+          description: Number of places where this symbol is passed by reference as an argument to another call.
+          type: HUGEINT
+          sample_values: []
+          is_nullable: true
+          is_unique: false
+        - id: cob:click_code:column:code.inbound_call_counts.distinct_callers
+          name: distinct_callers
+          description: Number of distinct symbols that call this symbol directly or pass it as a callback.
+          type: BIGINT
+          sample_values: []
+          is_nullable: true
+          is_unique: false
+      - id: cob:click_code:table:code.untested_public_symbols
+        name: untested_public_symbols
+        description: Public symbols in non-test files whose file has no recorded test association (no test imports it or matches
+          its name). This does not show that the symbol is never tested.
+        pk: []
+        type: VIEW
+        columns:
+        - id: cob:click_code:column:code.untested_public_symbols.symbol_id
+          name: symbol_id
+          description: 'ID: file path, ''::'', qualified name; repeated qualified definitions append @L<definition-line>.'
+          type: VARCHAR
+          sample_values: []
+          is_nullable: true
+          is_unique: false
+        - id: cob:click_code:column:code.untested_public_symbols.file_id
+          name: file_id
+          description: File that defines the symbol.
+          type: VARCHAR
+          sample_values: []
+          is_nullable: true
+          is_unique: false
+        - id: cob:click_code:column:code.untested_public_symbols.name
+          name: name
+          description: Bare name of the symbol.
+          type: VARCHAR
+          sample_values: []
+          is_nullable: true
+          is_unique: false
+        - id: cob:click_code:column:code.untested_public_symbols.qualname
+          name: qualname
+          description: Dotted name within the module, e.g. Class.method.
+          type: VARCHAR
+          sample_values: []
+          is_nullable: true
+          is_unique: false
+        - id: cob:click_code:column:code.untested_public_symbols.kind
+          name: kind
+          description: function, method or class.
+          type: VARCHAR
+          sample_values: []
+          is_nullable: true
+          is_unique: false
+      views:
+      - id: cob:click_code:table:code.call_edges
+        name: call_edges
+        description: One row per ordered pair of internal symbols where the first calls or references the second, aggregating
+          every call site between them. Use calls_directly for 'calls' or 'direct callers'; a pair can exist only because
+          the caller passes the callee as a callback (calls_directly false). Only resolved internal callees appear; calls
+          to builtins, third-party code and unresolved names are not edges.
+        pk:
+        - cob:click_code:column:code.call_edges.caller_symbol_id
+        - cob:click_code:column:code.call_edges.callee_symbol_id
+        type: VIEW
+        columns:
+        - id: cob:click_code:column:code.call_edges.caller_symbol_id
+          name: caller_symbol_id
+          description: Symbol whose body contains the call sites or callback references.
+          type: VARCHAR
+          sample_values: []
+          is_nullable: true
+          is_unique: false
+        - id: cob:click_code:column:code.call_edges.callee_symbol_id
+          name: callee_symbol_id
+          description: Internal symbol called or referenced.
+          type: VARCHAR
+          sample_values: []
+          is_nullable: true
+          is_unique: false
+        - id: cob:click_code:column:code.call_edges.direct_call_sites
+          name: direct_call_sites
+          description: Number of call sites where the caller invokes the callee directly.
+          type: BIGINT
+          sample_values: []
+          is_nullable: true
+          is_unique: false
+        - id: cob:click_code:column:code.call_edges.callback_references
+          name: callback_references
+          description: Number of places where the caller passes the callee as an argument, e.g. asyncio.to_thread(f).
+          type: BIGINT
+          sample_values: []
+          is_nullable: true
+          is_unique: false
+        - id: cob:click_code:column:code.call_edges.calls_directly
+          name: calls_directly
+          description: True when the caller invokes the callee directly at least once. This is the meaning of 'X calls Y'
+            and 'direct caller'.
+          type: BOOLEAN
+          sample_values: []
+          is_nullable: true
+          is_unique: false
+        - id: cob:click_code:column:code.call_edges.passes_as_callback
+          name: passes_as_callback
+          description: True when the caller passes the callee as a callback reference at least once.
+          type: BOOLEAN
+          sample_values: []
+          is_nullable: true
+          is_unique: false
+        - id: cob:click_code:column:code.call_edges.first_line
+          name: first_line
+          description: Smallest line number among the call sites and references in the caller's file.
+          type: INTEGER
+          sample_values: []
+          is_nullable: true
+          is_unique: false
+        - id: cob:click_code:column:code.call_edges.is_self_call
+          name: is_self_call
+          description: True when the symbol calls or references itself.
+          type: BOOLEAN
+          sample_values: []
+          is_nullable: true
+          is_unique: false
+        - id: cob:click_code:column:code.call_edges.caller_kind
+          name: caller_kind
+          description: 'function, method or class: kind of the caller (a class appears when the call is in its class body).'
+          type: VARCHAR
+          sample_values: []
+          is_nullable: true
+          is_unique: false
+        - id: cob:click_code:column:code.call_edges.caller_file_id
+          name: caller_file_id
+          description: File that defines the caller.
+          type: VARCHAR
+          sample_values: []
+          is_nullable: true
+          is_unique: false
+        - id: cob:click_code:column:code.call_edges.caller_in_test_file
+          name: caller_in_test_file
+          description: True when the caller is defined in a test file.
+          type: BOOLEAN
+          sample_values: []
+          is_nullable: true
+          is_unique: false
+        - id: cob:click_code:column:code.call_edges.callee_kind
+          name: callee_kind
+          description: 'function, method or class: kind of the callee. Calling a class constructs an instance.'
+          type: VARCHAR
+          sample_values: []
+          is_nullable: true
+          is_unique: false
+        - id: cob:click_code:column:code.call_edges.callee_file_id
+          name: callee_file_id
+          description: File that defines the callee.
+          type: VARCHAR
+          sample_values: []
+          is_nullable: true
+          is_unique: false
+        - id: cob:click_code:column:code.call_edges.callee_in_test_file
+          name: callee_in_test_file
+          description: True when the callee is defined in a test file.
+          type: BOOLEAN
+          sample_values: []
+          is_nullable: true
+          is_unique: false
+      - id: cob:click_code:table:code.reachability
+        name: reachability
+        description: 'Transitive callers: one row per pair (caller, target) where a chain of call edges leads from the caller
+          to the target, with the length of the shortest chain. direct_depth follows direct calls only and is null when the
+          target is reachable only through a callback reference; any_depth also follows callback references. The chain length
+          is unbounded and cycles are handled. A symbol is never listed as reaching itself. Use this view for ''directly or
+          indirectly'', ''transitively'', ''can reach'', ''impact of changing'' and shortest-depth questions instead of writing
+          a recursive query.'
+        pk:
+        - cob:click_code:column:code.reachability.caller_symbol_id
+        - cob:click_code:column:code.reachability.target_symbol_id
+        type: VIEW
+        columns:
+        - id: cob:click_code:column:code.reachability.caller_symbol_id
+          name: caller_symbol_id
+          description: Symbol from which a chain of calls reaches the target.
+          type: VARCHAR
+          sample_values: []
+          is_nullable: true
+          is_unique: false
+        - id: cob:click_code:column:code.reachability.target_symbol_id
+          name: target_symbol_id
+          description: Symbol reached.
+          type: VARCHAR
+          sample_values: []
+          is_nullable: true
+          is_unique: false
+        - id: cob:click_code:column:code.reachability.direct_depth
+          name: direct_depth
+          description: Edges in the shortest chain of direct calls from caller to target (1 = calls it directly); null when
+            every chain needs a callback reference.
+          type: INTEGER
+          sample_values: []
+          is_nullable: true
+          is_unique: false
+        - id: cob:click_code:column:code.reachability.any_depth
+          name: any_depth
+          description: Edges in the shortest chain when callback references also count as edges; never larger than direct_depth.
+          type: INTEGER
+          sample_values: []
+          is_nullable: true
+          is_unique: false
+        - id: cob:click_code:column:code.reachability.caller_kind
+          name: caller_kind
+          description: 'function, method or class: kind of the caller.'
+          type: VARCHAR
+          sample_values: []
+          is_nullable: true
+          is_unique: false
+        - id: cob:click_code:column:code.reachability.caller_file_id
+          name: caller_file_id
+          description: File that defines the caller.
+          type: VARCHAR
+          sample_values: []
+          is_nullable: true
+          is_unique: false
+        - id: cob:click_code:column:code.reachability.caller_in_test_file
+          name: caller_in_test_file
+          description: True when the caller is defined in a test file.
+          type: BOOLEAN
+          sample_values: []
+          is_nullable: true
+          is_unique: false
+      - id: cob:click_code:table:code.symbol_profile
+        name: symbol_profile
+        description: 'One row per function, method and class with the facts most questions filter on: kind flags, visibility,
+          test location, docstring presence, size, enclosing class and inbound and outbound call counts. ''Function'' means
+          kind = ''function'' (module-level def); methods are defs inside a class; classes are not functions even though calling
+          one constructs an instance.'
+        pk:
+        - cob:click_code:column:code.symbol_profile.symbol_id
+        type: VIEW
+        columns:
+        - id: cob:click_code:column:code.symbol_profile.symbol_id
+          name: symbol_id
+          description: Symbol ID, as in code.symbols.
+          type: VARCHAR
+          sample_values: []
+          is_nullable: true
+          is_unique: true
+        - id: cob:click_code:column:code.symbol_profile.file_id
+          name: file_id
+          description: File that defines the symbol.
+          type: VARCHAR
+          sample_values: []
+          is_nullable: true
+          is_unique: false
+        - id: cob:click_code:column:code.symbol_profile.name
+          name: name
+          description: Bare name.
+          type: VARCHAR
+          sample_values: []
+          is_nullable: true
+          is_unique: false
+        - id: cob:click_code:column:code.symbol_profile.qualname
+          name: qualname
+          description: Dotted name within the module, e.g. Class.method.
+          type: VARCHAR
+          sample_values: []
+          is_nullable: true
+          is_unique: false
+        - id: cob:click_code:column:code.symbol_profile.kind
+          name: kind
+          description: function, method or class.
+          type: VARCHAR
+          sample_values: []
+          is_nullable: true
+          is_unique: false
+        - id: cob:click_code:column:code.symbol_profile.is_function
+          name: is_function
+          description: True for module-level functions (kind = 'function').
+          type: BOOLEAN
+          sample_values: []
+          is_nullable: true
+          is_unique: false
+        - id: cob:click_code:column:code.symbol_profile.is_method
+          name: is_method
+          description: True for functions defined in a class body.
+          type: BOOLEAN
+          sample_values: []
+          is_nullable: true
+          is_unique: false
+        - id: cob:click_code:column:code.symbol_profile.is_class
+          name: is_class
+          description: True for classes.
+          type: BOOLEAN
+          sample_values: []
+          is_nullable: true
+          is_unique: false
+        - id: cob:click_code:column:code.symbol_profile.is_public
+          name: is_public
+          description: True when neither the name nor any enclosing class name starts with an underscore.
+          type: BOOLEAN
+          sample_values: []
+          is_nullable: true
+          is_unique: false
+        - id: cob:click_code:column:code.symbol_profile.is_dunder
+          name: is_dunder
+          description: True for names of the form __name__, e.g. __init__.
+          type: BOOLEAN
+          sample_values: []
+          is_nullable: true
+          is_unique: false
+        - id: cob:click_code:column:code.symbol_profile.in_test_file
+          name: in_test_file
+          description: True when the defining file is a test file.
+          type: BOOLEAN
+          sample_values: []
+          is_nullable: true
+          is_unique: false
+        - id: cob:click_code:column:code.symbol_profile.module
+          name: module
+          description: Dotted module name of the defining file.
+          type: VARCHAR
+          sample_values: []
+          is_nullable: true
+          is_unique: false
+        - id: cob:click_code:column:code.symbol_profile.enclosing_class_symbol_id
+          name: enclosing_class_symbol_id
+          description: For a method, the class that defines it; null otherwise.
+          type: VARCHAR
+          sample_values: []
+          is_nullable: true
+          is_unique: false
+        - id: cob:click_code:column:code.symbol_profile.line_start
+          name: line_start
+          description: First line of the definition, decorators excluded.
+          type: INTEGER
+          sample_values: []
+          is_nullable: true
+          is_unique: false
+        - id: cob:click_code:column:code.symbol_profile.line_end
+          name: line_end
+          description: Last line of the definition.
+          type: INTEGER
+          sample_values: []
+          is_nullable: true
+          is_unique: false
+        - id: cob:click_code:column:code.symbol_profile.line_span
+          name: line_span
+          description: line_end - line_start + 1.
+          type: INTEGER
+          sample_values: []
+          is_nullable: true
+          is_unique: false
+        - id: cob:click_code:column:code.symbol_profile.has_docstring
+          name: has_docstring
+          description: True when the symbol has a docstring (summary_source = 'docstring').
+          type: BOOLEAN
+          sample_values: []
+          is_nullable: true
+          is_unique: false
+        - id: cob:click_code:column:code.symbol_profile.direct_callers
+          name: direct_callers
+          description: Distinct other symbols that call this one directly.
+          type: BIGINT
+          sample_values: []
+          is_nullable: true
+          is_unique: false
+        - id: cob:click_code:column:code.symbol_profile.callers_any_kind
+          name: callers_any_kind
+          description: Distinct other symbols that call it directly or pass it as a callback.
+          type: BIGINT
+          sample_values: []
+          is_nullable: true
+          is_unique: false
+        - id: cob:click_code:column:code.symbol_profile.inbound_direct_call_sites
+          name: inbound_direct_call_sites
+          description: Direct call sites, in all callers, that resolve to this symbol.
+          type: HUGEINT
+          sample_values: []
+          is_nullable: true
+          is_unique: false
+        - id: cob:click_code:column:code.symbol_profile.inbound_callback_references
+          name: inbound_callback_references
+          description: Places where this symbol is passed as a callback.
+          type: HUGEINT
+          sample_values: []
+          is_nullable: true
+          is_unique: false
+        - id: cob:click_code:column:code.symbol_profile.internal_callees
+          name: internal_callees
+          description: Distinct other internal symbols this one calls directly.
+          type: BIGINT
+          sample_values: []
+          is_nullable: true
+          is_unique: false
+        - id: cob:click_code:column:code.symbol_profile.outgoing_call_sites
+          name: outgoing_call_sites
+          description: Direct call sites in this symbol's body, including calls to builtins and external code.
+          type: BIGINT
+          sample_values: []
+          is_nullable: true
+          is_unique: false
+      - id: cob:click_code:table:code.file_profile
+        name: file_profile
+        description: One row per Python file with its directory, top-level package, documentation, size, definition counts,
+          internal import counts and static test links. directory is the folder that contains the file ('' at the repository
+          root); group by directory, not by module or package, for questions about folders.
+        pk:
+        - cob:click_code:column:code.file_profile.file_id
+        type: VIEW
+        columns:
+        - id: cob:click_code:column:code.file_profile.file_id
+          name: file_id
+          description: Repository-relative path.
+          type: VARCHAR
+          sample_values: []
+          is_nullable: true
+          is_unique: true
+        - id: cob:click_code:column:code.file_profile.module
+          name: module
+          description: Dotted import name.
+          type: VARCHAR
+          sample_values: []
+          is_nullable: true
+          is_unique: false
+        - id: cob:click_code:column:code.file_profile.package
+          name: package
+          description: Dotted package name; empty for a top-level module.
+          type: VARCHAR
+          sample_values: []
+          is_nullable: true
+          is_unique: false
+        - id: cob:click_code:column:code.file_profile.directory
+          name: directory
+          description: Folder containing the file, as a path without trailing slash; '' at the repository root.
+          type: VARCHAR
+          sample_values: []
+          is_nullable: true
+          is_unique: false
+        - id: cob:click_code:column:code.file_profile.top_directory
+          name: top_directory
+          description: First path component for files in a folder; '' at the repository root.
+          type: VARCHAR
+          sample_values: []
+          is_nullable: true
+          is_unique: false
+        - id: cob:click_code:column:code.file_profile.file_name
+          name: file_name
+          description: Last path component, e.g. server.py.
+          type: VARCHAR
+          sample_values: []
+          is_nullable: true
+          is_unique: false
+        - id: cob:click_code:column:code.file_profile.is_test
+          name: is_test
+          description: True for test files.
+          type: BOOLEAN
+          sample_values: []
+          is_nullable: true
+          is_unique: false
+        - id: cob:click_code:column:code.file_profile.is_package_init
+          name: is_package_init
+          description: True for __init__.py files.
+          type: BOOLEAN
+          sample_values: []
+          is_nullable: true
+          is_unique: false
+        - id: cob:click_code:column:code.file_profile.line_count
+          name: line_count
+          description: Number of lines in the file.
+          type: INTEGER
+          sample_values: []
+          is_nullable: true
+          is_unique: false
+        - id: cob:click_code:column:code.file_profile.has_module_docstring
+          name: has_module_docstring
+          description: True when the file has a module docstring (files.description_source is not 'none').
+          type: BOOLEAN
+          sample_values: []
+          is_nullable: true
+          is_unique: false
+        - id: cob:click_code:column:code.file_profile.function_count
+          name: function_count
+          description: Module-level functions defined in the file.
+          type: BIGINT
+          sample_values: []
+          is_nullable: true
+          is_unique: false
+        - id: cob:click_code:column:code.file_profile.method_count
+          name: method_count
+          description: Methods defined in the file's classes.
+          type: BIGINT
+          sample_values: []
+          is_nullable: true
+          is_unique: false
+        - id: cob:click_code:column:code.file_profile.class_count
+          name: class_count
+          description: Classes defined in the file.
+          type: BIGINT
+          sample_values: []
+          is_nullable: true
+          is_unique: false
+        - id: cob:click_code:column:code.file_profile.public_symbol_count
+          name: public_symbol_count
+          description: Public functions, methods and classes in the file.
+          type: BIGINT
+          sample_values: []
+          is_nullable: true
+          is_unique: false
+        - id: cob:click_code:column:code.file_profile.imports_internal_files
+          name: imports_internal_files
+          description: Distinct other repository files this file imports.
+          type: BIGINT
+          sample_values: []
+          is_nullable: true
+          is_unique: false
+        - id: cob:click_code:column:code.file_profile.imported_by_files
+          name: imported_by_files
+          description: Distinct other repository files that import this file.
+          type: BIGINT
+          sample_values: []
+          is_nullable: true
+          is_unique: false
+        - id: cob:click_code:column:code.file_profile.linked_test_files
+          name: linked_test_files
+          description: Distinct test files statically linked to this file (imports or name match); not coverage.
+          type: BIGINT
+          sample_values: []
+          is_nullable: true
+          is_unique: false
+      - id: cob:click_code:table:code.file_dependencies
+        name: file_dependencies
+        description: 'Internal module dependencies: one row per ordered pair of distinct repository files where the first
+          imports the second. Imports of external modules are excluded.'
+        pk:
+        - cob:click_code:column:code.file_dependencies.importer_file_id
+        - cob:click_code:column:code.file_dependencies.imported_file_id
+        type: VIEW
+        columns:
+        - id: cob:click_code:column:code.file_dependencies.importer_file_id
+          name: importer_file_id
+          description: File containing the import statements.
+          type: VARCHAR
+          sample_values: []
+          is_nullable: true
+          is_unique: false
+        - id: cob:click_code:column:code.file_dependencies.imported_file_id
+          name: imported_file_id
+          description: Repository file it imports.
+          type: VARCHAR
+          sample_values: []
+          is_nullable: true
+          is_unique: false
+        - id: cob:click_code:column:code.file_dependencies.imported_names
+          name: imported_names
+          description: Import rows (one per imported name) between the two files.
+          type: BIGINT
+          sample_values: []
+          is_nullable: true
+          is_unique: false
+        - id: cob:click_code:column:code.file_dependencies.first_line
+          name: first_line
+          description: Line of the first import of that file.
+          type: INTEGER
+          sample_values: []
+          is_nullable: true
+          is_unique: false
+        - id: cob:click_code:column:code.file_dependencies.importer_is_test
+          name: importer_is_test
+          description: True when the importing file is a test file.
+          type: BOOLEAN
+          sample_values: []
+          is_nullable: true
+          is_unique: false
+      - id: cob:click_code:table:code.class_ancestry
+        name: class_ancestry
+        description: 'Transitive inheritance among internal classes: one row per (class, ancestor) with the number of inheritance
+          steps (1 = a direct base). Only bases that resolve to classes in the repository are followed; external bases such
+          as Exception or BaseModel are in code.class_bases.base_name.'
+        pk:
+        - cob:click_code:column:code.class_ancestry.class_symbol_id
+        - cob:click_code:column:code.class_ancestry.ancestor_symbol_id
+        type: VIEW
+        columns:
+        - id: cob:click_code:column:code.class_ancestry.class_symbol_id
+          name: class_symbol_id
+          description: Class.
+          type: VARCHAR
+          sample_values: []
+          is_nullable: true
+          is_unique: false
+        - id: cob:click_code:column:code.class_ancestry.ancestor_symbol_id
+          name: ancestor_symbol_id
+          description: Internal class it inherits from, directly or through other internal classes.
+          type: VARCHAR
+          sample_values: []
+          is_nullable: true
+          is_unique: false
+        - id: cob:click_code:column:code.class_ancestry.depth
+          name: depth
+          description: Inheritance steps on the shortest path; 1 for a direct base.
+          type: INTEGER
+          sample_values: []
+          is_nullable: true
+          is_unique: false
+    foreign_keys:
+    - source_column_id: cob:click_code:column:code.call_edges.caller_symbol_id
+      target_column_id: cob:click_code:column:code.symbols.symbol_id
+    - source_column_id: cob:click_code:column:code.call_edges.callee_symbol_id
+      target_column_id: cob:click_code:column:code.symbols.symbol_id
+    - source_column_id: cob:click_code:column:code.call_edges.caller_file_id
+      target_column_id: cob:click_code:column:code.files.file_id
+    - source_column_id: cob:click_code:column:code.call_edges.callee_file_id
+      target_column_id: cob:click_code:column:code.files.file_id
+    - source_column_id: cob:click_code:column:code.reachability.caller_symbol_id
+      target_column_id: cob:click_code:column:code.symbols.symbol_id
+    - source_column_id: cob:click_code:column:code.reachability.target_symbol_id
+      target_column_id: cob:click_code:column:code.symbols.symbol_id
+    - source_column_id: cob:click_code:column:code.reachability.caller_file_id
+      target_column_id: cob:click_code:column:code.files.file_id
+    - source_column_id: cob:click_code:column:code.symbol_profile.symbol_id
+      target_column_id: cob:click_code:column:code.symbols.symbol_id
+    - source_column_id: cob:click_code:column:code.symbol_profile.file_id
+      target_column_id: cob:click_code:column:code.files.file_id
+    - source_column_id: cob:click_code:column:code.symbol_profile.enclosing_class_symbol_id
+      target_column_id: cob:click_code:column:code.symbols.symbol_id
+    - source_column_id: cob:click_code:column:code.file_profile.file_id
+      target_column_id: cob:click_code:column:code.files.file_id
+    - source_column_id: cob:click_code:column:code.file_dependencies.importer_file_id
+      target_column_id: cob:click_code:column:code.files.file_id
+    - source_column_id: cob:click_code:column:code.file_dependencies.imported_file_id
+      target_column_id: cob:click_code:column:code.files.file_id
+    - source_column_id: cob:click_code:column:code.class_ancestry.class_symbol_id
+      target_column_id: cob:click_code:column:code.symbols.symbol_id
+    - source_column_id: cob:click_code:column:code.class_ancestry.ancestor_symbol_id
+      target_column_id: cob:click_code:column:code.symbols.symbol_id
+  foreign_keys:
+  - source_column_id: cob:click_code:column:code.headings.file_id
+    target_column_id: cob:click_code:column:code.files.file_id
+  - source_column_id: cob:click_code:column:code.symbols.file_id
+    target_column_id: cob:click_code:column:code.files.file_id
+  - source_column_id: cob:click_code:column:code.class_bases.class_symbol_id
+    target_column_id: cob:click_code:column:code.symbols.symbol_id
+  - source_column_id: cob:click_code:column:code.class_bases.base_symbol_id
+    target_column_id: cob:click_code:column:code.symbols.symbol_id
+  - source_column_id: cob:click_code:column:code.calls.caller_symbol_id
+    target_column_id: cob:click_code:column:code.symbols.symbol_id
+  - source_column_id: cob:click_code:column:code.calls.callee_symbol_id
+    target_column_id: cob:click_code:column:code.symbols.symbol_id
+  - source_column_id: cob:click_code:column:code.imports.file_id
+    target_column_id: cob:click_code:column:code.files.file_id
+  - source_column_id: cob:click_code:column:code.imports.imported_file_id
+    target_column_id: cob:click_code:column:code.files.file_id
+  - source_column_id: cob:click_code:column:code.test_links.test_file_id
+    target_column_id: cob:click_code:column:code.files.file_id
+  - source_column_id: cob:click_code:column:code.test_links.target_file_id
+    target_column_id: cob:click_code:column:code.files.file_id
+  joins: []
+semantic_layer:
+  terms:
+  - id: cob:click_code:term:snapshot
+    name: Code snapshot
+    description: 'One row identifying the analysed source: repository, commit, content fingerprint, builder and its known
+      limits.'
+    represents:
+    - cob:click_code:table:code.snapshot
+    columns_attributes:
+    - id: cob:click_code:attribute:code.snapshot.snapshot_id
+      name: snapshot id
+      description: 'Stable id of this snapshot: commit prefix and fingerprint prefix.'
+      column_id: cob:click_code:column:code.snapshot.snapshot_id
+    - id: cob:click_code:attribute:code.snapshot.repo_url
+      name: repo url
+      description: URL of the analysed repository.
+      column_id: cob:click_code:column:code.snapshot.repo_url
+    - id: cob:click_code:attribute:code.snapshot.commit_sha
+      name: commit sha
+      description: Commit SHA of the analysed checkout.
+      column_id: cob:click_code:column:code.snapshot.commit_sha
+    - id: cob:click_code:attribute:code.snapshot.built_at
+      name: built at
+      description: UTC time the map was built, ISO 8601 (SOURCE_DATE_EPOCH when set).
+      column_id: cob:click_code:column:code.snapshot.built_at
+    - id: cob:click_code:attribute:code.snapshot.builder_version
+      name: builder version
+      description: Name and version of the builder that produced the rows.
+      column_id: cob:click_code:column:code.snapshot.builder_version
+    - id: cob:click_code:attribute:code.snapshot.source_fingerprint
+      name: source fingerprint
+      description: 16-hex SHA-256 digest over sorted 'path NUL file-sha256' lines of every analysed file.
+      column_id: cob:click_code:column:code.snapshot.source_fingerprint
+    - id: cob:click_code:attribute:code.snapshot.file_count
+      name: file count
+      description: Number of Python files analysed.
+      column_id: cob:click_code:column:code.snapshot.file_count
+    - id: cob:click_code:attribute:code.snapshot.omitted_file_count
+      name: omitted file count
+      description: Number of Python files found but not analysed (excluded or unparseable).
+      column_id: cob:click_code:column:code.snapshot.omitted_file_count
+    - id: cob:click_code:attribute:code.snapshot.known_limits
+      name: known limits
+      description: JSON array of plain-language limits of the static analysis.
+      column_id: cob:click_code:column:code.snapshot.known_limits
+  - id: cob:click_code:term:files
+    name: Source file
+    description: One row per analysed Python source file. Module and package descriptions are in files.description; a package
+      description belongs to its __init__.py row.
+    represents:
+    - cob:click_code:table:code.files
+    columns_attributes:
+    - id: cob:click_code:attribute:code.files.file_id
+      name: file id
+      description: Repository-relative path of the file, with forward slashes.
+      column_id: cob:click_code:column:code.files.file_id
+    - id: cob:click_code:attribute:code.files.package
+      name: package
+      description: Dotted name of the package that contains the module; empty for a top-level module.
+      column_id: cob:click_code:column:code.files.package
+    - id: cob:click_code:attribute:code.files.module
+      name: module
+      description: Dotted import name of the module (a package's __init__.py has the package's name).
+      column_id: cob:click_code:column:code.files.module
+    - id: cob:click_code:attribute:code.files.is_test
+      name: is test
+      description: True when the path or file name marks the file as a test (tests/ or test/ directory, test_*.py, *_test.py,
+        conftest.py).
+      column_id: cob:click_code:column:code.files.is_test
+    - id: cob:click_code:attribute:code.files.line_count
+      name: line count
+      description: Number of lines in the file.
+      column_id: cob:click_code:column:code.files.line_count
+    - id: cob:click_code:attribute:code.files.sha256
+      name: sha256
+      description: SHA-256 of the file's bytes; used to detect stale certifications.
+      column_id: cob:click_code:column:code.files.sha256
+    - id: cob:click_code:attribute:code.files.description
+      name: description
+      description: Verbatim description from the module docstring; empty when the file has none.
+      column_id: cob:click_code:column:code.files.description
+    - id: cob:click_code:attribute:code.files.description_source
+      name: description source
+      description: 'Where the description came from: heading_purpose, module_docstring or none.'
+      column_id: cob:click_code:column:code.files.description_source
+    - id: cob:click_code:attribute:code.files.has_fixed_headings
+      name: has fixed headings
+      description: True when the module docstring uses the fixed headings [PURPOSE], [INTERFACE], [FLOW], [DEPENDENCIES] or
+        [CONSTRAINTS].
+      column_id: cob:click_code:column:code.files.has_fixed_headings
+  - id: cob:click_code:term:headings
+    name: Docstring heading
+    description: Optional fixed sections and contract atoms from module docstrings only. This table can be empty even when
+      ordinary module and function docstrings exist. Function docstrings are in symbols.summary, not this table.
+    represents:
+    - cob:click_code:table:code.headings
+    columns_attributes:
+    - id: cob:click_code:attribute:code.headings.heading
+      name: heading
+      description: Heading name such as [PURPOSE], or an atom name such as Teleology or Fails.
+      column_id: cob:click_code:column:code.headings.heading
+    - id: cob:click_code:attribute:code.headings.value
+      name: value
+      description: Verbatim text under the heading or after the atom.
+      column_id: cob:click_code:column:code.headings.value
+    - id: cob:click_code:attribute:code.headings.ordinal
+      name: ordinal
+      description: Position of the heading within the file's docstring, from 1.
+      column_id: cob:click_code:column:code.headings.ordinal
+  - id: cob:click_code:term:symbols
+    name: Code symbol
+    description: Functions, methods and classes, their definition locations and extracted docstring summaries. Use this table
+      for function definitions and function docstring questions.
+    represents:
+    - cob:click_code:table:code.symbols
+    columns_attributes:
+    - id: cob:click_code:attribute:code.symbols.symbol_id
+      name: symbol id
+      description: 'ID: file path, ''::'', qualified name; repeated qualified definitions append @L<definition-line>.'
+      column_id: cob:click_code:column:code.symbols.symbol_id
+    - id: cob:click_code:attribute:code.symbols.name
+      name: name
+      description: Bare name of the symbol.
+      column_id: cob:click_code:column:code.symbols.name
+    - id: cob:click_code:attribute:code.symbols.qualname
+      name: qualname
+      description: Dotted name within the module, e.g. Class.method.
+      column_id: cob:click_code:column:code.symbols.qualname
+    - id: cob:click_code:attribute:code.symbols.kind
+      name: kind
+      description: function, method or class.
+      column_id: cob:click_code:column:code.symbols.kind
+    - id: cob:click_code:attribute:code.symbols.line_start
+      name: line start
+      description: First line of the definition, decorators excluded.
+      column_id: cob:click_code:column:code.symbols.line_start
+    - id: cob:click_code:attribute:code.symbols.line_end
+      name: line end
+      description: Last line of the definition.
+      column_id: cob:click_code:column:code.symbols.line_end
+    - id: cob:click_code:attribute:code.symbols.is_public
+      name: is public
+      description: True when neither the name nor any enclosing class name starts with an underscore.
+      column_id: cob:click_code:column:code.symbols.is_public
+    - id: cob:click_code:attribute:code.symbols.summary
+      name: summary
+      description: First paragraph (or Teleology atom) of this function, method or class docstring, with whitespace normalized;
+        empty when absent. This is the function documentation, unlike optional module headings.
+      column_id: cob:click_code:column:code.symbols.summary
+    - id: cob:click_code:attribute:code.symbols.summary_source
+      name: summary source
+      description: docstring or none.
+      column_id: cob:click_code:column:code.symbols.summary_source
+  - id: cob:click_code:term:class_bases
+    name: Class base
+    description: Base classes named in each class statement, in order, with the internal class each one resolves to.
+    represents:
+    - cob:click_code:table:code.class_bases
+    columns_attributes:
+    - id: cob:click_code:attribute:code.class_bases.ordinal
+      name: ordinal
+      description: Position of the base in the class statement, from 1.
+      column_id: cob:click_code:column:code.class_bases.ordinal
+    - id: cob:click_code:attribute:code.class_bases.base_name
+      name: base name
+      description: Base expression as written, e.g. SQLDatabase, base.SQLDatabase or Generic[T].
+      column_id: cob:click_code:column:code.class_bases.base_name
+  - id: cob:click_code:term:calls
+    name: Call site
+    description: Call edges inside functions, methods and class bodies, with how the callee was resolved. Direct call sites
+      are all kept; those without an internal callee have a null callee and are classified as builtin, external, dynamic_attribute
+      or unresolved. Callback rows record an internal function or method passed by reference as an argument to another call,
+      e.g. asyncio.to_thread(f, x).
+    represents:
+    - cob:click_code:table:code.calls
+    columns_attributes:
+    - id: cob:click_code:attribute:code.calls.call_id
+      name: call id
+      description: 'Stable id: file path, line, column and a sequence number (for a callback row, the position of the argument).'
+      column_id: cob:click_code:column:code.calls.call_id
+    - id: cob:click_code:attribute:code.calls.callee_name
+      name: callee name
+      description: Callee as written at the call site, e.g. self.save or pd.read_csv; for a callback row, the reference as
+        written in the argument.
+      column_id: cob:click_code:column:code.calls.callee_name
+    - id: cob:click_code:attribute:code.calls.line
+      name: line
+      description: Line of the call.
+      column_id: cob:click_code:column:code.calls.line
+    - id: cob:click_code:attribute:code.calls.resolution
+      name: resolution
+      description: same_file, imported or method_on_self (internal callee found); builtin (a Python builtin such as len);
+        external (rooted in a third-party or standard-library import, or a module-level name assigned from one, e.g. logger);
+        dynamic_attribute (a method on an object whose type is not statically known, e.g. row.get); unresolved (anything else).
+      column_id: cob:click_code:column:code.calls.resolution
+    - id: cob:click_code:attribute:code.calls.confidence
+      name: confidence
+      description: 'high or low: low for inherited methods, callback rows, dynamic_attribute and unresolved.'
+      column_id: cob:click_code:column:code.calls.confidence
+    - id: cob:click_code:attribute:code.calls.call_kind
+      name: call kind
+      description: direct (the call site invokes the callee) or callback (an internal function or method passed as an argument,
+        e.g. asyncio.to_thread(f, x), executor.submit(f) or Thread(target=f), which the receiving call is expected to invoke).
+        Callback rows always carry a callee and low confidence.
+      column_id: cob:click_code:column:code.calls.call_kind
+  - id: cob:click_code:term:imports
+    name: Import statement
+    description: Import statements, one row per imported name, with the internal file each resolves to.
+    represents:
+    - cob:click_code:table:code.imports
+    columns_attributes:
+    - id: cob:click_code:attribute:code.imports.import_id
+      name: import id
+      description: 'Stable id: file path, line and a sequence number.'
+      column_id: cob:click_code:column:code.imports.import_id
+    - id: cob:click_code:attribute:code.imports.module_name
+      name: module name
+      description: Absolute dotted module name imported (relative imports resolved).
+      column_id: cob:click_code:column:code.imports.module_name
+    - id: cob:click_code:attribute:code.imports.line
+      name: line
+      description: Line of the import statement.
+      column_id: cob:click_code:column:code.imports.line
+    - id: cob:click_code:attribute:code.imports.is_internal
+      name: is internal
+      description: True when the module belongs to the analysed repository.
+      column_id: cob:click_code:column:code.imports.is_internal
+  - id: cob:click_code:term:test_links
+    name: Test link
+    description: Static associations between a test file and a source file, inferred because the test imports the file or
+      its name matches. They are not measured test execution or coverage.
+    represents:
+    - cob:click_code:table:code.test_links
+    columns_attributes:
+    - id: cob:click_code:attribute:code.test_links.reason
+      name: reason
+      description: imports_target (the test imports the file) or name_match (test_<name>.py matches <name>.py).
+      column_id: cob:click_code:column:code.test_links.reason
+  semantic_fks:
+  - column_attribute_id: cob:click_code:attribute:code.files.file_id
+    column_id: cob:click_code:column:code.headings.file_id
+    use_in_join_paths: true
+  - column_attribute_id: cob:click_code:attribute:code.files.file_id
+    column_id: cob:click_code:column:code.symbols.file_id
+    use_in_join_paths: true
+  - column_attribute_id: cob:click_code:attribute:code.symbols.symbol_id
+    column_id: cob:click_code:column:code.class_bases.class_symbol_id
+    use_in_join_paths: true
+  - column_attribute_id: cob:click_code:attribute:code.symbols.symbol_id
+    column_id: cob:click_code:column:code.class_bases.base_symbol_id
+    use_in_join_paths: true
+  - column_attribute_id: cob:click_code:attribute:code.symbols.symbol_id
+    column_id: cob:click_code:column:code.calls.caller_symbol_id
+    use_in_join_paths: true
+  - column_attribute_id: cob:click_code:attribute:code.symbols.symbol_id
+    column_id: cob:click_code:column:code.calls.callee_symbol_id
+    use_in_join_paths: true
+  - column_attribute_id: cob:click_code:attribute:code.files.file_id
+    column_id: cob:click_code:column:code.imports.file_id
+    use_in_join_paths: true
+  - column_attribute_id: cob:click_code:attribute:code.files.file_id
+    column_id: cob:click_code:column:code.imports.imported_file_id
+    use_in_join_paths: true
+  - column_attribute_id: cob:click_code:attribute:code.files.file_id
+    column_id: cob:click_code:column:code.test_links.test_file_id
+    use_in_join_paths: true
+  - column_attribute_id: cob:click_code:attribute:code.files.file_id
+    column_id: cob:click_code:column:code.test_links.target_file_id
+    use_in_join_paths: true
+  sql_attributes:
+    manual: []
+    table: []
+    sql: []
+    bridge_table: []
+  custom_analyses: []
+zones: []

@@ -1,0 +1,395 @@
+{
+  "request": {
+    "question": "invoke_with_structured_output in auto_ontology/utils/llm_invoke.py is the main structured-LLM-call wrapper. Which functions or methods in non-test code (every file under a tests/ folder is test code) reach it at exactly two hops: they do not call invoke_with_structured_output directly themselves, but they directly call at least one function or method that does call it directly? Consider direct calls only on both hops, and follow only calls to a named function or to a method on self (a call through another object's attribute, such as self._backend.classify(), is not followed); a function passed as an argument (e.g. pool.submit(f)) does not count as calling it. The intermediate function may live anywhere, including test code, but the functions you list must be in non-test code. Return their symbol IDs.\n\nRequested output columns: symbol_id (string).\nReturn exactly the requested output columns, using each requested name as the column alias, in the requested order. Return complete repository-relative file paths and complete symbol IDs exactly as stored. When the question asks which files, symbols or modules, return each distinct one once unless it asks for occurrences.",
+    "calculation_only": true
+  },
+  "status": 200,
+  "elapsed_s": 319.1,
+  "events": [
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "question_intent",
+      "thought": null,
+      "label": "Classifying the question"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "question_intent",
+      "thought": null,
+      "label": "Classifying the question"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "question_extraction",
+      "thought": null,
+      "label": "Understanding the question"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "question_extraction",
+      "thought": null,
+      "label": "Understanding the question"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "retrieve_candidates",
+      "thought": null,
+      "label": "Retrieving candidates"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "retrieve_candidates",
+      "thought": null,
+      "label": "Retrieving candidates"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "prepare_candidates",
+      "thought": null,
+      "label": "Preparing candidates"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "prepare_candidates",
+      "thought": "The question asks about functions/methods reaching invoke_with_structured_output at exactly two hops via direct calls without intermediate attribute access or argument passing. I need to trace the call graph through the calls/reachability tables. Tables containing file metadata, symbol definitions, or snapshot info are not required for hop-count logic.",
+      "label": "Preparing candidates"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "refine_evidence",
+      "thought": null,
+      "label": "Refining evidence"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "refine_evidence",
+      "thought": "No evidence line repairs are indicated; the provided evidence line is consistent with the database schema and sample values, and no certain corrections apply.",
+      "label": "Refining evidence"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "construct_sql_from_candidates",
+      "thought": null,
+      "label": "Constructing SQL"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "construct_sql_from_candidates",
+      "thought": "I need to find functions/methods in non-test code that reach invoke_with_structured_output at exactly two hops via direct calls. Evidence identifies invoke_with_structured_output as the target. The reachability table has direct_depth to measure hops. I need to find call edges where callee_symbol_id matches invoke_with_structured_output's symbol_id, then find callers of those callee symbols, ensuring callers don't directly call the target (direct_depth != 1) but call something that does. I'll start from reachability with direct_depth=2 matching the target, then trace back through calls/call_edges.",
+      "label": "Constructing SQL"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "validate_sql_query",
+      "thought": null,
+      "label": "Validating SQL and intent"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "validate_sql_query",
+      "thought": "I've carefully analyzed the SQL query against the user's question and the provided evidence. Here's my critical issues assessment:\n\n1. **Joins**: The query joins `auto_ontology_code.code.call_edges ce1` with `auto_ontology_code.code.symbol_profile cp` on `ce1.caller_symbol_id = cp.symbol_id`. This follows the verified join path `call_edges.caller_symbol_id = symbol_profile.symbol_id`. No critical join issues.\n\n2. **Aggregations**: The query has no aggregations, so this check doesn't apply.\n\n3. **Evidence compliance**: The SQL correctly uses `name = 'invoke_with_structured_output' AND module = 'auto_ontology.utils.llm_invoke'` exactly as specified in the authoritative evidence. The evidence states \"invoke_with_structured_output in auto_ontology/utils/llm_invoke.py is the main structured-LLM-call wrapper\" and the SQL maps to this perfectly.\n\nThe query structure is plausible for answering the question (finding functions that reach invoke_with_structured_output), filters correctly for non-test code (`cp.in_test_file = FALSE`), functions (`cp.is_function = TRUE`), and excludes methods (`cp.is_method = FALSE`). While the NOT EXISTS clause creates complexity, the instructions emphasize leniency and mark queries as valid if they could reasonably answer the question. The query follows all evidence instructions exactly and uses verified join paths.\n\nNo critical issues were found that would make the query unusable or clearly break the question. The SQL is valid.",
+      "label": "Validating SQL and intent"
+    },
+    {
+      "type": "sql",
+      "node": "validate_sql_query",
+      "sql": "SELECT DISTINCT cp.symbol_id FROM auto_ontology_code.code.call_edges ce1 JOIN auto_ontology_code.code.symbol_profile cp ON ce1.caller_symbol_id = cp.symbol_id WHERE ce1.callee_symbol_id = (SELECT symbol_id FROM auto_ontology_code.code.symbol_profile WHERE name = 'invoke_with_structured_output' AND module = 'auto_ontology.utils.llm_invoke') AND cp.in_test_file = FALSE AND cp.is_function = TRUE AND cp.is_method = FALSE AND NOT EXISTS (SELECT 1 FROM auto_ontology_code.code.call_edges ce2 WHERE ce2.caller_symbol_id = cp.symbol_id AND ce2.callee_symbol_id = (SELECT symbol_id FROM auto_ontology_code.code.symbol_profile WHERE name = 'invoke_with_structured_output' AND module = 'auto_ontology.utils.llm_invoke')) AND ce1.direct_call_sites >= 1;"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "execute_sql_query",
+      "thought": null,
+      "label": "Executing SQL"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "execute_sql_query",
+      "thought": null,
+      "label": "Executing SQL"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "check_empty_like_result",
+      "thought": null,
+      "label": "Checking results"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "check_empty_like_result",
+      "thought": null,
+      "label": "Checking results"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "check_value_repair",
+      "thought": null,
+      "label": "Checking values"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "check_value_repair",
+      "thought": null,
+      "label": "Checking values"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "reconstruct_sql",
+      "thought": null,
+      "label": "Reconstructing SQL"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "reconstruct_sql",
+      "thought": "I need to find functions/methods in non-test code that reach invoke_with_structured_output at exactly two hops via direct calls. The pattern is: caller (non-test) → intermediate (anywhere) → target (invoke_with_structured_output), with no direct caller→target call. I'll use call_edges to trace direct calls (call_kind='direct') rather than the reachability table, since the error analysis directed us away from reachability. I need to: 1) Find the target symbol_id, 2) Find intermediates that directly call the target, 3) Find non-test callers that directly call those intermediates but not the target directly.",
+      "label": "Reconstructing SQL"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "validate_sql_query",
+      "thought": null,
+      "label": "Validating SQL and intent"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "validate_sql_query",
+      "thought": "I need to check the generated SQL query for critical issues against the user's question, authoritative evidence, and verified join paths.\n\n**Question Analysis**: The user wants functions/methods in non-test code that reach `invoke_with_structured_output` at exactly two hops via direct calls (no attribute access or argument passing as intermediate). The SQL must find functions that call something that calls `invoke_with_structured_output` directly.\n\n**SQL Analysis**:\nThe generated SQL appears to address this question. It:\n1. Starts from `call_edges` joined with `symbol_profile`\n2. Filters for `in_test_file = FALSE` (non-test code)\n3. Filters for `call_kind = 'direct'`\n4. Uses EXISTS to find paths where the callee of a direct call is `invoke_with_structured_output`\n5. Uses NOT EXISTS to exclude direct calls where the symbol itself directly calls `invoke_with_structured_output`\n\nThis logic correctly implements \"exactly two hops\" - functions that call something that calls `invoke_with_structured_output` but don't directly call it.\n\n**Evidence Compliance**: The evidence mentions `invoke_with_structured_output in auto_ontology/utils/llm_invoke.py is the main structured-LLM-call wrapper` and specifies the module as `auto_ontology.utils.llm_invoke`. The SQL filters with:\n- `name = 'invoke_with_structured_output' AND module = 'auto_ontology.utils.llm_invoke'`\n\nThis matches the evidence exactly - using the correct name and module.\n\n**Join Paths**: The SQL uses `call_edges.caller_symbol_id = symbol_profile.symbol_id` which is one of the verified join paths listed:\n- `auto_ontology_code.code.call_edges.caller_symbol_id = auto_ontology_code.code.symbol_profile.symbol_id`\n\nThis is a valid verified join path.\n\n**Critical Issues Check**:\n1. **Joins**: The join `ce1.caller_symbol_id = sp.symbol_id` is a verified path - NOT critical.\n2. **Aggregations**: No aggregations in this query - NOT applicable.\n3. **Evidence compliance**: The SQL correctly uses `name = 'invoke_with_structured_output' AND module = 'auto_ontology.utils.llm_invoke'` matching the evidence exactly - NOT critical.\n\nThe SQL is logically correct for the question, follows the verified join paths, and complies with the evidence requirements. There are no critical issues.\n\n**Verdict**: VALID - the SQL could reasonably answer the question and has no serious problems.",
+      "label": "Validating SQL and intent"
+    },
+    {
+      "type": "sql",
+      "node": "validate_sql_query",
+      "sql": "SELECT DISTINCT sp.symbol_id FROM auto_ontology_code.code.call_edges ce1 JOIN auto_ontology_code.code.symbol_profile sp ON ce1.caller_symbol_id = sp.symbol_id WHERE sp.in_test_file = FALSE AND ce1.call_kind = 'direct' AND EXISTS (SELECT 1 FROM auto_ontology_code.code.call_edges ce2 WHERE ce2.call_kind = 'direct' AND ce2.caller_symbol_id = ce1.callee_symbol_id AND ce2.callee_symbol_id = (SELECT symbol_id FROM auto_ontology_code.code.symbol_profile WHERE name = 'invoke_with_structured_output' AND module = 'auto_ontology.utils.llm_invoke')) AND NOT EXISTS (SELECT 1 FROM auto_ontology_code.code.call_edges ce3 WHERE ce3.call_kind = 'direct' AND ce3.caller_symbol_id = sp.symbol_id AND ce3.callee_symbol_id = (SELECT symbol_id FROM auto_ontology_code.code.symbol_profile WHERE name = 'invoke_with_structured_output' AND module = 'auto_ontology.utils.llm_invoke'))"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "execute_sql_query",
+      "thought": null,
+      "label": "Executing SQL"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "execute_sql_query",
+      "thought": "Query failed, rewriting it: Binder Error: Referenced table \"ce2\" not found! Candidate tables: \"ce1\" LINE 1: ... (SELECT 1 FROM auto_ontology_code.code.call_edges ce2 WHERE ce2.call_kind = 'direct' AND ce2.caller_symbol_id = ce1... ^",
+      "label": "Executing SQL"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "reconstruct_sql",
+      "thought": null,
+      "label": "Reconstructing SQL"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "reconstruct_sql",
+      "thought": "I need to find functions/methods in non-test code that reach invoke_with_structured_output at exactly two hops via direct calls without directly calling it themselves. The two-hop path is: caller → intermediate → target (invoke_with_structured_output), where the caller does NOT directly call the target. I must use the calls and call_edges tables to trace direct calls (call_kind='direct'), and symbol_profile to filter out test files and identify function vs method.\n\nKey assumptions from the question and schema:\n1. The target is invoke_with_structured_output with module='auto_ontology.utils.llm_invoke' - I need to find its symbol_id first.\n2. Two-hop reachability via direct calls only: there must exist an intermediate symbol that the caller directly calls (call_kind='direct'), and that intermediate directly calls the target (call_kind='direct').\n3. The caller must NOT directly call the target (no direct call from caller to target).\n4. The caller must be in non-test code (in_test_file = FALSE in symbol_profile).\n5. The intermediate can be anywhere (test or non-test).\n6. I need to return symbol_id from symbol_profile for the qualifying callers.\n\nThe failed SQL had issues: ce2 was referenced without being in FROM/JOIN clause, and the EXISTS/Not EXISTS logic needed refinement. I need to structure the query so that all referenced tables are properly introduced via JOINs or subqueries in the FROM clause.\n\nActive assumption: I will use calls table for call_kind filtering and call_edges for the actual call relationships. The target symbol_id will be resolved via a subquery on symbol_profile.\n\nOne assumption that may need adjustment: whether the \"two hops\" means exactly two direct call hops (caller→intermediate→target) with no direct caller→target call, or if intermediate could also be the target itself. Based on the question wording \"they do not call invoke_with_structured_output directly themselves, but they directly call at least one function or method that does call it directly\", the intermediate must be a different entity that directly calls the target.\n\nI will construct the SQL step by step, first finding the target symbol_id, then finding intermediates that directly call it, then finding non-test callers that directly call those intermediates but not the target directly.",
+      "label": "Reconstructing SQL"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "validate_sql_query",
+      "thought": null,
+      "label": "Validating SQL and intent"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "validate_sql_query",
+      "thought": "The SQL correctly identifies non-test code symbols that are exactly two hops away from invoke_with_structured_output via direct calls, filtering out test file symbols and direct callers of the target.",
+      "label": "Validating SQL and intent"
+    },
+    {
+      "type": "sql",
+      "node": "validate_sql_query",
+      "sql": "WITH target_sym AS (SELECT symbol_id FROM auto_ontology_code.code.symbol_profile WHERE name = 'invoke_with_structured_output' AND module = 'auto_ontology.utils.llm_invoke'), intermediates AS (SELECT DISTINCT ce1.caller_symbol_id AS intermediate_id FROM auto_ontology_code.code.call_edges ce1 WHERE ce1.call_kind = 'direct' AND ce1.callee_symbol_id IN (SELECT symbol_id FROM target_sym)), caller_candidates AS (SELECT DISTINCT ce2.caller_symbol_id FROM auto_ontology_code.code.call_edges ce2 WHERE ce2.call_kind = 'direct' AND ce2.caller_symbol_id IN (SELECT intermediate_id FROM intermediates) AND ce2.callee_symbol_id NOT IN (SELECT symbol_id FROM target_sym)), non_test_callers AS (SELECT DISTINCT sp.symbol_id, sp.file_id, sp.name, sp.qualname, sp.kind, sp.is_function, sp.is_method, sp.in_test_file FROM auto_ontology_code.code.symbol_profile sp JOIN caller_candidates cc ON sp.symbol_id = cc.caller_symbol_id WHERE sp.in_test_file = FALSE) SELECT symbol_id FROM non_test_callers ORDER BY symbol_id"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "execute_sql_query",
+      "thought": null,
+      "label": "Executing SQL"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "execute_sql_query",
+      "thought": "Query failed, rewriting it: Binder Error: Values list \"ce1\" does not have a column named \"call_kind\" LINE 1: ...diate_id FROM auto_ontology_code.code.call_edges ce1 WHERE ce1.call_kind = 'direct' AND ce1.callee_symbol_id IN (SELECT... ^",
+      "label": "Executing SQL"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "reconstruct_sql",
+      "thought": null,
+      "label": "Reconstructing SQL"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "reconstruct_sql",
+      "thought": "I need to find functions/methods in non-test code that reach invoke_with_structured_output at exactly two hops via direct calls. The pattern is: non-test caller → intermediate (anywhere) → target (invoke_with_structured_output), where the caller does NOT directly call the target.  Key assumptions: 1) Target symbol_id is resolved from symbol_profile where name='invoke_with_structured_output' and module='auto_ontology.utils.llm_invoke'. 2) Two-hop path uses call_edges with call_kind='direct' for both hops. 3) Caller must NOT have a direct call to target (ce1.caller_symbol_id != ce2.caller_symbol_id when both connect to same target, or more precisely no direct call from caller to target). 4) Caller must be in non-test code (sp.in_test_file = FALSE). 5) Intermediate can be anywhere. 6) Return symbol_id from symbol_profile. The failed query error showed ce1.call_kind does not exist - call_kind lives in the calls table, not call_edges. I need to check call_edges columns: it has caller_kind, callee_kind but NOT call_kind. The call_kind is in the calls table. However, the question says 'Consider direct calls only on both hops' - I should use call_edges which has calls_directly BOOLEAN, or use calls table with call_kind. Looking at the schema, call_edges has calls_directly column, and calls has call_kind. The original failed query tried ce1.call_kind which doesn't exist in call_edges. I should use calls table for call_kind filtering, or use call_edges.calls_directly. Let me use calls table joins since it has call_kind. Actually, looking more carefully: the calls table has call_kind (direct/callback) and call_edges has calls_directly (True/False). They seem equivalent but from different tables. The error was ce1.call_kind not existing, so I should use calls table instead. But I need to trace two hops. Let me think about the join path: I need to find caller_symbol_id from call_edges where callee_symbol_id = target, then find another call_edges row where that caller_symbol_id is the callee, etc. Actually, the calls table links caller_symbol_id to callee_symbol_id with call_kind. So I can use calls table for both hops. Let me structure: first get target symbol_id, then find intermediates where calls.callee_symbol_id = target and calls.call_kind = 'direct', then find non-test callers where calls.caller_symbol_id = intermediate and calls.call_kind = 'direct', and also ensure no direct call from caller to target exists. I'll use the calls table for the call_kind filtering since call_edges doesn't have call_kind.",
+      "label": "Reconstructing SQL"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "validate_sql_query",
+      "thought": null,
+      "label": "Validating SQL and intent"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "validate_sql_query",
+      "thought": null,
+      "label": "Validating SQL and intent"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "reconstruct_sql",
+      "thought": null,
+      "label": "Reconstructing SQL"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "reconstruct_sql",
+      "thought": "I need to find functions/methods in non-test code that reach invoke_with_structured_output at exactly two hops via direct calls. The pattern is: non-test caller → intermediate → target, where caller does NOT directly call target. I'll use the calls table (which has call_kind to filter 'direct') for both hops, and symbol_profile to filter non-test callers. First, find target symbol_id, then intermediates that directly call it, then non-test callers that directly call those intermediates but not the target directly.",
+      "label": "Reconstructing SQL"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "validate_sql_query",
+      "thought": null,
+      "label": "Validating SQL and intent"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "validate_sql_query",
+      "thought": null,
+      "label": "Validating SQL and intent"
+    },
+    {
+      "type": "sql",
+      "node": "validate_sql_query",
+      "sql": "WITH target_sym AS (\n    SELECT symbol_id\n    FROM auto_ontology_code.code.symbol_profile\n    WHERE name = 'invoke_with_structured_output'\n    AND module = 'auto_ontology.utils.llm_invoke'\n),\nintermediates AS (\n    SELECT DISTINCT ce1.caller_symbol_id AS intermediate_id\n    FROM auto_ontology_code.code.calls ce1\n    WHERE ce1.call_kind = 'direct'\n    AND ce1.callee_symbol_id IN (SELECT symbol_id FROM target_sym)\n),\ncallers_to_intermediates AS (\n    SELECT DISTINCT ce2.caller_symbol_id\n    FROM auto_ontology_code.code.calls ce2\n    WHERE ce2.call_kind = 'direct'\n    AND ce2.callee_symbol_id IN (SELECT intermediate_id FROM intermediates)\n),\ndirect_to_target AS (\n    SELECT DISTINCT ce3.caller_symbol_id\n    FROM auto_ontology_code.code.calls ce3\n    WHERE ce3.call_kind = 'direct'\n    AND ce3.callee_symbol_id IN (SELECT symbol_id FROM target_sym)\n),\nnon_test_excluding_direct AS (\n    SELECT DISTINCT c.caller_symbol_id\n    FROM auto_ontology_code.code.calls c\n    WHERE c.call_kind = 'direct'\n    AND c.caller_symbol_id IN (SELECT caller_symbol_id FROM callers_to_intermediates)\n    AND c.caller_symbol_id NOT IN (SELECT caller_symbol_id FROM direct_to_target)\n)\nSELECT DISTINCT sp.symbol_id\nFROM auto_ontology_code.code.symbol_profile sp\nWHERE sp.in_test_file = FALSE\nAND sp.symbol_id IN (SELECT caller_symbol_id FROM non_test_excluding_direct)"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "execute_sql_query",
+      "thought": null,
+      "label": "Executing SQL"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "execute_sql_query",
+      "thought": null,
+      "label": "Executing SQL"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "check_empty_like_result",
+      "thought": null,
+      "label": "Checking results"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "check_empty_like_result",
+      "thought": null,
+      "label": "Checking results"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "check_value_repair",
+      "thought": null,
+      "label": "Checking values"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "check_value_repair",
+      "thought": null,
+      "label": "Checking values"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "format_and_respond",
+      "thought": null,
+      "label": "Formatting response"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "format_and_respond",
+      "thought": null,
+      "label": "Formatting response"
+    },
+    {
+      "type": "result",
+      "answer": {
+        "response": "This query identifies functions/methods in non-test code that reach invoke_with_structured_output via exactly two direct call hops. It first resolves the target symbol_id from symbol_profile, then finds intermediates that directly call the target (call_kind='direct'). Next, it identifies non-test callers that directly call those intermediates but excludes any that also directly call the target. Finally, it returns the symbol_ids of qualifying non-test callers from symbol_profile, ensuring only entries with in_test_file=FALSE are included.",
+        "sql_code": "WITH target_sym AS (\n    SELECT symbol_id\n    FROM auto_ontology_code.code.symbol_profile\n    WHERE name = 'invoke_with_structured_output'\n    AND module = 'auto_ontology.utils.llm_invoke'\n),\nintermediates AS (\n    SELECT DISTINCT ce1.caller_symbol_id AS intermediate_id\n    FROM auto_ontology_code.code.calls ce1\n    WHERE ce1.call_kind = 'direct'\n    AND ce1.callee_symbol_id IN (SELECT symbol_id FROM target_sym)\n),\ncallers_to_intermediates AS (\n    SELECT DISTINCT ce2.caller_symbol_id\n    FROM auto_ontology_code.code.calls ce2\n    WHERE ce2.call_kind = 'direct'\n    AND ce2.callee_symbol_id IN (SELECT intermediate_id FROM intermediates)\n),\ndirect_to_target AS (\n    SELECT DISTINCT ce3.caller_symbol_id\n    FROM auto_ontology_code.code.calls ce3\n    WHERE ce3.call_kind = 'direct'\n    AND ce3.callee_symbol_id IN (SELECT symbol_id FROM target_sym)\n),\nnon_test_excluding_direct AS (\n    SELECT DISTINCT c.caller_symbol_id\n    FROM auto_ontology_code.code.calls c\n    WHERE c.call_kind = 'direct'\n    AND c.caller_symbol_id IN (SELECT caller_symbol_id FROM callers_to_intermediates)\n    AND c.caller_symbol_id NOT IN (SELECT caller_symbol_id FROM direct_to_target)\n)\nSELECT DISTINCT sp.symbol_id\nFROM auto_ontology_code.code.symbol_profile sp\nWHERE sp.in_test_file = FALSE\nAND sp.symbol_id IN (SELECT caller_symbol_id FROM non_test_excluding_direct)",
+        "sql_columns": [
+          "7cdcba75-9e50-4d54-af48-3135d4e5f932",
+          "7f0b161e-61b4-4e5b-a62a-af2620cfae49",
+          "20633d50-abeb-4469-8df4-f10859185d7d",
+          "b5872999-4ab8-4fe5-adc6-18a43c90de2a",
+          "467afc17-7a83-4632-82ee-49828b34c51a",
+          "830f8bc7-290b-4470-8ddd-60e98236b08e",
+          "ae48b3e6-dcee-472c-869e-7c7d63a32115"
+        ],
+        "custom_analyses_used": [],
+        "sql_response_from_db": [
+          "[{\"symbol_id\":\"auto_ontology\\/semantic\\/bridge_tables.py::build_bridge_tables_sql_attributes\"},{\"symbol_id\":\"auto_ontology\\/server\\/chat\\/router.py::_build_charts_event\"},{\"symbol_id\":\"auto_ontology\\/retrieval\\/text_to_sql\\/agents\\/candidates_retrieval.py::CandidateRetrievalAgent.execute\"},{\"symbol_id\":\"auto_ontology\\/server\\/chat\\/worker.py::_worker_loop\"},{\"symbol_id\":\"auto_ontology\\/retrieval\\/text_to_sql\\/agents\\/sql_parse_validation.py::SQLValidationAgent.execute\"},{\"symbol_id\":\"auto_ontology\\/retrieval\\/text_to_sql\\/agents\\/candidates_preparation.py::CandidatePreparationAgent.execute\"},{\"symbol_id\":\"auto_ontology\\/semantic\\/sql_attribute_suggester.py::suggest_sql_attributes\"},{\"symbol_id\":\"auto_ontology\\/server\\/sql_attributes\\/router.py::get_sql_attribute_description_suggestion\"},{\"symbol_id\":\"auto_ontology\\/semantic\\/semantic_fk.py::_resolve_via_vdb\"},{\"symbol_id\":\"auto_ontology\\/semantic\\/deterministic.py::_generate_column_descriptions\"},{\"symbol_id\":\"auto_ontology\\/semantic\\/semantic_fk.py::select_semantic_fk_join_defaults\"},{\"symbol_id\":\"auto_ontology\\/retrieval\\/text_to_sql\\/agents\\/evidence_refinement.py::EvidenceRefinementAgent.execute\"},{\"symbol_id\":\"auto_ontology\\/semantic\\/visit_enter.py::process_table\"}]"
+        ],
+        "thoughts": "- Preparing candidates: The question asks about reaching a function via 'exactly two hops via direct calls'. Among the provided schema columns, only `code.reachability.direct_depth` explicitly models traversal depth: 'represents the numeric depth of a direct (single-hop) relationship traversal, as evidenced by a sample value of 1'. This directly maps to the 'hops' concept in the question. No other column addresses hop depth or traversal distance. The ID for this column is `1fc87e73-1644-421a-b8a8-31c8ddb560db`.\n- Preparing candidates: The question asks about functions/methods reaching invoke_with_structured_output at exactly two hops via direct calls without intermediate attribute access or argument passing. I need to trace the call graph through the calls/reachability tables. Tables containing file metadata, symbol definitions, or snapshot info are not required for hop-count logic.\n- Refining evidence: The question asks for functions/methods reaching invoke_with_structured_output at exactly two hops via direct calls without intermediate access. The evidence only describes invoke_with_structured_output's location and purpose, without defining hop semantics, call graphs, or path structures. None of the provided columns describe multi-hop traversal logic. The natural-language phrase \"reach invoke_with_structured_output at exactly two hops\" does not correspond to any evidence-defined field or rule. Therefore, the question remains unchanged, and no evidence fields are grounded.\n- Refining evidence: No evidence line repairs are indicated; the provided evidence line is consistent with the database schema and sample values, and no certain corrections apply.\n- Constructing SQL: I need to find functions/methods in non-test code that reach invoke_with_structured_output at exactly two hops via direct calls. Evidence identifies invoke_with_structured_output as the target. The reachability table has direct_depth to measure hops. I need to find call edges where callee_symbol_id matches invoke_with_structured_output's symbol_id, then find callers of those callee symbols, ensuring callers don't directly call the target (direct_depth != 1) but call something that does. I'll start from reachability with direct_depth=2 matching the target, then trace back through calls/call_edges.\n- Validating SQL and intent: I've carefully analyzed the SQL query against the user's question and the provided evidence. Here's my critical issues assessment:\n\n1. **Joins**: The query joins `auto_ontology_code.code.call_edges ce1` with `auto_ontology_code.code.symbol_profile cp` on `ce1.caller_symbol_id = cp.symbol_id`. This follows the verified join path `call_edges.caller_symbol_id = symbol_profile.symbol_id`. No critical join issues.\n\n2. **Aggregations**: The query has no aggregations, so this check doesn't apply.\n\n3. **Evidence compliance**: The SQL correctly uses `name = 'invoke_with_structured_output' AND module = 'auto_ontology.utils.llm_invoke'` exactly as specified in the authoritative evidence. The evidence states \"invoke_with_structured_output in auto_ontology/utils/llm_invoke.py is the main structured-LLM-call wrapper\" and the SQL maps to this perfectly.\n\nThe query structure is plausible for answering the question (finding functions that reach invoke_with_structured_output), filters correctly for non-test code (`cp.in_test_file = FALSE`), functions (`cp.is_function = TRUE`), and excludes methods (`cp.is_method = FALSE`). While the NOT EXISTS clause creates complexity, the instructions emphasize leniency and mark queries as valid if they could reasonably answer the question. The query follows all evidence instructions exactly and uses verified join paths.\n\nNo critical issues were found that would make the query unusable or clearly break the question. The SQL is valid.\n- Reconstructing SQL: The query fails because it attempts to filter on cp.in_test_file and cp.is_function/is_method, but the symbol_profile table stores these as aggregate counts (method_count, function_count) rather than boolean columns. Additionally, the call_edges table uses Callee In Test File and Passes As Callback booleans, not the symbol_profile fields. Rewriting to use the correct column names from the schema (callee_in_test_file, passes_as_callback, function_count, method_count) will resolve the issue.\n- Reconstructing SQL: I need to find functions/methods in non-test code that reach invoke_with_structured_output at exactly two hops via direct calls. The pattern is: caller (non-test) → intermediate (anywhere) → target (invoke_with_structured_output), with no direct caller→target call. I'll use call_edges to trace direct calls (call_kind='direct') rather than the reachability table, since the error analysis directed us away from reachability. I need to: 1) Find the target symbol_id, 2) Find intermediates that directly call the target, 3) Find non-test callers that directly call those intermediates but not the target directly.\n- Validating SQL and intent: I need to check the generated SQL query for critical issues against the user's question, authoritative evidence, and verified join paths.\n\n**Question Analysis**: The user wants functions/methods in non-test code that reach `invoke_with_structured_output` at exactly two hops via direct calls (no attribute access or argument passing as intermediate). The SQL must find functions that call something that calls `invoke_with_structured_output` directly.\n\n**SQL Analysis**:\nThe generated SQL appears to address this question. It:\n1. Starts from `call_edges` joined with `symbol_profile`\n2. Filters for `in_test_file = FALSE` (non-test code)\n3. Filters for `call_kind = 'direct'`\n4. Uses EXISTS to find paths where the callee of a direct call is `invoke_with_structured_output`\n5. Uses NOT EXISTS to exclude direct calls where the symbol itself directly calls `invoke_with_structured_output`\n\nThis logic correctly implements \"exactly two hops\" - functions that call something that calls `invoke_with_structured_output` but don't directly call it.\n\n**Evidence Compliance**: The evidence mentions `invoke_with_structured_output in auto_ontology/utils/llm_invoke.py is the main structured-LLM-call wrapper` and specifies the module as `auto_ontology.utils.llm_invoke`. The SQL filters with:\n- `name = 'invoke_with_structured_output' AND module = 'auto_ontology.utils.llm_invoke'`\n\nThis matches the evidence exactly - using the correct name and module.\n\n**Join Paths**: The SQL uses `call_edges.caller_symbol_id = symbol_profile.symbol_id` which is one of the verified join paths listed:\n- `auto_ontology_code.code.call_edges.caller_symbol_id = auto_ontology_code.code.symbol_profile.symbol_id`\n\nThis is a valid verified join path.\n\n**Critical Issues Check**:\n1. **Joins**: The join `ce1.caller_symbol_id = sp.symbol_id` is a verified path - NOT critical.\n2. **Aggregations**: No aggregations in this query - NOT applicable.\n3. **Evidence compliance**: The SQL correctly uses `name = 'invoke_with_structured_output' AND module = 'auto_ontology.utils.llm_invoke'` matching the evidence exactly - NOT critical.\n\nThe SQL is logically correct for the question, follows the verified join paths, and complies with the evidence requirements. There are no critical issues.\n\n**Verdict**: VALID - the SQL could reasonably answer the question and has no serious problems.\n- Executing SQL: Query failed, rewriting it: Binder Error: Referenced table \"ce2\" not found! Candidate tables: \"ce1\" LINE 1: ... (SELECT 1 FROM auto_ontology_code.code.call_edges ce2 WHERE ce2.call_kind = 'direct' AND ce2.caller_symbol_id = ce1... ^\n- Reconstructing SQL: I need to find functions/methods in non-test code that reach invoke_with_structured_output at exactly two hops via direct calls without directly calling it themselves. The two-hop path is: caller → intermediate → target (invoke_with_structured_output), where the caller does NOT directly call the target. I must use the calls and call_edges tables to trace direct calls (call_kind='direct'), and symbol_profile to filter out test files and identify function vs method.\n\nKey assumptions from the question and schema:\n1. The target is invoke_with_structured_output with module='auto_ontology.utils.llm_invoke' - I need to find its symbol_id first.\n2. Two-hop reachability via direct calls only: there must exist an intermediate symbol that the caller directly calls (call_kind='direct'), and that intermediate directly calls the target (call_kind='direct').\n3. The caller must NOT directly call the target (no direct call from caller to target).\n4. The caller must be in non-test code (in_test_file = FALSE in symbol_profile).\n5. The intermediate can be anywhere (test or non-test).\n6. I need to return symbol_id from symbol_profile for the qualifying callers.\n\nThe failed SQL had issues: ce2 was referenced without being in FROM/JOIN clause, and the EXISTS/Not EXISTS logic needed refinement. I need to structure the query so that all referenced tables are properly introduced via JOINs or subqueries in the FROM clause.\n\nActive assumption: I will use calls table for call_kind filtering and call_edges for the actual call relationships. The target symbol_id will be resolved via a subquery on symbol_profile.\n\nOne assumption that may need adjustment: whether the \"two hops\" means exactly two direct call hops (caller→intermediate→target) with no direct caller→target call, or if intermediate could also be the target itself. Based on the question wording \"they do not call invoke_with_structured_output directly themselves, but they directly call at least one function or method that does call it directly\", the intermediate must be a different entity that directly calls the target.\n\nI will construct the SQL step by step, first finding the target symbol_id, then finding intermediates that directly call it, then finding non-test callers that directly call those intermediates but not the target directly.\n- Validating SQL and intent: The SQL correctly identifies non-test code symbols that are exactly two hops away from invoke_with_structured_output via direct calls, filtering out test file symbols and direct callers of the target.\n- Executing SQL: Query failed, rewriting it: Binder Error: Values list \"ce1\" does not have a column named \"call_kind\" LINE 1: ...diate_id FROM auto_ontology_code.code.call_edges ce1 WHERE ce1.call_kind = 'direct' AND ce1.callee_symbol_id IN (SELECT... ^\n- Reconstructing SQL: I need to find functions/methods in non-test code that reach invoke_with_structured_output at exactly two hops via direct calls. The pattern is: non-test caller → intermediate (anywhere) → target (invoke_with_structured_output), where the caller does NOT directly call the target.  Key assumptions: 1) Target symbol_id is resolved from symbol_profile where name='invoke_with_structured_output' and module='auto_ontology.utils.llm_invoke'. 2) Two-hop path uses call_edges with call_kind='direct' for both hops. 3) Caller must NOT have a direct call to target (ce1.caller_symbol_id != ce2.caller_symbol_id when both connect to same target, or more precisely no direct call from caller to target). 4) Caller must be in non-test code (sp.in_test_file = FALSE). 5) Intermediate can be anywhere. 6) Return symbol_id from symbol_profile. The failed query error showed ce1.call_kind does not exist - call_kind lives in the calls table, not call_edges. I need to check call_edges columns: it has caller_kind, callee_kind but NOT call_kind. The call_kind is in the calls table. However, the question says 'Consider direct calls only on both hops' - I should use call_edges which has calls_directly BOOLEAN, or use calls table with call_kind. Looking at the schema, call_edges has calls_directly column, and calls has call_kind. The original failed query tried ce1.call_kind which doesn't exist in call_edges. I should use calls table for call_kind filtering, or use call_edges.calls_directly. Let me use calls table joins since it has call_kind. Actually, looking more carefully: the calls table has call_kind (direct/callback) and call_edges has calls_directly (True/False). They seem equivalent but from different tables. The error was ce1.call_kind not existing, so I should use calls table instead. But I need to trace two hops. Let me think about the join path: I need to find caller_symbol_id from call_edges where callee_symbol_id = target, then find another call_edges row where that caller_symbol_id is the callee, etc. Actually, the calls table links caller_symbol_id to callee_symbol_id with call_kind. So I can use calls table for both hops. Let me structure: first get target symbol_id, then find intermediates where calls.callee_symbol_id = target and calls.call_kind = 'direct', then find non-test callers where calls.caller_symbol_id = intermediate and calls.call_kind = 'direct', and also ensure no direct call from caller to target exists. I'll use the calls table for the call_kind filtering since call_edges doesn't have call_kind.\n- Reconstructing SQL: I need to find functions/methods in non-test code that reach invoke_with_structured_output at exactly two hops via direct calls. The pattern is: non-test caller → intermediate → target, where caller does NOT directly call target. I'll use the calls table (which has call_kind to filter 'direct') for both hops, and symbol_profile to filter non-test callers. First, find target symbol_id, then intermediates that directly call it, then non-test callers that directly call those intermediates but not the target directly."
+      }
+    }
+  ],
+  "question_id": 3,
+  "gold_sql": "WITH d AS (SELECT DISTINCT caller_symbol_id AS s FROM code.calls WHERE call_kind = 'direct' AND callee_symbol_id = 'auto_ontology/utils/llm_invoke.py::invoke_with_structured_output') SELECT DISTINCT c.caller_symbol_id AS symbol_id FROM code.calls c JOIN code.symbols x ON x.symbol_id = c.caller_symbol_id JOIN code.files f ON f.file_id = x.file_id WHERE c.call_kind = 'direct' AND c.callee_symbol_id IN (SELECT s FROM d) AND c.caller_symbol_id NOT IN (SELECT s FROM d) AND NOT f.is_test ORDER BY 1",
+  "gold_row_count": 1,
+  "agent_sql": "WITH target_sym AS (\n    SELECT symbol_id\n    FROM auto_ontology_code.code.symbol_profile\n    WHERE name = 'invoke_with_structured_output'\n    AND module = 'auto_ontology.utils.llm_invoke'\n),\nintermediates AS (\n    SELECT DISTINCT ce1.caller_symbol_id AS intermediate_id\n    FROM auto_ontology_code.code.calls ce1\n    WHERE ce1.call_kind = 'direct'\n    AND ce1.callee_symbol_id IN (SELECT symbol_id FROM target_sym)\n),\ncallers_to_intermediates AS (\n    SELECT DISTINCT ce2.caller_symbol_id\n    FROM auto_ontology_code.code.calls ce2\n    WHERE ce2.call_kind = 'direct'\n    AND ce2.callee_symbol_id IN (SELECT intermediate_id FROM intermediates)\n),\ndirect_to_target AS (\n    SELECT DISTINCT ce3.caller_symbol_id\n    FROM auto_ontology_code.code.calls ce3\n    WHERE ce3.call_kind = 'direct'\n    AND ce3.callee_symbol_id IN (SELECT symbol_id FROM target_sym)\n),\nnon_test_excluding_direct AS (\n    SELECT DISTINCT c.caller_symbol_id\n    FROM auto_ontology_code.code.calls c\n    WHERE c.call_kind = 'direct'\n    AND c.caller_symbol_id IN (SELECT caller_symbol_id FROM callers_to_intermediates)\n    AND c.caller_symbol_id NOT IN (SELECT caller_symbol_id FROM direct_to_target)\n)\nSELECT DISTINCT sp.symbol_id\nFROM auto_ontology_code.code.symbol_profile sp\nWHERE sp.in_test_file = FALSE\nAND sp.symbol_id IN (SELECT caller_symbol_id FROM non_test_excluding_direct)",
+  "agent_answer": "This query identifies functions/methods in non-test code that reach invoke_with_structured_output via exactly two direct call hops. It first resolves the target symbol_id from symbol_profile, then finds intermediates that directly call the target (call_kind='direct'). Next, it identifies non-test callers that directly call those intermediates but excludes any that also directly call the target. Finally, it returns the symbol_ids of qualifying non-test callers from symbol_profile, ensuring only entries with in_test_file=FALSE are included.",
+  "agent_row_count": 13,
+  "correct_rows": false,
+  "error": null
+}

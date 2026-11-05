@@ -1,0 +1,31 @@
+{
+  "question_id": "ao-06",
+  "arm": "B",
+  "model": "nvidia/nemotron-3.5-lightning",
+  "error": null,
+  "elapsed_s": 3.71,
+  "attempts": [
+    {
+      "sql": "SELECT s.symbol_id\nFROM code.symbols s\nJOIN code.files f ON s.file_id = f.file_id\nJOIN code.calls c ON s.symbol_id = c.caller_symbol_id\nWHERE f.module = 'base'\n  AND f.package = 'auto_ontology.connectors'\n  AND s.kind = 'method'\n  AND s.name = 'get_columns'\n  AND s.is_public = FALSE\n  AND f.is_test = FALSE\nGROUP BY s.symbol_id\nHAVING COUNT(*) = 1\n  AND MAX(CASE WHEN c.resolution = 'same_file' THEN 1 ELSE 0 END) = 1\n  AND MAX(CASE WHEN c.confidence = 'high' THEN 1 ELSE 0 END) = 0\n  AND MAX(CASE WHEN h.value IS NOT NULL THEN 1 ELSE 0 END) = 0\n  AND s.symbol_id NOT LIKE '%@L%'",
+      "error": "Binder Error: Referenced table \"h\" not found!"
+    },
+    {
+      "sql": "SELECT s.symbol_id\nFROM code.symbols s\nJOIN code.files f ON s.file_id = f.file_id\nJOIN code.calls c ON s.symbol_id = c.caller_symbol_id\nLEFT JOIN code.headings h ON h.file_id = s.file_id AND h.heading = 'get_columns'\nWHERE f.module = 'base'\n  AND f.package = 'auto_ontology.connectors'\n  AND s.kind = 'method'\n  AND s.name = 'get_columns'\n  AND s.is_public = FALSE\n  AND f.is_test = FALSE\nGROUP BY s.symbol_id\nHAVING COUNT(*) = 1\n  AND MAX(CASE WHEN c.resolution = 'same_file' THEN 1 ELSE 0 END) = 1\n  AND MAX(CASE WHEN c.confidence = 'high' THEN 1 ELSE 0 END) = 0\n  AND MAX(CASE WHEN h.value IS NOT NULL THEN 1 ELSE 0 END) = 0\n  AND s.symbol_id NOT LIKE '%@L%'",
+      "error": null
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 5767,
+    "completion_tokens": 629,
+    "total_tokens": 6396,
+    "cost": 0.00046613000000000004,
+    "providers": [
+      "CoreWeave",
+      "CoreWeave"
+    ]
+  },
+  "request": "Among the production database connector classes that directly subclass SQLDatabase (auto_ontology/connectors/base.py), excluding classes in test code (any file under a tests/ folder), which ones override get_columns with their own get_columns method that has no docstring of its own (a leading # comment is not a docstring)? Return the symbol ID of each such get_columns method.\n\nRequested output columns: symbol_id (string).",
+  "explanation": "The query joins the headings table with a condition on heading = 'get_columns' to check for a docstring value, using a LEFT JOIN so that symbols without a matching heading still appear in results. It filters for methods named get_columns in the base connector file, excludes test files and public symbols, groups by symbol_id, and applies having conditions to ensure exactly one same-file call site, no high-confidence resolution, and no docstring value.",
+  "sql": "SELECT s.symbol_id\nFROM code.symbols s\nJOIN code.files f ON s.file_id = f.file_id\nJOIN code.calls c ON s.symbol_id = c.caller_symbol_id\nLEFT JOIN code.headings h ON h.file_id = s.file_id AND h.heading = 'get_columns'\nWHERE f.module = 'base'\n  AND f.package = 'auto_ontology.connectors'\n  AND s.kind = 'method'\n  AND s.name = 'get_columns'\n  AND s.is_public = FALSE\n  AND f.is_test = FALSE\nGROUP BY s.symbol_id\nHAVING COUNT(*) = 1\n  AND MAX(CASE WHEN c.resolution = 'same_file' THEN 1 ELSE 0 END) = 1\n  AND MAX(CASE WHEN c.confidence = 'high' THEN 1 ELSE 0 END) = 0\n  AND MAX(CASE WHEN h.value IS NOT NULL THEN 1 ELSE 0 END) = 0\n  AND s.symbol_id NOT LIKE '%@L%'",
+  "rows": []
+}

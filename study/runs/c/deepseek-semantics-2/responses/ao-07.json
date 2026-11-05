@@ -1,0 +1,34 @@
+{
+  "question_id": "ao-07",
+  "arm": "C-semantics",
+  "model": "deepseek/deepseek-v4.1-flash-1017",
+  "error": null,
+  "elapsed_s": 204.4,
+  "attempts": [
+    {
+      "sql": "SELECT DISTINCT s.symbol_id AS symbol_id\nFROM auto_ontology_code.code.symbols AS s\nJOIN auto_ontology_code.code.files AS f ON s.file_id = f.file_id\nWHERE s.kind IN ('function', 'method')\n  AND f.is_test = false\n  AND s.file_id NOT LIKE 'auto_ontology/dal/%'\n  AND EXISTS (\n      SELECT 1\n      FROM auto_ontology_code.code.calls AS c\n      WHERE c.caller_symbol_id = s.symbol_id\n        AND c.call_kind = 'direct'\n        AND (\n          c.callee_symbol_id LIKE 'auto_ontology/dal/session.py::write_transaction%'\n          OR c.callee_name = 'write_transaction'\n          OR c.callee_name LIKE '%.write_transaction'\n        )\n  )\n  AND NOT EXISTS (\n      SELECT 1\n      FROM auto_ontology_code.code.calls AS c2\n      WHERE c2.caller_symbol_id = s.symbol_id\n        AND c2.call_kind = 'direct'\n        AND (\n          c2.callee_symbol_id LIKE 'auto_ontology/dal/session.py::store%'\n          OR c2.callee_name = 'store'\n          OR c2.callee_name LIKE '%.store'\n        )\n  )\nORDER BY s.symbol_id"
+    }
+  ],
+  "usage": {},
+  "request": "auto_ontology/dal/session.py provides store() (the active connection handle) and write_transaction() (a context manager that groups store() queries into one transaction). Outside the auto_ontology/dal/ folder, and excluding test code (every file under a tests/ folder), which functions or methods open a transaction themselves by calling write_transaction directly (e.g. `with write_transaction():`) but never call store() directly anywhere in their own body? Only direct calls count; calls made by helpers they invoke do not. Return their symbol IDs.\n\nRequested output columns: symbol_id (string).\nReturn exactly the requested output columns, using each requested name as the column alias, in the requested order. Return complete repository-relative file paths and complete symbol IDs exactly as stored. When the question asks which files, symbols or modules, return each distinct one once unless it asks for occurrences.",
+  "explanation": "This lists the unique functions and methods, defined outside the data-access layer folder and outside test files, that themselves directly invoke the write-transaction helper while never directly invoking the connection-handle helper anywhere in their own body. It matches direct call sites by the callee's symbol identity and by the name written at the call site, so indirect calls made through helper functions are ignored. Files flagged as tests and anything under the data-access folder are excluded, and only functions and methods are considered.",
+  "sql": "SELECT DISTINCT s.symbol_id AS symbol_id\nFROM auto_ontology_code.code.symbols AS s\nJOIN auto_ontology_code.code.files AS f ON s.file_id = f.file_id\nWHERE s.kind IN ('function', 'method')\n  AND f.is_test = false\n  AND s.file_id NOT LIKE 'auto_ontology/dal/%'\n  AND EXISTS (\n      SELECT 1\n      FROM auto_ontology_code.code.calls AS c\n      WHERE c.caller_symbol_id = s.symbol_id\n        AND c.call_kind = 'direct'\n        AND (\n          c.callee_symbol_id LIKE 'auto_ontology/dal/session.py::write_transaction%'\n          OR c.callee_name = 'write_transaction'\n          OR c.callee_name LIKE '%.write_transaction'\n        )\n  )\n  AND NOT EXISTS (\n      SELECT 1\n      FROM auto_ontology_code.code.calls AS c2\n      WHERE c2.caller_symbol_id = s.symbol_id\n        AND c2.call_kind = 'direct'\n        AND (\n          c2.callee_symbol_id LIKE 'auto_ontology/dal/session.py::store%'\n          OR c2.callee_name = 'store'\n          OR c2.callee_name LIKE '%.store'\n        )\n  )\nORDER BY s.symbol_id",
+  "rows": [
+    {
+      "symbol_id": "auto_ontology/catalog/store/schemas.py::add_schemas_edge"
+    },
+    {
+      "symbol_id": "auto_ontology/catalog/write.py::populate_fks"
+    },
+    {
+      "symbol_id": "auto_ontology/catalog/write.py::populate_pks"
+    },
+    {
+      "symbol_id": "auto_ontology/server/rules/router.py::create_rule"
+    },
+    {
+      "symbol_id": "auto_ontology/server/tags/router.py::detach_tag"
+    }
+  ],
+  "source_record": "run/responses/10i_ask_with_key/ask_q7.json"
+}

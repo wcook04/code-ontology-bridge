@@ -1,0 +1,202 @@
+[
+  {
+    "id": "httpx-01",
+    "question": "Which source files of the httpx library itself (test code excluded) start with a module-level docstring? Give the repository-relative file paths.",
+    "fields": [
+      {
+        "name": "file_path",
+        "type": "string"
+      }
+    ],
+    "ordered": false,
+    "reference_sql": "SELECT file_id AS file_path FROM code.files WHERE NOT is_test AND description_source <> 'none' ORDER BY file_id",
+    "row_count": 5,
+    "topic": "module docstrings",
+    "difficulty": "easy",
+    "source_check": "Parsed every httpx/**/*.py with ast.get_docstring: exactly _decoders.py, _exceptions.py, _transports/default.py, _types.py and _urlparse.py have module docstrings (e.g. _decoders.py opens with 'Handlers for Content-Encoding.'; _client.py, _models.py, _utils.py open with 'from __future__ import annotations'). Matches the database."
+  },
+  {
+    "id": "httpx-02",
+    "question": "Which functions or methods anywhere in the repository (test code included) directly call the `request_context` context manager defined in httpx/_exceptions.py? Count only direct call sites, not places where it is passed as an argument. Give each caller's symbol ID.",
+    "fields": [
+      {
+        "name": "symbol_id",
+        "type": "string"
+      }
+    ],
+    "ordered": false,
+    "reference_sql": "SELECT DISTINCT caller_symbol_id AS symbol_id FROM code.calls WHERE callee_symbol_id = 'httpx/_exceptions.py::request_context' AND call_kind = 'direct' ORDER BY symbol_id",
+    "row_count": 12,
+    "topic": "direct callers",
+    "difficulty": "medium",
+    "source_check": "Opened httpx/_client.py line 1013 (Client._send_single_request: 'with request_context(request=request):') and httpx/_models.py line 896 (Response.iter_bytes: 'with request_context(request=self._request):'); both real direct calls. grep for 'request_context(' in httpx/ and tests/ shows only the 12 reported sites (2 in _client.py, 10 Response methods in _models.py) besides the definition. Matches."
+  },
+  {
+    "id": "httpx-03",
+    "question": "Which non-test Python files in the repository have no associated test file at all, meaning no test file imports that module directly (importing only the top-level httpx package counts as importing httpx/__init__.py, not its submodules) and no test file's name is exactly test_ followed by the source file's name (e.g. test_asgi.py for asgi.py; test_decoders.py does not match _decoders.py)? Give the repository-relative file paths.",
+    "fields": [
+      {
+        "name": "file_path",
+        "type": "string"
+      }
+    ],
+    "ordered": false,
+    "reference_sql": "SELECT f.file_id AS file_path FROM code.files f WHERE NOT f.is_test AND f.file_id NOT IN (SELECT target_file_id FROM code.test_links) ORDER BY f.file_id",
+    "row_count": 18,
+    "topic": "test associations",
+    "difficulty": "medium",
+    "source_check": "Checked tests/: almost every test does 'import httpx' (links only httpx/__init__.py); tests/test_utils.py imports httpx._utils and tests/models/test_whatwg.py imports httpx._urlparse; tests/test_asgi.py and tests/test_wsgi.py match asgi.py/wsgi.py by name. tests/test_decoders.py, test_content.py, test_multipart.py, test_config.py etc. do not name-match _decoders.py/_content.py/... because the source modules carry a leading underscore, so those files are (correctly by the stated rule, though misleadingly for a human) reported as untested. The 18 listed files agree with that rule."
+  },
+  {
+    "id": "httpx-04",
+    "question": "Which methods defined directly in the body of the synchronous `Client` class in httpx/_client.py have no docstring? Include private and dunder methods; exclude methods inherited from BaseClient. Give their symbol IDs.",
+    "fields": [
+      {
+        "name": "symbol_id",
+        "type": "string"
+      }
+    ],
+    "ordered": false,
+    "reference_sql": "SELECT symbol_id FROM code.symbols WHERE file_id = 'httpx/_client.py' AND kind = 'method' AND qualname LIKE 'Client.%' AND qualname NOT LIKE 'Client.%.%' AND summary_source = 'none' ORDER BY symbol_id",
+    "row_count": 7,
+    "topic": "method docstrings",
+    "difficulty": "medium",
+    "source_check": "ast over httpx/_client.py: Client has 20 methods; those with ast.get_docstring None are exactly __init__, _init_transport, _init_proxy_transport, _send_handling_auth, _send_handling_redirects, __enter__, __exit__ (e.g. _send_handling_auth at line 930 begins directly with 'auth_flow = auth.sync_auth_flow(request)'). Matches."
+  },
+  {
+    "id": "httpx-05",
+    "question": "What are the five longest functions or methods (classes excluded) in the non-test code, measured as the number of lines from the def line (decorators not counted) through the last line of the body? Return each symbol ID with its line count, longest first, ties broken by symbol ID alphabetically.",
+    "fields": [
+      {
+        "name": "symbol_id",
+        "type": "string"
+      },
+      {
+        "name": "line_count",
+        "type": "integer"
+      }
+    ],
+    "ordered": true,
+    "reference_sql": "SELECT s.symbol_id, s.line_end - s.line_start + 1 AS line_count FROM code.symbols s JOIN code.files f ON f.file_id = s.file_id WHERE NOT f.is_test AND s.kind IN ('function','method') ORDER BY line_count DESC, s.symbol_id LIMIT 5",
+    "row_count": 5,
+    "topic": "largest functions",
+    "difficulty": "medium",
+    "source_check": "httpx/_urlparse.py: 'def urlparse' is at line 213 and its final 'return ParseResult(...)' closes at line 345 (133 lines), confirmed by sed. Next value after the fifth row is 78 (Client.__init__ / AsyncClient.__init__, Client.__init__ spans 639-716), so there is no tie at the cutoff. Matches."
+  },
+  {
+    "id": "httpx-06",
+    "question": "Which classes in the non-test code define at least 20 methods directly in their own body? Count every method definition separately (a property getter and its setter count as two; inherited methods and methods of nested classes do not count). Return each class's symbol ID and its method count, largest count first, ties broken by symbol ID alphabetically.",
+    "fields": [
+      {
+        "name": "symbol_id",
+        "type": "string"
+      },
+      {
+        "name": "method_count",
+        "type": "integer"
+      }
+    ],
+    "ordered": true,
+    "reference_sql": "SELECT c.symbol_id, COUNT(m.symbol_id) AS method_count FROM code.symbols c JOIN code.files f ON f.file_id = c.file_id JOIN code.symbols m ON m.file_id = c.file_id AND m.kind = 'method' AND m.qualname LIKE c.qualname || '.%' AND m.qualname NOT LIKE c.qualname || '.%.%' WHERE c.kind = 'class' AND NOT f.is_test GROUP BY c.symbol_id HAVING COUNT(m.symbol_id) >= 20 ORDER BY method_count DESC, c.symbol_id",
+    "row_count": 7,
+    "topic": "class size",
+    "difficulty": "medium",
+    "source_check": "Counted def/async def statements directly in each ClassDef body with ast over httpx/: Response 42, BaseClient 32, URL 28, QueryParams 22, Client 20, AsyncClient 20, Headers 20; no other class reaches 20. Property getter/setter pairs (e.g. BaseClient.timeout@L254/@L258) are stored as separate symbols, consistent with the question's counting rule. Matches."
+  },
+  {
+    "id": "httpx-07",
+    "question": "Which classes inherit from httpx's `RequestError` exception (httpx/_exceptions.py), either directly or through any number of intermediate classes? Exclude RequestError itself. Give their symbol IDs.",
+    "fields": [
+      {
+        "name": "symbol_id",
+        "type": "string"
+      }
+    ],
+    "ordered": false,
+    "reference_sql": "WITH RECURSIVE sub(symbol_id) AS (SELECT class_symbol_id FROM code.class_bases WHERE base_symbol_id = 'httpx/_exceptions.py::RequestError' UNION SELECT b.class_symbol_id FROM code.class_bases b JOIN sub ON b.base_symbol_id = sub.symbol_id) SELECT symbol_id FROM sub ORDER BY symbol_id",
+    "row_count": 18,
+    "topic": "transitive inheritance",
+    "difficulty": "hard",
+    "source_check": "Read the class statements in httpx/_exceptions.py (and its docstring hierarchy): RequestError -> TransportError, DecodingError, TooManyRedirects; TransportError -> TimeoutException (ConnectTimeout, ReadTimeout, WriteTimeout, PoolTimeout), NetworkError (ConnectError, ReadError, WriteError, CloseError), ProtocolError (LocalProtocolError, RemoteProtocolError), ProxyError, UnsupportedProtocol = 18. No test class subclasses any of these (test classes subclass httpx.Auth / httpx.MockTransport only). Matches."
+  },
+  {
+    "id": "httpx-08",
+    "question": "Which classes defined in httpx/_exceptions.py are not subclassed by any other class anywhere in the repository (tests included)? Give their symbol IDs.",
+    "fields": [
+      {
+        "name": "symbol_id",
+        "type": "string"
+      }
+    ],
+    "ordered": false,
+    "reference_sql": "SELECT s.symbol_id FROM code.symbols s WHERE s.file_id = 'httpx/_exceptions.py' AND s.kind = 'class' AND NOT EXISTS (SELECT 1 FROM code.class_bases b WHERE b.base_symbol_id = s.symbol_id) ORDER BY s.symbol_id",
+    "row_count": 21,
+    "topic": "exception leaves",
+    "difficulty": "hard",
+    "source_check": "ast over httpx/_exceptions.py: 28 classes; the 21 whose names never appear as a base of another class there are exactly the reported ones. Checked tests/ class statements: only RepeatAuth/ResponseBodyAuth/SyncOrAsyncAuth (httpx.Auth), two ConsumeBodyTransport (httpx.MockTransport) and TestServer (uvicorn Server), so no test subclasses an exception. Matches. (Side note: those test bases written as httpx.Auth / httpx.MockTransport are left unresolved by the extractor although they do resolve to internal classes through the package re-export; irrelevant to this answer.)"
+  },
+  {
+    "id": "httpx-09",
+    "question": "Within httpx/_client.py, which functions or methods eventually lead to a call of `Client._send_single_request`, through a chain of one or more direct calls whose every step is inside httpx/_client.py? Count direct calls only (no callbacks) and exclude `_send_single_request` itself. Give their symbol IDs.",
+    "fields": [
+      {
+        "name": "symbol_id",
+        "type": "string"
+      }
+    ],
+    "ordered": false,
+    "reference_sql": "WITH RECURSIVE up(symbol_id) AS (SELECT caller_symbol_id FROM code.calls WHERE callee_symbol_id = 'httpx/_client.py::Client._send_single_request' AND call_kind = 'direct' AND caller_symbol_id LIKE 'httpx/_client.py::%' UNION SELECT c.caller_symbol_id FROM code.calls c JOIN up ON c.callee_symbol_id = up.symbol_id WHERE c.call_kind = 'direct' AND c.caller_symbol_id LIKE 'httpx/_client.py::%') SELECT symbol_id FROM up WHERE symbol_id <> 'httpx/_client.py::Client._send_single_request' ORDER BY symbol_id",
+    "row_count": 12,
+    "topic": "multi-hop call chain",
+    "difficulty": "hard",
+    "source_check": "Followed the chain in httpx/_client.py: _send_handling_redirects calls self._send_single_request; _send_handling_auth calls self._send_handling_redirects (line ~944); send calls self._send_handling_auth; request and stream call self.send; get/options/head/post/put/patch/delete call self.request. AsyncClient's methods call only async counterparts, BaseClient never calls these. 12 symbols, matches the database. Outside the file the chain does continue in source (httpx/_api.py::request does 'client.request(...)' on a Client instance) but the extractor classifies that as a dynamic_attribute call, which is why the question is scoped to httpx/_client.py."
+  },
+  {
+    "id": "httpx-10",
+    "question": "Which internal httpx modules are imported directly by both httpx/_client.py and httpx/_models.py? Give the repository-relative file paths of the imported modules.",
+    "fields": [
+      {
+        "name": "file_path",
+        "type": "string"
+      }
+    ],
+    "ordered": false,
+    "reference_sql": "SELECT imported_file_id AS file_path FROM code.imports WHERE file_id = 'httpx/_client.py' AND imported_file_id IS NOT NULL INTERSECT SELECT imported_file_id FROM code.imports WHERE file_id = 'httpx/_models.py' AND imported_file_id IS NOT NULL ORDER BY file_path",
+    "row_count": 6,
+    "topic": "shared module dependencies",
+    "difficulty": "hard",
+    "source_check": "grep of top-level imports: _client.py imports .__version__, ._auth, ._config, ._decoders, ._exceptions, ._models, ._status_codes, ._transports.base, ._transports.default, ._types, ._urls, ._utils; _models.py imports ._content, ._decoders, ._exceptions, ._multipart, ._status_codes, ._types, ._urls, ._utils. Intersection = _decoders, _exceptions, _status_codes, _types, _urls, _utils. Matches."
+  },
+  {
+    "id": "httpx-11",
+    "question": "In tests/client/test_redirects.py, which test functions both pass that module's `redirects` handler function as an argument (for example to a mock transport) and create an `httpx.AsyncClient`? Give their symbol IDs.",
+    "fields": [
+      {
+        "name": "symbol_id",
+        "type": "string"
+      }
+    ],
+    "ordered": false,
+    "reference_sql": "SELECT caller_symbol_id AS symbol_id FROM code.calls WHERE callee_symbol_id = 'tests/client/test_redirects.py::redirects' AND call_kind = 'callback' AND caller_symbol_id LIKE 'tests/client/test_redirects.py::%' INTERSECT SELECT caller_symbol_id FROM code.calls WHERE callee_name = 'httpx.AsyncClient' AND caller_symbol_id LIKE 'tests/client/test_redirects.py::%' ORDER BY symbol_id",
+    "row_count": 3,
+    "topic": "test set logic",
+    "difficulty": "hard",
+    "source_check": "grep 'AsyncClient' in tests/client/test_redirects.py finds exactly lines 156, 245, 443: test_async_next_request, test_async_too_many_redirects, test_async_invalid_redirect, each 'httpx.AsyncClient(transport=httpx.MockTransport(redirects))'. 27 test functions pass redirects in total; the other 24 use httpx.Client. Matches. Note: the extractor records httpx.AsyncClient / httpx.Client / httpx.MockTransport in tests as dynamic_attribute with no internal callee, although via 'import httpx' and the package re-export they are the internal classes in httpx/_client.py and httpx/_transports/mock.py."
+  },
+  {
+    "id": "httpx-12",
+    "question": "Which functions in httpx/_main.py are handed over by name as a callback argument to another call (not called directly) in the CLI command function `main` in httpx/_main.py, counting the arguments of the click decorators applied to `main` as part of `main`? Give their symbol IDs.",
+    "fields": [
+      {
+        "name": "symbol_id",
+        "type": "string"
+      }
+    ],
+    "ordered": false,
+    "reference_sql": "SELECT DISTINCT callee_symbol_id AS symbol_id FROM code.calls WHERE caller_symbol_id = 'httpx/_main.py::main' AND call_kind = 'callback' AND callee_symbol_id LIKE 'httpx/_main.py::%' ORDER BY symbol_id",
+    "row_count": 4,
+    "topic": "callback references",
+    "difficulty": "medium",
+    "source_check": "httpx/_main.py: decorator options pass callback=validate_json (line 361), callback=validate_auth (line 384), callback=handle_help (line 449); inside the body line 492 passes functools.partial(trace, verbose=verbose). download_response and print_response are called directly (lines 495, 499) and are not callbacks. 4 rows, matches. Discrepancy-ish: the three decorator references are recorded with main as caller although they lie on lines 361-449, before main's recorded range 452-506 (decorators excluded); the question states this attribution explicitly."
+  }
+]

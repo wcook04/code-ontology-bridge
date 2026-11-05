@@ -1,81 +1,70 @@
-// The comparison's held-out result, stated on the first screen. It reads the same
-// experiment/summary.json as the comparison page and shows nothing until that file exists.
+// The study's result, stated on the first screen. It reads the same study/summary.json as the
+// study page and shows nothing until that file exists.
 
-import { useEffect, useState } from "react";
 import { onLinkClick } from "../app/router";
+import { MODEL_NAMES, useStudy } from "../views/Study";
 
-interface RunRow { model: string; arm: string; set: string; questions: number; expected_rows: number }
-
-const ARMS: { id: string; name: string }[] = [
-  { id: "schema", name: "Schema only" },
-  { id: "schema_model", name: "Schema + this project’s semantic model" },
-  { id: "auto_ontology", name: "Auto Ontology, with the semantic model imported" },
+const ROWS: { id: string; name: string; ours: boolean }[] = [
+  { id: "A", name: "Schema only", ours: false },
+  { id: "B", name: "+ bridge base model", ours: true },
+  { id: "S", name: "+ bridge semantics layer", ours: true },
 ];
-const MODELS: { id: string; name: string }[] = [
-  { id: "nemotron", name: "NVIDIA Nemotron 3.5 Lightning" },
-  { id: "deepseek", name: "DeepSeek v4.1 Flash" },
+const INSIDE: { id: string; name: string; ours: boolean }[] = [
+  { id: "C-native", name: "Auto Ontology alone", ours: false },
+  { id: "C-base", name: "+ bridge base model", ours: true },
+  { id: "C-semantics", name: "+ bridge semantics layer", ours: true },
 ];
 
 export function HeadlineResult() {
-  const [runs, setRuns] = useState<RunRow[] | null>(null);
-  useEffect(() => {
-    fetch(new URL("experiment/summary.json", document.baseURI)).then(
-      (r) => (r.ok ? r.json().then((d) => setRuns(d.runs)) : undefined),
-      () => undefined,
-    );
-  }, []);
-  if (!runs) return null;
-  const held = (m: string, a: string) => runs.find((r) => r.model === m && r.arm === a && r.set === "heldout");
-  const arms = ARMS.filter((a) => MODELS.some((m) => held(m.id, a.id)));
-  if (arms.length < 2) return null;
-  const n = held(MODELS[0].id, arms[0].id)!.questions;
+  const data = useStudy();
+  if (!data || data === "error") return null;
+  const cell = (m: string, a: string) => data.cells.find((c) => c.model === m && c.arm === a);
+  const models = Object.keys(MODEL_NAMES).filter((m) => cell(m, "A"));
+  if (!models.length) return null;
+  const mean = (v: number[]) => v.reduce((a, b) => a + b, 0) / v.length;
+  const table = (rows: typeof ROWS, label: string) => (
+    <div className="table-wrap">
+      <table className="rows headline-cmp__table">
+        <thead>
+          <tr>
+            <th scope="col">{label}</th>
+            {models.map((m) => <th key={m} scope="col" className="num">{MODEL_NAMES[m]}</th>)}
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((r) => (
+            <tr key={r.id} className={r.ours ? "is-ours" : ""}>
+              <th scope="row">{r.name}</th>
+              {models.map((m) => {
+                const c = cell(m, r.id);
+                return (
+                  <td key={m} className="num cmp-score">
+                    {c ? (
+                      <>
+                        <strong>{mean(c.suite).toFixed(1)}</strong> of {c.denominator}
+                        <span className="cmp-bar" aria-hidden="true"><span style={{ width: `${(100 * mean(c.suite)) / c.denominator}%` }} /></span>
+                      </>
+                    ) : <span className="muted small">running</span>}
+                  </td>
+                );
+              })}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+  const inside = INSIDE.filter((r) => models.some((m) => cell(m, r.id)));
   return (
     <figure className="headline-cmp" aria-labelledby="headline-cmp-cap">
       <figcaption id="headline-cmp-cap" className="headline-cmp__lead">
-        {n} held-out questions about Auto Ontology’s own code, committed before any model saw them and asked without hints. Questions
-        answered with exactly the right rows:
+        48 questions about four Python repositories, written without seeing the bridge and frozen before any model ran. Questions answered
+        with the right rows on the real database and on eight altered copies of it, averaged over repeated runs:
       </figcaption>
-      <div className="table-wrap">
-        <table className="rows headline-cmp__table">
-          <thead>
-            <tr>
-              <th scope="col">What the model was given</th>
-              {MODELS.map((m) => (
-                <th scope="col" className="num" key={m.id}>{m.name}</th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {arms.map((a) => (
-              <tr key={a.id} className={a.id === "schema" ? "" : "is-ours"}>
-                <th scope="row">{a.name}</th>
-                {MODELS.map((m) => {
-                  const r = held(m.id, a.id);
-                  return (
-                    <td className="num cmp-score" key={m.id}>
-                      {r ? (
-                        <>
-                          <strong>{r.expected_rows}</strong> of {r.questions}
-                          <span className="cmp-bar" aria-hidden="true"><span style={{ width: `${(100 * r.expected_rows) / r.questions}%` }} /></span>
-                        </>
-                      ) : (
-                        <span className="muted small">no result*</span>
-                      )}
-                    </td>
-                  );
-                })}
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-      {arms.some((a) => MODELS.some((m) => !held(m.id, a.id))) ? (
-        <p className="small muted">* Nemotron’s held-out run inside Auto Ontology was rate-limited by the NVIDIA API and is not counted; the comparison page explains.</p>
-      ) : null}
+      {table(ROWS, "A model asked directly, given")}
+      {inside.length ? table(inside, "NVIDIA’s Auto Ontology agent, 12 questions") : null}
       <p className="small">
-        <a href="#/comparison" onClick={onLinkClick}>
-          How the comparison was run, the 22 development questions and every answer
-        </a>
+        <a href="#/study" onClick={onLinkClick}>How the study was run, every question and every answer</a>
       </p>
     </figure>
   );
