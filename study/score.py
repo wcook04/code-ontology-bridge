@@ -73,8 +73,15 @@ def rows_match(rows: list[dict] | None, want: list[tuple], fields: list[dict], o
 
 @lru_cache(maxsize=None)
 def connect(path: str):
+    """Open a database under the real database's catalog name, so that every variant answers to
+    the same names: Auto Ontology's agent qualifies tables as <repo>_code.code.<table>."""
     from run_direct import DB_CONFIG
-    return duckdb.connect(path, read_only=True, config=DB_CONFIG)
+    stem = Path(path).stem
+    catalog = stem if stem.endswith("_code") else stem.rsplit("_v", 1)[0] + "_code"
+    con = duckdb.connect(config=DB_CONFIG)
+    con.execute(f"ATTACH '{path}' AS {catalog} (READ_ONLY)")
+    con.execute(f"USE {catalog}")
+    return con
 
 
 def execute(path: str, sql: str):
