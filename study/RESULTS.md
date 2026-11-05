@@ -19,7 +19,7 @@ The agent, its retrieval, validation and repair, the database contents and the c
 
 | Auto Ontology is given | DeepSeek v4.1 Flash snapshot | DeepSeek v4.1 Flash suite | Nemotron 3.5 Lightning snapshot | Nemotron 3.5 Lightning suite |
 | --- | ---: | ---: | ---: | ---: |
-| Auto Ontology alone (no model imported) | — | — | — | — |
+| Auto Ontology alone (no model imported) | 11.7 (11–12) | 7.3 (7–8) | 3.0 (2–5) | 1.3 (1–2) |
 | Auto Ontology + bridge base model | 10.3 (10–11) | 7.3 (7–8) | 3.0 (1–5) | 2.0 (0–4) |
 | Auto Ontology + bridge semantics layer | 11.7 (11–12) | 8.7 (8–9) | 4.0 (2–6) | 2.7 (1–5) |
 
@@ -29,12 +29,16 @@ A question counts as improved or regressed when its suite pass rate across repet
 
 | Model | From → to | Improved | Regressed | Mean change per question |
 | --- | --- | ---: | ---: | ---: |
+| DeepSeek v4.1 Flash | C-native → C-base | 0 | 0 | -0.00 |
+| DeepSeek v4.1 Flash | C-native → C-semantics | 0 | 0 | +0.11 |
 | DeepSeek v4.1 Flash | A → B | 14 | 1 | +0.28 |
 | DeepSeek v4.1 Flash | B → S | 6 | 6 | -0.00 |
 | DeepSeek v4.1 Flash | A → S | 16 | 3 | +0.28 |
 | DeepSeek v4.1 Flash | V → S | 6 | 1 | +0.12 |
 | DeepSeek v4.1 Flash | A → V | 8 | 2 | +0.15 |
 | DeepSeek v4.1 Flash | C-base → C-semantics | 1 | 0 | +0.11 |
+| Nemotron 3.5 Lightning | C-native → C-base | 1 | 0 | +0.06 |
+| Nemotron 3.5 Lightning | C-native → C-semantics | 1 | 0 | +0.11 |
 | Nemotron 3.5 Lightning | A → B | 3 | 0 | +0.07 |
 | Nemotron 3.5 Lightning | B → S | 5 | 1 | +0.08 |
 | Nemotron 3.5 Lightning | A → S | 8 | 0 | +0.15 |
@@ -50,12 +54,14 @@ A question counts as improved or regressed when its suite pass rate across repet
 | DeepSeek v4.1 Flash | B | 1.5 | 0.06 | 2762 |
 | DeepSeek v4.1 Flash | V | 1.6 | 0.05 | 1306 |
 | DeepSeek v4.1 Flash | S | 1.5 | 0.09 | 6171 |
+| DeepSeek v4.1 Flash | C-native | 266.7 | 0.00 | 0 |
 | DeepSeek v4.1 Flash | C-base | 178.8 | 0.00 | 0 |
 | DeepSeek v4.1 Flash | C-semantics | 248.7 | 0.00 | 0 |
 | Nemotron 3.5 Lightning | A | 1.9 | 0.03 | 853 |
 | Nemotron 3.5 Lightning | B | 1.7 | 0.05 | 3490 |
 | Nemotron 3.5 Lightning | V | 3.1 | 0.05 | 2283 |
 | Nemotron 3.5 Lightning | S | 2.1 | 0.10 | 8869 |
+| Nemotron 3.5 Lightning | C-native | 325.0 | 0.00 | 0 |
 | Nemotron 3.5 Lightning | C-base | 222.6 | 0.00 | 0 |
 | Nemotron 3.5 Lightning | C-semantics | 217.4 | 0.00 | 0 |
 

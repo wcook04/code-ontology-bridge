@@ -1,0 +1,195 @@
+{
+  "request": {
+    "question": "Which five functions in the data-access layer are used most widely by the rest of the codebase? Consider module-level functions (not methods or classes) defined in non-test files under auto_ontology/dal/, excluding auto_ontology/dal/session.py. Rank them by the number of distinct functions or methods that call them directly, counting only callers that are in non-test files (every file under a tests/ folder is test code) located outside auto_ontology/dal/. Calls through a module alias (e.g. `dal.fetch_databases()` after `from auto_ontology.dal import datasources as dal`) or an import alias count; a function passed by reference without being called does not. Highest count first; break ties by symbol ID ascending and return exactly five rows. Return the symbol ID and the caller count.\n\nRequested output columns: symbol_id (string), caller_count (integer).\nReturn exactly the requested output columns, using each requested name as the column alias, in the requested order. Return complete repository-relative file paths and complete symbol IDs exactly as stored. When the question asks which files, symbols or modules, return each distinct one once unless it asks for occurrences.\nOrder the rows as the question asks.",
+    "calculation_only": true
+  },
+  "status": 200,
+  "elapsed_s": 242.4,
+  "events": [
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "question_intent",
+      "thought": null,
+      "label": "Classifying the question"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "question_intent",
+      "thought": null,
+      "label": "Classifying the question"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "question_extraction",
+      "thought": null,
+      "label": "Understanding the question"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "question_extraction",
+      "thought": null,
+      "label": "Understanding the question"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "retrieve_candidates",
+      "thought": null,
+      "label": "Retrieving candidates"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "retrieve_candidates",
+      "thought": null,
+      "label": "Retrieving candidates"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "prepare_candidates",
+      "thought": null,
+      "label": "Preparing candidates"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "prepare_candidates",
+      "thought": "The user's analytical question centers on ranking functions by 'number of distinct callers'. Among the provided schema columns, `distinct_callers` (ID: 5f2e838c-c0af-4f2e-b90b-336e6ce241dc, physical ref: code.inbound_call_counts.distinct_callers) is the exact attribute that stores the count of distinct entities calling a symbol, making it the primary focus. The other columns (`symbol_id`, `file_id`) support identification and origin but do not drive the ranking or represent the caller count focus.",
+      "label": "Preparing candidates"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "refine_evidence",
+      "thought": null,
+      "label": "Refining evidence"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "refine_evidence",
+      "thought": "After reviewing the sanitized question and all provided evidence (both the natural-language description in lines 1+ and the table/schema metadata), there are no certain mistakes matching the three allowed repair categories. The question's request is fully consistent with the column descriptions, sample values, and table labels. No string representations, constant values, or predicate operators are demonstrably incorrect or in need of correction based on verified anchors or fallback samples. Therefore, no repairs are applied, the repair list is empty, and the question is copied unchanged.",
+      "label": "Refining evidence"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "construct_sql_from_candidates",
+      "thought": null,
+      "label": "Constructing SQL"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "construct_sql_from_candidates",
+      "thought": "I need to query the inbound_call_counts table to find the top 5 module-level functions (kind='function') defined in non-test files under auto_ontology/dal/ (excluding session.py), ranked by distinct_callers count. The distinct_callers column directly represents 'count of distinct entities that call or invoke the code symbol'. I'll filter for files under auto_ontology/dal/ path, exclude session.py and test files, then order by distinct_callers DESC and symbol_id ASC for tie-breaking, limiting to 5 rows. The symbol_id column already contains complete repository-relative file paths as required.",
+      "label": "Constructing SQL"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "validate_sql_query",
+      "thought": null,
+      "label": "Validating SQL and intent"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "validate_sql_query",
+      "thought": "The SQL query has been checked for critical issues against the authoritative evidence and question requirements:\n\n1. **Joins**: The query has no joins - it directly queries a single table. No join issues exist.\n\n2. **Aggregations**: The query has no aggregations - it simply selects and filters from the table. No aggregation issues exist.\n\n3. **Evidence compliance**: The SQL correctly:\n   - Uses table `auto_ontology_code.code.inbound_call_counts` (matches USED SQL OBJECTS)\n   - Selects `symbol_id, distinct_callers AS caller_count` (matches requested output columns)\n   - Filters `kind = 'function'` (matches kind column description with sample value 'function')\n   - Filters `file_id LIKE 'auto_ontology/dal/%'` (matches file_id description as source file identifier)\n   - Excludes `file_id != 'auto_ontology/dal/session.py'` (matches explicit instruction)\n   - Excludes `file_id NOT LIKE '%/tests/%'` (matches non-test files requirement)\n   - Orders by `distinct_callers DESC, symbol_id ASC` (matches 'highest count first; break ties by symbol ID ascending')\n   - Limits to `LIMIT 5` (matches 'return exactly five rows')\n\nThe SQL correctly implements all question requirements and follows the authoritative evidence exactly. There are no substituted values, wrong column mappings, or missing filters. The query would correctly return the top 5 functions in the data-access layer ranked by distinct callers.\n\nNo critical issues are present. The query is valid.",
+      "label": "Validating SQL and intent"
+    },
+    {
+      "type": "sql",
+      "node": "validate_sql_query",
+      "sql": "SELECT symbol_id, distinct_callers AS caller_count FROM auto_ontology_code.code.inbound_call_counts WHERE kind = 'function' AND file_id LIKE 'auto_ontology/dal/%' AND file_id != 'auto_ontology/dal/session.py' AND file_id NOT LIKE '%/tests/%' ORDER BY distinct_callers DESC, symbol_id ASC LIMIT 5"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "execute_sql_query",
+      "thought": null,
+      "label": "Executing SQL"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "execute_sql_query",
+      "thought": null,
+      "label": "Executing SQL"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "check_empty_like_result",
+      "thought": null,
+      "label": "Checking results"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "check_empty_like_result",
+      "thought": null,
+      "label": "Checking results"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "check_value_repair",
+      "thought": null,
+      "label": "Checking values"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "check_value_repair",
+      "thought": null,
+      "label": "Checking values"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "format_and_respond",
+      "thought": null,
+      "label": "Formatting response"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "format_and_respond",
+      "thought": null,
+      "label": "Formatting response"
+    },
+    {
+      "type": "result",
+      "answer": {
+        "response": "This query identifies the top 5 most widely used module-level functions in the data-access layer by examining the inbound_call_counts table. It filters for kind='function' to capture only module-level functions (excluding methods and classes), restricts to files under auto_ontology/dal/ while excluding session.py and test directory files, then ranks by the distinct_callers count in descending order with symbol_id ascending as the tiebreaker. The result returns each function's symbol ID and its distinct caller count.",
+        "sql_code": "SELECT symbol_id, distinct_callers AS caller_count FROM auto_ontology_code.code.inbound_call_counts WHERE kind = 'function' AND file_id LIKE 'auto_ontology/dal/%' AND file_id != 'auto_ontology/dal/session.py' AND file_id NOT LIKE '%/tests/%' ORDER BY distinct_callers DESC, symbol_id ASC LIMIT 5",
+        "sql_columns": [
+          "93de0eb3-5b29-4d9f-afd1-3ea28f937383",
+          "460030b1-64c7-4704-8458-b8cd9def65cd",
+          "338d8d8c-0abc-4417-95a8-c0f0f4b44aa3",
+          "0ea43ac1-647b-41bc-811d-b958ede9b817"
+        ],
+        "custom_analyses_used": [],
+        "sql_response_from_db": [
+          "[{\"symbol_id\":\"auto_ontology\\/dal\\/tags.py::create_tag\",\"caller_count\":70},{\"symbol_id\":\"auto_ontology\\/dal\\/tags.py::list_tag_targets\",\"caller_count\":42},{\"symbol_id\":\"auto_ontology\\/dal\\/search.py::search_tokens\",\"caller_count\":29},{\"symbol_id\":\"auto_ontology\\/dal\\/users.py::resolve_accessible_catalog_ids\",\"caller_count\":25},{\"symbol_id\":\"auto_ontology\\/dal\\/tags.py::attach_tag\",\"caller_count\":24}]"
+        ],
+        "thoughts": "- Preparing candidates: The user's analytical question centers on ranking functions by 'number of distinct callers'. Among the provided schema columns, `distinct_callers` (ID: 5f2e838c-c0af-4f2e-b90b-336e6ce241dc, physical ref: code.inbound_call_counts.distinct_callers) is the exact attribute that stores the count of distinct entities calling a symbol, making it the primary focus. The other columns (`symbol_id`, `file_id`) support identification and origin but do not drive the ranking or represent the caller count focus.\n- Refining evidence: After reviewing the sanitized question and all provided evidence (both the natural-language description in lines 1+ and the table/schema metadata), there are no certain mistakes matching the three allowed repair categories. The question's request is fully consistent with the column descriptions, sample values, and table labels. No string representations, constant values, or predicate operators are demonstrably incorrect or in need of correction based on verified anchors or fallback samples. Therefore, no repairs are applied, the repair list is empty, and the question is copied unchanged.\n- Constructing SQL: I need to query the inbound_call_counts table to find the top 5 module-level functions (kind='function') defined in non-test files under auto_ontology/dal/ (excluding session.py), ranked by distinct_callers count. The distinct_callers column directly represents 'count of distinct entities that call or invoke the code symbol'. I'll filter for files under auto_ontology/dal/ path, exclude session.py and test files, then order by distinct_callers DESC and symbol_id ASC for tie-breaking, limiting to 5 rows. The symbol_id column already contains complete repository-relative file paths as required.\n- Validating SQL and intent: The SQL query has been checked for critical issues against the authoritative evidence and question requirements:\n\n1. **Joins**: The query has no joins - it directly queries a single table. No join issues exist.\n\n2. **Aggregations**: The query has no aggregations - it simply selects and filters from the table. No aggregation issues exist.\n\n3. **Evidence compliance**: The SQL correctly:\n   - Uses table `auto_ontology_code.code.inbound_call_counts` (matches USED SQL OBJECTS)\n   - Selects `symbol_id, distinct_callers AS caller_count` (matches requested output columns)\n   - Filters `kind = 'function'` (matches kind column description with sample value 'function')\n   - Filters `file_id LIKE 'auto_ontology/dal/%'` (matches file_id description as source file identifier)\n   - Excludes `file_id != 'auto_ontology/dal/session.py'` (matches explicit instruction)\n   - Excludes `file_id NOT LIKE '%/tests/%'` (matches non-test files requirement)\n   - Orders by `distinct_callers DESC, symbol_id ASC` (matches 'highest count first; break ties by symbol ID ascending')\n   - Limits to `LIMIT 5` (matches 'return exactly five rows')\n\nThe SQL correctly implements all question requirements and follows the authoritative evidence exactly. There are no substituted values, wrong column mappings, or missing filters. The query would correctly return the top 5 functions in the data-access layer ranked by distinct callers.\n\nNo critical issues are present. The query is valid."
+      }
+    }
+  ],
+  "question_id": 8,
+  "gold_sql": "SELECT c.callee_symbol_id AS symbol_id, COUNT(DISTINCT c.caller_symbol_id) AS caller_count FROM code.calls c JOIN code.symbols cs ON cs.symbol_id = c.caller_symbol_id JOIN code.files cf ON cf.file_id = cs.file_id JOIN code.symbols t ON t.symbol_id = c.callee_symbol_id JOIN code.files tf ON tf.file_id = t.file_id WHERE c.call_kind = 'direct' AND NOT cf.is_test AND cs.kind IN ('function', 'method') AND cs.file_id NOT LIKE 'auto_ontology/dal/%' AND t.kind = 'function' AND t.file_id LIKE 'auto_ontology/dal/%' AND NOT tf.is_test AND t.file_id <> 'auto_ontology/dal/session.py' GROUP BY 1 ORDER BY 2 DESC, 1 LIMIT 5",
+  "gold_row_count": 1,
+  "agent_sql": "SELECT symbol_id, distinct_callers AS caller_count FROM auto_ontology_code.code.inbound_call_counts WHERE kind = 'function' AND file_id LIKE 'auto_ontology/dal/%' AND file_id != 'auto_ontology/dal/session.py' AND file_id NOT LIKE '%/tests/%' ORDER BY distinct_callers DESC, symbol_id ASC LIMIT 5",
+  "agent_answer": "This query identifies the top 5 most widely used module-level functions in the data-access layer by examining the inbound_call_counts table. It filters for kind='function' to capture only module-level functions (excluding methods and classes), restricts to files under auto_ontology/dal/ while excluding session.py and test directory files, then ranks by the distinct_callers count in descending order with symbol_id ascending as the tiebreaker. The result returns each function's symbol ID and its distinct caller count.",
+  "agent_row_count": 5,
+  "correct_rows": false,
+  "error": null
+}

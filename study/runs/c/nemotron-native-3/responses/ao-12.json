@@ -1,0 +1,35 @@
+{
+  "question_id": "ao-12",
+  "arm": "C-native",
+  "model": "nvidia/nemotron-3.5-lightning",
+  "error": null,
+  "elapsed_s": 238.2,
+  "attempts": [
+    {
+      "sql": "WITH RECURSIVE inheritance_tree AS ( SELECT class_symbol_id, base_symbol_id, base_name, 1 AS depth FROM auto_ontology_code.code.class_bases WHERE base_name = 'ApiModel' UNION ALL SELECT c.class_symbol_id, c.base_symbol_id, c.base_name, d.depth + 1 FROM auto_ontology_code.code.class_bases c JOIN inheritance_tree d ON c.base_symbol_id = d.class_symbol_id WHERE c.base_name != 'ApiModel' AND c.base_name != 'BaseModel' AND c.base_name != '_Payload' AND c.base_name != 'Exception' AND c.base_name != 'BaseAgent' ) SELECT class_symbol_id, MIN(depth) AS depth FROM inheritance_tree GROUP BY class_symbol_id HAVING MIN(depth) > 1 ORDER BY class_symbol_id"
+    }
+  ],
+  "usage": {},
+  "request": "Which classes inherit from ApiModel (auto_ontology/server/models.py) only indirectly, i.e. through at least one intermediate class of this repository, and do not name ApiModel directly in their class statement? An import alias of ApiModel (auto_ontology/server/responses.py imports it as _Payload) counts as naming ApiModel directly, and a subscripted base such as ListResponse[T] counts as its class. For each, give the class symbol ID and the length of the shortest inheritance chain to ApiModel (2 when the parent class directly subclasses ApiModel).\n\nRequested output columns: class_symbol_id (string), depth (integer).\nReturn exactly the requested output columns, using each requested name as the column alias, in the requested order. Return complete repository-relative file paths and complete symbol IDs exactly as stored. When the question asks which files, symbols or modules, return each distinct one once unless it asks for occurrences.",
+  "explanation": "This query identifies classes that inherit from ApiModel indirectly through at least one intermediate class, excluding those that directly name ApiModel as their base. It uses a recursive CTE to traverse the inheritance chain starting from ApiModel bases, then groups by class_symbol_id to find the minimum depth. Classes with minimum depth greater than 1 are those that inherit through intermediate classes. The results show each class symbol ID and its shortest inheritance chain length to ApiModel.",
+  "sql": "WITH RECURSIVE inheritance_tree AS ( SELECT class_symbol_id, base_symbol_id, base_name, 1 AS depth FROM auto_ontology_code.code.class_bases WHERE base_name = 'ApiModel' UNION ALL SELECT c.class_symbol_id, c.base_symbol_id, c.base_name, d.depth + 1 FROM auto_ontology_code.code.class_bases c JOIN inheritance_tree d ON c.base_symbol_id = d.class_symbol_id WHERE c.base_name != 'ApiModel' AND c.base_name != 'BaseModel' AND c.base_name != '_Payload' AND c.base_name != 'Exception' AND c.base_name != 'BaseAgent' ) SELECT class_symbol_id, MIN(depth) AS depth FROM inheritance_tree GROUP BY class_symbol_id HAVING MIN(depth) > 1 ORDER BY class_symbol_id",
+  "rows": [
+    {
+      "class_symbol_id": "auto_ontology/server/models.py::TableExplorationTerm",
+      "depth": 2
+    },
+    {
+      "class_symbol_id": "auto_ontology/server/models.py::Term",
+      "depth": 2
+    },
+    {
+      "class_symbol_id": "auto_ontology/server/models.py::TermDetail",
+      "depth": 3
+    },
+    {
+      "class_symbol_id": "auto_ontology/server/models.py::TermListItem",
+      "depth": 3
+    }
+  ],
+  "source_record": "run/responses/10i_ask_with_key/ask_q12.json"
+}

@@ -91,6 +91,9 @@ def allowed(name: str) -> bool:
             if len(p.parts) > 3 and p.parts[3] in {'evidence', 'responses', 'logs'}:
                 return False  # Superseded captures live in Git history; current/ owns retained evidence.
             return p.suffix in {'.md', '.py', '.sh', '.json', '.yaml', '.txt', '.log', '.sql', '.patch'} or p.name in {'.gitignore', 'ingestion_keyed.compile_marker'}
+    if owner == 'study':
+        # The code-semantics study: protocol, frozen questions, runners, data, every run and the results.
+        return p.suffix in {'.md', '.py', '.sh', '.json', '.yaml', '.duckdb', '.txt', '.log', '.sql', '.patch'} or p.name.endswith('_marker')
     return False
 
 

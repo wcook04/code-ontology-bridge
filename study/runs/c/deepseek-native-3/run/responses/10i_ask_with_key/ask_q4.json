@@ -1,0 +1,247 @@
+{
+  "request": {
+    "question": "Consider the agent classes defined in non-test code that directly subclass BaseAgent from auto_ontology/retrieval/text_to_sql/base.py (every file under a tests/ folder, conftest.py and helpers included, is test code). Which of these agent classes are constructed (the class is called by name, e.g. ResponseAgent()) somewhere in non-test code but are never constructed anywhere in test code? Count only direct constructor calls written in a function or method body; patching or referencing a class without calling it does not count, and a test that calls a function which constructs the class does not count as constructing it. Return their class symbol IDs.\n\nRequested output columns: class_symbol_id (string).\nReturn exactly the requested output columns, using each requested name as the column alias, in the requested order. Return complete repository-relative file paths and complete symbol IDs exactly as stored. When the question asks which files, symbols or modules, return each distinct one once unless it asks for occurrences.",
+    "calculation_only": true
+  },
+  "status": 200,
+  "elapsed_s": 260.8,
+  "events": [
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "question_intent",
+      "thought": null,
+      "label": "Classifying the question"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "question_intent",
+      "thought": null,
+      "label": "Classifying the question"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "question_extraction",
+      "thought": null,
+      "label": "Understanding the question"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "question_extraction",
+      "thought": null,
+      "label": "Understanding the question"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "retrieve_candidates",
+      "thought": null,
+      "label": "Retrieving candidates"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "retrieve_candidates",
+      "thought": null,
+      "label": "Retrieving candidates"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "prepare_candidates",
+      "thought": null,
+      "label": "Preparing candidates"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "prepare_candidates",
+      "thought": "The query requires class inheritance/base information (`class_bases`), class symbol metadata and non-test file filtering (`symbols`), constructor-call evidence (`inbound_call_counts`), and potentially test-coverage filtering (`untested_public_symbols`). The `imports` table is not needed because base-class relationships are represented directly in `class_bases`, and imports do not supply constructor-call or test/non-test qualification for this query.",
+      "label": "Preparing candidates"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "refine_evidence",
+      "thought": null,
+      "label": "Refining evidence"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "refine_evidence",
+      "thought": "No specific evidence lines containing data values are provided for repair. Line 1 is a definition of terms used in the question and does not contain a value or operator that can be corrected based on the provided schema or samples.",
+      "label": "Refining evidence"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "construct_sql_from_candidates",
+      "thought": null,
+      "label": "Constructing SQL"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "construct_sql_from_candidates",
+      "thought": "I find agent classes by joining class_bases to symbols on class_symbol_id, requiring direct subclassing of the BaseAgent symbol in auto_ontology/retrieval/text_to_sql/base.py. I restrict the class's own file to non-test code (not under a tests/ folder and not a conftest file). Non-test construction is proven by an EXISTS on direct calls whose callee is the class symbol and whose caller is a function/method in a non-test file; test construction is detected the same way but with the caller in a tests/ or conftest file. Only classes with at least one non-test direct constructor call and zero test-file direct constructor calls are returned, with SELECT DISTINCT because each class symbol must appear once.",
+      "label": "Constructing SQL"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "validate_sql_query",
+      "thought": null,
+      "label": "Validating SQL and intent"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "validate_sql_query",
+      "thought": "The SQL answers the question by selecting class symbols whose direct base is the specified BaseAgent symbol, restricting the class to non-test files, requiring at least one direct constructor call from a non-test function/method, and excluding classes with any direct constructor call from a test function/method. It follows the authoritative evidence: direct constructor calls are modeled via `calls.call_kind = 'direct'`, callers are restricted to `function`/`method`, test code is excluded via `tests/` and `conftest`, and construction by a helper function called from a test is not treated as test construction because only direct calls to the class symbol are checked. The joins used are plausible and supported by the schema, including `class_bases.class_symbol_id = symbols.symbol_id` and `calls.callee_symbol_id = symbols.symbol_id`. The aggregation is just `DISTINCT`, which matches the request to return each distinct class symbol ID once. The `base_name` fallback for unresolved base symbols is a minor broadening but not a critical failure.",
+      "label": "Validating SQL and intent"
+    },
+    {
+      "type": "sql",
+      "node": "validate_sql_query",
+      "sql": "SELECT DISTINCT s.symbol_id AS class_symbol_id FROM class_bases AS cb JOIN symbols AS s ON s.symbol_id = cb.class_symbol_id WHERE (cb.base_symbol_id = 'auto_ontology/retrieval/text_to_sql/base.py::BaseAgent' OR (cb.base_symbol_id IS NULL AND cb.base_name = 'BaseAgent')) AND s.file_id NOT LIKE '%tests/%' AND s.file_id NOT LIKE '%conftest%' AND EXISTS (SELECT 1 FROM calls AS c JOIN symbols AS caller ON caller.symbol_id = c.caller_symbol_id WHERE c.callee_symbol_id = s.symbol_id AND c.call_kind = 'direct' AND caller.kind IN ('function','method') AND caller.file_id NOT LIKE '%tests/%' AND caller.file_id NOT LIKE '%conftest%') AND NOT EXISTS (SELECT 1 FROM calls AS c2 JOIN symbols AS caller2 ON caller2.symbol_id = c2.caller_symbol_id WHERE c2.callee_symbol_id = s.symbol_id AND c2.call_kind = 'direct' AND caller2.kind IN ('function','method') AND (caller2.file_id LIKE '%tests/%' OR caller2.file_id LIKE '%conftest%')) ORDER BY class_symbol_id;"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "execute_sql_query",
+      "thought": null,
+      "label": "Executing SQL"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "execute_sql_query",
+      "thought": "Query failed, rewriting it: Catalog Error: Table with name class_bases does not exist! Did you mean \"code.class_bases\"? LINE 1: SELECT DISTINCT s.symbol_id AS class_symbol_id FROM class_bases AS cb JOIN symbols AS s ON s.symbol_id = cb... ^",
+      "label": "Executing SQL"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "reconstruct_sql",
+      "thought": null,
+      "label": "Reconstructing SQL"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "reconstruct_sql",
+      "thought": "The previous query failed only because it referenced unqualified table names; the catalog resolves these tables under the `code` schema, so every table reference must be schema-qualified (`code.class_bases`, `code.symbols`, `code.calls`). All other assumptions remain valid: BaseAgent is identified from auto_ontology/retrieval/text_to_sql/base.py either by its exact symbol ID or, when the base symbol is unresolved, by base_name 'BaseAgent' with a null base_symbol_id; 'test code' means files whose path contains 'tests/' or 'conftest'; a direct constructor call is a `calls` row with call_kind 'direct' whose callee_symbol_id is the class symbol; only calls whose caller symbol kind is 'function' or 'method' count (so module-level calls and decorators/class-body references are excluded, matching the 'written in a function or method body' rule); patching/referencing is excluded because it would not be a direct call to the class symbol; a class counts as constructed in non-test code only if at least one such direct call has a caller in a non-test file; it is excluded if any such direct call has a caller in a test file. DISTINCT is required because multiple construction sites could otherwise duplicate a class. No date or numeric filters apply.",
+      "label": "Reconstructing SQL"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "validate_sql_query",
+      "thought": null,
+      "label": "Validating SQL and intent"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "validate_sql_query",
+      "thought": "The query correctly identifies direct subclasses of BaseAgent by filtering class_bases.base_symbol_id against the full symbol ID 'auto_ontology/retrieval/text_to_sql/base.py::BaseAgent' (with a lenient fallback on base_name when base_symbol_id is NULL). It joins class_bases to symbols on class_symbol_id (a valid FK) and restricts the class to non-test files (excluding tests/ and conftest). For 'constructed in non-test code', it uses an EXISTS over code.calls filtering call_kind='direct', requiring the caller kind to be function/method (matching 'written in a function or method body') and the caller file to be non-test. For 'never constructed in test code', the NOT EXISTS correctly excludes classes with any direct constructor call whose caller is in a test file/helper. This aligns with the evidence: patching/referencing without calling is excluded via call_kind='direct', transitive test-helper construction is handled by file-based caller checks, and only direct calls in function/method bodies count. The output column is s.symbol_id aliased as class_symbol_id, matching the requested output. No aggregation is used (only DISTINCT), no nonsensical joins, and the evidence-defined symbol ID, filter, and construction semantics are faithfully implemented. Minor stylistic choices (like the base_symbol_id NULL fallback) are acceptable lenient variations.",
+      "label": "Validating SQL and intent"
+    },
+    {
+      "type": "sql",
+      "node": "validate_sql_query",
+      "sql": "SELECT DISTINCT s.symbol_id AS class_symbol_id FROM code.class_bases AS cb JOIN code.symbols AS s ON s.symbol_id = cb.class_symbol_id WHERE (cb.base_symbol_id = 'auto_ontology/retrieval/text_to_sql/base.py::BaseAgent' OR (cb.base_symbol_id IS NULL AND cb.base_name = 'BaseAgent')) AND s.file_id NOT LIKE '%tests/%' AND s.file_id NOT LIKE '%conftest%' AND EXISTS (SELECT 1 FROM code.calls AS c JOIN code.symbols AS caller ON caller.symbol_id = c.caller_symbol_id WHERE c.callee_symbol_id = s.symbol_id AND c.call_kind = 'direct' AND caller.kind IN ('function','method') AND caller.file_id NOT LIKE '%tests/%' AND caller.file_id NOT LIKE '%conftest%') AND NOT EXISTS (SELECT 1 FROM code.calls AS c2 JOIN code.symbols AS caller2 ON caller2.symbol_id = c2.caller_symbol_id WHERE c2.callee_symbol_id = s.symbol_id AND c2.call_kind = 'direct' AND caller2.kind IN ('function','method') AND (caller2.file_id LIKE '%tests/%' OR caller2.file_id LIKE '%conftest%')) ORDER BY class_symbol_id"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "execute_sql_query",
+      "thought": null,
+      "label": "Executing SQL"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "execute_sql_query",
+      "thought": null,
+      "label": "Executing SQL"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "check_empty_like_result",
+      "thought": null,
+      "label": "Checking results"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "check_empty_like_result",
+      "thought": null,
+      "label": "Checking results"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "check_value_repair",
+      "thought": null,
+      "label": "Checking values"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "check_value_repair",
+      "thought": null,
+      "label": "Checking values"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "format_and_respond",
+      "thought": null,
+      "label": "Formatting response"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "format_and_respond",
+      "thought": null,
+      "label": "Formatting response"
+    },
+    {
+      "type": "result",
+      "answer": {
+        "response": "This returns the distinct class symbol IDs of agent classes that directly subclass BaseAgent from the text-to-SQL base module, are defined in non-test files, and are instantiated by direct constructor calls inside functions or methods in non-test code while never being instantiated in any test file. It joins class base records to their class symbols, restricts the class's own file to non-test paths, and uses direct call records from function or method callers to confirm non-test construction and to rule out any test-file construction. Each qualifying class symbol appears once.",
+        "sql_code": "SELECT DISTINCT s.symbol_id AS class_symbol_id FROM code.class_bases AS cb JOIN code.symbols AS s ON s.symbol_id = cb.class_symbol_id WHERE (cb.base_symbol_id = 'auto_ontology/retrieval/text_to_sql/base.py::BaseAgent' OR (cb.base_symbol_id IS NULL AND cb.base_name = 'BaseAgent')) AND s.file_id NOT LIKE '%tests/%' AND s.file_id NOT LIKE '%conftest%' AND EXISTS (SELECT 1 FROM code.calls AS c JOIN code.symbols AS caller ON caller.symbol_id = c.caller_symbol_id WHERE c.callee_symbol_id = s.symbol_id AND c.call_kind = 'direct' AND caller.kind IN ('function','method') AND caller.file_id NOT LIKE '%tests/%' AND caller.file_id NOT LIKE '%conftest%') AND NOT EXISTS (SELECT 1 FROM code.calls AS c2 JOIN code.symbols AS caller2 ON caller2.symbol_id = c2.caller_symbol_id WHERE c2.callee_symbol_id = s.symbol_id AND c2.call_kind = 'direct' AND caller2.kind IN ('function','method') AND (caller2.file_id LIKE '%tests/%' OR caller2.file_id LIKE '%conftest%')) ORDER BY class_symbol_id",
+        "sql_columns": [
+          "f553b7a1-abdc-4db2-9b04-7173838f25c0",
+          "54c0eca1-943d-4c14-afcb-0509dc753805",
+          "39da2066-562f-4620-9804-eba41cd1fe0b",
+          "13daffad-d279-47b4-9aee-6feb05e810fd",
+          "5c3cced8-3e7e-4a0d-b0f6-bcca1e3c4f65",
+          "b36ba714-ff35-4dac-b7be-ecdbfa25cda2",
+          "c9de9061-e795-4628-bea5-855380d7d53d",
+          "6297ada0-4e41-4f7d-88d0-54d22f890cea",
+          "8bc0d04c-7e36-429f-83cb-7851586ace9b"
+        ],
+        "custom_analyses_used": [],
+        "sql_response_from_db": [
+          "[{\"class_symbol_id\":\"auto_ontology\\/retrieval\\/entity_coverage\\/agents\\/coverage.py::CoverageGradeAgent\"},{\"class_symbol_id\":\"auto_ontology\\/retrieval\\/text_to_sql\\/agents\\/empty_like_result_check.py::EmptyLikeResultCheckAgent\"},{\"class_symbol_id\":\"auto_ontology\\/retrieval\\/text_to_sql\\/agents\\/join_path_check.py::JoinPathCheckAgent\"},{\"class_symbol_id\":\"auto_ontology\\/retrieval\\/text_to_sql\\/agents\\/jsonb_path_check.py::JsonbPathCheckAgent\"},{\"class_symbol_id\":\"auto_ontology\\/retrieval\\/text_to_sql\\/agents\\/kumo_prediction.py::KumoPredictionAgent\"},{\"class_symbol_id\":\"auto_ontology\\/retrieval\\/text_to_sql\\/agents\\/prediction_graph.py::PredictionGraphAgent\"},{\"class_symbol_id\":\"auto_ontology\\/retrieval\\/text_to_sql\\/agents\\/proactive_value_check.py::ProactiveValueCheckAgent\"},{\"class_symbol_id\":\"auto_ontology\\/retrieval\\/text_to_sql\\/agents\\/response.py::ResponseAgent\"}]"
+        ],
+        "thoughts": "- Preparing candidates: The question’s output is specifically each distinct class symbol ID, and the relevant column is the symbol ID on the untested public symbols table.\n- Preparing candidates: The query requires class inheritance/base information (`class_bases`), class symbol metadata and non-test file filtering (`symbols`), constructor-call evidence (`inbound_call_counts`), and potentially test-coverage filtering (`untested_public_symbols`). The `imports` table is not needed because base-class relationships are represented directly in `class_bases`, and imports do not supply constructor-call or test/non-test qualification for this query.\n- Refining evidence: No specific evidence lines containing data values are provided for repair. Line 1 is a definition of terms used in the question and does not contain a value or operator that can be corrected based on the provided schema or samples.\n- Constructing SQL: I find agent classes by joining class_bases to symbols on class_symbol_id, requiring direct subclassing of the BaseAgent symbol in auto_ontology/retrieval/text_to_sql/base.py. I restrict the class's own file to non-test code (not under a tests/ folder and not a conftest file). Non-test construction is proven by an EXISTS on direct calls whose callee is the class symbol and whose caller is a function/method in a non-test file; test construction is detected the same way but with the caller in a tests/ or conftest file. Only classes with at least one non-test direct constructor call and zero test-file direct constructor calls are returned, with SELECT DISTINCT because each class symbol must appear once.\n- Validating SQL and intent: The SQL answers the question by selecting class symbols whose direct base is the specified BaseAgent symbol, restricting the class to non-test files, requiring at least one direct constructor call from a non-test function/method, and excluding classes with any direct constructor call from a test function/method. It follows the authoritative evidence: direct constructor calls are modeled via `calls.call_kind = 'direct'`, callers are restricted to `function`/`method`, test code is excluded via `tests/` and `conftest`, and construction by a helper function called from a test is not treated as test construction because only direct calls to the class symbol are checked. The joins used are plausible and supported by the schema, including `class_bases.class_symbol_id = symbols.symbol_id` and `calls.callee_symbol_id = symbols.symbol_id`. The aggregation is just `DISTINCT`, which matches the request to return each distinct class symbol ID once. The `base_name` fallback for unresolved base symbols is a minor broadening but not a critical failure.\n- Executing SQL: Query failed, rewriting it: Catalog Error: Table with name class_bases does not exist! Did you mean \"code.class_bases\"? LINE 1: SELECT DISTINCT s.symbol_id AS class_symbol_id FROM class_bases AS cb JOIN symbols AS s ON s.symbol_id = cb... ^\n- Reconstructing SQL: The failure is a catalog resolution error: the query referenced the table as class_bases, but it lives in the code schema, so it must be referenced as code.class_bases (same for any other unqualified table references). The tables needed to answer the question (code.class_bases, code.symbols, code.calls, code.untested_public_symbols) are all present, so no new data is required. Additional fixable issues to address in the rewrite: qualify every table with its schema prefix, and confirm the correct column names on class_bases (the resolved join key is class_bases.base_symbol_id = symbols.symbol_id, while the subclass symbol column should be verified, e.g. class_symbol_id, and base_name/ordinal used consistently). The logic of filtering out test files (LIKE '%tests/%' or '%conftest%') on both the class definition and the caller symbol, requiring a direct non-test constructor call and excluding any test-code direct constructor call, remains valid once the references are corrected.\n- Reconstructing SQL: The previous query failed only because it referenced unqualified table names; the catalog resolves these tables under the `code` schema, so every table reference must be schema-qualified (`code.class_bases`, `code.symbols`, `code.calls`). All other assumptions remain valid: BaseAgent is identified from auto_ontology/retrieval/text_to_sql/base.py either by its exact symbol ID or, when the base symbol is unresolved, by base_name 'BaseAgent' with a null base_symbol_id; 'test code' means files whose path contains 'tests/' or 'conftest'; a direct constructor call is a `calls` row with call_kind 'direct' whose callee_symbol_id is the class symbol; only calls whose caller symbol kind is 'function' or 'method' count (so module-level calls and decorators/class-body references are excluded, matching the 'written in a function or method body' rule); patching/referencing is excluded because it would not be a direct call to the class symbol; a class counts as constructed in non-test code only if at least one such direct call has a caller in a non-test file; it is excluded if any such direct call has a caller in a test file. DISTINCT is required because multiple construction sites could otherwise duplicate a class. No date or numeric filters apply.\n- Validating SQL and intent: The query correctly identifies direct subclasses of BaseAgent by filtering class_bases.base_symbol_id against the full symbol ID 'auto_ontology/retrieval/text_to_sql/base.py::BaseAgent' (with a lenient fallback on base_name when base_symbol_id is NULL). It joins class_bases to symbols on class_symbol_id (a valid FK) and restricts the class to non-test files (excluding tests/ and conftest). For 'constructed in non-test code', it uses an EXISTS over code.calls filtering call_kind='direct', requiring the caller kind to be function/method (matching 'written in a function or method body') and the caller file to be non-test. For 'never constructed in test code', the NOT EXISTS correctly excludes classes with any direct constructor call whose caller is in a test file/helper. This aligns with the evidence: patching/referencing without calling is excluded via call_kind='direct', transitive test-helper construction is handled by file-based caller checks, and only direct calls in function/method bodies count. The output column is s.symbol_id aliased as class_symbol_id, matching the requested output. No aggregation is used (only DISTINCT), no nonsensical joins, and the evidence-defined symbol ID, filter, and construction semantics are faithfully implemented. Minor stylistic choices (like the base_symbol_id NULL fallback) are acceptable lenient variations."
+      }
+    }
+  ],
+  "question_id": 4,
+  "gold_sql": "SELECT b.class_symbol_id FROM code.class_bases b JOIN code.symbols s ON s.symbol_id = b.class_symbol_id JOIN code.files f ON f.file_id = s.file_id WHERE b.base_symbol_id = 'auto_ontology/retrieval/text_to_sql/base.py::BaseAgent' AND NOT f.is_test AND EXISTS (SELECT 1 FROM code.calls c JOIN code.symbols cs ON cs.symbol_id = c.caller_symbol_id JOIN code.files cf ON cf.file_id = cs.file_id WHERE c.callee_symbol_id = b.class_symbol_id AND c.call_kind = 'direct' AND NOT cf.is_test) AND NOT EXISTS (SELECT 1 FROM code.calls c JOIN code.symbols cs ON cs.symbol_id = c.caller_symbol_id JOIN code.files cf ON cf.file_id = cs.file_id WHERE c.callee_symbol_id = b.class_symbol_id AND c.call_kind = 'direct' AND cf.is_test) ORDER BY 1",
+  "gold_row_count": 1,
+  "agent_sql": "SELECT DISTINCT s.symbol_id AS class_symbol_id FROM code.class_bases AS cb JOIN code.symbols AS s ON s.symbol_id = cb.class_symbol_id WHERE (cb.base_symbol_id = 'auto_ontology/retrieval/text_to_sql/base.py::BaseAgent' OR (cb.base_symbol_id IS NULL AND cb.base_name = 'BaseAgent')) AND s.file_id NOT LIKE '%tests/%' AND s.file_id NOT LIKE '%conftest%' AND EXISTS (SELECT 1 FROM code.calls AS c JOIN code.symbols AS caller ON caller.symbol_id = c.caller_symbol_id WHERE c.callee_symbol_id = s.symbol_id AND c.call_kind = 'direct' AND caller.kind IN ('function','method') AND caller.file_id NOT LIKE '%tests/%' AND caller.file_id NOT LIKE '%conftest%') AND NOT EXISTS (SELECT 1 FROM code.calls AS c2 JOIN code.symbols AS caller2 ON caller2.symbol_id = c2.caller_symbol_id WHERE c2.callee_symbol_id = s.symbol_id AND c2.call_kind = 'direct' AND caller2.kind IN ('function','method') AND (caller2.file_id LIKE '%tests/%' OR caller2.file_id LIKE '%conftest%')) ORDER BY class_symbol_id",
+  "agent_answer": "This returns the distinct class symbol IDs of agent classes that directly subclass BaseAgent from the text-to-SQL base module, are defined in non-test files, and are instantiated by direct constructor calls inside functions or methods in non-test code while never being instantiated in any test file. It joins class base records to their class symbols, restricts the class's own file to non-test paths, and uses direct call records from function or method callers to confirm non-test construction and to rule out any test-file construction. Each qualifying class symbol appears once.",
+  "agent_row_count": 8,
+  "correct_rows": false,
+  "error": null
+}

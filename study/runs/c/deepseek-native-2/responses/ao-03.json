@@ -1,0 +1,58 @@
+{
+  "question_id": "ao-03",
+  "arm": "C-native",
+  "model": "deepseek/deepseek-v4.1-flash-1017",
+  "error": null,
+  "elapsed_s": 274.7,
+  "attempts": [
+    {
+      "sql": "SELECT DISTINCT c.symbol_id AS symbol_id FROM code.symbols AS c JOIN code.files AS cf ON c.file_id = cf.file_id JOIN code.calls AS e1 ON e1.caller_symbol_id = c.symbol_id JOIN code.symbols AS i ON i.symbol_id = e1.callee_symbol_id JOIN code.calls AS e2 ON e2.caller_symbol_id = i.symbol_id JOIN code.symbols AS t ON t.symbol_id = e2.callee_symbol_id WHERE cf.is_test = FALSE AND c.kind IN ('function', 'method') AND t.name = 'invoke_with_structured_output' AND t.file_id = 'auto_ontology/utils/llm_invoke.py' AND e1.call_kind = 'direct' AND e1.resolution <> 'dynamic_attribute' AND e2.call_kind = 'direct' AND e2.resolution <> 'dynamic_attribute' AND NOT EXISTS (SELECT 1 FROM code.calls AS d WHERE d.caller_symbol_id = c.symbol_id AND d.callee_symbol_id = t.symbol_id AND d.call_kind = 'direct' AND d.resolution <> 'dynamic_attribute') ORDER BY c.symbol_id"
+    }
+  ],
+  "usage": {},
+  "request": "invoke_with_structured_output in auto_ontology/utils/llm_invoke.py is the main structured-LLM-call wrapper. Which functions or methods in non-test code (every file under a tests/ folder is test code) reach it at exactly two hops: they do not call invoke_with_structured_output directly themselves, but they directly call at least one function or method that does call it directly? Consider direct calls only on both hops, and follow only calls to a named function or to a method on self (a call through another object's attribute, such as self._backend.classify(), is not followed); a function passed as an argument (e.g. pool.submit(f)) does not count as calling it. The intermediate function may live anywhere, including test code, but the functions you list must be in non-test code. Return their symbol IDs.\n\nRequested output columns: symbol_id (string).\nReturn exactly the requested output columns, using each requested name as the column alias, in the requested order. Return complete repository-relative file paths and complete symbol IDs exactly as stored. When the question asks which files, symbols or modules, return each distinct one once unless it asks for occurrences.",
+  "explanation": "This returns the symbol identifiers of functions and methods in non-test files that reach the structured-LLM wrapper at exactly two hops. It traces direct call edges from each candidate to an intermediate symbol and from that intermediate to the target wrapper, excludes any candidate that also calls the wrapper directly, and lists each qualifying symbol once.",
+  "sql": "SELECT DISTINCT c.symbol_id AS symbol_id FROM code.symbols AS c JOIN code.files AS cf ON c.file_id = cf.file_id JOIN code.calls AS e1 ON e1.caller_symbol_id = c.symbol_id JOIN code.symbols AS i ON i.symbol_id = e1.callee_symbol_id JOIN code.calls AS e2 ON e2.caller_symbol_id = i.symbol_id JOIN code.symbols AS t ON t.symbol_id = e2.callee_symbol_id WHERE cf.is_test = FALSE AND c.kind IN ('function', 'method') AND t.name = 'invoke_with_structured_output' AND t.file_id = 'auto_ontology/utils/llm_invoke.py' AND e1.call_kind = 'direct' AND e1.resolution <> 'dynamic_attribute' AND e2.call_kind = 'direct' AND e2.resolution <> 'dynamic_attribute' AND NOT EXISTS (SELECT 1 FROM code.calls AS d WHERE d.caller_symbol_id = c.symbol_id AND d.callee_symbol_id = t.symbol_id AND d.call_kind = 'direct' AND d.resolution <> 'dynamic_attribute') ORDER BY c.symbol_id",
+  "rows": [
+    {
+      "symbol_id": "auto_ontology/retrieval/text_to_sql/agents/candidates_preparation.py::CandidatePreparationAgent.execute"
+    },
+    {
+      "symbol_id": "auto_ontology/retrieval/text_to_sql/agents/candidates_retrieval.py::CandidateRetrievalAgent.execute"
+    },
+    {
+      "symbol_id": "auto_ontology/retrieval/text_to_sql/agents/evidence_refinement.py::EvidenceRefinementAgent.execute"
+    },
+    {
+      "symbol_id": "auto_ontology/retrieval/text_to_sql/agents/sql_parse_validation.py::SQLValidationAgent.execute"
+    },
+    {
+      "symbol_id": "auto_ontology/semantic/bridge_tables.py::build_bridge_tables_sql_attributes"
+    },
+    {
+      "symbol_id": "auto_ontology/semantic/deterministic.py::_generate_column_descriptions"
+    },
+    {
+      "symbol_id": "auto_ontology/semantic/semantic_fk.py::_resolve_via_vdb"
+    },
+    {
+      "symbol_id": "auto_ontology/semantic/semantic_fk.py::select_semantic_fk_join_defaults"
+    },
+    {
+      "symbol_id": "auto_ontology/semantic/sql_attribute_suggester.py::suggest_sql_attributes"
+    },
+    {
+      "symbol_id": "auto_ontology/semantic/visit_enter.py::process_table"
+    },
+    {
+      "symbol_id": "auto_ontology/server/chat/router.py::_build_charts_event"
+    },
+    {
+      "symbol_id": "auto_ontology/server/chat/worker.py::_worker_loop"
+    },
+    {
+      "symbol_id": "auto_ontology/server/sql_attributes/router.py::get_sql_attribute_description_suggestion"
+    }
+  ],
+  "source_record": "run/responses/10i_ask_with_key/ask_q3.json"
+}

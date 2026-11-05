@@ -1,0 +1,18 @@
+{
+  "question_id": "ao-02",
+  "arm": "C-native",
+  "model": "nvidia/nemotron-3.5-lightning",
+  "error": null,
+  "elapsed_s": 260.2,
+  "attempts": [
+    {
+      "sql": "WITH create_graph_sym AS (\n    SELECT symbol_id\n    FROM auto_ontology_code.code.symbols\n    WHERE name = 'create_graph'\n      AND qualname LIKE '%text_to_sql_graph%'\n    LIMIT 1\n),\ncallback_calls AS (\n    SELECT DISTINCT c.callee_symbol_id AS symbol_id\n    FROM auto_ontology_code.code.calls c\n    JOIN create_graph_sym s ON c.caller_symbol_id = s.symbol_id\n    WHERE c.call_kind = 'callback'\n      AND c.callee_symbol_id != s.symbol_id\n)\nSELECT symbol_id\nFROM callback_calls\nORDER BY symbol_id;"
+    }
+  ],
+  "usage": {},
+  "request": "When the text-to-SQL LangGraph is assembled by create_graph in auto_ontology/retrieval/text_to_sql/text_to_sql_graph.py, which functions or methods of this repository does create_graph hand over by reference, i.e. pass the function object itself as an argument to another call (as with graph.add_conditional_edges(node, router_fn, ...)) rather than calling it? Count only plain names passed directly as call arguments; functions that create_graph calls itself, values that are the result of a call (such as _make_soft_check_router(...)), lambdas, and local variables holding nodes do not count. Functions passed only inside an if/else branch of create_graph count. Return each distinct function's symbol ID.\n\nRequested output columns: symbol_id (string).\nReturn exactly the requested output columns, using each requested name as the column alias, in the requested order. Return complete repository-relative file paths and complete symbol IDs exactly as stored. When the question asks which files, symbols or modules, return each distinct one once unless it asks for occurrences.",
+  "explanation": "This query identifies functions or methods from the text-to-SQL LangGraph repository that are passed as plain function objects (by reference) to other calls within the create_graph function defined in auto_ontology/retrieval/text_to_sql/text_to_sql_graph.py. It locates the create_graph symbol, then finds all originating calls with call_kind 'callback' and returns the distinct symbol IDs of the callee functions, excluding self-references. The output lists each such function's full symbol identifier as stored in the repository's metadata.",
+  "sql": "WITH create_graph_sym AS (\n    SELECT symbol_id\n    FROM auto_ontology_code.code.symbols\n    WHERE name = 'create_graph'\n      AND qualname LIKE '%text_to_sql_graph%'\n    LIMIT 1\n),\ncallback_calls AS (\n    SELECT DISTINCT c.callee_symbol_id AS symbol_id\n    FROM auto_ontology_code.code.calls c\n    JOIN create_graph_sym s ON c.caller_symbol_id = s.symbol_id\n    WHERE c.call_kind = 'callback'\n      AND c.callee_symbol_id != s.symbol_id\n)\nSELECT symbol_id\nFROM callback_calls\nORDER BY symbol_id;",
+  "rows": [],
+  "source_record": "run/responses/10i_ask_with_key/ask_q2.json"
+}

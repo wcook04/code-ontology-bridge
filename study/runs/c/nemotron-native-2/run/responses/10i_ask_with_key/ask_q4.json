@@ -1,0 +1,275 @@
+{
+  "request": {
+    "question": "Consider the agent classes defined in non-test code that directly subclass BaseAgent from auto_ontology/retrieval/text_to_sql/base.py (every file under a tests/ folder, conftest.py and helpers included, is test code). Which of these agent classes are constructed (the class is called by name, e.g. ResponseAgent()) somewhere in non-test code but are never constructed anywhere in test code? Count only direct constructor calls written in a function or method body; patching or referencing a class without calling it does not count, and a test that calls a function which constructs the class does not count as constructing it. Return their class symbol IDs.\n\nRequested output columns: class_symbol_id (string).\nReturn exactly the requested output columns, using each requested name as the column alias, in the requested order. Return complete repository-relative file paths and complete symbol IDs exactly as stored. When the question asks which files, symbols or modules, return each distinct one once unless it asks for occurrences.",
+    "calculation_only": true
+  },
+  "status": 200,
+  "elapsed_s": 168.2,
+  "events": [
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "question_intent",
+      "thought": null,
+      "label": "Classifying the question"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "question_intent",
+      "thought": null,
+      "label": "Classifying the question"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "question_extraction",
+      "thought": null,
+      "label": "Understanding the question"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "question_extraction",
+      "thought": null,
+      "label": "Understanding the question"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "retrieve_candidates",
+      "thought": null,
+      "label": "Retrieving candidates"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "retrieve_candidates",
+      "thought": null,
+      "label": "Retrieving candidates"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "prepare_candidates",
+      "thought": null,
+      "label": "Preparing candidates"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "prepare_candidates",
+      "thought": "The user wants agent class symbols that subclass BaseAgent, appear in non-test code, but never in test code. This requires checking class hierarchies (class_bases), filtering by test status of source files (code.files.is_test), and ensuring symbols are absent from test-linked symbols (untested_public_symbols or test_links). The table auto_ontology_code.code.inbound_call_counts records call invocation counts and distinct callers, but has no role in determining class inheritance, test-status filtering, or symbol exclusions based on test code. Its columns (inbound_calls, callback_references, distinct_callers) are irrelevant to the query's logical requirements.",
+      "label": "Preparing candidates"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "refine_evidence",
+      "thought": null,
+      "label": "Refining evidence"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "refine_evidence",
+      "thought": "The single numbered evidence line (1|) is a rule about constructor call counting that is already consistent with the user's question and contains no mistaken scalar values, operators, or string representations that conflict with the provided table anchors or sample values. The table column `base_name` samples include `BaseAgent`, aligning with the question's reference. No repairs are warranted under the given rules, so the repair list is empty and the sanitized question is returned unchanged.",
+      "label": "Refining evidence"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "construct_sql_from_candidates",
+      "thought": null,
+      "label": "Constructing SQL"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "construct_sql_from_candidates",
+      "thought": "I need to find agent classes that directly subclass BaseAgent, are constructed (called with parentheses) in non-test code, but never constructed in test code. The approach: 1) Find all BaseAgent subclasses from code.class_bases where base_name='BaseAgent' joined with code.symbols. 2) Find direct constructor calls (call_kind='direct' in code.calls) for these classes. 3) For each class, check if it has at least one direct call in a non-test file (is_test=FALSE) and zero direct calls in test files (is_test=TRUE). The is_test flag in code.files determines test vs non-test code status. The caller's file is traced via caller_symbol_id → code.symbols.file_id → code.files.is_test.",
+      "label": "Constructing SQL"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "validate_sql_query",
+      "thought": null,
+      "label": "Validating SQL and intent"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "validate_sql_query",
+      "thought": "I've carefully analyzed the SQL query against the provided evidence and criteria. Let me go through each critical issue check:\n\n1. **Joins**: All joins in the SQL are reasonable and follow logical paths through the available tables. The query joins `code.class_bases` to `code.symbols` to find BaseAgent subclasses, then joins `code.calls` to find direct calls to those classes, and finally joins `code.files` to distinguish test vs production files. These joins are not nonsensical or broken - they form a coherent path to answer the question.\n\n2. **Aggregations**: The query uses COUNT, which is appropriate for counting call occurrences. The question asks to identify classes, and counting calls that construct those classes is the right approach. The query correctly separates non-test calls from test calls.\n\n3. **Evidence compliance**: \n   - The SQL uses `WHERE cb.base_name = 'BaseAgent'` which matches the evidence showing 'BaseAgent' as a sample value for base_name\n   - The SQL uses `WHERE c.call_kind = 'direct'` which matches the evidence showing 'direct' as a sample value for call_kind\n   - The filtering logic (`non_test_call_count > 0 AND test_call_count = 0`) correctly implements the requirement to find classes constructed in non-test code but never in test code\n   - The evidence's counting methodology (direct constructor calls only, excluding test constructions) is properly reflected\n\nThe SQL follows the authoritative evidence exactly where values and columns are specified. There are no seriously wrong joins, no clearly wrong aggregations, and no evidence substitution issues. The query could reasonably answer the question as posed.\n\nNo critical issues were found. The SQL is valid.",
+      "label": "Validating SQL and intent"
+    },
+    {
+      "type": "sql",
+      "node": "validate_sql_query",
+      "sql": "WITH baseagent_subclasses AS (\n    SELECT s.symbol_id AS class_symbol_id\n    FROM code.class_bases cb\n    JOIN code.symbols s ON cb.class_symbol_id = s.symbol_id\n    WHERE cb.base_name = 'BaseAgent'\n),\ndirect_calls AS (\n    SELECT c.callee_symbol_id,\n           f.is_test AS caller_is_test_file\n    FROM code.calls c\n    JOIN baseagent_subclasses bas ON c.callee_symbol_id = bas.class_symbol_id\n    JOIN code.symbols caller_sym ON c.caller_symbol_id = caller_sym.symbol_id\n    JOIN code.files f ON caller_sym.file_id = f.file_id\n    WHERE c.call_kind = 'direct'\n),\nclass_summary AS (\n    SELECT class_symbol_id,\n           COUNT(CASE WHEN NOT caller_is_test_file THEN 1 END) AS non_test_call_count,\n           COUNT(CASE WHEN caller_is_test_file THEN 1 END) AS test_call_count\n    FROM direct_calls\n    GROUP BY class_symbol_id\n)\nSELECT class_symbol_id\nFROM class_summary\nWHERE non_test_call_count > 0 AND test_call_count = 0\nORDER BY class_symbol_id"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "execute_sql_query",
+      "thought": null,
+      "label": "Executing SQL"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "execute_sql_query",
+      "thought": "Query failed, rewriting it: Binder Error: Referenced column \"class_symbol_id\" not found in FROM clause! Candidate bindings: \"callee_symbol_id\", \"caller_is_test_file\" LINE 21: GROUP BY class_symbol_id ^",
+      "label": "Executing SQL"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "reconstruct_sql",
+      "thought": null,
+      "label": "Reconstructing SQL"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "reconstruct_sql",
+      "thought": "The error occurs because `class_symbol_id` is referenced in the `class_summary` CTE's GROUP BY clause, but it's not a column in the `direct_calls` CTE. The `direct_calls` CTE selects `c.callee_symbol_id` and `f.is_test AS caller_is_test_file`, but doesn't carry forward `class_symbol_id` from the `baseagent_subclasses` CTE. The fix is to include `bas.class_symbol_id` in the `direct_calls` SELECT clause, which makes it available for the subsequent GROUP BY in `class_summary`. All other assumptions from the original approach remain valid: BaseAgent subclasses identified from class_bases.base_name='BaseAgent', direct calls filtered by call_kind='direct', test status determined by files.is_test, and the goal of finding classes with non_test_call_count > 0 and test_call_count = 0.",
+      "label": "Reconstructing SQL"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "validate_sql_query",
+      "thought": null,
+      "label": "Validating SQL and intent"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "validate_sql_query",
+      "thought": null,
+      "label": "Validating SQL and intent"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "reconstruct_sql",
+      "thought": null,
+      "label": "Reconstructing SQL"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "reconstruct_sql",
+      "thought": "BaseAgent subclasses are identified from code.class_bases filtered by base_name = 'BaseAgent', joined with code.symbols on class_symbol_id to get class symbol IDs. Direct constructor calls are identified from code.calls where call_kind = 'direct' and callee_symbol_id matches a BaseAgent subclass symbol_id. The file containing the caller (determined via caller_symbol_id -> code.symbols.file_id -> code.files.file_id) is used to determine if a call originates from test or non-test code via the is_test flag. A BaseAgent subclass is included if it has at least one direct constructor call in a non-test file (non_test_call_count > 0) and zero direct constructor calls in test files (test_call_count = 0). The join cb.class_symbol_id = s.symbol_id between code.class_bases and code.symbols is valid. The join c.callee_symbol_id = bas.class_symbol_id between code.calls and the BaseAgent subclasses CTE is valid because callee_symbol_id references code.symbols.symbol_id which is the same domain as class_symbol_id. The COUNT(CASE WHEN ...) pattern is used per evidence rules regarding FILTER limitations on aggregates.",
+      "label": "Reconstructing SQL"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "validate_sql_query",
+      "thought": null,
+      "label": "Validating SQL and intent"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "validate_sql_query",
+      "thought": "Let me analyze the SQL query for critical issues against the provided evidence and question.",
+      "label": "Validating SQL and intent"
+    },
+    {
+      "type": "sql",
+      "node": "validate_sql_query",
+      "sql": "WITH baseagent_subclasses AS (\n    SELECT s.symbol_id AS class_symbol_id\n    FROM code.class_bases cb\n    JOIN code.symbols s ON cb.class_symbol_id = s.symbol_id\n    WHERE cb.base_name = 'BaseAgent'\n),\ndirect_calls AS (\n    SELECT bas.class_symbol_id,\n           c.callee_symbol_id,\n           f.is_test AS caller_is_test_file\n    FROM baseagent_subclasses bas\n    JOIN code.calls c ON c.callee_symbol_id = bas.class_symbol_id\n    JOIN code.symbols caller_sym ON c.caller_symbol_id = caller_sym.symbol_id\n    JOIN code.files f ON caller_sym.file_id = f.file_id\n    WHERE c.call_kind = 'direct'\n),\nclass_summary AS (\n    SELECT class_symbol_id,\n           COUNT(CASE WHEN NOT caller_is_test_file THEN 1 END) AS non_test_call_count,\n           COUNT(CASE WHEN caller_is_test_file THEN 1 END) AS test_call_count\n    FROM direct_calls\n    GROUP BY class_symbol_id\n)\nSELECT class_symbol_id\nFROM class_summary\nWHERE non_test_call_count > 0 AND test_call_count = 0\nORDER BY class_symbol_id"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "execute_sql_query",
+      "thought": null,
+      "label": "Executing SQL"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "execute_sql_query",
+      "thought": null,
+      "label": "Executing SQL"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "check_empty_like_result",
+      "thought": null,
+      "label": "Checking results"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "check_empty_like_result",
+      "thought": null,
+      "label": "Checking results"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "check_value_repair",
+      "thought": null,
+      "label": "Checking values"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "check_value_repair",
+      "thought": null,
+      "label": "Checking values"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "format_and_respond",
+      "thought": null,
+      "label": "Formatting response"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "format_and_respond",
+      "thought": null,
+      "label": "Formatting response"
+    },
+    {
+      "type": "result",
+      "answer": {
+        "response": "This query finds agent classes that directly subclass BaseAgent and have direct constructor calls only in non-test code (not in any test file). It starts by identifying all BaseAgent subclasses from the class_bases table, then traces direct constructor calls (call_kind = 'direct') to those classes, determines each call's origin file test status, and finally returns class symbol IDs where non-test construction exists but no test construction occurs.",
+        "sql_code": "WITH baseagent_subclasses AS (\n    SELECT s.symbol_id AS class_symbol_id\n    FROM code.class_bases cb\n    JOIN code.symbols s ON cb.class_symbol_id = s.symbol_id\n    WHERE cb.base_name = 'BaseAgent'\n),\ndirect_calls AS (\n    SELECT bas.class_symbol_id,\n           c.callee_symbol_id,\n           f.is_test AS caller_is_test_file\n    FROM baseagent_subclasses bas\n    JOIN code.calls c ON c.callee_symbol_id = bas.class_symbol_id\n    JOIN code.symbols caller_sym ON c.caller_symbol_id = caller_sym.symbol_id\n    JOIN code.files f ON caller_sym.file_id = f.file_id\n    WHERE c.call_kind = 'direct'\n),\nclass_summary AS (\n    SELECT class_symbol_id,\n           COUNT(CASE WHEN NOT caller_is_test_file THEN 1 END) AS non_test_call_count,\n           COUNT(CASE WHEN caller_is_test_file THEN 1 END) AS test_call_count\n    FROM direct_calls\n    GROUP BY class_symbol_id\n)\nSELECT class_symbol_id\nFROM class_summary\nWHERE non_test_call_count > 0 AND test_call_count = 0\nORDER BY class_symbol_id",
+        "sql_columns": [
+          "1bd71fef-b8f2-46ce-ba40-93140ff2ee52",
+          "2595537e-be3d-4870-8640-f93f8e5f3a3d",
+          "97ae8ab9-ccf3-41ef-a28d-9150d4070bf6",
+          "d0fc5164-5d11-431d-8785-e0addad210b1",
+          "cca58d2e-8c25-429c-b646-d902e85c5b46",
+          "49aed150-3fff-4b02-bd7c-1165a6882920",
+          "71e34243-67f1-41d2-a1d0-58f72743573a",
+          "193d206c-b206-4ec6-b7c1-de8bf2e91a3a",
+          "26e90b18-f2cb-462f-aadd-9b4cdd4170a6"
+        ],
+        "custom_analyses_used": [],
+        "sql_response_from_db": [
+          "[{\"class_symbol_id\":\"auto_ontology\\/retrieval\\/entity_coverage\\/agents\\/coverage.py::CoverageGradeAgent\"},{\"class_symbol_id\":\"auto_ontology\\/retrieval\\/text_to_sql\\/agents\\/empty_like_result_check.py::EmptyLikeResultCheckAgent\"},{\"class_symbol_id\":\"auto_ontology\\/retrieval\\/text_to_sql\\/agents\\/join_path_check.py::JoinPathCheckAgent\"},{\"class_symbol_id\":\"auto_ontology\\/retrieval\\/text_to_sql\\/agents\\/jsonb_path_check.py::JsonbPathCheckAgent\"},{\"class_symbol_id\":\"auto_ontology\\/retrieval\\/text_to_sql\\/agents\\/kumo_prediction.py::KumoPredictionAgent\"},{\"class_symbol_id\":\"auto_ontology\\/retrieval\\/text_to_sql\\/agents\\/prediction_graph.py::PredictionGraphAgent\"},{\"class_symbol_id\":\"auto_ontology\\/retrieval\\/text_to_sql\\/agents\\/proactive_value_check.py::ProactiveValueCheckAgent\"},{\"class_symbol_id\":\"auto_ontology\\/retrieval\\/text_to_sql\\/agents\\/response.py::ResponseAgent\"}]"
+        ],
+        "thoughts": "- Preparing candidates: The query's primary subject is identifying agent class symbol IDs that directly subclass BaseAgent. The column `code.class_bases.base_name` stores base class identifiers (e.g., BaseModel, ApiModel, Exception) and is the key attribute used to filter classes directly subclassing BaseAgent. While `code.files.is_test` addresses the non-test vs. test construction distinction, the core entity defined by the question is the class-subclass relationship, making `code.class_bases.base_name` the primary column attribute representing the main focus.\n- Preparing candidates: The user wants agent class symbols that subclass BaseAgent, appear in non-test code, but never in test code. This requires checking class hierarchies (class_bases), filtering by test status of source files (code.files.is_test), and ensuring symbols are absent from test-linked symbols (untested_public_symbols or test_links). The table auto_ontology_code.code.inbound_call_counts records call invocation counts and distinct callers, but has no role in determining class inheritance, test-status filtering, or symbol exclusions based on test code. Its columns (inbound_calls, callback_references, distinct_callers) are irrelevant to the query's logical requirements.\n- Refining evidence: Strict scope analysis: The evidence section provides a natural-language rule about constructor call counting but does not explicitly map any concept to a physical column from the supplied list using cues like \"refers to\", \"means\", \"is defined as\", or \"corresponds to\". The question is a natural-language query without column references. Since no field from the provided dialect-quoted column list is described or mapped in the evidence, and the evidence-defined concepts (\"direct constructor calls\", \"function or method body\", \"test that calls a function which constructs the class\") are not tied to specific column identifiers in the evidence, no replacements are required per the strict scope rules. Both the question and evidence remain unchanged, as leaving them untouched satisfies the condition that fields appearing in the tables section but not described by evidence must remain untouched in both outputs.\n- Refining evidence: The single numbered evidence line (1|) is a rule about constructor call counting that is already consistent with the user's question and contains no mistaken scalar values, operators, or string representations that conflict with the provided table anchors or sample values. The table column `base_name` samples include `BaseAgent`, aligning with the question's reference. No repairs are warranted under the given rules, so the repair list is empty and the sanitized question is returned unchanged.\n- Constructing SQL: I need to find agent classes that directly subclass BaseAgent, are constructed (called with parentheses) in non-test code, but never constructed in test code. The approach: 1) Find all BaseAgent subclasses from code.class_bases where base_name='BaseAgent' joined with code.symbols. 2) Find direct constructor calls (call_kind='direct' in code.calls) for these classes. 3) For each class, check if it has at least one direct call in a non-test file (is_test=FALSE) and zero direct calls in test files (is_test=TRUE). The is_test flag in code.files determines test vs non-test code status. The caller's file is traced via caller_symbol_id → code.symbols.file_id → code.files.is_test.\n- Validating SQL and intent: I've carefully analyzed the SQL query against the provided evidence and criteria. Let me go through each critical issue check:\n\n1. **Joins**: All joins in the SQL are reasonable and follow logical paths through the available tables. The query joins `code.class_bases` to `code.symbols` to find BaseAgent subclasses, then joins `code.calls` to find direct calls to those classes, and finally joins `code.files` to distinguish test vs production files. These joins are not nonsensical or broken - they form a coherent path to answer the question.\n\n2. **Aggregations**: The query uses COUNT, which is appropriate for counting call occurrences. The question asks to identify classes, and counting calls that construct those classes is the right approach. The query correctly separates non-test calls from test calls.\n\n3. **Evidence compliance**: \n   - The SQL uses `WHERE cb.base_name = 'BaseAgent'` which matches the evidence showing 'BaseAgent' as a sample value for base_name\n   - The SQL uses `WHERE c.call_kind = 'direct'` which matches the evidence showing 'direct' as a sample value for call_kind\n   - The filtering logic (`non_test_call_count > 0 AND test_call_count = 0`) correctly implements the requirement to find classes constructed in non-test code but never in test code\n   - The evidence's counting methodology (direct constructor calls only, excluding test constructions) is properly reflected\n\nThe SQL follows the authoritative evidence exactly where values and columns are specified. There are no seriously wrong joins, no clearly wrong aggregations, and no evidence substitution issues. The query could reasonably answer the question as posed.\n\nNo critical issues were found. The SQL is valid.\n- Executing SQL: Query failed, rewriting it: Binder Error: Referenced column \"class_symbol_id\" not found in FROM clause! Candidate bindings: \"callee_symbol_id\", \"caller_is_test_file\" LINE 21: GROUP BY class_symbol_id ^\n- Reconstructing SQL: The SQL query references `class_symbol_id` in the `GROUP BY` clause of `class_summary`, but this column is not selected in the `direct_calls` CTE. It is available as `c.callee_symbol_id` in the `calls` table, and the join with `baseagent_subclasses` already links on that identifier. The error is a column reference/aliasing issue within the existing table schema, not a missing table or concept. Hence, fixable.\n- Reconstructing SQL: The error occurs because `class_symbol_id` is referenced in the `class_summary` CTE's GROUP BY clause, but it's not a column in the `direct_calls` CTE. The `direct_calls` CTE selects `c.callee_symbol_id` and `f.is_test AS caller_is_test_file`, but doesn't carry forward `class_symbol_id` from the `baseagent_subclasses` CTE. The fix is to include `bas.class_symbol_id` in the `direct_calls` SELECT clause, which makes it available for the subsequent GROUP BY in `class_summary`. All other assumptions from the original approach remain valid: BaseAgent subclasses identified from class_bases.base_name='BaseAgent', direct calls filtered by call_kind='direct', test status determined by files.is_test, and the goal of finding classes with non_test_call_count > 0 and test_call_count = 0.\n- Reconstructing SQL: BaseAgent subclasses are identified from code.class_bases filtered by base_name = 'BaseAgent', joined with code.symbols on class_symbol_id to get class symbol IDs. Direct constructor calls are identified from code.calls where call_kind = 'direct' and callee_symbol_id matches a BaseAgent subclass symbol_id. The file containing the caller (determined via caller_symbol_id -> code.symbols.file_id -> code.files.file_id) is used to determine if a call originates from test or non-test code via the is_test flag. A BaseAgent subclass is included if it has at least one direct constructor call in a non-test file (non_test_call_count > 0) and zero direct constructor calls in test files (test_call_count = 0). The join cb.class_symbol_id = s.symbol_id between code.class_bases and code.symbols is valid. The join c.callee_symbol_id = bas.class_symbol_id between code.calls and the BaseAgent subclasses CTE is valid because callee_symbol_id references code.symbols.symbol_id which is the same domain as class_symbol_id. The COUNT(CASE WHEN ...) pattern is used per evidence rules regarding FILTER limitations on aggregates.\n- Validating SQL and intent: Let me analyze the SQL query for critical issues against the provided evidence and question."
+      }
+    }
+  ],
+  "question_id": 4,
+  "gold_sql": "SELECT b.class_symbol_id FROM code.class_bases b JOIN code.symbols s ON s.symbol_id = b.class_symbol_id JOIN code.files f ON f.file_id = s.file_id WHERE b.base_symbol_id = 'auto_ontology/retrieval/text_to_sql/base.py::BaseAgent' AND NOT f.is_test AND EXISTS (SELECT 1 FROM code.calls c JOIN code.symbols cs ON cs.symbol_id = c.caller_symbol_id JOIN code.files cf ON cf.file_id = cs.file_id WHERE c.callee_symbol_id = b.class_symbol_id AND c.call_kind = 'direct' AND NOT cf.is_test) AND NOT EXISTS (SELECT 1 FROM code.calls c JOIN code.symbols cs ON cs.symbol_id = c.caller_symbol_id JOIN code.files cf ON cf.file_id = cs.file_id WHERE c.callee_symbol_id = b.class_symbol_id AND c.call_kind = 'direct' AND cf.is_test) ORDER BY 1",
+  "gold_row_count": 1,
+  "agent_sql": "WITH baseagent_subclasses AS (\n    SELECT s.symbol_id AS class_symbol_id\n    FROM code.class_bases cb\n    JOIN code.symbols s ON cb.class_symbol_id = s.symbol_id\n    WHERE cb.base_name = 'BaseAgent'\n),\ndirect_calls AS (\n    SELECT bas.class_symbol_id,\n           c.callee_symbol_id,\n           f.is_test AS caller_is_test_file\n    FROM baseagent_subclasses bas\n    JOIN code.calls c ON c.callee_symbol_id = bas.class_symbol_id\n    JOIN code.symbols caller_sym ON c.caller_symbol_id = caller_sym.symbol_id\n    JOIN code.files f ON caller_sym.file_id = f.file_id\n    WHERE c.call_kind = 'direct'\n),\nclass_summary AS (\n    SELECT class_symbol_id,\n           COUNT(CASE WHEN NOT caller_is_test_file THEN 1 END) AS non_test_call_count,\n           COUNT(CASE WHEN caller_is_test_file THEN 1 END) AS test_call_count\n    FROM direct_calls\n    GROUP BY class_symbol_id\n)\nSELECT class_symbol_id\nFROM class_summary\nWHERE non_test_call_count > 0 AND test_call_count = 0\nORDER BY class_symbol_id",
+  "agent_answer": "This query finds agent classes that directly subclass BaseAgent and have direct constructor calls only in non-test code (not in any test file). It starts by identifying all BaseAgent subclasses from the class_bases table, then traces direct constructor calls (call_kind = 'direct') to those classes, determines each call's origin file test status, and finally returns class symbol IDs where non-test construction exists but no test construction occurs.",
+  "agent_row_count": 8,
+  "correct_rows": false,
+  "error": null
+}

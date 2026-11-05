@@ -1,0 +1,43 @@
+{
+  "question_id": "ao-04",
+  "arm": "C-native",
+  "model": "nvidia/nemotron-3.5-lightning",
+  "error": null,
+  "elapsed_s": 168.2,
+  "attempts": [
+    {
+      "sql": "WITH baseagent_subclasses AS (\n    SELECT s.symbol_id AS class_symbol_id\n    FROM code.class_bases cb\n    JOIN code.symbols s ON cb.class_symbol_id = s.symbol_id\n    WHERE cb.base_name = 'BaseAgent'\n),\ndirect_calls AS (\n    SELECT bas.class_symbol_id,\n           c.callee_symbol_id,\n           f.is_test AS caller_is_test_file\n    FROM baseagent_subclasses bas\n    JOIN code.calls c ON c.callee_symbol_id = bas.class_symbol_id\n    JOIN code.symbols caller_sym ON c.caller_symbol_id = caller_sym.symbol_id\n    JOIN code.files f ON caller_sym.file_id = f.file_id\n    WHERE c.call_kind = 'direct'\n),\nclass_summary AS (\n    SELECT class_symbol_id,\n           COUNT(CASE WHEN NOT caller_is_test_file THEN 1 END) AS non_test_call_count,\n           COUNT(CASE WHEN caller_is_test_file THEN 1 END) AS test_call_count\n    FROM direct_calls\n    GROUP BY class_symbol_id\n)\nSELECT class_symbol_id\nFROM class_summary\nWHERE non_test_call_count > 0 AND test_call_count = 0\nORDER BY class_symbol_id"
+    }
+  ],
+  "usage": {},
+  "request": "Consider the agent classes defined in non-test code that directly subclass BaseAgent from auto_ontology/retrieval/text_to_sql/base.py (every file under a tests/ folder, conftest.py and helpers included, is test code). Which of these agent classes are constructed (the class is called by name, e.g. ResponseAgent()) somewhere in non-test code but are never constructed anywhere in test code? Count only direct constructor calls written in a function or method body; patching or referencing a class without calling it does not count, and a test that calls a function which constructs the class does not count as constructing it. Return their class symbol IDs.\n\nRequested output columns: class_symbol_id (string).\nReturn exactly the requested output columns, using each requested name as the column alias, in the requested order. Return complete repository-relative file paths and complete symbol IDs exactly as stored. When the question asks which files, symbols or modules, return each distinct one once unless it asks for occurrences.",
+  "explanation": "This query finds agent classes that directly subclass BaseAgent and have direct constructor calls only in non-test code (not in any test file). It starts by identifying all BaseAgent subclasses from the class_bases table, then traces direct constructor calls (call_kind = 'direct') to those classes, determines each call's origin file test status, and finally returns class symbol IDs where non-test construction exists but no test construction occurs.",
+  "sql": "WITH baseagent_subclasses AS (\n    SELECT s.symbol_id AS class_symbol_id\n    FROM code.class_bases cb\n    JOIN code.symbols s ON cb.class_symbol_id = s.symbol_id\n    WHERE cb.base_name = 'BaseAgent'\n),\ndirect_calls AS (\n    SELECT bas.class_symbol_id,\n           c.callee_symbol_id,\n           f.is_test AS caller_is_test_file\n    FROM baseagent_subclasses bas\n    JOIN code.calls c ON c.callee_symbol_id = bas.class_symbol_id\n    JOIN code.symbols caller_sym ON c.caller_symbol_id = caller_sym.symbol_id\n    JOIN code.files f ON caller_sym.file_id = f.file_id\n    WHERE c.call_kind = 'direct'\n),\nclass_summary AS (\n    SELECT class_symbol_id,\n           COUNT(CASE WHEN NOT caller_is_test_file THEN 1 END) AS non_test_call_count,\n           COUNT(CASE WHEN caller_is_test_file THEN 1 END) AS test_call_count\n    FROM direct_calls\n    GROUP BY class_symbol_id\n)\nSELECT class_symbol_id\nFROM class_summary\nWHERE non_test_call_count > 0 AND test_call_count = 0\nORDER BY class_symbol_id",
+  "rows": [
+    {
+      "class_symbol_id": "auto_ontology/retrieval/entity_coverage/agents/coverage.py::CoverageGradeAgent"
+    },
+    {
+      "class_symbol_id": "auto_ontology/retrieval/text_to_sql/agents/empty_like_result_check.py::EmptyLikeResultCheckAgent"
+    },
+    {
+      "class_symbol_id": "auto_ontology/retrieval/text_to_sql/agents/join_path_check.py::JoinPathCheckAgent"
+    },
+    {
+      "class_symbol_id": "auto_ontology/retrieval/text_to_sql/agents/jsonb_path_check.py::JsonbPathCheckAgent"
+    },
+    {
+      "class_symbol_id": "auto_ontology/retrieval/text_to_sql/agents/kumo_prediction.py::KumoPredictionAgent"
+    },
+    {
+      "class_symbol_id": "auto_ontology/retrieval/text_to_sql/agents/prediction_graph.py::PredictionGraphAgent"
+    },
+    {
+      "class_symbol_id": "auto_ontology/retrieval/text_to_sql/agents/proactive_value_check.py::ProactiveValueCheckAgent"
+    },
+    {
+      "class_symbol_id": "auto_ontology/retrieval/text_to_sql/agents/response.py::ResponseAgent"
+    }
+  ],
+  "source_record": "run/responses/10i_ask_with_key/ask_q4.json"
+}

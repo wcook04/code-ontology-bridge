@@ -1,0 +1,39 @@
+{
+  "question_id": "ao-12",
+  "arm": "C-native",
+  "model": "deepseek/deepseek-v4.1-flash-1017",
+  "error": null,
+  "elapsed_s": 578.2,
+  "attempts": [
+    {
+      "sql": "WITH RECURSIVE bases AS (SELECT class_symbol_id, base_symbol_id, trim(split_part(base_name, '[', 1)) AS base_norm FROM auto_ontology_code.code.class_bases), inherits AS (SELECT class_symbol_id, 1 AS depth FROM bases WHERE base_symbol_id = 'auto_ontology/server/models.py::ApiModel' OR base_norm IN ('ApiModel', '_Payload') UNION SELECT b.class_symbol_id, i.depth + 1 FROM bases AS b JOIN inherits AS i ON b.base_symbol_id = i.class_symbol_id WHERE i.depth < 64), shortest AS (SELECT class_symbol_id, MIN(depth) AS depth FROM inherits GROUP BY class_symbol_id) SELECT s.symbol_id AS class_symbol_id, CAST(sh.depth AS INTEGER) AS depth FROM shortest AS sh JOIN auto_ontology_code.code.symbols AS s ON s.symbol_id = sh.class_symbol_id WHERE s.kind = 'class' AND sh.depth >= 2 AND NOT EXISTS (SELECT 1 FROM bases AS b2 WHERE b2.class_symbol_id = sh.class_symbol_id AND (b2.base_symbol_id = 'auto_ontology/server/models.py::ApiModel' OR b2.base_norm IN ('ApiModel', '_Payload'))) ORDER BY sh.depth, s.symbol_id"
+    }
+  ],
+  "usage": {},
+  "request": "Which classes inherit from ApiModel (auto_ontology/server/models.py) only indirectly, i.e. through at least one intermediate class of this repository, and do not name ApiModel directly in their class statement? An import alias of ApiModel (auto_ontology/server/responses.py imports it as _Payload) counts as naming ApiModel directly, and a subscripted base such as ListResponse[T] counts as its class. For each, give the class symbol ID and the length of the shortest inheritance chain to ApiModel (2 when the parent class directly subclasses ApiModel).\n\nRequested output columns: class_symbol_id (string), depth (integer).\nReturn exactly the requested output columns, using each requested name as the column alias, in the requested order. Return complete repository-relative file paths and complete symbol IDs exactly as stored. When the question asks which files, symbols or modules, return each distinct one once unless it asks for occurrences.",
+  "explanation": "This returns the class symbols that reach ApiModel only through at least one intermediate class, together with the length of their shortest inheritance chain. It walks the recorded class-to-base relationships, treating ApiModel and its import alias in the responses module as the same root and ignoring any subscript on a base name, then takes the minimum number of hops per class. Classes that name ApiModel (or its alias) directly in their class statement are removed, and only class-kind symbols are kept, ordered shortest chain first.",
+  "sql": "WITH RECURSIVE bases AS (SELECT class_symbol_id, base_symbol_id, trim(split_part(base_name, '[', 1)) AS base_norm FROM auto_ontology_code.code.class_bases), inherits AS (SELECT class_symbol_id, 1 AS depth FROM bases WHERE base_symbol_id = 'auto_ontology/server/models.py::ApiModel' OR base_norm IN ('ApiModel', '_Payload') UNION SELECT b.class_symbol_id, i.depth + 1 FROM bases AS b JOIN inherits AS i ON b.base_symbol_id = i.class_symbol_id WHERE i.depth < 64), shortest AS (SELECT class_symbol_id, MIN(depth) AS depth FROM inherits GROUP BY class_symbol_id) SELECT s.symbol_id AS class_symbol_id, CAST(sh.depth AS INTEGER) AS depth FROM shortest AS sh JOIN auto_ontology_code.code.symbols AS s ON s.symbol_id = sh.class_symbol_id WHERE s.kind = 'class' AND sh.depth >= 2 AND NOT EXISTS (SELECT 1 FROM bases AS b2 WHERE b2.class_symbol_id = sh.class_symbol_id AND (b2.base_symbol_id = 'auto_ontology/server/models.py::ApiModel' OR b2.base_norm IN ('ApiModel', '_Payload'))) ORDER BY sh.depth, s.symbol_id",
+  "rows": [
+    {
+      "class_symbol_id": "auto_ontology/server/models.py::TableExplorationTerm",
+      "depth": 2
+    },
+    {
+      "class_symbol_id": "auto_ontology/server/models.py::Term",
+      "depth": 2
+    },
+    {
+      "class_symbol_id": "auto_ontology/server/responses.py::PagedListResponse",
+      "depth": 2
+    },
+    {
+      "class_symbol_id": "auto_ontology/server/models.py::TermDetail",
+      "depth": 3
+    },
+    {
+      "class_symbol_id": "auto_ontology/server/models.py::TermListItem",
+      "depth": 3
+    }
+  ],
+  "source_record": "run/responses/10i_ask_with_key/ask_q12.json"
+}
