@@ -5,7 +5,7 @@
 import { useEffect, useState } from "react";
 import { Out } from "../components/parts";
 
-const REPO = "https://github.com/wcook04/code-ontology-bridge/blob/codex/paper-and-diagrams";
+const REPO = "https://github.com/wcook04/code-ontology-bridge/blob/main";
 
 interface RunRow {
   model: string;
@@ -23,6 +23,8 @@ interface Summary {
   models: Record<string, string>;
   runs: RunRow[];
   questions: Record<string, Record<string, Record<string, { expected_rows: boolean; rows: number; reference_rows: number }>>>;
+  question_text?: Record<string, Record<string, string>>;
+  notes?: Record<string, string>;
 }
 
 const ARMS: { id: string; name: string; what: string }[] = [
@@ -52,9 +54,10 @@ export function Comparison() {
     <section className="band page comparison" aria-labelledby="cmp-title">
       <h1 id="cmp-title">What each layer adds</h1>
       <p className="lede-2">
-        The same language model answered the same questions three ways. Each arm ran each question set once, completely, under a{" "}
-        <Out href={`${REPO}/docs/experiment-protocol.md`}>protocol committed before any run</Out>. A program compared every result with a
-        reference query’s rows.
+        The same language model answered the same questions three ways, under a{" "}
+        <Out href={`${REPO}/docs/experiment-protocol.md`}>protocol committed before any run</Out> and amended only before the runs an
+        amendment changed. Each complete run asked every question once, and no question was asked again. A program compared every result
+        with a reference query’s rows.
       </p>
       <ol className="arms">
         {ARMS.map((a, i) => (
@@ -97,7 +100,7 @@ export function Comparison() {
                               <span className="cmp-bar" aria-hidden="true"><span style={{ width: `${(100 * r.expected_rows) / r.questions}%` }} /></span>
                             </>
                           ) : (
-                            <span className="muted">not run</span>
+                            <span className="muted">no result</span>
                           )}
                         </td>
                       ))}
@@ -109,6 +112,7 @@ export function Comparison() {
               </tbody>
             </table>
           </div>
+          {data.notes?.[m] ? <p className="small muted measure">{data.notes[m]}</p> : null}
         </section>
       ))}
       {sets.map((s) => (
@@ -134,6 +138,7 @@ function QuestionGrid({ set, data, models }: { set: string; data: Summary; model
           <thead>
             <tr>
               <th scope="col">Question</th>
+              <th scope="col" className="cmp-qtext">Asked</th>
               {cols.map((c) => (
                 <th scope="col" key={c.key} className="num" title={`${MODEL_NAMES[c.m]}, ${c.a.name}`}>
                   {c.m === "nemotron" ? "N" : "D"}
@@ -146,6 +151,7 @@ function QuestionGrid({ set, data, models }: { set: string; data: Summary; model
             {ids.map((id) => (
               <tr key={id}>
                 <th scope="row">{id}</th>
+                <td className="cmp-qtext small">{data.question_text?.[set]?.[id] ?? ""}</td>
                 {cols.map((c) => {
                   const r = qs[id][c.key];
                   return (

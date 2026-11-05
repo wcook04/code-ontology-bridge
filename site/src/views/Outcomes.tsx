@@ -76,8 +76,9 @@ function OutcomeTable({ o, params }: { o: OutcomeList; params: URLSearchParams }
   return (
     <>
       <p className="lede-2">
-        The author wrote these questions while building the project and asked each one of Auto Ontology over the extracted database of
-        Auto Ontology’s own code. Each request named the columns to return, and most came with a hint on how to answer.
+        The author wrote these 22 questions while building the project. Auto Ontology answered each one, using DeepSeek v4.1 Flash, over the
+        extracted database of its own code. Each request named the columns to return, and 18 came with a hint on how to answer. The 16
+        held-out questions, asked without hints, are on the <a href="#/comparison" onClick={onLinkClick}>comparison page</a>.
       </p>
       <dl className="totals">
         <div>
@@ -87,25 +88,23 @@ function OutcomeTable({ o, params }: { o: OutcomeList; params: URLSearchParams }
           </dd>
         </div>
         <div>
-          <dt>Expected rows and an explanation of the query</dt>
-          <dd>20 of {o.population_total}</dd>
+          <dt>First SQL ran without an error</dt>
+          <dd>10 of {o.population_total}</dd>
         </div>
         <div>
           <dt>Median time per request</dt>
-          <dd>146 s</dd>
+          <dd>175 s</dd>
         </div>
       </dl>
       <p className="measure">
         Each response has two parts: the rows the SQL returned, and a short written explanation of the query. Auto Ontology’s agent writes
-        that explanation together with the SQL, before the query runs, so it describes the calculation rather than the result. Question 2
-        returned an extra row; question 14’s explanation is the single word “thought”.
+        that explanation together with the SQL, before the query runs, so it describes the calculation rather than the result. Twenty-one
+        explanations describe the query; question 2’s is the single word “Purple”, although its rows are right.
       </p>
       <p className="measure">
-        The shared instructions sent with every question asked the agent, after executing the SQL, to describe the returned rows. Auto
-        Ontology’s explanation is written before execution, so no response could follow that instruction; the rows are always returned
-        beside it. In 15 of the 22 requests the first SQL ran and gave the recorded rows. In six, the first query named a table without its
-        “code.” schema and failed with a catalog error, and Auto Ontology’s rewrite step fixed it. Question 2, the one whose final rows were wrong, was
-        rewritten twice after Auto Ontology’s own checks and ran twice.
+        In twelve requests the first query named a table without its “code.” schema, as in <code>FROM calls</code>, and failed with a
+        catalog error. Auto Ontology’s repair step read the error, added the schema and ran the query again; every one of those twelve then
+        returned the expected rows. Question 2 was rewritten three times after Auto Ontology’s own checks.
       </p>
       <RunConfig />
       <div className="filters" role="search">

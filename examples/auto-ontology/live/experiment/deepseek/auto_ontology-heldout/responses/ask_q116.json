@@ -1,0 +1,197 @@
+{
+  "request": {
+    "question": "Which functions or methods are passed by reference (as callbacks) to another call, and which caller passes them? Only count callees defined under auto_ontology/semantic.\n\nRequested output columns: caller_symbol_id (string), callee_symbol_id (string).\nReturn every requested field using exactly its specified column alias. Preserve complete case-sensitive repository-relative paths and symbol IDs; do not substitute display names. Include all requested counts and provenance fields. Explain the query result in ordinary prose; do not emit placeholder text. These questions concern a static map of open-source Python code. Describe what the query computes and the assumptions it makes; the returned rows are reported separately. Questions asking which files, modules or symbols mean distinct identities, not one repeated row per matching import or call occurrence; preserve occurrence counts only when requested. Caller/callee graph questions include methods as well as standalone functions unless a symbol kind is explicitly restricted. Use files.is_test for test-file classification; test_links describe associations, not the complete set of test files. Use DOUBLE or DECIMAL, rather than single-precision REAL, for percentage calculations.",
+    "calculation_only": true
+  },
+  "status": 200,
+  "elapsed_s": 161.1,
+  "events": [
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "question_intent",
+      "thought": null,
+      "label": "Classifying the question"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "question_intent",
+      "thought": null,
+      "label": "Classifying the question"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "question_extraction",
+      "thought": null,
+      "label": "Understanding the question"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "question_extraction",
+      "thought": null,
+      "label": "Understanding the question"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "retrieve_candidates",
+      "thought": null,
+      "label": "Retrieving candidates"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "retrieve_candidates",
+      "thought": null,
+      "label": "Retrieving candidates"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "prepare_candidates",
+      "thought": null,
+      "label": "Preparing candidates"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "prepare_candidates",
+      "thought": "The query requires identifying specific call relationships and verifying that the involved symbols are functions or methods, which is accomplished using `auto_ontology_code.code.calls` and `auto_ontology_code.code.symbols`. All other candidate tables provide metadata (e.g., file structure, usage counts, import details, inheritance) that are not necessary to satisfy the requested column list or the qualification criteria, and thus can be safely removed.",
+      "label": "Preparing candidates"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "refine_evidence",
+      "thought": null,
+      "label": "Refining evidence"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "refine_evidence",
+      "thought": "No certain repair applies: the question already grounds callback filtering, caller/callee projection, and the path scope; no named value anchor or sample value contradicts the stored representation, scalar constant, or predicate operator in the evidence.",
+      "label": "Refining evidence"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "construct_sql_from_candidates",
+      "thought": null,
+      "label": "Constructing SQL"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "construct_sql_from_candidates",
+      "thought": "I treat “passed by reference (as callbacks)” as calls.call_kind = 'callback', as the schema description defines callback rows for internal functions or methods passed as arguments. I interpret “defined under auto_ontology/semantic” as symbols.file_id starting with auto_ontology/semantic/ because file_id is the repository-relative path. I restrict callee symbols to kind function or method, include methods as required, and use DISTINCT because the question asks for distinct caller/callee symbol identities rather than every callback occurrence.",
+      "label": "Constructing SQL"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "validate_sql_query",
+      "thought": null,
+      "label": "Validating SQL and intent"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "validate_sql_query",
+      "thought": "The generated SQL joins calls to symbols on callee_symbol_id = symbols.symbol_id, following the authoritative join path exactly. It filters call_kind = 'callback', matching the semantic hint for the calls table, and restricts callees to kinds 'function' and 'method' while additionally requiring symbols.file_id LIKE 'auto_ontology/semantic/%' to enforce that only callees defined under auto_ontology/semantic are counted. DISTINCT with an ORDER BY on the two requested columns correctly returns distinct (caller_symbol_id, callee_symbol_id) identity pairs rather than one row per call occurrence, aligning with the evidence's guidance on distinct identities. The output aliases exactly match the requested caller_symbol_id and callee_symbol_id. No aggregations, nonsensical joins, or substituted evidence values are present.",
+      "label": "Validating SQL and intent"
+    },
+    {
+      "type": "sql",
+      "node": "validate_sql_query",
+      "sql": "SELECT DISTINCT c.caller_symbol_id AS caller_symbol_id, c.callee_symbol_id AS callee_symbol_id FROM auto_ontology_code.code.calls AS c INNER JOIN auto_ontology_code.code.symbols AS s ON c.callee_symbol_id = s.symbol_id WHERE c.call_kind = 'callback' AND s.kind IN ('function', 'method') AND s.file_id LIKE 'auto_ontology/semantic/%' ORDER BY caller_symbol_id, callee_symbol_id;"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "execute_sql_query",
+      "thought": null,
+      "label": "Executing SQL"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "execute_sql_query",
+      "thought": null,
+      "label": "Executing SQL"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "check_empty_like_result",
+      "thought": null,
+      "label": "Checking results"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "check_empty_like_result",
+      "thought": null,
+      "label": "Checking results"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "check_value_repair",
+      "thought": null,
+      "label": "Checking values"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "check_value_repair",
+      "thought": null,
+      "label": "Checking values"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "format_and_respond",
+      "thought": null,
+      "label": "Formatting response"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "format_and_respond",
+      "thought": null,
+      "label": "Formatting response"
+    },
+    {
+      "type": "result",
+      "answer": {
+        "response": "The query returns distinct caller/callee symbol pairs where the callee is passed as a callback argument and is defined as a function or method under the auto_ontology/semantic path. It uses the call records to identify callback relationships and joins to the symbol table to enforce the callee definition path and symbol kind.",
+        "sql_code": "SELECT DISTINCT c.caller_symbol_id AS caller_symbol_id, c.callee_symbol_id AS callee_symbol_id FROM auto_ontology_code.code.calls AS c INNER JOIN auto_ontology_code.code.symbols AS s ON c.callee_symbol_id = s.symbol_id WHERE c.call_kind = 'callback' AND s.kind IN ('function', 'method') AND s.file_id LIKE 'auto_ontology/semantic/%' ORDER BY caller_symbol_id, callee_symbol_id;",
+        "sql_columns": [
+          "dfc57b65-8353-42fb-b068-4dda36ea633d",
+          "37787b87-0e65-46ff-8e58-2f5eb86d9d00",
+          "68066889-2575-41cf-83b2-597a7bac3c4b",
+          "8b0eb5ed-3e94-452e-b48c-db70c12bb8b9",
+          "837c4c11-ecc6-4a5b-9966-b89b878aca28",
+          "74218517-ebb7-42d3-9007-d1a19b1f63de"
+        ],
+        "custom_analyses_used": [],
+        "sql_response_from_db": [
+          "[{\"caller_symbol_id\":\"auto_ontology\\/ingestion_service\\/semantic_scheduler.py::SemanticScheduler._run_once\",\"callee_symbol_id\":\"auto_ontology\\/semantic\\/compile.py::run_semantic_compilation\"},{\"caller_symbol_id\":\"auto_ontology\\/semantic\\/deterministic.py::_generate_column_descriptions\",\"callee_symbol_id\":\"auto_ontology\\/semantic\\/deterministic.py::_describe_column_batch\"},{\"caller_symbol_id\":\"auto_ontology\\/semantic\\/semantic_fk.py::_match_hit_by_sample_values\",\"callee_symbol_id\":\"auto_ontology\\/semantic\\/semantic_fk.py::_hit_score\"}]"
+        ],
+        "thoughts": "- Preparing candidates: The question’s primary subject is identifying callback relationships where a function/method is passed by reference into another call. Among the listed attributes, the column that directly encodes that distinction is code.calls.call_kind, whose value 'callback' marks an internal function or method passed as an argument to a receiving call. The requested caller_symbol_id and callee_symbol_id are output fields of that call relationship, but the primary subject attribute available in the schema description is call_kind.\n- Preparing candidates: The query requires identifying specific call relationships and verifying that the involved symbols are functions or methods, which is accomplished using `auto_ontology_code.code.calls` and `auto_ontology_code.code.symbols`. All other candidate tables provide metadata (e.g., file structure, usage counts, import details, inheritance) that are not necessary to satisfy the requested column list or the qualification criteria, and thus can be safely removed.\n- Refining evidence: No certain repair applies: the question already grounds callback filtering, caller/callee projection, and the path scope; no named value anchor or sample value contradicts the stored representation, scalar constant, or predicate operator in the evidence.\n- Constructing SQL: I treat “passed by reference (as callbacks)” as calls.call_kind = 'callback', as the schema description defines callback rows for internal functions or methods passed as arguments. I interpret “defined under auto_ontology/semantic” as symbols.file_id starting with auto_ontology/semantic/ because file_id is the repository-relative path. I restrict callee symbols to kind function or method, include methods as required, and use DISTINCT because the question asks for distinct caller/callee symbol identities rather than every callback occurrence.\n- Validating SQL and intent: The generated SQL joins calls to symbols on callee_symbol_id = symbols.symbol_id, following the authoritative join path exactly. It filters call_kind = 'callback', matching the semantic hint for the calls table, and restricts callees to kinds 'function' and 'method' while additionally requiring symbols.file_id LIKE 'auto_ontology/semantic/%' to enforce that only callees defined under auto_ontology/semantic are counted. DISTINCT with an ORDER BY on the two requested columns correctly returns distinct (caller_symbol_id, callee_symbol_id) identity pairs rather than one row per call occurrence, aligning with the evidence's guidance on distinct identities. The output aliases exactly match the requested caller_symbol_id and callee_symbol_id. No aggregations, nonsensical joins, or substituted evidence values are present."
+      }
+    }
+  ],
+  "question_id": 116,
+  "gold_sql": "SELECT DISTINCT c.caller_symbol_id, c.callee_symbol_id\nFROM code.calls c\nWHERE c.call_kind = 'callback' AND c.callee_symbol_id LIKE 'auto_ontology/semantic/%'\nORDER BY c.caller_symbol_id, c.callee_symbol_id;",
+  "gold_row_count": 3,
+  "agent_sql": "SELECT DISTINCT c.caller_symbol_id AS caller_symbol_id, c.callee_symbol_id AS callee_symbol_id FROM auto_ontology_code.code.calls AS c INNER JOIN auto_ontology_code.code.symbols AS s ON c.callee_symbol_id = s.symbol_id WHERE c.call_kind = 'callback' AND s.kind IN ('function', 'method') AND s.file_id LIKE 'auto_ontology/semantic/%' ORDER BY caller_symbol_id, callee_symbol_id;",
+  "agent_answer": "The query returns distinct caller/callee symbol pairs where the callee is passed as a callback argument and is defined as a function or method under the auto_ontology/semantic path. It uses the call records to identify callback relationships and joins to the symbol table to enforce the callee definition path and symbol kind.",
+  "agent_row_count": 3,
+  "correct_rows": true,
+  "error": null
+}

@@ -1,0 +1,62 @@
+{
+  "question_id": 16,
+  "status": 200,
+  "error": null,
+  "elapsed_s": 13.3,
+  "attempts": [
+    {
+      "sql": "SELECT f.file_id\nFROM code.files AS f\nWHERE f.is_test = FALSE\n  AND f.file_id <> '__init__.py'\n  AND f.file_id NOT LIKE '%/__init__.py'\n  AND f.file_id <> '__main__.py'\n  AND f.file_id NOT LIKE '%/__main__.py'\n  AND f.file_id NOT LIKE 'alembic/%'\n  AND f.file_id NOT LIKE '%/alembic/%'\n  AND NOT EXISTS (\n    SELECT 1\n    FROM code.imports AS i\n    WHERE i.imported_file_id = f.file_id\n      AND i.file_id <> f.file_id\n  )\nORDER BY f.file_id",
+      "error": null
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 2956,
+    "completion_tokens": 4303,
+    "total_tokens": 7259,
+    "cost": 0.002188564,
+    "is_byok": 0
+  },
+  "request": {
+    "question": "Which non-test modules are never imported by another file in the repository? Leave out package __init__.py files, __main__.py files and the Alembic migration directory.\n\nHint: Only imports that resolve to a file count. Python runs a package's __init__.py whenever a submodule is imported; __main__.py files are run with python -m or as a console script (the code map holds only Python files, so pyproject [project.scripts] entries are not read; at this commit the only one, in mcp/pyproject.toml, points at a __main__.py); Alembic loads alembic/ from its script_location. Scripts run directly by path, such as files under dev_tools/, are still listed.\n\nRequested output columns: file_id (string).",
+    "arm": "schema_model",
+    "model": "deepseek/deepseek-v4.1-flash-1017"
+  },
+  "events": [
+    {
+      "type": "result",
+      "answer": {
+        "response": "The query selects non-test files that are not package initializers or __main__ entry points, excludes any path under an alembic/ directory, and keeps only files for which no code.imports row resolves to that file from a different file. It treats only imports with a non-null imported_file_id as evidence of being imported, and ignores self-imports.",
+        "sql_code": "SELECT f.file_id\nFROM code.files AS f\nWHERE f.is_test = FALSE\n  AND f.file_id <> '__init__.py'\n  AND f.file_id NOT LIKE '%/__init__.py'\n  AND f.file_id <> '__main__.py'\n  AND f.file_id NOT LIKE '%/__main__.py'\n  AND f.file_id NOT LIKE 'alembic/%'\n  AND f.file_id NOT LIKE '%/alembic/%'\n  AND NOT EXISTS (\n    SELECT 1\n    FROM code.imports AS i\n    WHERE i.imported_file_id = f.file_id\n      AND i.file_id <> f.file_id\n  )\nORDER BY f.file_id",
+        "sql_response_from_db": [
+          {
+            "file_id": "auto_ontology/retrieval/data_access/candidates.py"
+          },
+          {
+            "file_id": "auto_ontology/semantic/loaders.py"
+          },
+          {
+            "file_id": "dev_tools/_add_spdx_headers.py"
+          },
+          {
+            "file_id": "dev_tools/fixtures/seed_fixtures.py"
+          },
+          {
+            "file_id": "dev_tools/fixtures/seed_graph_fixture.py"
+          },
+          {
+            "file_id": "dev_tools/generate_backend_openapi.py"
+          },
+          {
+            "file_id": "dev_tools/generate_permission_resource.py"
+          },
+          {
+            "file_id": "dev_tools/local_ingest.py"
+          },
+          {
+            "file_id": "dev_tools/release_helm_chart.py"
+          }
+        ]
+      }
+    }
+  ]
+}

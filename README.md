@@ -4,13 +4,19 @@
 
 code-ontology-bridge reads a Python repository and writes two files that [Auto Ontology](https://github.com/NVIDIA/auto-ontology) already imports: a DuckDB database of the code's files, functions, methods, classes, calls, imports, base classes, docstrings and test links, and a semantic model in Auto Ontology's own YAML format that says what each table and column means and how the tables join. Auto Ontology needs no code-specific connector: its existing model import and DuckDB connector take it from there. The model also carries the table keys and joins: at the pinned revision Auto Ontology's DuckDB connector reports no primary or foreign keys (`get_pks` and `get_fks` return empty tables), so the exported model declares a key for each of the 10 tables and 10 joins, such as `code.calls.callee_symbol_id` → `code.symbols.symbol_id`.
 
-**What the recorded run shows.** We exported Auto Ontology's own repository (473 Python files; 5,319 functions, methods and classes) and asked its agent 22 questions about that code. For 21 of them, the SQL the agent wrote returned exactly the rows of the reference query, and 20 of those responses also explained the query correctly. In the main example, following direct calls finds three of the four functions that reach `resolve_semantic_fks`. The fourth is a scheduler that hands one of them to `asyncio.to_thread`; the extractor records that hand-over as a callback reference, and the agent's recursive SQL returned all four.
+**What the comparison shows.** We exported Auto Ontology's own repository (473 Python files; 5,319 functions, methods and classes) and asked about its code three ways, with two language models, under a [protocol](docs/experiment-protocol.md) committed before any run: the model given the schema alone (A), the schema plus this project's semantic model (B), and Auto Ontology with the model imported (C). Questions answered with exactly the expected rows:
 
-[Open the website](https://wcook04.github.io/code-ontology-bridge/) · [Read the paper](docs/case-study.md) · [Download the PDF](docs/case-study.pdf) · [Build the exports locally](#build-the-exports-locally)
+| | Nemotron 3.5 Lightning, held-out | DeepSeek v4.1 Flash, held-out | DeepSeek v4.1 Flash, development |
+| --- | ---: | ---: | ---: |
+| A, schema only | 6 of 16 | 13 of 16 | 14 of 22 |
+| B, + semantic model | 13 of 16 | 16 of 16 | 18 of 22 |
+| C, Auto Ontology | no result* | 14 of 16 | **22 of 22** |
 
-**What it does not show yet.** The author wrote the questions during development, each named its output columns and 18 came with a hint, so this is not an independent benchmark. No agent was given the same database without the semantic model, so the model's own contribution is unmeasured. The run used DeepSeek v4.1 Flash through OpenRouter with NVIDIA embedding and reranking models, against Auto Ontology `cdaf61e` with a twelve-file compatibility patch; requests took a median of 146 seconds with three running at a time. Extraction and export need neither the patch nor model credentials.
+\* Nemotron's held-out run inside Auto Ontology, and its repeats, were rate-limited by the NVIDIA API and are discarded and listed. The 16 held-out questions were committed before any model saw them and carry no hints. The semantic model by itself raises both models on both question sets. Inside Auto Ontology, DeepSeek answered every development question correctly; Nemotron's development scores and every response are in the [results](examples/auto-ontology/live/RESULTS.md). In the main example, following direct calls finds three of the four functions that reach `resolve_semantic_fks`; the fourth is a scheduler that hands one of them to `asyncio.to_thread`, which the extractor records as a callback reference, and the agent's recursive SQL returned all four.
 
-**Next run.** Two extractor defects found after that run are fixed, with regression tests in `tests/codemap/test_scopes.py`: an import inside one function could link a call in another function to the wrong definition, and calls inside a nested function were credited to the enclosing function even when it never ran it. The committed database and model are rebuilt with the fix (the four question 11 callers are unchanged), two reference queries are corrected, and 16 held-out questions without hints are added. The [experiment protocol](docs/experiment-protocol.md), committed before any run, compares the same model given the schema alone, the schema plus the exported model, and Auto Ontology.
+[Open the website](https://wcook04.github.io/code-ontology-bridge/) · [Read the results](examples/auto-ontology/live/RESULTS.md) · [Read the paper](docs/case-study.md) · [Build the exports locally](#build-the-exports-locally)
+
+**What it does not show.** The author wrote all 38 questions and their reference queries, about one repository, so this is not an independent benchmark, and each arm ran each question set once. Arm C used Auto Ontology `cdaf61e` with a twelve-file compatibility patch, NVIDIA embedding and reranking models, and three requests at a time; its requests took minutes each on a laptop. Extraction and export need neither the patch nor model credentials.
 
 ## What each part contributes
 
@@ -98,15 +104,13 @@ Separate [governance commands](docs/governance.md) record checks and annotate SQ
 
 ## What the experiment established
 
-The complete run on 4 November 2026 used DeepSeek v4.1 Flash through OpenRouter, NVIDIA embeddings and reranking, and SQL routing for all 22 questions. Every request specified required output fields; 18 included hints. Reference SQL and answer values were kept out of requests, and no saved example analyses were imported.
+Eleven complete runs: three arms, two models (NVIDIA Nemotron 3.5 Lightning through the NVIDIA API, DeepSeek v4.1 Flash through OpenRouter), and two question sets (22 development questions, 18 with hints; 16 held-out questions without hints). Every request named its output columns. Reference SQL and answer values were kept out of every request, and the same program scored every arm.
 
-| Result | Count |
-| --- | ---: |
-| Completed requests | 22/22 |
-| Matching result tables | 21/22 |
-| Matching tables whose written response explains the query | 20/22 |
+- **B minus A, the semantic model alone:** better on every model and set; held-out, Nemotron 6 → 13 of 16 and DeepSeek 13 → 16.
+- **C minus B, Auto Ontology on top:** DeepSeek development 18 → 22 of 22; DeepSeek held-out 16 → 14, where one of the two misses follows an ambiguous wording. Nemotron's one complete Auto Ontology run scored 12 of 22 on development questions, against 13 with the metadata in the prompt, with its reasoning left on by our runner's choice of client.
+- **How Auto Ontology got there:** in the DeepSeek development run, twelve first queries left the `code.` schema off a table name and failed; Auto Ontology's repair step fixed all twelve.
 
-Each response pairs the returned rows with a short written explanation. At this Auto Ontology revision the agent writes that explanation together with the SQL, before the query runs ([`SQLGenerationModel.response`](https://github.com/NVIDIA/auto-ontology/blob/cdaf61e1bd0cf3820d11d72b43bb460816aebbd3/auto_ontology/retrieval/text_to_sql/models.py)), so it describes the calculation; the rows are returned beside it. Q2 selected an extra package. Q14 returned the correct rows but only “thought” as its prose. Both remain in the [detailed results](examples/auto-ontology/live/RESULTS.md), alongside every other answer. There is no held-out set or schema-only control. The next test should compare schema-only and semantic-layer context on independent questions.
+Each Auto Ontology response pairs the returned rows with a written explanation that the agent writes together with the SQL, before the query runs ([`SQLGenerationModel.response`](https://github.com/NVIDIA/auto-ontology/blob/cdaf61e1bd0cf3820d11d72b43bb460816aebbd3/auto_ontology/retrieval/text_to_sql/models.py)). One of the 22 development explanations is not an explanation: question 2's is the single word "Purple", beside correct rows. The [results](examples/auto-ontology/live/RESULTS.md) list every run, every miss and the discarded attempts.
 
 <a id="serve-data-for-a-website"></a>
 
@@ -124,7 +128,7 @@ uv run cob inspect-publish --bundle build/inspection/bundle.json --out build/pub
 uv run cob inspect-serve --bundle build/inspection/bundle.json
 ```
 
-Open `http://127.0.0.1:8767/api/v1` for the JSON route index. The new `build/publication/` directory contains a small manifest, a Q11 reading path, separate model/source resources and all 22 recorded answers. The complete bundle remains available. Use a new output directory for each publication build. The service reads saved data; it does not ask a model new questions. See the [backend contract and frontend handoff](docs/inspection-api.md) for endpoints, graph limits and deployment options.
+Open `http://127.0.0.1:8767/api/v1` for the JSON route index. The new `build/publication/` directory contains a small manifest, a Q11 reading path, separate model/source resources and all 22 recorded answers of the DeepSeek development run inside Auto Ontology. The complete bundle remains available. Use a new output directory for each publication build. The service reads saved data; it does not ask a model new questions. See the [backend contract and frontend handoff](docs/inspection-api.md) for endpoints, graph limits and deployment options.
 
 <a id="try-it-locally"></a>
 
@@ -163,7 +167,7 @@ The extractor is a static-analysis prototype. Dynamic calls can be missed, callb
 | [code_ontology_bridge/](code_ontology_bridge/) | Installable extractor, exporters, read-only inspection API, static publication builder and governance commands. |
 | [docs/](docs/README.md) | Paper, PDF, explanatory figures and task-specific guides. |
 | [eval/](eval/) | Authored questions, reference SQL, output contracts and optional example analyses. |
-| [examples/auto-ontology/](examples/auto-ontology/) | Generated dataset and replay tools; [live/current/](examples/auto-ontology/live/current/) retains the complete run; the [Q11 descriptor](examples/auto-ontology/live/caller-chain-case.json) supplies the reading path. |
+| [examples/auto-ontology/](examples/auto-ontology/) | Generated dataset and replay tools; [live/current/](examples/auto-ontology/live/current/) holds the run the website follows and [live/experiment/](examples/auto-ontology/live/experiment/) every comparison run; the [Q11 descriptor](examples/auto-ontology/live/caller-chain-case.json) supplies the reading path. |
 | [site/](site/README.md) | The reading website: the Q11 walkthrough and all 22 outcomes, built from the static publication. |
 | [tests/](tests/) | Local behavior and optional upstream compatibility checks. |
 | [tools/](tools/) | Repository checks, paper builder and [publication/deployment tools](docs/deployment.md). |

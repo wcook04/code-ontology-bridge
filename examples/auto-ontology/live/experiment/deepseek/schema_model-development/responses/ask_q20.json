@@ -1,0 +1,67 @@
+{
+  "question_id": 20,
+  "status": 200,
+  "error": null,
+  "elapsed_s": 16.2,
+  "attempts": [
+    {
+      "sql": "WITH RECURSIVE importers(file_id) AS (\n  SELECT i.file_id\n  FROM code.imports i\n  WHERE i.imported_file_id = 'auto_ontology/semantic/constants.py'\n  UNION\n  SELECT i.file_id\n  FROM code.imports i\n  JOIN importers imp ON i.imported_file_id = imp.file_id\n),\nimporters_with_dir AS (\n  SELECT\n    imp.file_id,\n    CASE\n      WHEN strpos(imp.file_id, '/') = 0 THEN ''\n      ELSE regexp_replace(imp.file_id, '/[^/]*$', '')\n    END AS dir\n  FROM importers imp\n)\nSELECT\n  CASE\n    WHEN iwd.dir = '' THEN ''\n    WHEN strpos(iwd.dir, '/') = 0 THEN iwd.dir\n    ELSE split_part(iwd.dir, '/', 1) || '/' || split_part(iwd.dir, '/', 2)\n  END AS area,\n  COUNT(DISTINCT iwd.file_id)::INTEGER AS files\nFROM importers_with_dir iwd\nJOIN code.files f ON f.file_id = iwd.file_id\nWHERE f.is_test = FALSE\n  AND iwd.file_id <> 'auto_ontology/semantic/constants.py'\nGROUP BY area\nORDER BY area",
+      "error": null
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 2872,
+    "completion_tokens": 2563,
+    "total_tokens": 5435,
+    "cost": 0.001611762,
+    "is_byok": 0
+  },
+  "request": {
+    "question": "Which files import, directly or through other files, auto_ontology/semantic/constants.py? Give the number of such non-test files per directory, using the first two levels of each file's directory.\n\nHint: Follow resolved imports backwards, recursively. A file's directory is its path without the file name; dev_tools/x.py counts under dev_tools and auto_ontology/dal/x.py under auto_ontology/dal.\n\nRequested output columns: area (string), files (integer). Order the rows as the question asks.",
+    "arm": "schema_model",
+    "model": "deepseek/deepseek-v4.1-flash-1017"
+  },
+  "events": [
+    {
+      "type": "result",
+      "answer": {
+        "response": "The query builds the reverse closure of resolved imports ending at auto_ontology/semantic/constants.py, so it finds every file that imports the constants module directly or through an import chain. It then drops test files and the target itself, derives each remaining file's directory and keeps its first two path components, and counts distinct files per area. Rows are ordered by area.",
+        "sql_code": "WITH RECURSIVE importers(file_id) AS (\n  SELECT i.file_id\n  FROM code.imports i\n  WHERE i.imported_file_id = 'auto_ontology/semantic/constants.py'\n  UNION\n  SELECT i.file_id\n  FROM code.imports i\n  JOIN importers imp ON i.imported_file_id = imp.file_id\n),\nimporters_with_dir AS (\n  SELECT\n    imp.file_id,\n    CASE\n      WHEN strpos(imp.file_id, '/') = 0 THEN ''\n      ELSE regexp_replace(imp.file_id, '/[^/]*$', '')\n    END AS dir\n  FROM importers imp\n)\nSELECT\n  CASE\n    WHEN iwd.dir = '' THEN ''\n    WHEN strpos(iwd.dir, '/') = 0 THEN iwd.dir\n    ELSE split_part(iwd.dir, '/', 1) || '/' || split_part(iwd.dir, '/', 2)\n  END AS area,\n  COUNT(DISTINCT iwd.file_id)::INTEGER AS files\nFROM importers_with_dir iwd\nJOIN code.files f ON f.file_id = iwd.file_id\nWHERE f.is_test = FALSE\n  AND iwd.file_id <> 'auto_ontology/semantic/constants.py'\nGROUP BY area\nORDER BY area",
+        "sql_response_from_db": [
+          {
+            "area": "auto_ontology/catalog",
+            "files": 12
+          },
+          {
+            "area": "auto_ontology/dal",
+            "files": 9
+          },
+          {
+            "area": "auto_ontology/ingestion_service",
+            "files": 6
+          },
+          {
+            "area": "auto_ontology/retrieval",
+            "files": 30
+          },
+          {
+            "area": "auto_ontology/semantic",
+            "files": 9
+          },
+          {
+            "area": "auto_ontology/server",
+            "files": 27
+          },
+          {
+            "area": "dev_tools",
+            "files": 2
+          },
+          {
+            "area": "dev_tools/fixtures",
+            "files": 2
+          }
+        ]
+      }
+    }
+  ]
+}

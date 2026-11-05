@@ -1,11 +1,11 @@
 {
   "request": {
-    "question": "Which non-test modules are never imported by another file in the repository? Leave out package __init__.py files, __main__.py files and the Alembic migration directory.\n\nRequested output columns: file_id (string).\nReturn every requested field using exactly its specified column alias. Preserve complete case-sensitive repository-relative paths and symbol IDs; do not substitute display names. Include all requested counts and provenance fields. Explain the query result in ordinary prose; do not emit placeholder text. These questions concern a static map of open-source Python code. After executing SQL, describe the returned rows and query assumptions. Questions asking which files, modules or symbols mean distinct identities, not one repeated row per matching import or call occurrence; preserve occurrence counts only when requested. Caller/callee graph questions include methods as well as standalone functions unless a symbol kind is explicitly restricted. Use files.is_test for test-file classification; test_links describe associations, not the complete set of test files. Use DOUBLE or DECIMAL, rather than single-precision REAL, for percentage calculations.",
+    "question": "Which non-test modules are never imported by another file in the repository? Leave out package __init__.py files, __main__.py files and the Alembic migration directory.\n\nRequested output columns: file_id (string).\nReturn every requested field using exactly its specified column alias. Preserve complete case-sensitive repository-relative paths and symbol IDs; do not substitute display names. Include all requested counts and provenance fields. Explain the query result in ordinary prose; do not emit placeholder text. These questions concern a static map of open-source Python code. Describe what the query computes and the assumptions it makes; the returned rows are reported separately. Questions asking which files, modules or symbols mean distinct identities, not one repeated row per matching import or call occurrence; preserve occurrence counts only when requested. Caller/callee graph questions include methods as well as standalone functions unless a symbol kind is explicitly restricted. Use files.is_test for test-file classification; test_links describe associations, not the complete set of test files. Use DOUBLE or DECIMAL, rather than single-precision REAL, for percentage calculations.",
     "evidence": "Only imports that resolve to a file count. Python runs a package's __init__.py whenever a submodule is imported; __main__.py files are run with python -m or as a console script (the code map holds only Python files, so pyproject [project.scripts] entries are not read; at this commit the only one, in mcp/pyproject.toml, points at a __main__.py); Alembic loads alembic/ from its script_location. Scripts run directly by path, such as files under dev_tools/, are still listed.",
     "calculation_only": true
   },
   "status": 200,
-  "elapsed_s": 104.7,
+  "elapsed_s": 293.0,
   "events": [
     {
       "type": "step",
@@ -60,7 +60,7 @@
       "type": "step",
       "phase": "end",
       "node": "prepare_candidates",
-      "thought": "The query needs the set of files/modules from code.files, filtered by is_test and path-based exclusions, then anti-joined against code.imports on imported_file_id to find files never imported by another file. The other candidate tables do not provide general repository import-edge information and are not needed for the final file_id result.",
+      "thought": "The required logic is: select file paths from files, filter out test files and excluded package/migration paths, then anti-join imports on imported_file_id to ensure no other file imports the module. No symbol, test-link, or call-count table is needed for this filter.",
       "label": "Preparing candidates"
     },
     {
@@ -74,7 +74,7 @@
       "type": "step",
       "phase": "end",
       "node": "refine_evidence",
-      "thought": "No repair is justified: the evidence contains no conflicting scalar value, column sample, or operator anchor that proves a correction to the supplied question.",
+      "thought": "The only evidence-mapped field present is the test classification: non-test means `files.is_test = false`. The evidence explicitly names `files.is_test`, so I ground the question phrase \"non-test\" to the dialect-quoted column and false condition, and replace the evidence reference accordingly. Other concepts such as file_id, imports by another file, __init__.py/__main__.py exclusions, and Alembic paths are not mapped to specific columns in the supplied evidence, so they remain untouched.",
       "label": "Refining evidence"
     },
     {
@@ -88,7 +88,7 @@
       "type": "step",
       "phase": "end",
       "node": "construct_sql_from_candidates",
-      "thought": "The question needs files that no other file imports. Per the evidence, only imports that resolve to a file count, so I use the resolved target column `imported_file_id` (which is populated only when the import maps to a repository file) and ignore unresolved imports entirely, rather than matching on module names. I also require the importing file to differ from the imported file (`i.file_id <> f.file_id`) because \"imported by another file\" excludes self-imports; a module that only imports itself should still count as never imported. Test classification uses files.is_test (as mandated), and test_links are not used since they describe associations, not the full test set. Path exclusions: I drop any file whose name is __init__.py or __main__.py, both at repository root (file_id = '__init__.py') and in subdirectories (LIKE '%/__init__.py'), because Python executes package __init__.py on submodule import and __main__.py under `python -m`/console scripts, so neither is a meaningful \"module\" here. I drop the Alembic migration directory with both 'alembic/%' and '%/alembic/%' patterns, since Alembic loads that directory via script_location rather than by import; console-script targets in pyproject are not resolvable in the code map, so nothing extra is excluded for those. Zero/missing values: files with no importing rows are kept via NOT EXISTS (they are the answer, not a NULL conversion); imports with NULL imported_file_id are excluded from consideration since they do not resolve to a file. Ties/ordering: no ranking is requested, so rows are simply ordered alphabetically by file_id for readability; no LIMIT is applied because the question asks for all such modules. Output is a single distinct identity column, file_id, with no duplicates since files.file_id is unique.",
+      "thought": "The query treats a module as imported only when an import row has a non-null target that equals the file path, because the evidence says only imports that resolve to a file count. Self-imports are excluded from the “imported by another file” condition, because the question says another file. Tests are removed with is_test = FALSE. Package initializer files and main-entry files are excluded by basename at any depth. The Alembic migration directory is assumed to be the top-level alembic/ directory named in the evidence. Files executed directly by path, such as dev_tools scripts, are not separately excluded and therefore can appear if nothing imports them.",
       "label": "Constructing SQL"
     },
     {
@@ -102,13 +102,60 @@
       "type": "step",
       "phase": "end",
       "node": "validate_sql_query",
-      "thought": "The query selects the requested file_id from non-test files, excludes __init__.py, __main__.py, and Alembic paths, and uses NOT EXISTS on imports.imported_file_id to identify files never imported by another file. This satisfies the core intent and evidence.",
+      "thought": "The query uses the verified FK path imports.imported_file_id -> files.file_id in a NOT EXISTS anti-join, which is the correct way to find files that are not the target of any resolved import. It correctly excludes self-imports with i.file_id <> f.file_id so that 'another file' is respected. It filters with files.is_test = FALSE, excludes root and nested __init__.py and __main__.py paths, and excludes the Alembic directory using alembic/% (consistent with a repo-relative alembic/ directory). No aggregation is involved, and because each file_id is returned at most once through NOT EXISTS, distinct file identity is preserved. The evidence's instruction to use files.is_test for test classification is followed, and the evidence's resolved-import condition is followed via imported_file_id. Any remaining assumptions (forward-slash repo-relative paths, alembic/ at repository root) are minor implementation assumptions, not critical defects.",
       "label": "Validating SQL and intent"
     },
     {
       "type": "sql",
       "node": "validate_sql_query",
-      "sql": "SELECT f.file_id AS file_id FROM code.files AS f WHERE f.is_test = FALSE AND NOT (f.file_id = '__init__.py' OR f.file_id LIKE '%/__init__.py') AND NOT (f.file_id = '__main__.py' OR f.file_id LIKE '%/__main__.py') AND f.file_id NOT LIKE 'alembic/%' AND f.file_id NOT LIKE '%/alembic/%' AND NOT EXISTS (SELECT 1 FROM code.imports AS i WHERE i.imported_file_id = f.file_id AND i.file_id <> f.file_id) ORDER BY f.file_id;"
+      "sql": "SELECT f.file_id FROM files AS f WHERE f.is_test = FALSE AND f.file_id <> '__init__.py' AND f.file_id NOT LIKE '%/__init__.py' AND f.file_id <> '__main__.py' AND f.file_id NOT LIKE '%/__main__.py' AND f.file_id NOT LIKE 'alembic/%' AND NOT EXISTS (SELECT 1 FROM imports AS i WHERE i.imported_file_id = f.file_id AND i.file_id <> f.file_id) ORDER BY f.file_id;"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "execute_sql_query",
+      "thought": null,
+      "label": "Executing SQL"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "execute_sql_query",
+      "thought": "Query failed, rewriting it: Catalog Error: Table with name files does not exist! Did you mean \"code.files\"? LINE 1: SELECT f.file_id FROM files AS f WHERE f.is_test = FALSE AND f.file_id <> '__init__... ^",
+      "label": "Executing SQL"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "reconstruct_sql",
+      "thought": null,
+      "label": "Reconstructing SQL"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "reconstruct_sql",
+      "thought": "The only change forced by the validation error is that table references must be schema-qualified as code.files and code.imports, because the object name is stored in that schema. All previously valid assumptions remain: an import counts only when it resolves to a file path (imported_file_id), i.e. non-resolving imports with a NULL target are ignored; 'imported by another file' means an import whose importing file differs from the target, so self-imports are ignored; test modules are removed with is_test = FALSE per the evidence; package __init__.py and __main__.py files are excluded at any depth by basename; the Alembic directory is taken to be the top-level alembic/ directory named by script_location; and scripts run directly by path (e.g. dev_tools/) are kept as candidates rather than excluded, as the evidence states. Each file appears once because the anti-join is expressed with NOT EXISTS and no counts are requested.",
+      "label": "Reconstructing SQL"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "validate_sql_query",
+      "thought": null,
+      "label": "Validating SQL and intent"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "validate_sql_query",
+      "thought": "The SQL selects non-test file paths, excludes package __init__.py/__main__.py and the Alembic migration directory, and uses NOT EXISTS on resolved imports to find files never imported by another file. This matches the requested semantics.",
+      "label": "Validating SQL and intent"
+    },
+    {
+      "type": "sql",
+      "node": "validate_sql_query",
+      "sql": "SELECT f.file_id FROM code.files AS f WHERE f.is_test = FALSE AND f.file_id <> '__init__.py' AND f.file_id NOT LIKE '%/__init__.py' AND f.file_id <> '__main__.py' AND f.file_id NOT LIKE '%/__main__.py' AND f.file_id NOT LIKE 'alembic/%' AND NOT EXISTS (SELECT 1 FROM code.imports AS i WHERE i.imported_file_id = f.file_id AND i.file_id <> f.file_id) ORDER BY f.file_id;"
     },
     {
       "type": "step",
@@ -169,27 +216,27 @@
     {
       "type": "result",
       "answer": {
-        "response": "This lists every non-test Python module in the repository that no other file imports. It reads the file inventory (repository-relative path and the test flag) and checks each file against the recorded import edges, counting only imports that resolve to an actual repository file and ignoring a file importing itself. Package initializer files, main-entry modules, and anything in the Alembic migration directory are excluded, and the resulting paths are returned in alphabetical order.",
-        "sql_code": "SELECT f.file_id AS file_id FROM code.files AS f WHERE f.is_test = FALSE AND NOT (f.file_id = '__init__.py' OR f.file_id LIKE '%/__init__.py') AND NOT (f.file_id = '__main__.py' OR f.file_id LIKE '%/__main__.py') AND f.file_id NOT LIKE 'alembic/%' AND f.file_id NOT LIKE '%/alembic/%' AND NOT EXISTS (SELECT 1 FROM code.imports AS i WHERE i.imported_file_id = f.file_id AND i.file_id <> f.file_id) ORDER BY f.file_id;",
+        "response": "This query lists the repository-relative path of every non-test Python file that no other file in the repository imports. It reads the file inventory and excludes package initializer files, main-entry files, and anything under the Alembic migration directory, then keeps only files that never appear as the resolved target of an import made by a different file. Self-imports and imports that do not resolve to a tracked file are not counted, while directly-run scripts are still eligible to be listed. Results are returned as distinct paths in alphabetical order.",
+        "sql_code": "SELECT f.file_id FROM code.files AS f WHERE f.is_test = FALSE AND f.file_id <> '__init__.py' AND f.file_id NOT LIKE '%/__init__.py' AND f.file_id <> '__main__.py' AND f.file_id NOT LIKE '%/__main__.py' AND f.file_id NOT LIKE 'alembic/%' AND NOT EXISTS (SELECT 1 FROM code.imports AS i WHERE i.imported_file_id = f.file_id AND i.file_id <> f.file_id) ORDER BY f.file_id;",
         "sql_columns": [
-          "87d58d1a-2f75-426f-84a7-5cf922bae7d1",
-          "5c25446c-6a95-4098-8755-0fd355af05f3",
-          "c5407067-d0f0-4213-8bfa-760970bdc859",
-          "dbe498cb-48c3-47e6-8f1c-9c755ec146d1"
+          "4aefaeb1-bce4-49ad-bc8b-4342b8dddb36",
+          "cada99f6-9864-47b6-85f5-988e67ad3a43",
+          "ad71ee93-72fb-4035-92c0-3b16057746f7",
+          "52c595d1-ac02-43c2-9621-0d5a0b42fb50"
         ],
         "custom_analyses_used": [],
         "sql_response_from_db": [
           "[{\"file_id\":\"auto_ontology\\/retrieval\\/data_access\\/candidates.py\"},{\"file_id\":\"auto_ontology\\/semantic\\/loaders.py\"},{\"file_id\":\"dev_tools\\/_add_spdx_headers.py\"},{\"file_id\":\"dev_tools\\/fixtures\\/seed_fixtures.py\"},{\"file_id\":\"dev_tools\\/fixtures\\/seed_graph_fixture.py\"},{\"file_id\":\"dev_tools\\/generate_backend_openapi.py\"},{\"file_id\":\"dev_tools\\/generate_permission_resource.py\"},{\"file_id\":\"dev_tools\\/local_ingest.py\"},{\"file_id\":\"dev_tools\\/release_helm_chart.py\"}]"
         ],
-        "thoughts": "- Preparing candidates: The question asks to return file_id for files/modules matching criteria, so the primary column attribute is code.files.file_id.\n- Preparing candidates: The query needs the set of files/modules from code.files, filtered by is_test and path-based exclusions, then anti-joined against code.imports on imported_file_id to find files never imported by another file. The other candidate tables do not provide general repository import-edge information and are not needed for the final file_id result.\n- Refining evidence: Only the evidence phrase 'files.is_test' explicitly maps to a physical column. I replaced it in the evidence with the exact quoted reference \"code\".\"files\".\"is_test\". In the question, the semantic phrase 'non-test modules' corresponds to the same test classification field, so I grounded it as modules where \"code\".\"files\".\"is_test\" = false while preserving the rest of the question unchanged.\n- Refining evidence: No repair is justified: the evidence contains no conflicting scalar value, column sample, or operator anchor that proves a correction to the supplied question.\n- Constructing SQL: The question needs files that no other file imports. Per the evidence, only imports that resolve to a file count, so I use the resolved target column `imported_file_id` (which is populated only when the import maps to a repository file) and ignore unresolved imports entirely, rather than matching on module names. I also require the importing file to differ from the imported file (`i.file_id <> f.file_id`) because \"imported by another file\" excludes self-imports; a module that only imports itself should still count as never imported. Test classification uses files.is_test (as mandated), and test_links are not used since they describe associations, not the full test set. Path exclusions: I drop any file whose name is __init__.py or __main__.py, both at repository root (file_id = '__init__.py') and in subdirectories (LIKE '%/__init__.py'), because Python executes package __init__.py on submodule import and __main__.py under `python -m`/console scripts, so neither is a meaningful \"module\" here. I drop the Alembic migration directory with both 'alembic/%' and '%/alembic/%' patterns, since Alembic loads that directory via script_location rather than by import; console-script targets in pyproject are not resolvable in the code map, so nothing extra is excluded for those. Zero/missing values: files with no importing rows are kept via NOT EXISTS (they are the answer, not a NULL conversion); imports with NULL imported_file_id are excluded from consideration since they do not resolve to a file. Ties/ordering: no ranking is requested, so rows are simply ordered alphabetically by file_id for readability; no LIMIT is applied because the question asks for all such modules. Output is a single distinct identity column, file_id, with no duplicates since files.file_id is unique.\n- Validating SQL and intent: The query selects the requested file_id from non-test files, excludes __init__.py, __main__.py, and Alembic paths, and uses NOT EXISTS on imports.imported_file_id to identify files never imported by another file. This satisfies the core intent and evidence."
+        "thoughts": "- Preparing candidates: The question asks to find the `file_id` for each qualifying module, with exclusions based on file type/path. The primary output attribute is therefore the repository-relative file identifier.\n- Preparing candidates: The required logic is: select file paths from files, filter out test files and excluded package/migration paths, then anti-join imports on imported_file_id to ensure no other file imports the module. No symbol, test-link, or call-count table is needed for this filter.\n- Refining evidence: The only evidence-mapped field present is the test classification: non-test means `files.is_test = false`. The evidence explicitly names `files.is_test`, so I ground the question phrase \"non-test\" to the dialect-quoted column and false condition, and replace the evidence reference accordingly. Other concepts such as file_id, imports by another file, __init__.py/__main__.py exclusions, and Alembic paths are not mapped to specific columns in the supplied evidence, so they remain untouched.\n- Constructing SQL: The query treats a module as imported only when an import row has a non-null target that equals the file path, because the evidence says only imports that resolve to a file count. Self-imports are excluded from the “imported by another file” condition, because the question says another file. Tests are removed with is_test = FALSE. Package initializer files and main-entry files are excluded by basename at any depth. The Alembic migration directory is assumed to be the top-level alembic/ directory named in the evidence. Files executed directly by path, such as dev_tools scripts, are not separately excluded and therefore can appear if nothing imports them.\n- Validating SQL and intent: The query uses the verified FK path imports.imported_file_id -> files.file_id in a NOT EXISTS anti-join, which is the correct way to find files that are not the target of any resolved import. It correctly excludes self-imports with i.file_id <> f.file_id so that 'another file' is respected. It filters with files.is_test = FALSE, excludes root and nested __init__.py and __main__.py paths, and excludes the Alembic directory using alembic/% (consistent with a repo-relative alembic/ directory). No aggregation is involved, and because each file_id is returned at most once through NOT EXISTS, distinct file identity is preserved. The evidence's instruction to use files.is_test for test classification is followed, and the evidence's resolved-import condition is followed via imported_file_id. Any remaining assumptions (forward-slash repo-relative paths, alembic/ at repository root) are minor implementation assumptions, not critical defects.\n- Executing SQL: Query failed, rewriting it: Catalog Error: Table with name files does not exist! Did you mean \"code.files\"? LINE 1: SELECT f.file_id FROM files AS f WHERE f.is_test = FALSE AND f.file_id <> '__init__... ^\n- Reconstructing SQL: The failure is purely a name-resolution issue: the query referenced `files` (and `imports`) without the `code.` schema prefix, so the catalog could not find them, even though `code.files` and `code.imports` exist and contain the needed columns (`file_id`, `is_test`, and the import source/target file references). No new tables or concepts are required — the same tables with schema qualification (and verification that the import target column is the correct one, e.g. an imported/resolved file id column on `code.imports`) will answer the question. Hence fixable, not missing_data.\n- Reconstructing SQL: The only change forced by the validation error is that table references must be schema-qualified as code.files and code.imports, because the object name is stored in that schema. All previously valid assumptions remain: an import counts only when it resolves to a file path (imported_file_id), i.e. non-resolving imports with a NULL target are ignored; 'imported by another file' means an import whose importing file differs from the target, so self-imports are ignored; test modules are removed with is_test = FALSE per the evidence; package __init__.py and __main__.py files are excluded at any depth by basename; the Alembic directory is taken to be the top-level alembic/ directory named by script_location; and scripts run directly by path (e.g. dev_tools/) are kept as candidates rather than excluded, as the evidence states. Each file appears once because the anti-join is expressed with NOT EXISTS and no counts are requested.\n- Validating SQL and intent: The SQL selects non-test file paths, excludes package __init__.py/__main__.py and the Alembic migration directory, and uses NOT EXISTS on resolved imports to find files never imported by another file. This matches the requested semantics."
       }
     }
   ],
   "question_id": 16,
   "gold_sql": "SELECT f.file_id\nFROM code.files f\nWHERE NOT f.is_test\n  AND right('/' || f.file_id, 12) NOT IN ('/__init__.py', '/__main__.py')\n  AND f.file_id NOT LIKE 'alembic/%'\n  AND NOT EXISTS (\n    SELECT 1 FROM code.imports i\n    WHERE i.imported_file_id = f.file_id AND i.file_id <> f.file_id\n  )\nORDER BY f.file_id;",
   "gold_row_count": 9,
-  "agent_sql": "SELECT f.file_id AS file_id FROM code.files AS f WHERE f.is_test = FALSE AND NOT (f.file_id = '__init__.py' OR f.file_id LIKE '%/__init__.py') AND NOT (f.file_id = '__main__.py' OR f.file_id LIKE '%/__main__.py') AND f.file_id NOT LIKE 'alembic/%' AND f.file_id NOT LIKE '%/alembic/%' AND NOT EXISTS (SELECT 1 FROM code.imports AS i WHERE i.imported_file_id = f.file_id AND i.file_id <> f.file_id) ORDER BY f.file_id;",
-  "agent_answer": "This lists every non-test Python module in the repository that no other file imports. It reads the file inventory (repository-relative path and the test flag) and checks each file against the recorded import edges, counting only imports that resolve to an actual repository file and ignoring a file importing itself. Package initializer files, main-entry modules, and anything in the Alembic migration directory are excluded, and the resulting paths are returned in alphabetical order.",
+  "agent_sql": "SELECT f.file_id FROM code.files AS f WHERE f.is_test = FALSE AND f.file_id <> '__init__.py' AND f.file_id NOT LIKE '%/__init__.py' AND f.file_id <> '__main__.py' AND f.file_id NOT LIKE '%/__main__.py' AND f.file_id NOT LIKE 'alembic/%' AND NOT EXISTS (SELECT 1 FROM code.imports AS i WHERE i.imported_file_id = f.file_id AND i.file_id <> f.file_id) ORDER BY f.file_id;",
+  "agent_answer": "This query lists the repository-relative path of every non-test Python file that no other file in the repository imports. It reads the file inventory and excludes package initializer files, main-entry files, and anything under the Alembic migration directory, then keeps only files that never appear as the resolved target of an import made by a different file. Self-imports and imports that do not resolve to a tracked file are not counted, while directly-run scripts are still eligible to be listed. Results are returned as distinct paths in alphabetical order.",
   "agent_row_count": 9,
   "correct_rows": true,
   "error": null

@@ -1,0 +1,34 @@
+{
+  "question_id": 11,
+  "status": 200,
+  "error": null,
+  "elapsed_s": 47.7,
+  "attempts": [
+    {
+      "sql": "WITH RECURSIVE\ntarget AS (\n  SELECT s.symbol_id\n  FROM code.symbols s\n  JOIN code.files f ON f.file_id = s.file_id\n  WHERE s.name = 'resolve_semantic_fks'\n    AND f.is_test = false\n),\nedges AS (\n  SELECT DISTINCT c.callee_symbol_id, c.caller_symbol_id\n  FROM code.calls c\n  JOIN code.symbols s ON s.symbol_id = c.caller_symbol_id\n  JOIN code.files f ON f.file_id = s.file_id\n  WHERE c.resolution = 'resolved'\n    AND c.callee_symbol_id IS NOT NULL\n    AND c.caller_symbol_id IS NOT NULL\n    AND f.is_test = false\n),\nreach(symbol_id, depth, path) AS (\n  SELECT e.caller_symbol_id, 1, [e.caller_symbol_id]\n  FROM edges e\n  JOIN target t ON t.symbol_id = e.callee_symbol_id\n  UNION ALL\n  SELECT e.caller_symbol_id, r.depth + 1, list_append(r.path, e.caller_symbol_id)\n  FROM reach r\n  JOIN edges e ON e.callee_symbol_id = r.symbol_id\n  WHERE NOT list_contains(r.path, e.caller_symbol_id)\n)\nSELECT r.symbol_id, CAST(MIN(r.depth) AS INTEGER) AS depth\nFROM reach r\nWHERE NOT EXISTS (SELECT 1 FROM target t WHERE t.symbol_id = r.symbol_id)\nGROUP BY r.symbol_id\nORDER BY depth, r.symbol_id;",
+      "error": null
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 762,
+    "completion_tokens": 6843,
+    "total_tokens": 7605,
+    "cost": 0.004566078,
+    "is_byok": 0
+  },
+  "request": {
+    "question": "What would be affected if resolve_semantic_fks changed? List every resolved caller symbol, including standalone functions, methods and class-scope callers, reached directly or indirectly, with the shortest call depth, outside the tests.\n\nHint: Follow resolved calls backwards from the callee to its callers, recursively. Calls include callback references (call_kind 'callback'), where a function is passed to another call such as asyncio.to_thread(f, x). Overridden methods called through a base class (self._run_once() in a base class) are not followed to the subclass.\n\nRequested output columns: symbol_id (string), depth (integer).",
+    "arm": "schema",
+    "model": "deepseek/deepseek-v4.1-flash-1017"
+  },
+  "events": [
+    {
+      "type": "result",
+      "answer": {
+        "response": "The query seeds all non-test symbols named resolve_semantic_fks, then reverses resolved call edges from those callees to their callers. It recursively walks to callers outside test files, includes callback-reference edges because it does not filter by call_kind, and uses a path guard to stop cycles. It returns each reached caller symbol once with the shortest depth and omits the original callee symbols.",
+        "sql_code": "WITH RECURSIVE\ntarget AS (\n  SELECT s.symbol_id\n  FROM code.symbols s\n  JOIN code.files f ON f.file_id = s.file_id\n  WHERE s.name = 'resolve_semantic_fks'\n    AND f.is_test = false\n),\nedges AS (\n  SELECT DISTINCT c.callee_symbol_id, c.caller_symbol_id\n  FROM code.calls c\n  JOIN code.symbols s ON s.symbol_id = c.caller_symbol_id\n  JOIN code.files f ON f.file_id = s.file_id\n  WHERE c.resolution = 'resolved'\n    AND c.callee_symbol_id IS NOT NULL\n    AND c.caller_symbol_id IS NOT NULL\n    AND f.is_test = false\n),\nreach(symbol_id, depth, path) AS (\n  SELECT e.caller_symbol_id, 1, [e.caller_symbol_id]\n  FROM edges e\n  JOIN target t ON t.symbol_id = e.callee_symbol_id\n  UNION ALL\n  SELECT e.caller_symbol_id, r.depth + 1, list_append(r.path, e.caller_symbol_id)\n  FROM reach r\n  JOIN edges e ON e.callee_symbol_id = r.symbol_id\n  WHERE NOT list_contains(r.path, e.caller_symbol_id)\n)\nSELECT r.symbol_id, CAST(MIN(r.depth) AS INTEGER) AS depth\nFROM reach r\nWHERE NOT EXISTS (SELECT 1 FROM target t WHERE t.symbol_id = r.symbol_id)\nGROUP BY r.symbol_id\nORDER BY depth, r.symbol_id;",
+        "sql_response_from_db": []
+      }
+    }
+  ]
+}

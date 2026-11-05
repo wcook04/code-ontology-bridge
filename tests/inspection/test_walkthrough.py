@@ -39,10 +39,9 @@ def test_all_outcomes_and_filtered_denominators(bundle):
     api = Inspector(bundle)
     all_rows = api.query('/api/v1/outcomes', {})
     assert [r['question_id'] for r in all_rows['items']] == list(range(1, 23))
-    assert all_rows['population_counts'] == {'table_match': {'pass': 21, 'fail': 1},
-        'prose_review': {'substantive': 20, 'unknown': 1, 'fail': 1}}
-    for params, ids in [({'table_match': 'fail'}, [2]), ({'prose_review': 'fail'}, [14]),
-                        ({'prose_review': 'unknown'}, [2]), ({'q': 'Q11'}, [11])]:
+    assert all_rows['population_counts'] == {'table_match': {'pass': 22}, 'prose_review': {'unknown': 22}}
+    for params, ids in [({'table_match': 'fail'}, []), ({'table_match': 'pass'}, list(range(1, 23))),
+                        ({'prose_review': 'unknown'}, list(range(1, 23))), ({'q': 'Q11'}, [11])]:
         page = api.query('/api/v1/outcomes', params)
         assert [r['question_id'] for r in page['items']] == ids
         assert page['population_total'] == 22 and page['total'] == len(ids)

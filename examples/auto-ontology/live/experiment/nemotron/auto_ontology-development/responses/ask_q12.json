@@ -1,0 +1,195 @@
+{
+  "request": {
+    "question": "Which packages under auto_ontology have the most lines of non-test code? Give the top five.\n\nRequested output columns: package (string), lines (integer).\nReturn every requested field using exactly its specified column alias. Preserve complete case-sensitive repository-relative paths and symbol IDs; do not substitute display names. Include all requested counts and provenance fields. Explain the query result in ordinary prose; do not emit placeholder text. These questions concern a static map of open-source Python code. Describe what the query computes and the assumptions it makes; the returned rows are reported separately. Questions asking which files, modules or symbols mean distinct identities, not one repeated row per matching import or call occurrence; preserve occurrence counts only when requested. Caller/callee graph questions include methods as well as standalone functions unless a symbol kind is explicitly restricted. Use files.is_test for test-file classification; test_links describe associations, not the complete set of test files. Use DOUBLE or DECIMAL, rather than single-precision REAL, for percentage calculations.\nReturn each package and its total line count. Order by lines descending, then package ascending.",
+    "evidence": "Package is the dotted package of each file.",
+    "calculation_only": true
+  },
+  "status": 200,
+  "elapsed_s": 375.5,
+  "events": [
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "question_intent",
+      "thought": null,
+      "label": "Classifying the question"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "question_intent",
+      "thought": null,
+      "label": "Classifying the question"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "question_extraction",
+      "thought": null,
+      "label": "Understanding the question"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "question_extraction",
+      "thought": null,
+      "label": "Understanding the question"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "retrieve_candidates",
+      "thought": null,
+      "label": "Retrieving candidates"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "retrieve_candidates",
+      "thought": null,
+      "label": "Retrieving candidates"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "prepare_candidates",
+      "thought": null,
+      "label": "Preparing candidates"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "prepare_candidates",
+      "thought": "The question asks for the top five packages under `auto_ontology` ranked by non-test lines of code. The `auto_ontology_code.code.files` table contains all columns required for this aggregation: `package` to group by package, `is_test` to filter out test files, and `line_count` to sum non-test lines. No other table supplies these attributes, and the intended query aggregates directly over `files` without joins that would be affected by the other tables.",
+      "label": "Preparing candidates"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "refine_evidence",
+      "thought": null,
+      "label": "Refining evidence"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "refine_evidence",
+      "thought": "The evidence line 1 (`\"?code?\"|\"?files?\"|\"?package?\" is the dotted package of each file.`) contains placeholder tokens (`?code?`, `?files?`, `?package?`) but no certain mistake that can be anchored to a verified database value, an explicit constant from the question, or a proven column sample value. The sanitized question (`List top five \"code\".\"files\".\"package\" under auto_ontology by non-test lines of code.`) already uses the correct column/reference names (`code.files.package`). The schema describes `package` as `VARCHAR` with description \"Dotted name of the package that contains the module; empty for a top-level module,\" but no exact stored representation or sample values are provided to prove what `?package?` must resolve to. The prohibited repairs (changing column names, prose, mappings, etc.) also argue against altering the placeholders. Since no repair is certain under the given rules, the evidence may already be valid, and the question contains no scalar/operator mistakes requiring correction. Therefore, no repairs apply.",
+      "label": "Refining evidence"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "construct_sql_from_candidates",
+      "thought": null,
+      "label": "Constructing SQL"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "construct_sql_from_candidates",
+      "thought": "The query aggregates non-test line counts per package from the auto_ontology_code.code.files table. Key assumptions: (1) is_test = false correctly excludes test files (tests/ directory, test_*.py, *_test.py, conftest.py); (2) package groups all files belonging to a package including top-level modules with empty package name; (3) line_count is per-file and needs SUM aggregation; (4) ordering is by total lines descending then package name ascending to break ties consistently; (5) LIMIT 5 implements the 'top five' request. No joins are needed since all required columns reside in the single files table.",
+      "label": "Constructing SQL"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "validate_sql_query",
+      "thought": null,
+      "label": "Validating SQL and intent"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "validate_sql_query",
+      "thought": null,
+      "label": "Validating SQL and intent"
+    },
+    {
+      "type": "sql",
+      "node": "validate_sql_query",
+      "sql": "SELECT package, SUM(line_count) AS lines FROM auto_ontology_code.code.files WHERE is_test = false GROUP BY package ORDER BY lines DESC, package ASC LIMIT 5"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "execute_sql_query",
+      "thought": null,
+      "label": "Executing SQL"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "execute_sql_query",
+      "thought": null,
+      "label": "Executing SQL"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "check_empty_like_result",
+      "thought": null,
+      "label": "Checking results"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "check_empty_like_result",
+      "thought": null,
+      "label": "Checking results"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "check_value_repair",
+      "thought": null,
+      "label": "Checking values"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "check_value_repair",
+      "thought": null,
+      "label": "Checking values"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "format_and_respond",
+      "thought": null,
+      "label": "Formatting response"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "format_and_respond",
+      "thought": null,
+      "label": "Formatting response"
+    },
+    {
+      "type": "result",
+      "answer": {
+        "response": "This query computes the total non-test line count per package in the auto_ontology repository by summing line_count from all files where is_test is false, grouping results by the dotted package name, and returning the top five packages ordered by descending line count with package name as the tiebreaker ascending.",
+        "sql_code": "SELECT package, SUM(line_count) AS lines FROM auto_ontology_code.code.files WHERE is_test = false GROUP BY package ORDER BY lines DESC, package ASC LIMIT 5",
+        "sql_columns": [
+          "2ae91adc-7b62-4aac-9789-12356403dd81",
+          "b40cfde1-b7a5-4b19-9269-89cade1072e5",
+          "c7c7fb2f-53b0-4237-805e-d6a277098d13"
+        ],
+        "custom_analyses_used": [],
+        "sql_response_from_db": [
+          "[{\"package\":\"auto_ontology.dal\",\"lines\":16959.0},{\"package\":\"auto_ontology.retrieval.text_to_sql.agents\",\"lines\":9816.0},{\"package\":\"auto_ontology.connectors\",\"lines\":6796.0},{\"package\":\"auto_ontology.retrieval.text_to_sql\",\"lines\":4875.0},{\"package\":\"auto_ontology.semantic\",\"lines\":4825.0}]"
+        ],
+        "thoughts": "- Preparing candidates: The question asks to 'List top five packages under auto_ontology by non-test lines of code.' The primary subject of this analytical question is 'packages.' Among the provided column attributes, `code.files.package` directly identifies the dotted name of the package containing each module, making it the core attribute for grouping/listing packages. While `code.files.is_test` is relevant for the 'non-test' filter metric, and `code.files.module` relates to module names, the package-level attribute is the primary subject. Therefore, the column attribute that best represents the primary subject is `code.files.package`.\n- Preparing candidates: The question asks for the top five packages under `auto_ontology` ranked by non-test lines of code. The `auto_ontology_code.code.files` table contains all columns required for this aggregation: `package` to group by package, `is_test` to filter out test files, and `line_count` to sum non-test lines. No other table supplies these attributes, and the intended query aggregates directly over `files` without joins that would be affected by the other tables.\n- Refining evidence: The evidence section states: 'Package is the dotted package of each file.' This maps the concept label 'Package' to the physical column reference '\"code\".\"files\".\"package\"' from the relevant dialect-quoted columns list (description: 'Dotted name of the package that contains the module; empty for a top-level module.'\n\n- In the question 'List top five packages under auto_ontology by non-test lines of code.', the word 'packages' is a plural semantic equivalent of the evidence concept 'Package'. Per the strict grounding rules, I replace the minimal matching question phrase ('packages') with the complete grounded rule from evidence (the physical column reference), preserving all surrounding wording. The result grounds the package reference while leaving 'under auto_ontology' and 'by non-test lines of code' untouched, as those are not described in the evidence.\n\n- In the evidence 'Package is the dotted package of each file.', the only field reference is 'Package'. I replace it verbatim with the exact physical column reference from the supplied list.\n\n- No other fields are described by the evidence, so they remain untouched in both outputs.\n- Refining evidence: The evidence line 1 (`\"?code?\"|\"?files?\"|\"?package?\" is the dotted package of each file.`) contains placeholder tokens (`?code?`, `?files?`, `?package?`) but no certain mistake that can be anchored to a verified database value, an explicit constant from the question, or a proven column sample value. The sanitized question (`List top five \"code\".\"files\".\"package\" under auto_ontology by non-test lines of code.`) already uses the correct column/reference names (`code.files.package`). The schema describes `package` as `VARCHAR` with description \"Dotted name of the package that contains the module; empty for a top-level module,\" but no exact stored representation or sample values are provided to prove what `?package?` must resolve to. The prohibited repairs (changing column names, prose, mappings, etc.) also argue against altering the placeholders. Since no repair is certain under the given rules, the evidence may already be valid, and the question contains no scalar/operator mistakes requiring correction. Therefore, no repairs apply.\n- Constructing SQL: The query aggregates non-test line counts per package from the auto_ontology_code.code.files table. Key assumptions: (1) is_test = false correctly excludes test files (tests/ directory, test_*.py, *_test.py, conftest.py); (2) package groups all files belonging to a package including top-level modules with empty package name; (3) line_count is per-file and needs SUM aggregation; (4) ordering is by total lines descending then package name ascending to break ties consistently; (5) LIMIT 5 implements the 'top five' request. No joins are needed since all required columns reside in the single files table."
+      }
+    }
+  ],
+  "question_id": 12,
+  "gold_sql": "SELECT package, SUM(line_count) AS lines\nFROM code.files\nWHERE package LIKE 'auto_ontology%' AND NOT is_test\nGROUP BY package\nORDER BY lines DESC, package\nLIMIT 5;",
+  "gold_row_count": 5,
+  "agent_sql": "SELECT package, SUM(line_count) AS lines FROM auto_ontology_code.code.files WHERE is_test = false GROUP BY package ORDER BY lines DESC, package ASC LIMIT 5",
+  "agent_answer": "This query computes the total non-test line count per package in the auto_ontology repository by summing line_count from all files where is_test is false, grouping results by the dotted package name, and returning the top five packages ordered by descending line count with package name as the tiebreaker ascending.",
+  "agent_row_count": 5,
+  "correct_rows": true,
+  "error": null
+}

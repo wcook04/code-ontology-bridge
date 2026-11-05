@@ -1,87 +1,81 @@
-# Fresh evaluation: 4 November 2026
+# What the semantic model and Auto Ontology each add: 4 November 2026
 
-**21/22 matching result tables; 20/22 with both matching tables and substantive prose.** The written response is the agent's explanation of its query, which Auto Ontology writes together with the SQL before the query runs; the rows are returned beside it, so the prose describes the calculation rather than the values. This is one complete run of all 22 questions under protocol `explicit-output-v3`. No answer was replaced by a selected rerun.
+The same language model answered the same questions about Auto Ontology's own code three ways, under a [protocol](../../../docs/experiment-protocol.md) committed before any run:
 
-**How the SQL was reached.** In 15 of the 22 requests the first SQL Auto Ontology ran gave the recorded rows. In six (Q3, Q5, Q11, Q18, Q21, Q22) the first query named a table without its `code.` schema, failed with a DuckDB catalog error, and was fixed by Auto Ontology's rewrite step; Q2 was rewritten twice after its own checks and ran twice. 29 queries ran in all.
+- **A, schema only.** The model sees the tables' and columns' names and types, writes SQL, and may try again after an SQL error (three runs at most).
+- **B, schema plus the exported semantic model.** The same, plus what this project's semantic model says: each table's and column's description, the primary keys and the 10 declared joins.
+- **C, Auto Ontology.** Auto Ontology imports the semantic model, and its agent retrieves context, writes the SQL, checks it and repairs it, querying the database through its DuckDB connector.
 
-**What the instructions asked for.** The shared output instructions ([answer_contracts.json](../../../eval/answer_contracts.json)) ask the agent, after executing SQL, to describe the returned rows. At `cdaf61e` the explanation is written before execution, so no response could follow that part; the rows are returned beside it.
+Two models, two question sets, eleven complete runs: Nemotron has no held-out result inside Auto Ontology (below). Each run asked every question once; no question was asked again.
 
-**Known reference defects.** Q11's reference query stops at depth 6 (`depth < 6`); every caller here is within depth 3, so the score is unaffected, but it is not a correct reference for deeper call chains. Q20 groups by the first two path parts, so a script directly under `dev_tools/` counts as its own area; the agent's SQL and the reference both do this. Both references stay unchanged for this run and should be fixed before a new evaluation.
+## Questions with exactly the expected rows
 
-The [original automatic score](current/score.json) reports 21 passes. [Review of every response](current/review.json) reduces the combined count to 20 because Q14's prose is just “thought”. The original score and responses remain unchanged.
+| Model | Arm | Development (22, 18 with hints) | Held-out (16, no hints) |
+| --- | --- | ---: | ---: |
+| NVIDIA Nemotron 3.5 Lightning | A, schema only | 10 | 6 |
+| | B, + semantic model | 13 | 13 |
+| | C, Auto Ontology | 12 | no result |
+| DeepSeek v4.1 Flash | A, schema only | 14 | 13 |
+| | B, + semantic model | 18 | 16 |
+| | C, Auto Ontology | **22** | 14 |
 
-## What was run
+**B minus A is what the exported semantic model is worth by itself.** Every model and question set improves: Nemotron goes from 6 to 13 of 16 held-out questions, DeepSeek from 13 to 16.
 
-| Item | Recorded setting |
-| --- | --- |
-| Source being queried | NVIDIA Auto Ontology `cdaf61e1bd0cf3820d11d72b43bb460816aebbd3` |
-| Bridge implementation | `34285a2ed7440bc07bbe5e17f16452e6c48b50f0` |
-| Chat model | `deepseek/deepseek-v4.1-flash-1017` through OpenRouter |
-| Embeddings / reranking | `nvidia/nemotron-3-embed-1b` / `nvidia/llama-nemotron-rerank-vl-1b-v2` |
-| Routing | `calculation_only: true` on every request |
-| Collection | One API request per question, three concurrent workers; upstream internal SQL/structured-output retries remain enabled |
-| Context | 18 original hints, explicit output fields/types, general identity and caller guidance |
-| Saved example analyses imported | None |
-| Start / finish | 11:27:10 / 11:50:35 UTC, 4 November 2026 |
+**C minus B is what Auto Ontology adds on top of the same metadata.** Nemotron's one complete Auto Ontology run scored 12 of 22 development questions, against 13 with the metadata in the prompt; it ran through Auto Ontology's OpenAI-compatible client, which cannot switch off Nemotron's reasoning, so 1,120 of its structured-output calls used up the 8,192-token output limit and several answers came back empty. Its held-out run and three repeats through Auto Ontology's NVIDIA client with reasoning off were rate-limited by the NVIDIA API and are discarded, so Nemotron has no held-out result inside Auto Ontology. On the development set, DeepSeek inside Auto Ontology returned the expected rows for all 22 questions, against 18 with the metadata in the prompt. On the held-out set it scored 14 against 16. Its two misses:
 
-The [manifest](current/manifest.json) records model settings and hashes of all frozen inputs and runner files. The [status](current/status.json) confirms normal completion with no changed runner inputs. The model queried eight tables and two views describing 473 files, 168 test files and 5,319 symbols.
+- **Q101** asks which "functions or methods" `run_ingest` calls directly. Auto Ontology's SQL keeps only callees whose kind is function or method, which drops the one callee that is a class (a constructor call); the reference counts it. The question's wording supports both readings.
+- **Q106** asks for public functions with no recorded caller. Auto Ontology's SQL also admits methods and returns one extra row.
 
-## Scoring and review
+The held-out set is 16 questions, and each arm ran once, so a difference of one or two questions is within what a second run could change.
 
-The strict scorer checks named columns and their types, full case-sensitive identifiers, row multiplicity, and order where the contract requests it. Integer values are exact; numeric transport has an absolute tolerance of 1e-6. A result must complete successfully. The automatic prose check rejects empty text, known placeholders and generic unrelated refusals; it cannot establish semantic correctness.
+## How each arm worked
 
-All 22 final SQL statements, tables and explanations were reviewed. Twenty explanations describe the query or its assumptions; most leave the actual values to the accompanying table. This count is not a measure of polished narrative answers. Matching one result table also does not establish SQL equivalence on other data: some generated queries add filters that happen not to change this snapshot's rows.
+| Model | Arm | Set | Median seconds per request | Requests that needed a repair |
+| --- | --- | --- | ---: | ---: |
+| Nemotron 3.5 Lightning | A, schema only | development | 29.4 | 2 |
+| Nemotron 3.5 Lightning | A, schema only | held-out | 28.9 | 2 |
+| Nemotron 3.5 Lightning | B, + semantic model | development | 16.4 | 4 |
+| Nemotron 3.5 Lightning | B, + semantic model | held-out | 20.9 | 2 |
+| Nemotron 3.5 Lightning | C, Auto Ontology | development | 706.5 | 3 |
+| DeepSeek v4.1 Flash | A, schema only | development | 3.6 | 0 |
+| DeepSeek v4.1 Flash | A, schema only | held-out | 6.7 | 1 |
+| DeepSeek v4.1 Flash | B, + semantic model | development | 2.5 | 0 |
+| DeepSeek v4.1 Flash | B, + semantic model | held-out | 2.5 | 0 |
+| DeepSeek v4.1 Flash | C, Auto Ontology | development | 175.1 | 13 |
+| DeepSeek v4.1 Flash | C, Auto Ontology | held-out | 158.9 | 9 |
 
-### Two remaining problems
+Arms A and B called the model directly at temperature 0. Their manifests record the model, endpoint and inputs but not a commit; they started at 21:44:04 UTC, when the checkout was at `2d3686c`. The DeepSeek Auto Ontology runs record `e1d41b3`, which changed only the website and the summariser. Arm C ran three requests at a time. The two models' Auto Ontology runs shared one laptop, on separate ports, so its times include that contention. The NVIDIA API served Nemotron and OpenRouter served DeepSeek; Auto Ontology used NVIDIA's `nemotron-3-embed-1b` and `llama-nemotron-rerank-vl-1b-v2` for retrieval in every C run.
 
-**Q2, package description:** the final query uses `module LIKE '%semantic%'` together with `module = package`. That includes both `auto_ontology.semantic` and `auto_ontology.server.semantic_compilation`, yielding the requested description plus an extra empty description. The reference selects exactly `auto_ontology.semantic`. The response does not acknowledge this overbroad match.
+In the DeepSeek development run inside Auto Ontology, twelve of the 22 first queries named a table without its `code.` schema (for example `FROM calls`) and failed with a DuckDB catalog error. Auto Ontology's repair step read the error, added the schema and ran the query again; all twelve then returned the expected rows. Question 2's rows are right, but its written explanation is the single word "Purple": that request reached Auto Ontology's "unconstructable SQL" step, started again from the beginning, and returned that text with the correct SQL.
 
-**Q14, resolution statistics:** all seven rows, counts and percentages match, but the entire prose response is “thought”. The existing validator rejects several literal stubs, including `test`, `TODO` and `PLACEHOLDER`; this different stub escaped it. The manual review records the failure without altering the response or re-running the question.
+## The recorded example on the website
 
-## Every answer
+The website follows the DeepSeek development run inside Auto Ontology question by question: [`current/`](current/) holds its manifest, frozen inputs, every response and the service logs, with [artifacts.json](current/artifacts.json) listing each file's SHA-256. The manifest binds the run to the exact database it queried (`dataset_sha256`, algorithm `cob_typed_tables_v1`) and to the runner files, unchanged from start to finish.
 
-Each link contains the exact request, streamed events, final SQL and prose, and returned rows. The `gold_sql` field is appended by the capture script after the response; it is not part of the request.
+Every run of all three arms is in [`experiment/`](experiment/), one folder per model, arm and question set, with its responses, manifest and score; [summary.json](experiment/summary.json) collects the numbers above and each question's result in each run.
 
-| Question | Subject | Table match | Prose review |
-| --- | --- | --- | --- |
-| [Q1](current/responses/10i_ask_with_key/ask_q1.json) | Callers of upsert_table_term | Yes | Query explained |
-| [Q2](current/responses/10i_ask_with_key/ask_q2.json) | Semantic package description | No: extra row | Overbroad scope |
-| [Q3](current/responses/10i_ask_with_key/ask_q3.json) | Files without descriptions | Yes | Query explained |
-| [Q4](current/responses/10i_ask_with_key/ask_q4.json) | Definition and docstring | Yes | Query explained |
-| [Q5](current/responses/10i_ask_with_key/ask_q5.json) | Repository counts | Yes | Query explained |
-| [Q6](current/responses/10i_ask_with_key/ask_q6.json) | Snapshot identity | Yes | Query explained |
-| [Q7](current/responses/10i_ask_with_key/ask_q7.json) | Public functions without test links | Yes | Query explained |
-| [Q8](current/responses/10i_ask_with_key/ask_q8.json) | Most-called functions/methods | Yes | Query explained |
-| [Q9](current/responses/10i_ask_with_key/ask_q9.json) | Imports of dal/terms.py | Yes | Query explained |
-| [Q10](current/responses/10i_ask_with_key/ask_q10.json) | Test associations | Yes | Query explained |
-| [Q11](current/responses/10i_ask_with_key/ask_q11.json) | Recursive caller chain | Yes | Query explained |
-| [Q12](current/responses/10i_ask_with_key/ask_q12.json) | Package line counts | Yes | Query explained |
-| [Q13](current/responses/10i_ask_with_key/ask_q13.json) | Classes with most methods | Yes | Query explained |
-| [Q14](current/responses/10i_ask_with_key/ask_q14.json) | Call-resolution statistics | Yes | Stub |
-| [Q15](current/responses/10i_ask_with_key/ask_q15.json) | Connector imports | Yes | Query explained |
-| [Q16](current/responses/10i_ask_with_key/ask_q16.json) | Modules without importers | Yes | Query explained |
-| [Q17](current/responses/10i_ask_with_key/ask_q17.json) | Compilation callees | Yes | Query explained |
-| [Q18](current/responses/10i_ask_with_key/ask_q18.json) | Undocumented public symbols | Yes | Query explained |
-| [Q19](current/responses/10i_ask_with_key/ask_q19.json) | Mutual package calls | Yes | Query explained |
-| [Q20](current/responses/10i_ask_with_key/ask_q20.json) | Transitive import impact | Yes | Query explained |
-| [Q21](current/responses/10i_ask_with_key/ask_q21.json) | Test with most source links | Yes | Query explained |
-| [Q22](current/responses/10i_ask_with_key/ask_q22.json) | Subclassed but unconstructed classes | Yes | Query explained |
+## What was fixed before these runs
 
-## What the result supports
+- **Extractor.** Imports bind only in the function, method or class that contains them, and calls inside a nested function count for the enclosing function only when it calls or passes on that nested function. Rebuilding the database with these fixes removed 21 of 9,442 linked calls and added 7; the four question 11 callers did not change. Regression tests are in `tests/codemap/test_scopes.py`.
+- **Reference queries.** Question 11's reference no longer stops at depth 6, and question 20's groups by directory. `tests/export/test_reference_semantics.py` checks the question 11 reference on a synthetic repository with a seven-deep chain, a cycle and two paths to one caller.
+- **Instructions.** The shared instruction no longer asks the agent to describe the returned rows: Auto Ontology writes its explanation before the query runs and returns the rows beside it.
+- **Held-out questions.** Sixteen questions without hints, with their reference queries, were committed before any arm ran.
+- **Dry run.** With each reference query in place of the model, the harness scored 22 of 22 and 16 of 16, which checks the scoring, not any model.
 
-Auto Ontology's existing database agent can query source-derived rows through the bridge. Q11 follows a callback as well as ordinary call edges; Q19 finds mutually calling packages; Q22 finds a base class with ten non-test subclasses. These are properties of the static map, not proof of runtime impact or test coverage.
+## Discarded runs
 
-The questions were authored during development. Earlier full runs informed the explicit output contracts, distinct-identity guidance, caller wording and placeholder checks. Q11 was clarified to include methods and class-scope callers; all 22 reference SQL statements and answer rows are unchanged from the preceding protocols. The final result is therefore a development-set demonstration, without held-out questions, another repository, a schema-only control or a comparison against direct source reading.
+Seven attempts were discarded whole, as the protocol requires; [experiment/discarded.txt](experiment/discarded.txt) lists each with its reason.
 
-The seven SQL examples distributed in the exported dataset were excluded from the imported model. Audit reconstructed every request from its frozen question, existing hint and public contract, and verified no reference SQL or answer payload was sent. The runner's own internal retries can repair SQL, but the bridge does not supply reference answers to them.
+- The first four Auto Ontology attempts never started PostgreSQL: the run folder's path made its Unix socket path longer than the 103-byte limit. No question was asked.
+- The next set stopped when the laptop shut down partway through; every run was started again from the first question.
+- Four Nemotron Auto Ontology attempts were rate-limited by the NVIDIA API ("429 Too Many Requests"): the first-configuration held-out run and a ChatNVIDIA development run that ran at once on one key, then a ChatNVIDIA development run alone with three requests at a time, then one with a single request at a time. The protocol was amended, and the amendments committed, before the ChatNVIDIA attempts: they route Nemotron through Auto Ontology's NVIDIA client with reasoning off, one request at a time. Even then the key returned about 50 rate-limit errors a minute, so no amended run completed.
 
-## Evidence and reproduction
+## What this does and does not show
 
-- [Frozen inputs](current/inputs/): questions and references, output contracts, model YAML and exact upstream patch.
-- [Responses](current/responses/): setup, import, compilation and all 22 question captures.
-- [Service logs](current/logs/): logs from this same isolated run, with local paths replaced by placeholders by the runner.
-- [Artifact hashes](current/artifacts.json): hashes of retained evidence, including the separate review.
-- [Reproduction guide](../../../docs/reproduction.md): data build, local tests and a new complete live run.
-- [Upstream patch and validation](upstream-fix/README.md): configuration, routing and structured-output changes.
+It shows that the exported semantic model, on its own, makes two different models write correct SQL over the code database much more often, and that Auto Ontology's agent, given that model, answered every development question correctly with one of them.
 
-The current tree contains one full evaluation. Earlier observations remain in Git: the original demonstration at `b8ed6f2`, the first explicit-output full run at `0c57ea1`, and the second at `34285a2`. Removing their capture folders from the current tree does not change those records. The current score uses only the fresh run above.
+It does not show accuracy on questions someone else wrote: the author wrote all 38 questions and their reference queries, about one repository. Each arm ran once. Matching rows on this snapshot does not prove two queries are equivalent on other data. The extractor reads source text, so the rows describe the code's text, not what it does at run time.
+
+## Reproduction
+
+`examples/auto-ontology/live/direct_sql_run.py` runs arms A and B; `fresh_run.py` runs arm C (`fresh_run_lane.py` shifts its local ports so two can share a machine); `evaluate_run.py` scores every arm; `tools/summarise_experiment.py` collects the runs; `tools/promote_run.py` makes one complete run the website's record. The [reproduction guide](../../../docs/reproduction.md) covers building the data and the upstream patch.

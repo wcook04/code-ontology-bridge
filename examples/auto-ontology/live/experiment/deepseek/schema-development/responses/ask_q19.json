@@ -1,0 +1,34 @@
+{
+  "question_id": 19,
+  "status": 200,
+  "error": null,
+  "elapsed_s": 8.0,
+  "attempts": [
+    {
+      "sql": "WITH directed AS (SELECT DISTINCT caller_file.package AS caller_package, callee_file.package AS callee_package FROM code.calls AS c JOIN code.symbols AS caller_symbol ON caller_symbol.symbol_id = c.caller_symbol_id JOIN code.files AS caller_file ON caller_file.file_id = caller_symbol.file_id JOIN code.symbols AS callee_symbol ON callee_symbol.symbol_id = c.callee_symbol_id JOIN code.files AS callee_file ON callee_file.file_id = callee_symbol.file_id WHERE c.resolution = 'resolved' AND caller_file.is_test = false AND callee_file.is_test = false AND caller_file.package IS NOT NULL AND callee_file.package IS NOT NULL AND caller_file.package <> callee_file.package) SELECT DISTINCT d1.caller_package AS package_a, d1.callee_package AS package_b FROM directed AS d1 JOIN directed AS d2 ON d1.caller_package = d2.callee_package AND d1.callee_package = d2.caller_package WHERE d1.caller_package < d1.callee_package",
+      "error": null
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 670,
+    "completion_tokens": 1492,
+    "total_tokens": 2162,
+    "cost": 0.000769986,
+    "is_byok": 0
+  },
+  "request": {
+    "question": "Which pairs of packages call into each other in both directions?\n\nHint: Count only resolved calls between different packages, outside the tests.\n\nRequested output columns: package_a (string), package_b (string).",
+    "arm": "schema",
+    "model": "deepseek/deepseek-v4.1-flash-1017"
+  },
+  "events": [
+    {
+      "type": "result",
+      "answer": {
+        "response": "The query builds resolved, non-test-file call edges between packages, then keeps only pairs where at least one call exists in each direction. It returns each unordered pair once, with package_a and package_b ordered alphabetically. The package comparison uses the caller and callee package fields from code.files, excluding null and same-package edges.",
+        "sql_code": "WITH directed AS (SELECT DISTINCT caller_file.package AS caller_package, callee_file.package AS callee_package FROM code.calls AS c JOIN code.symbols AS caller_symbol ON caller_symbol.symbol_id = c.caller_symbol_id JOIN code.files AS caller_file ON caller_file.file_id = caller_symbol.file_id JOIN code.symbols AS callee_symbol ON callee_symbol.symbol_id = c.callee_symbol_id JOIN code.files AS callee_file ON callee_file.file_id = callee_symbol.file_id WHERE c.resolution = 'resolved' AND caller_file.is_test = false AND callee_file.is_test = false AND caller_file.package IS NOT NULL AND callee_file.package IS NOT NULL AND caller_file.package <> callee_file.package) SELECT DISTINCT d1.caller_package AS package_a, d1.callee_package AS package_b FROM directed AS d1 JOIN directed AS d2 ON d1.caller_package = d2.callee_package AND d1.callee_package = d2.caller_package WHERE d1.caller_package < d1.callee_package",
+        "sql_response_from_db": []
+      }
+    }
+  ]
+}

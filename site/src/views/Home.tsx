@@ -9,13 +9,12 @@ import { CallerGraph, type Selection } from "../components/CallerGraph";
 import { SystemDiagram } from "../components/SystemDiagram";
 import { HeadlineResult } from "../components/HeadlineResult";
 import { Term } from "../components/Term";
-import { CopyButton, Excerpt, Gate, Out, ProseStatus, RowsTable, TableStatus } from "../components/parts";
+import { CopyButton, Excerpt, Gate, Out, RowsTable, TableStatus } from "../components/parts";
 import { RunConfig } from "../components/RunConfig";
 import { AnswerProse, AssessmentBlock, RequestBlock, Results, SqlPair } from "../components/Evidence";
 import { entryState, href, onLinkClick, replaceView } from "../app/router";
 import { ROLES, roleOf } from "../app/roles";
 import { termForSymbol } from "../app/glossary";
-import { CORRECTIONS_URL } from "../app/findings";
 
 const WALKTHROUGH = "/api/v1/walkthroughs/caller-chain-q11";
 const OUTCOMES = "/api/v1/outcomes?limit=100";
@@ -60,7 +59,8 @@ function Hero() {
           <Term id="auto-ontology">NVIDIA Auto Ontology</Term> already imports, so its SQL agent can answer questions about the code.
         </p>
         <p className="recorded">
-          This website shows one recorded run: Auto Ontology was asked 22 questions about its own source code. Nothing here runs live.
+          Auto Ontology was pointed at its own source code and asked 38 questions. The same questions also went to two language models given
+          only the database, with and without this project’s semantic model. Every run is recorded; nothing here runs live.
         </p>
         <HeadlineResult />
         <Stages />
@@ -68,7 +68,7 @@ function Hero() {
           In the recorded example, following direct calls finds three of the four functions that reach{" "}
           <Term id="resolver">resolve_semantic_fks</Term>. The fourth, <Term id="scheduler">a scheduler</Term>, does not call the wrapper directly: at line
           203 it passes it to <Term id="to_thread">asyncio.to_thread</Term>. The extractor records that hand-over, and Auto Ontology’s SQL
-          found all four.
+          found all four. In the recorded run, all 22 development questions came back with exactly the expected rows.
         </p>
         <div className="actions">
           <a className="btn" href={href({ view: "home", step: "source" })} onClick={(e) => { e.preventDefault(); jump("source"); }}>
@@ -528,14 +528,14 @@ function OutcomesTeaser() {
       <h2 id="h-outcomes">All 22 recorded questions</h2>
       <Gate loaded={outcomes} what="the outcome list">
         {(o) => {
-          const picks = [o.items.find((i) => i.question_id === 2), o.items.find((i) => i.question_id === 14)];
+          const picks = [o.items.find((i) => i.question_id === 2)];
           return (
             <>
               <p className="measure">
                 Question 11 is one of {o.population_total}. For {o.population_counts.table_match.pass ?? 0} of them, the rows Auto Ontology
-                returned were exactly the expected rows. Each response pairs those rows with a short explanation of the query, which Auto Ontology’s agent writes before the query
-                runs. The author wrote the questions while developing the project, so this is not an independent benchmark. Two responses
-                fell short:
+                returned were exactly the expected rows. Each response pairs those rows with a short explanation of the query, which Auto
+                Ontology’s agent writes before the query runs. The author wrote these questions while developing the project and most carry a
+                hint, so the held-out questions on the comparison page are the harder test. One explanation fell short:
               </p>
               <ul className="cases">
                 {picks.map((q) =>
@@ -545,9 +545,9 @@ function OutcomesTeaser() {
                         Question {q.question_id}: {q.question}
                       </a>
                       <span className="cases__status">
-                        <TableStatus value={q.assessment.table_match} /> <ProseStatus value={q.assessment.prose_review} />
+                        <TableStatus value={q.assessment.table_match} />
                       </span>
-                      <span className="small">{q.review_finding?.reason}</span>
+                      <span className="small">The rows are right; the written explanation is the single word “Purple”.</span>
                     </li>
                   ) : null,
                 )}
@@ -582,18 +582,19 @@ function Limits({ model }: { model: ModelStep }) {
           <h3>It shows</h3>
           <ul className="facts">
             <li>Auto Ontology can import the extractor’s semantic model and query its database through the existing DuckDB connector.</li>
-            <li>For 21 of 22 questions, the SQL its agent wrote returned exactly the rows of a reference query the author wrote.</li>
+            <li>In one complete run with DeepSeek v4.1 Flash, the SQL its agent wrote returned exactly the rows of the author’s reference query for all 22 development questions.</li>
+            <li>The semantic model helps on its own. Given only the table and column names, Nemotron 3.5 Lightning answered 6 of 16 held-out questions and DeepSeek 13; given the semantic model as well, 13 and 16.</li>
             <li>A relationship only the extractor records, a function handed to asyncio.to_thread, reached the final answer: direct calls alone find three of the four callers.</li>
-            <li>Every request, SQL statement, returned row and written response is recorded and published unchanged.</li>
+            <li>Every request, SQL statement, returned row and written response is published unchanged, including the runs that scored worst.</li>
           </ul>
         </div>
         <div>
           <h3>It does not show</h3>
           <ul className="facts">
-            <li>How much the semantic model helps: no agent was given the same database without it.</li>
-            <li>Accuracy on new questions: the author wrote all 22 while developing the project, named the columns to return and gave hints for 18.</li>
-            <li>Speed in general: in this run a request took a median of 146 seconds, with three running at a time.</li>
-            <li>That every recorded link is right. After the run, two extractor defects were found and fixed: an import inside one function could link a call in another function to the wrong definition, and calls inside a nested function were credited to the enclosing function even when it never ran the nested one. Rebuilding Auto Ontology with the fix removes 21 of the 9,442 linked calls and adds 7; the four question 11 callers are unchanged. <a href={CORRECTIONS_URL} target="_blank" rel="noreferrer">Every changed row&nbsp;↗</a></li>
+            <li>Accuracy on a benchmark someone else wrote: the author wrote all 38 questions and their reference queries, about one repository.</li>
+            <li>Stable rates: each arm ran each question set once, and 16 held-out questions is a small sample.</li>
+            <li>Speed in general: requests in this run took a median of 175 seconds on a laptop running two Auto Ontology instances at once.</li>
+            <li>That every recorded link is right. The extractor follows plain names; the published limits list the patterns, such as a local variable shadowing a module-level name, that can still link the wrong definition. No independent audit of its links has been done yet.</li>
             <li>What happens at run time: the extractor reads source text, so a recorded call is not proof the code runs, and a missing one is not proof it never happens.</li>
           </ul>
         </div>

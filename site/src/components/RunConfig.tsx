@@ -24,19 +24,19 @@ export function RunConfig() {
         </tr>
         <tr>
           <th scope="row">Questions</th>
-          <td>22, written by the author during development; each names its output columns and 18 include a hint</td>
+          <td>The 22 development questions, written by the author while building the project; each names its output columns and 18 include a hint. The 16 held-out questions are on the comparison page.</td>
         </tr>
         <tr>
           <th scope="row">Scoring</th>
-          <td>A program compared returned rows with rows from the author’s reference SQL; the author read every response</td>
+          <td>A program compared returned rows with rows from the author’s reference SQL. The run went once, start to finish; no question was asked again.</td>
         </tr>
         <tr>
           <th scope="row">Time per request</th>
-          <td>Median 146 seconds, from 50 to 274, with three requests running at a time</td>
+          <td>Median 175 seconds, from 72 to 568, with three requests running at a time on a laptop that was running a second Auto Ontology instance alongside</td>
         </tr>
         <tr>
           <th scope="row">Not measured</th>
-          <td>Accuracy on new questions, the effect of the semantic model against a schema-only agent, cost, and which table descriptions each question retrieved</td>
+          <td>Cost, and which table descriptions each question retrieved. What the semantic model and Auto Ontology each add is measured on the comparison page.</td>
         </tr>
       </tbody>
       <tfoot>

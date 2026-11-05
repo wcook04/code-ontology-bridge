@@ -30,7 +30,6 @@ REQUIRED = {
     'examples/auto-ontology/live/RESULTS.md',
     'examples/auto-ontology/live/current/manifest.json',
     'examples/auto-ontology/live/current/score.json',
-    'examples/auto-ontology/live/current/review.json',
     'examples/auto-ontology/live/current/artifacts.json',
 }
 

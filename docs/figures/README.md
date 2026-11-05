@@ -46,11 +46,13 @@ The diagram omits literal symbol names, full paths and unrelated calls. The sour
 
 ## Evaluation
 
-[evaluation.png](evaluation.png) answers: **Why are there two reported success counts?**
+*History only: this figure shows the earlier 22-question run (21 matching tables, 20 with explanations), which the three-arm comparison replaced. Nothing links to it now.*
+
+[evaluation.png](evaluation.png) answered: **Why are there two reported success counts?**
 
 Show a short main path: 22 responses, Table check, 21 matches, Prose review, 20 pass both. Reference rows feed only the table check. A branch from Table check identifies Q2: extra row; a branch from Prose review identifies Q14: prose stub. The latter response says “thought”. Keep every node label on one line and put the development-set qualification in the caption.
 
-Sources: [results](../../examples/auto-ontology/live/RESULTS.md), [automatic score](../../examples/auto-ontology/live/current/score.json) and [manual review](../../examples/auto-ontology/live/current/review.json). All requests specify output fields; only 18 have hints. The flow groups the reported counts; review covered every answer, not only the 21 matching tables. Internal retries are omitted, so the figure must not call this one-shot accuracy. There is no held-out comparison.
+Sources: `examples/auto-ontology/live/RESULTS.md`, `current/score.json` and `current/review.json` as they stood at commit `2d3686c`. All requests specify output fields; only 18 have hints. Internal retries are omitted, so the figure must not call this one-shot accuracy.
 
 ## Review and build
 

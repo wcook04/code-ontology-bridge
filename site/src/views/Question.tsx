@@ -8,7 +8,7 @@ import { Captured, Gate, Out, RowsTable } from "../components/parts";
 import { ResultView } from "../components/ResultView";
 import { RequestBlock, Results } from "../components/Evidence";
 import { entryState, href, onLinkClick } from "../app/router";
-import { ATTEMPTS, CORRECTED, CORRECTIONS_URL, ELAPSED, PROSE_REVIEW_WORDS, findingFor, proseReading } from "../app/findings";
+import { ATTEMPTS, ELAPSED, PROSE_REVIEW_WORDS, findingFor, proseReading } from "../app/findings";
 import { readableSql } from "../app/sql";
 
 const REPO = "https://github.com/wcook04/code-ontology-bridge/blob/main/examples/auto-ontology/live/current/";
@@ -53,11 +53,6 @@ function Body({ q, total }: { q: QuestionDetail; total: number }) {
         {f ? <p className="finding__says">{f.says(rows)}</p> : null}
         {f ? <ResultView finding={f} rows={rows} contract={q.output_contract} referenceText={q.reference_rows} links={links} /> : <p className="notice">This question’s columns differ from the ones this website’s summary was written for, so no summary is shown. The recorded rows are under “The recorded evidence”.</p>}
         {f?.limit ? <p className="finding__limit">{f.limit}</p> : null}
-        {CORRECTED[q.question_id] ? (
-          <p className="finding__limit">
-            {CORRECTED[q.question_id]} <a href={CORRECTIONS_URL} target="_blank" rel="noreferrer">See every changed row&nbsp;↗</a>
-          </p>
-        ) : null}
         <p className="finding__source">This summary was written for this website from the {rows.length} recorded {rows.length === 1 ? "row" : "rows"}. It is not Auto Ontology’s answer.</p>
       </section>
 
@@ -90,7 +85,7 @@ function Body({ q, total }: { q: QuestionDetail; total: number }) {
               Auto Ontology’s written response, verbatim. Its agent writes this together with the SQL, before the query runs, to describe
               the calculation; the rows are returned beside it.
             </p>
-            <p className="small">{PROSE_REVIEW_WORDS[q.assessment.prose_review] ?? ""}</p>
+            {q.assessment.review_method === "not_supplied" ? null : <p className="small">{PROSE_REVIEW_WORDS[q.assessment.prose_review] ?? ""}</p>}
           </div>
         </div>
         {f?.sqlNote ? <p className="small measure">{f.sqlNote}</p> : null}

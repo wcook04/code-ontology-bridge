@@ -1,0 +1,268 @@
+{
+  "request": {
+    "question": "How many non-test files are there, and how many of them have a module docstring?\n\nRequested output columns: non_test_files (integer), with_docstring (integer).\nReturn every requested field using exactly its specified column alias. Preserve complete case-sensitive repository-relative paths and symbol IDs; do not substitute display names. Include all requested counts and provenance fields. Explain the query result in ordinary prose; do not emit placeholder text. These questions concern a static map of open-source Python code. Describe what the query computes and the assumptions it makes; the returned rows are reported separately. Questions asking which files, modules or symbols mean distinct identities, not one repeated row per matching import or call occurrence; preserve occurrence counts only when requested. Caller/callee graph questions include methods as well as standalone functions unless a symbol kind is explicitly restricted. Use files.is_test for test-file classification; test_links describe associations, not the complete set of test files. Use DOUBLE or DECIMAL, rather than single-precision REAL, for percentage calculations.",
+    "calculation_only": true
+  },
+  "status": 200,
+  "elapsed_s": 161.6,
+  "events": [
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "question_intent",
+      "thought": null,
+      "label": "Classifying the question"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "question_intent",
+      "thought": null,
+      "label": "Classifying the question"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "question_extraction",
+      "thought": null,
+      "label": "Understanding the question"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "question_extraction",
+      "thought": null,
+      "label": "Understanding the question"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "retrieve_candidates",
+      "thought": null,
+      "label": "Retrieving candidates"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "retrieve_candidates",
+      "thought": null,
+      "label": "Retrieving candidates"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "prepare_candidates",
+      "thought": null,
+      "label": "Preparing candidates"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "prepare_candidates",
+      "thought": "The question can be answered entirely from `auto_ontology_code.code.files`: `is_test` identifies non-test files, and `description` / `description_source` identify whether a module docstring exists. No other table supplies a needed column or an existence condition that would restrict which file rows qualify.",
+      "label": "Preparing candidates"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "refine_evidence",
+      "thought": null,
+      "label": "Refining evidence"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "refine_evidence",
+      "thought": "No certain repair applies: the boolean comparison is_test = false is already correct for the BOOLEAN column, and no value anchor or sample value contradicts any string or operator in the evidence or question.",
+      "label": "Refining evidence"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "construct_sql_from_candidates",
+      "thought": null,
+      "label": "Constructing SQL"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "construct_sql_from_candidates",
+      "thought": "I will count rows in the files table where is_test is false to get non-test files. For module docstrings, I treat description_source values other than 'none' as evidence that a module docstring exists, since the allowed non-none sources (heading_purpose and module_docstring) both indicate description content came from the module docstring. No joins are needed, and the table is referenced unqualified per the schema instructions. Both counts are cast to INTEGER as requested; since is_test and description_source are non-null, no extra null handling is required.",
+      "label": "Constructing SQL"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "validate_sql_query",
+      "thought": null,
+      "label": "Validating SQL and intent"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "validate_sql_query",
+      "thought": "The query correctly restricts to non-test files using `files.is_test = FALSE`, matching the authoritative evidence and the normalized question. It also returns the requested aliases and casts counts to integer. However, the `with_docstring` count is critically wrong: it uses `description_source <> 'none'`, which counts both `'module_docstring'` and `'heading_purpose'`. The question asks specifically for files with a module docstring, so the predicate should isolate `description_source = 'module_docstring'` rather than any non-`'none'` description source. This overcounts and does not answer the requested metric.",
+      "label": "Validating SQL and intent"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "reconstruct_sql",
+      "thought": null,
+      "label": "Reconstructing SQL"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "reconstruct_sql",
+      "thought": "The query counts rows in the files table. Non-test files are those where is_test = FALSE, per the authoritative evidence that is_test is the sole test-file classification (test_links associations are not used, since they do not define the complete set of test files). The remaining valid assumption: both counts are cast to INTEGER as requested, and no null handling is needed because is_test and description_source are non-nullable. One assumption had to change: previously any description_source other than 'none' was treated as evidence of a module docstring; the validation and the column description ('heading_purpose, module_docstring or none') require counting only description_source = 'module_docstring', so heading_purpose-based descriptions are excluded from the docstring count. The docstring count is computed with COUNT(CASE WHEN ... THEN 1 END) rather than a FILTER clause, and it is scoped to the same non-test filter, so it counts the subset of non-test files that have a module docstring. No joins are needed since all required columns live in the files table.",
+      "label": "Reconstructing SQL"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "validate_sql_query",
+      "thought": null,
+      "label": "Validating SQL and intent"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "validate_sql_query",
+      "thought": "The query answers the question using the correct base table (`files`) and the authoritative test-file classifier `files.is_test = FALSE`. It counts all non-test files for `non_test_files`, and counts those whose `description_source` is `'module_docstring'` for `with_docstring`. The aggregation is appropriate: `COUNT(*)` for the total non-test files and a conditional `COUNT(CASE WHEN ... THEN 1 END)` for the subset with a module docstring. No joins are required, and none are incorrectly introduced. The use of `description_source = 'module_docstring'` is a reasonable interpretation of the available metadata for identifying files with a module docstring. There are no critical join or aggregation errors, and the authoritative evidence requirement to use `files.is_test` for test classification is followed.",
+      "label": "Validating SQL and intent"
+    },
+    {
+      "type": "sql",
+      "node": "validate_sql_query",
+      "sql": "SELECT CAST(COUNT(*) AS INTEGER) AS non_test_files, CAST(COUNT(CASE WHEN f.description_source = 'module_docstring' THEN 1 END) AS INTEGER) AS with_docstring FROM files AS f WHERE f.is_test = FALSE;"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "execute_sql_query",
+      "thought": null,
+      "label": "Executing SQL"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "execute_sql_query",
+      "thought": "Query failed, rewriting it: Catalog Error: Table with name files does not exist! Did you mean \"code.files\"? LINE 1: ..._docstring' THEN 1 END) AS INTEGER) AS with_docstring FROM files AS f WHERE f.is_test = FALSE; ^",
+      "label": "Executing SQL"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "reconstruct_sql",
+      "thought": null,
+      "label": "Reconstructing SQL"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "reconstruct_sql",
+      "thought": "The question asks for two counts over the files table: how many files are not tests, and how many of those non-test files have a module docstring. Assumption retained: a file is non-test when files.is_test = FALSE, because the authoritative evidence designates files.is_test as the sole test-file classification (test_links is explicitly not the complete set of test files). Assumption retained: a module docstring exists when description_source = 'module_docstring', because that column's description enumerates 'heading_purpose', 'module_docstring' and 'none', and only the 'module_docstring' value denotes a docstring source. Assumption retained: no joins are needed, since both is_test and description_source live in files. Assumption retained: both counts are cast to INTEGER as requested, and no NULL handling is needed because is_test and description_source are non-nullable. Assumption changed: the table must be referenced as code.files (not bare files) to resolve against the catalog; the alias f is used consistently thereafter. The docstring count uses COUNT(CASE WHEN ... THEN 1 END) rather than a FILTER clause, per the aggregation rules.",
+      "label": "Reconstructing SQL"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "validate_sql_query",
+      "thought": null,
+      "label": "Validating SQL and intent"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "validate_sql_query",
+      "thought": "The SQL directly answers the question using the required test-file classification column `code.files.is_test = FALSE`. It counts all non-test files and counts those whose `description_source` is `'module_docstring'`, which matches the requested `with_docstring` metric. No joins are needed, and there are no nonsensical joins or clearly wrong aggregations. The use of `COUNT(CASE WHEN ... THEN 1 END)` is an appropriate conditional count.",
+      "label": "Validating SQL and intent"
+    },
+    {
+      "type": "sql",
+      "node": "validate_sql_query",
+      "sql": "SELECT CAST(COUNT(*) AS INTEGER) AS non_test_files, CAST(COUNT(CASE WHEN f.description_source = 'module_docstring' THEN 1 END) AS INTEGER) AS with_docstring FROM code.files AS f WHERE f.is_test = FALSE;"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "execute_sql_query",
+      "thought": null,
+      "label": "Executing SQL"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "execute_sql_query",
+      "thought": null,
+      "label": "Executing SQL"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "check_empty_like_result",
+      "thought": null,
+      "label": "Checking results"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "check_empty_like_result",
+      "thought": null,
+      "label": "Checking results"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "check_value_repair",
+      "thought": null,
+      "label": "Checking values"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "check_value_repair",
+      "thought": null,
+      "label": "Checking values"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "format_and_respond",
+      "thought": null,
+      "label": "Formatting response"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "format_and_respond",
+      "thought": null,
+      "label": "Formatting response"
+    },
+    {
+      "type": "result",
+      "answer": {
+        "response": "This query counts two things from the code files table: the total number of files that are not tests, and, among those same non-test files, the number whose description came from a module docstring. Test status is taken from the file-level test flag rather than from test-link associations, and docstring presence is determined by the recorded description source being 'module_docstring'. Both results are returned as integer counts in the requested order, without grouping or ordering.",
+        "sql_code": "SELECT CAST(COUNT(*) AS INTEGER) AS non_test_files, CAST(COUNT(CASE WHEN f.description_source = 'module_docstring' THEN 1 END) AS INTEGER) AS with_docstring FROM code.files AS f WHERE f.is_test = FALSE;",
+        "sql_columns": [
+          "d9a43f32-e2fe-4244-827a-63bf53f18b98",
+          "8068de41-b92a-4498-b746-f3b154dbdf8d"
+        ],
+        "custom_analyses_used": [],
+        "sql_response_from_db": [
+          "[{\"non_test_files\":305,\"with_docstring\":273}]"
+        ],
+        "thoughts": "- Preparing candidates: The question’s main analytical target is the presence of a module docstring among non-test files. The only listed attribute tied to module docstring characteristics is code.files.has_fixed_headings, which describes module docstring structure. code.files.is_test is only a filter, and code.snapshot.file_count is an overall count.\n- Preparing candidates: The question can be answered entirely from `auto_ontology_code.code.files`: `is_test` identifies non-test files, and `description` / `description_source` identify whether a module docstring exists. No other table supplies a needed column or an existence condition that would restrict which file rows qualify.\n- Refining evidence: The evidence explicitly maps the test-file classification concept to files.is_test. Therefore, in the question, 'non-test files' is grounded to the physical column with the negation condition: \"code\".\"files\".\"is_test\" = false. In the evidence, the field reference files.is_test is replaced with the exact dialect-quoted reference \"code\".\"files\".\"is_test\". The phrase 'module docstring' is not described or mapped in the Evidence section (only in the relevant columns list), so it remains untouched per strict scope. The field test_links has no allowed mapping target in the supplied qualified-column list, so it also remains unchanged.\n- Refining evidence: No certain repair applies: the boolean comparison is_test = false is already correct for the BOOLEAN column, and no value anchor or sample value contradicts any string or operator in the evidence or question.\n- Constructing SQL: I will count rows in the files table where is_test is false to get non-test files. For module docstrings, I treat description_source values other than 'none' as evidence that a module docstring exists, since the allowed non-none sources (heading_purpose and module_docstring) both indicate description content came from the module docstring. No joins are needed, and the table is referenced unqualified per the schema instructions. Both counts are cast to INTEGER as requested; since is_test and description_source are non-null, no extra null handling is required.\n- Validating SQL and intent: The query correctly restricts to non-test files using `files.is_test = FALSE`, matching the authoritative evidence and the normalized question. It also returns the requested aliases and casts counts to integer. However, the `with_docstring` count is critically wrong: it uses `description_source <> 'none'`, which counts both `'module_docstring'` and `'heading_purpose'`. The question asks specifically for files with a module docstring, so the predicate should isolate `description_source = 'module_docstring'` rather than any non-`'none'` description source. This overcounts and does not answer the requested metric.\n- Reconstructing SQL: The needed data is present in the files table. The issue is incorrect SQL logic: with_docstring should count rows where files.description_source = 'module_docstring', not where it is merely <> 'none'. This can be corrected using the same table.\n- Reconstructing SQL: The query counts rows in the files table. Non-test files are those where is_test = FALSE, per the authoritative evidence that is_test is the sole test-file classification (test_links associations are not used, since they do not define the complete set of test files). The remaining valid assumption: both counts are cast to INTEGER as requested, and no null handling is needed because is_test and description_source are non-nullable. One assumption had to change: previously any description_source other than 'none' was treated as evidence of a module docstring; the validation and the column description ('heading_purpose, module_docstring or none') require counting only description_source = 'module_docstring', so heading_purpose-based descriptions are excluded from the docstring count. The docstring count is computed with COUNT(CASE WHEN ... THEN 1 END) rather than a FILTER clause, and it is scoped to the same non-test filter, so it counts the subset of non-test files that have a module docstring. No joins are needed since all required columns live in the files table.\n- Validating SQL and intent: The query answers the question using the correct base table (`files`) and the authoritative test-file classifier `files.is_test = FALSE`. It counts all non-test files for `non_test_files`, and counts those whose `description_source` is `'module_docstring'` for `with_docstring`. The aggregation is appropriate: `COUNT(*)` for the total non-test files and a conditional `COUNT(CASE WHEN ... THEN 1 END)` for the subset with a module docstring. No joins are required, and none are incorrectly introduced. The use of `description_source = 'module_docstring'` is a reasonable interpretation of the available metadata for identifying files with a module docstring. There are no critical join or aggregation errors, and the authoritative evidence requirement to use `files.is_test` for test classification is followed.\n- Executing SQL: Query failed, rewriting it: Catalog Error: Table with name files does not exist! Did you mean \"code.files\"? LINE 1: ..._docstring' THEN 1 END) AS INTEGER) AS with_docstring FROM files AS f WHERE f.is_test = FALSE; ^\n- Reconstructing SQL: The question asks for two counts over the files table: how many files are not tests, and how many of those non-test files have a module docstring. Assumption retained: a file is non-test when files.is_test = FALSE, because the authoritative evidence designates files.is_test as the sole test-file classification (test_links is explicitly not the complete set of test files). Assumption retained: a module docstring exists when description_source = 'module_docstring', because that column's description enumerates 'heading_purpose', 'module_docstring' and 'none', and only the 'module_docstring' value denotes a docstring source. Assumption retained: no joins are needed, since both is_test and description_source live in files. Assumption retained: both counts are cast to INTEGER as requested, and no NULL handling is needed because is_test and description_source are non-nullable. Assumption changed: the table must be referenced as code.files (not bare files) to resolve against the catalog; the alias f is used consistently thereafter. The docstring count uses COUNT(CASE WHEN ... THEN 1 END) rather than a FILTER clause, per the aggregation rules.\n- Validating SQL and intent: The SQL directly answers the question using the required test-file classification column `code.files.is_test = FALSE`. It counts all non-test files and counts those whose `description_source` is `'module_docstring'`, which matches the requested `with_docstring` metric. No joins are needed, and there are no nonsensical joins or clearly wrong aggregations. The use of `COUNT(CASE WHEN ... THEN 1 END)` is an appropriate conditional count."
+      }
+    }
+  ],
+  "question_id": 107,
+  "gold_sql": "SELECT COUNT(*) AS non_test_files,\n       COUNT(*) FILTER (WHERE description_source <> 'none') AS with_docstring\nFROM code.files\nWHERE NOT is_test;",
+  "gold_row_count": 1,
+  "agent_sql": "SELECT CAST(COUNT(*) AS INTEGER) AS non_test_files, CAST(COUNT(CASE WHEN f.description_source = 'module_docstring' THEN 1 END) AS INTEGER) AS with_docstring FROM code.files AS f WHERE f.is_test = FALSE;",
+  "agent_answer": "This query counts two things from the code files table: the total number of files that are not tests, and, among those same non-test files, the number whose description came from a module docstring. Test status is taken from the file-level test flag rather than from test-link associations, and docstring presence is determined by the recorded description source being 'module_docstring'. Both results are returned as integer counts in the requested order, without grouping or ordering.",
+  "agent_row_count": 1,
+  "correct_rows": true,
+  "error": null
+}

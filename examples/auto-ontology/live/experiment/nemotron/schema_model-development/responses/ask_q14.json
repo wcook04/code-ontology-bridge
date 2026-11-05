@@ -1,0 +1,72 @@
+{
+  "question_id": 14,
+  "status": 200,
+  "error": null,
+  "elapsed_s": 26.1,
+  "attempts": [
+    {
+      "sql": "",
+      "error": "the reply had no SQL"
+    },
+    {
+      "sql": "WITH direct_calls AS (\n  SELECT resolution, COUNT(*) AS calls\n  FROM code.calls\n  WHERE call_kind = 'direct'\n  GROUP BY resolution\n),\ntotal_direct AS (\n  SELECT COUNT(*) AS total\n  FROM code.calls\n  WHERE call_kind = 'direct'\n)\nSELECT\n  resolution,\n  calls,\n  ROUND(CAST(calls AS DECIMAL) / total * 100, 2) AS pct\nFROM direct_calls, total_direct\nORDER BY calls DESC",
+      "error": null
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 5888,
+    "completion_tokens": 3706,
+    "total_tokens": 9594
+  },
+  "request": {
+    "question": "What share of direct call sites could the static analysis resolve, by resolution kind?\n\nHint: Direct call sites have call_kind 'direct'; callback rows are references passed as arguments and are not call sites.\n\nRequested output columns: resolution (string), calls (integer), pct (number). Order the rows as the question asks.",
+    "arm": "schema_model",
+    "model": "nvidia/nemotron-3.5-lightning-30b-a3b"
+  },
+  "events": [
+    {
+      "type": "result",
+      "answer": {
+        "response": "The query isolates all direct call sites (call_kind = 'direct'), groups them by resolution kind, counts the calls per kind, and computes each kind's proportional share of the total direct call volume. Callback rows are excluded as they are references passed as arguments, not call sites. Results are ordered by call count descending to highlight the most common resolution categories.",
+        "sql_code": "WITH direct_calls AS (\n  SELECT resolution, COUNT(*) AS calls\n  FROM code.calls\n  WHERE call_kind = 'direct'\n  GROUP BY resolution\n),\ntotal_direct AS (\n  SELECT COUNT(*) AS total\n  FROM code.calls\n  WHERE call_kind = 'direct'\n)\nSELECT\n  resolution,\n  calls,\n  ROUND(CAST(calls AS DECIMAL) / total * 100, 2) AS pct\nFROM direct_calls, total_direct\nORDER BY calls DESC",
+        "sql_response_from_db": [
+          {
+            "resolution": "dynamic_attribute",
+            "calls": 11691,
+            "pct": 37.78
+          },
+          {
+            "resolution": "external",
+            "calls": 5371,
+            "pct": 17.35
+          },
+          {
+            "resolution": "imported",
+            "calls": 4850,
+            "pct": 15.67
+          },
+          {
+            "resolution": "same_file",
+            "calls": 4336,
+            "pct": 14.01
+          },
+          {
+            "resolution": "builtin",
+            "calls": 4119,
+            "pct": 13.31
+          },
+          {
+            "resolution": "unresolved",
+            "calls": 340,
+            "pct": 1.1
+          },
+          {
+            "resolution": "method_on_self",
+            "calls": 242,
+            "pct": 0.78
+          }
+        ]
+      }
+    }
+  ]
+}

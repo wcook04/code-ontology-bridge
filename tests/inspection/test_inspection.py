@@ -39,17 +39,19 @@ def request(app, path="/api/v1", query="", method="GET", **extra):
     return result
 
 
-def test_retained_example_joins_and_review(api):
+def test_retained_example_joins_and_scores(api):
     overview = api.query("/api/v1/overview", {})
     assert overview["summary"]["row_counts"]["files"] == 473
     assert overview["summary"]["row_counts"]["symbols"] == 5319
-    assert overview["evidence"]["review"]["rows_and_substantive_prose"] == 20
+    assert overview["evidence"]["review"] is None
+    assert overview["evidence"]["score"]["strict_rows_pass"] == 22
     q11 = api.query("/api/v1/questions/11", {})
     assert "backwards" in q11["request"]["evidence"]
     assert "Requested output columns" in q11["request"]["question"]
     assert len(q11["result_tables"][0]) == 4
     assert "thoughts" not in q11 and "events" not in q11
-    assert api.query("/api/v1/questions/14", {})["review_finding"]["prose"] == "fail"
+    q2 = api.query("/api/v1/questions/2", {})
+    assert q2["answer"] == "Purple" and q2["review_finding"] is None
 
 
 def test_graph_matches_saved_q11_and_keeps_callback(api):

@@ -1,21 +1,24 @@
 # Capabilities and remaining work
 
-The bridge exports a Python source map, imports it into Auto Ontology and lets its database agent query the resulting rows. The [fresh complete evaluation](examples/auto-ontology/live/RESULTS.md) matched 21/22 reference tables; 20 also had substantive explanations. This file tracks current limits. Earlier development observations remain in Git history.
+The bridge exports a Python source map, imports it into Auto Ontology and lets its database agent query the resulting rows. The [three-arm comparison](examples/auto-ontology/live/RESULTS.md) measured what the exported semantic model and Auto Ontology each add, with two models on 22 development and 16 held-out questions. This file tracks current limits. Earlier development observations remain in Git history.
 
 ## Current evaluation limits
 
 | Issue | Evidence | Remaining work |
 | --- | --- | --- |
-| Package-name ambiguity | [Q2](examples/auto-ontology/live/current/responses/10i_ask_with_key/ask_q2.json) matches two packages with `%semantic%`, where the reference identifies one. | Better grounding of informal names to complete package identities; evaluate on independent questions. |
-| Prose can still be a stub | [Q14](examples/auto-ontology/live/current/responses/10i_ask_with_key/ask_q14.json) has correct rows but only “thought” as its explanation. | Response validation must examine substance; a finite placeholder list is insufficient. The [review](examples/auto-ontology/live/current/review.json) records this miss. |
-| Development-set evidence | Questions, hints and output guidance informed implementation. | Freeze a held-out set, add another repository and compare semantic context with schema-only querying. No general accuracy advantage has been measured. |
-| Upstream benchmark not run | Exports and compatibility tests use NVIDIA's dataset contracts. | The full schema-only versus semantic-layer benchmark remains separate from the live demonstration. |
+| Author-written questions, one repository | All 38 questions and reference queries were written by the author, about Auto Ontology's own code. | Questions written by someone else; a second repository. |
+| One run per arm | Each arm ran each set once; 16 held-out questions is a small sample. | Repeated runs to estimate run-to-run variation. |
+| Ambiguous wording | Held-out [Q101](examples/auto-ontology/live/experiment/deepseek/auto_ontology-heldout/responses/ask_q101.json) says "functions or methods"; Auto Ontology excluded a constructor call the reference counts. | Questions reviewed for a single reading before the next freeze. |
+| Prose can be a stub | Development [Q2](examples/auto-ontology/live/current/responses/10i_ask_with_key/ask_q2.json) has correct rows and the explanation "Purple". | Response validation that examines substance; a finite placeholder list is insufficient. |
+| Schema-qualification errors | Twelve of 22 first queries in the DeepSeek development run omitted the `code.` schema and needed a repair. | Report upstream; the catalog could give qualified names. |
+| No Nemotron held-out result inside Auto Ontology | The runner sent Nemotron through the OpenAI-compatible client, which cannot switch reasoning off; the amended runs through ChatNVIDIA were rate-limited by the NVIDIA API ([discarded runs](examples/auto-ontology/live/experiment/discarded.txt)). | Repeat both Nemotron arm C runs through ChatNVIDIA on a key with a higher rate limit. |
+| Upstream benchmark not run | Exports and compatibility tests use NVIDIA's dataset contracts. | Run NVIDIA's own benchmark harness on the exported dataset. |
 
-The final run is retained as collected. Its score is not raised by selecting earlier answers or by changing references after evaluation.
+Every run is retained as collected. No question was asked again, and no reference changed after a run.
 
 ## Source-analysis limits
 
-The extractor is static. Imports bind only in the function, method or class that contains them, and calls inside a nested function count for the enclosing function only when it runs that nested function; both were corrected after the recorded run. It misses dynamic calls, omits module-level calls from the call table, and records callback references without proving they execute. Only 9,442 of 31,178 direct call sites in the example resolve to an internal symbol. The 349 rows labelled `unresolved` are a residual category, not all unresolved behavior: 11,794 more are dynamic attribute calls. Test links are associations based on imports and filenames, not coverage. Missing descriptions stay empty.
+The extractor is static. Imports bind only in the function, method or class that contains them, and calls inside a nested function count for the enclosing function only when it runs that nested function; both were corrected, and the database rebuilt, before the comparison ran. It misses dynamic calls, omits module-level calls from the call table, and records callback references without proving they execute. Only 9,442 of 31,178 direct call sites in the example resolve to an internal symbol. The 349 rows labelled `unresolved` are a residual category, not all unresolved behavior: 11,794 more are dynamic attribute calls. Test links are associations based on imports and filenames, not coverage. Missing descriptions stay empty.
 
 Repeated qualified definitions now receive line-qualified IDs, preserving property getter/setter ownership; ambiguous targets remain unresolved. See the [extractor](code_ontology_bridge/codemap/) and [tests](tests/codemap/). This repair does not make static resolution complete for arbitrary Python programs.
 

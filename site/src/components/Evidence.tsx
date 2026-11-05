@@ -122,15 +122,17 @@ export function AssessmentBlock({ assessment, score, finding }: { assessment: As
           {score.order_matches ? "" : ", order differed"}.
         </p>
       </div>
-      <div className="assess__item">
-        <p className="assess__head">
-          Prose review <ProseStatus value={assessment.prose_review} />
-        </p>
-        <p className="small">
-          The author read the written answer{assessment.review_method === "author_review_not_blinded" ? " (not a blinded review)" : ""}
-          {assessment.review_basis === "documented_aggregate" ? "; recorded as part of the run’s overall count." : "; recorded as an individual finding."}
-        </p>
-      </div>
+      {assessment.review_method === "not_supplied" ? null : (
+        <div className="assess__item">
+          <p className="assess__head">
+            Prose review <ProseStatus value={assessment.prose_review} />
+          </p>
+          <p className="small">
+            The author read the written answer{assessment.review_method === "author_review_not_blinded" ? " (not a blinded review)" : ""}
+            {assessment.review_basis === "documented_aggregate" ? "; recorded as part of the run’s overall count." : "; recorded as an individual finding."}
+          </p>
+        </div>
+      )}
       {finding ? (
         <div className="assess__finding">
           <p className="assess__head">What the author found</p>

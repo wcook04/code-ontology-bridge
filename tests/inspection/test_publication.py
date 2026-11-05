@@ -66,9 +66,8 @@ def test_frozen_model_readback_and_request_preserved(bundle):
         final = next(e["answer"] for e in original["events"] if e.get("type") == "result")
         assert q["result_tables"] == [json.loads(t) for t in final["sql_response_from_db"]]
         assert "thoughts" not in encode(q).decode()
-    assert bundle["evidence"]["binding"]["dataset_match"] == "not_captured"
-    assert bundle["evidence"]["questions"][13]["assessment"]["prose_review"] == "fail"
-    assert bundle["evidence"]["questions"][1]["assessment"]["table_match"] == "fail"
+    assert bundle["evidence"]["binding"]["dataset_match"] == "verified"
+    assert all(q["assessment"]["table_match"] == "pass" for q in bundle["evidence"]["questions"])
 
 
 def test_q11_presets_links_and_occurrence_location(bundle):
@@ -124,10 +123,10 @@ def test_missing_review_unknown_and_new_digest_binding(tmp_path, bundle):
     evidence = tmp_path / "run"
     shutil.copytree(EVIDENCE, evidence)
     hashes = json.loads((evidence / "artifacts.json").read_text())
-    del hashes["files"]["review.json"]
+    hashes["files"].pop("review.json", None)
     (evidence / "artifacts.json").write_bytes(encode(hashes))
-    (evidence / "review.json").unlink()
-    loaded = load_evidence(evidence, bundle["snapshot"]["commit_sha"])
+    (evidence / "review.json").unlink(missing_ok=True)
+    loaded = load_evidence(evidence, bundle["snapshot"]["commit_sha"], bundle["dataset"]["sha256"])
     assert all(q["assessment"]["prose_review"] == "unknown" for q in loaded["questions"])
     manifest = json.loads((evidence / "manifest.json").read_text())
     manifest["dataset_sha256"] = bundle["dataset"]["sha256"]

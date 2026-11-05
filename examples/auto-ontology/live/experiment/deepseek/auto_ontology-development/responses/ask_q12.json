@@ -1,0 +1,195 @@
+{
+  "request": {
+    "question": "Which packages under auto_ontology have the most lines of non-test code? Give the top five.\n\nRequested output columns: package (string), lines (integer).\nReturn every requested field using exactly its specified column alias. Preserve complete case-sensitive repository-relative paths and symbol IDs; do not substitute display names. Include all requested counts and provenance fields. Explain the query result in ordinary prose; do not emit placeholder text. These questions concern a static map of open-source Python code. Describe what the query computes and the assumptions it makes; the returned rows are reported separately. Questions asking which files, modules or symbols mean distinct identities, not one repeated row per matching import or call occurrence; preserve occurrence counts only when requested. Caller/callee graph questions include methods as well as standalone functions unless a symbol kind is explicitly restricted. Use files.is_test for test-file classification; test_links describe associations, not the complete set of test files. Use DOUBLE or DECIMAL, rather than single-precision REAL, for percentage calculations.\nReturn each package and its total line count. Order by lines descending, then package ascending.",
+    "evidence": "Package is the dotted package of each file.",
+    "calculation_only": true
+  },
+  "status": 200,
+  "elapsed_s": 90.9,
+  "events": [
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "question_intent",
+      "thought": null,
+      "label": "Classifying the question"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "question_intent",
+      "thought": null,
+      "label": "Classifying the question"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "question_extraction",
+      "thought": null,
+      "label": "Understanding the question"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "question_extraction",
+      "thought": null,
+      "label": "Understanding the question"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "retrieve_candidates",
+      "thought": null,
+      "label": "Retrieving candidates"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "retrieve_candidates",
+      "thought": null,
+      "label": "Retrieving candidates"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "prepare_candidates",
+      "thought": null,
+      "label": "Preparing candidates"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "prepare_candidates",
+      "thought": "The question only needs non-test files aggregated by package: `auto_ontology_code.code.files` supplies `package`, `is_test`, and `line_count`, so the query can filter `is_test = false`, group by `package`, and sum `line_count` as `lines`. No other table provides package-level line counts, and none is needed to scope rows to non-test files.",
+      "label": "Preparing candidates"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "refine_evidence",
+      "thought": null,
+      "label": "Refining evidence"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "refine_evidence",
+      "thought": "No string representation, constant value, or predicate operator repair is certain from the supplied question, evidence, or value anchors. The existing question and evidence are consistent.",
+      "label": "Refining evidence"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "construct_sql_from_candidates",
+      "thought": null,
+      "label": "Constructing SQL"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "construct_sql_from_candidates",
+      "thought": "Aggregate file line counts by package, keeping only non-test files. Mapping from the evidence: `package` is the dotted package of each file (\"code\".\"files\".\"package\"), and test classification uses `files.is_test` (test_links are associations only, so not used). \"Lines of non-test code\" is computed as SUM(line_count) over files where is_test is false, because line_count is the per-file line total. Assumptions: (1) scope — the entire static map is the auto_ontology repository, so \"under auto_ontology\" needs no extra package-name prefix filter; rows with an empty package are excluded because the column description says empty means a top-level module, which is not a package. (2) zero/missing — no zero coercion and no division is used, so packages with no non-test files simply do not appear (there is nothing to sum). (3) ties — ranking ties in total lines are broken by package name ascending, as the request specifies. LIMIT 5 comes from the request for the top five.",
+      "label": "Constructing SQL"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "validate_sql_query",
+      "thought": null,
+      "label": "Validating SQL and intent"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "validate_sql_query",
+      "thought": "The query directly answers the question from the `files` table by grouping on `package`, summing `line_count`, excluding test files via `is_test = false`, and ordering by total lines descending then package ascending with `LIMIT 5`. This matches the requested output columns (`package`, `lines`) and the normalized retrieval requirements. No joins are used, so there are no nonsensical join issues. `SUM(line_count)` is the correct aggregation for total lines of code. The `package <> ''` condition is a reasonable exclusion of the top-level/empty package and does not conflict with the authoritative evidence. No percentage calculation is involved, so the DOUBLE/DECIMAL instruction is not applicable.",
+      "label": "Validating SQL and intent"
+    },
+    {
+      "type": "sql",
+      "node": "validate_sql_query",
+      "sql": "SELECT package AS package, SUM(line_count) AS lines FROM auto_ontology_code.code.files WHERE is_test = false AND package <> '' GROUP BY package ORDER BY lines DESC, package ASC LIMIT 5"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "execute_sql_query",
+      "thought": null,
+      "label": "Executing SQL"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "execute_sql_query",
+      "thought": null,
+      "label": "Executing SQL"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "check_empty_like_result",
+      "thought": null,
+      "label": "Checking results"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "check_empty_like_result",
+      "thought": null,
+      "label": "Checking results"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "check_value_repair",
+      "thought": null,
+      "label": "Checking values"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "check_value_repair",
+      "thought": null,
+      "label": "Checking values"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "format_and_respond",
+      "thought": null,
+      "label": "Formatting response"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "format_and_respond",
+      "thought": null,
+      "label": "Formatting response"
+    },
+    {
+      "type": "result",
+      "answer": {
+        "response": "This query totals the number of lines in non-test files for each package. It reads the file inventory, keeps only files that are not marked as tests and that belong to an actual package (top-level modules with no package are left out), sums each file's line count per package, and then ranks packages from the largest total to the smallest, breaking ties alphabetically by package name and returning only the top five.",
+        "sql_code": "SELECT package AS package, SUM(line_count) AS lines FROM auto_ontology_code.code.files WHERE is_test = false AND package <> '' GROUP BY package ORDER BY lines DESC, package ASC LIMIT 5",
+        "sql_columns": [
+          "8a982af1-d0ff-4039-a4a0-f5fabfeae37a",
+          "a73d1ecc-6570-4e89-9d23-fbf326577d83",
+          "4aefaeb1-bce4-49ad-bc8b-4342b8dddb36"
+        ],
+        "custom_analyses_used": [],
+        "sql_response_from_db": [
+          "[{\"package\":\"auto_ontology.dal\",\"lines\":16959.0},{\"package\":\"auto_ontology.retrieval.text_to_sql.agents\",\"lines\":9816.0},{\"package\":\"auto_ontology.connectors\",\"lines\":6796.0},{\"package\":\"auto_ontology.retrieval.text_to_sql\",\"lines\":4875.0},{\"package\":\"auto_ontology.semantic\",\"lines\":4825.0}]"
+        ],
+        "thoughts": "- Preparing candidates: The question groups non-test code by package and returns package names, so the primary column attribute is the dotted package of each file: code.files.package.\n- Preparing candidates: The question only needs non-test files aggregated by package: `auto_ontology_code.code.files` supplies `package`, `is_test`, and `line_count`, so the query can filter `is_test = false`, group by `package`, and sum `line_count` as `lines`. No other table provides package-level line counts, and none is needed to scope rows to non-test files.\n- Refining evidence: Rebuild the full evidence and question with the supplied qualified column references for the code corpus. Apply the table mappings directly to the natural‑language package field and test‑file classification, leaving all other columns and constraints unchanged.\n- Refining evidence: No string representation, constant value, or predicate operator repair is certain from the supplied question, evidence, or value anchors. The existing question and evidence are consistent.\n- Constructing SQL: Aggregate file line counts by package, keeping only non-test files. Mapping from the evidence: `package` is the dotted package of each file (\"code\".\"files\".\"package\"), and test classification uses `files.is_test` (test_links are associations only, so not used). \"Lines of non-test code\" is computed as SUM(line_count) over files where is_test is false, because line_count is the per-file line total. Assumptions: (1) scope — the entire static map is the auto_ontology repository, so \"under auto_ontology\" needs no extra package-name prefix filter; rows with an empty package are excluded because the column description says empty means a top-level module, which is not a package. (2) zero/missing — no zero coercion and no division is used, so packages with no non-test files simply do not appear (there is nothing to sum). (3) ties — ranking ties in total lines are broken by package name ascending, as the request specifies. LIMIT 5 comes from the request for the top five.\n- Validating SQL and intent: The query directly answers the question from the `files` table by grouping on `package`, summing `line_count`, excluding test files via `is_test = false`, and ordering by total lines descending then package ascending with `LIMIT 5`. This matches the requested output columns (`package`, `lines`) and the normalized retrieval requirements. No joins are used, so there are no nonsensical join issues. `SUM(line_count)` is the correct aggregation for total lines of code. The `package <> ''` condition is a reasonable exclusion of the top-level/empty package and does not conflict with the authoritative evidence. No percentage calculation is involved, so the DOUBLE/DECIMAL instruction is not applicable."
+      }
+    }
+  ],
+  "question_id": 12,
+  "gold_sql": "SELECT package, SUM(line_count) AS lines\nFROM code.files\nWHERE package LIKE 'auto_ontology%' AND NOT is_test\nGROUP BY package\nORDER BY lines DESC, package\nLIMIT 5;",
+  "gold_row_count": 5,
+  "agent_sql": "SELECT package AS package, SUM(line_count) AS lines FROM auto_ontology_code.code.files WHERE is_test = false AND package <> '' GROUP BY package ORDER BY lines DESC, package ASC LIMIT 5",
+  "agent_answer": "This query totals the number of lines in non-test files for each package. It reads the file inventory, keeps only files that are not marked as tests and that belong to an actual package (top-level modules with no package are left out), sums each file's line count per package, and then ranks packages from the largest total to the smallest, breaking ties alphabetically by package name and returning only the top five.",
+  "agent_row_count": 5,
+  "correct_rows": true,
+  "error": null
+}

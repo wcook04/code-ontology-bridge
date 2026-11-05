@@ -1,0 +1,47 @@
+{
+  "question_id": 109,
+  "status": 200,
+  "error": null,
+  "elapsed_s": 6.8,
+  "attempts": [
+    {
+      "sql": "SELECT s.symbol_id AS symbol_id, COUNT(DISTINCT c.caller_symbol_id)::INTEGER AS callers FROM code.symbols s JOIN code.files f ON f.file_id = s.file_id JOIN code.calls c ON c.callee_symbol_id = s.symbol_id JOIN code.symbols caller_s ON caller_s.symbol_id = c.caller_symbol_id JOIN code.files caller_f ON caller_f.file_id = caller_s.file_id WHERE f.is_test = FALSE AND caller_f.is_test = FALSE AND s.is_public = TRUE AND s.kind IN ('function', 'method') AND (f.file_id LIKE 'auto_ontology/dal/%' OR f.package = 'auto_ontology/dal' OR f.package LIKE 'auto_ontology.dal%') GROUP BY s.symbol_id HAVING COUNT(DISTINCT c.caller_symbol_id) > 20 ORDER BY callers DESC, s.symbol_id",
+      "error": null
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 692,
+    "completion_tokens": 2041,
+    "total_tokens": 2733,
+    "cost": 0.0026568,
+    "is_byok": 0
+  },
+  "request": {
+    "question": "Which public functions or methods in non-test files of auto_ontology/dal are called directly by more than 20 distinct callers outside the tests? Give each one's number of distinct callers.\n\nRequested output columns: symbol_id (string), callers (integer). Order the rows as the question asks.",
+    "arm": "schema",
+    "model": "deepseek/deepseek-v4.1-flash-1017"
+  },
+  "events": [
+    {
+      "type": "result",
+      "answer": {
+        "response": "This query finds public functions and methods defined in non-test files under auto_ontology/dal, then counts the distinct non-test caller symbols that directly call each one. It keeps only symbols with more than 20 distinct outside-test callers and orders them by caller count descending, then symbol_id.",
+        "sql_code": "SELECT s.symbol_id AS symbol_id, COUNT(DISTINCT c.caller_symbol_id)::INTEGER AS callers FROM code.symbols s JOIN code.files f ON f.file_id = s.file_id JOIN code.calls c ON c.callee_symbol_id = s.symbol_id JOIN code.symbols caller_s ON caller_s.symbol_id = c.caller_symbol_id JOIN code.files caller_f ON caller_f.file_id = caller_s.file_id WHERE f.is_test = FALSE AND caller_f.is_test = FALSE AND s.is_public = TRUE AND s.kind IN ('function', 'method') AND (f.file_id LIKE 'auto_ontology/dal/%' OR f.package = 'auto_ontology/dal' OR f.package LIKE 'auto_ontology.dal%') GROUP BY s.symbol_id HAVING COUNT(DISTINCT c.caller_symbol_id) > 20 ORDER BY callers DESC, s.symbol_id",
+        "sql_response_from_db": [
+          {
+            "symbol_id": "auto_ontology/dal/session.py::store",
+            "callers": 242
+          },
+          {
+            "symbol_id": "auto_ontology/dal/session.py::write_transaction",
+            "callers": 32
+          },
+          {
+            "symbol_id": "auto_ontology/dal/users.py::resolve_accessible_catalog_ids",
+            "callers": 24
+          }
+        ]
+      }
+    }
+  ]
+}

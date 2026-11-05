@@ -1,0 +1,39 @@
+{
+  "question_id": 22,
+  "status": 200,
+  "error": null,
+  "elapsed_s": 5.1,
+  "attempts": [
+    {
+      "sql": "SELECT s.symbol_id, COUNT(DISTINCT sub.symbol_id)::INTEGER AS subclasses\nFROM code.symbols s\nJOIN code.class_bases cb ON cb.base_symbol_id = s.symbol_id\nJOIN code.symbols sub ON sub.symbol_id = cb.class_symbol_id\nJOIN code.files sf ON sf.file_id = sub.file_id\nWHERE s.kind = 'class'\n  AND s.is_public\n  AND s.file_id LIKE 'auto_ontology/connectors/%'\n  AND sf.is_test = FALSE\n  AND sub.symbol_id <> s.symbol_id\n  AND NOT EXISTS (\n    SELECT 1\n    FROM code.calls c\n    WHERE c.callee_symbol_id = s.symbol_id\n      AND c.call_kind = 'direct'\n  )\nGROUP BY s.symbol_id\nHAVING COUNT(DISTINCT sub.symbol_id) > 0\nORDER BY s.symbol_id",
+      "error": null
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 2882,
+    "completion_tokens": 1399,
+    "total_tokens": 4281,
+    "cost": 0.000977298,
+    "is_byok": 0
+  },
+  "request": {
+    "question": "Which public classes in auto_ontology/connectors are used only as base classes: subclassed by other non-test classes but never constructed by a resolved call? Give the number of non-test subclasses of each.\n\nHint: code.class_bases records the base classes named in each class statement; base_symbol_id is the internal class a base resolves to. Calling a class name creates an instance.\n\nRequested output columns: symbol_id (string), subclasses (integer).",
+    "arm": "schema_model",
+    "model": "deepseek/deepseek-v4.1-flash-1017"
+  },
+  "events": [
+    {
+      "type": "result",
+      "answer": {
+        "response": "The query finds public class symbols defined under auto_ontology/connectors that are named as a resolved base class by at least one non-test class. It excludes any class that is the target of a resolved direct call, treating such a call as construction, and counts the distinct non-test subclass symbols for each remaining base class.",
+        "sql_code": "SELECT s.symbol_id, COUNT(DISTINCT sub.symbol_id)::INTEGER AS subclasses\nFROM code.symbols s\nJOIN code.class_bases cb ON cb.base_symbol_id = s.symbol_id\nJOIN code.symbols sub ON sub.symbol_id = cb.class_symbol_id\nJOIN code.files sf ON sf.file_id = sub.file_id\nWHERE s.kind = 'class'\n  AND s.is_public\n  AND s.file_id LIKE 'auto_ontology/connectors/%'\n  AND sf.is_test = FALSE\n  AND sub.symbol_id <> s.symbol_id\n  AND NOT EXISTS (\n    SELECT 1\n    FROM code.calls c\n    WHERE c.callee_symbol_id = s.symbol_id\n      AND c.call_kind = 'direct'\n  )\nGROUP BY s.symbol_id\nHAVING COUNT(DISTINCT sub.symbol_id) > 0\nORDER BY s.symbol_id",
+        "sql_response_from_db": [
+          {
+            "symbol_id": "auto_ontology/connectors/base.py::SQLDatabase",
+            "subclasses": 10
+          }
+        ]
+      }
+    }
+  ]
+}

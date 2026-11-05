@@ -1,0 +1,65 @@
+{
+  "question_id": 18,
+  "status": 200,
+  "error": null,
+  "elapsed_s": 7.2,
+  "attempts": [
+    {
+      "sql": "SELECT\n  f.package AS package,\n  COUNT(*)::INTEGER AS public_symbols,\n  COUNT(*) FILTER (WHERE s.summary_source = 'none')::INTEGER AS undocumented,\n  (100.0 * COUNT(*) FILTER (WHERE s.summary_source = 'none') / COUNT(*))::DOUBLE AS pct_undocumented\nFROM code.symbols s\nJOIN code.files f ON f.file_id = s.file_id\nWHERE s.is_public\n  AND NOT f.is_test\nGROUP BY f.package\nHAVING COUNT(*) >= 20\nORDER BY pct_undocumented DESC, package ASC\nLIMIT 5;",
+      "error": null
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 712,
+    "completion_tokens": 859,
+    "total_tokens": 1571,
+    "cost": 0.000608388,
+    "is_byok": 0
+  },
+  "request": {
+    "question": "Which packages have the highest share of public symbols without a docstring? Consider packages with at least 20 public symbols outside the tests and give the top five.\n\nHint: summary_source is 'none' when a symbol has no docstring.\n\nRequested output columns: package (string), public_symbols (integer), undocumented (integer), pct_undocumented (number). Order the rows as the question asks.",
+    "arm": "schema",
+    "model": "deepseek/deepseek-v4.1-flash-1017"
+  },
+  "events": [
+    {
+      "type": "result",
+      "answer": {
+        "response": "This query joins public symbols to their files, excludes test files, and groups the remaining symbols by package. It counts all public symbols per package and those whose summary_source is 'none' as undocumented, then computes the undocumented percentage. Packages with fewer than 20 public non-test symbols are filtered out, and the five packages with the highest undocumented share are returned.",
+        "sql_code": "SELECT\n  f.package AS package,\n  COUNT(*)::INTEGER AS public_symbols,\n  COUNT(*) FILTER (WHERE s.summary_source = 'none')::INTEGER AS undocumented,\n  (100.0 * COUNT(*) FILTER (WHERE s.summary_source = 'none') / COUNT(*))::DOUBLE AS pct_undocumented\nFROM code.symbols s\nJOIN code.files f ON f.file_id = s.file_id\nWHERE s.is_public\n  AND NOT f.is_test\nGROUP BY f.package\nHAVING COUNT(*) >= 20\nORDER BY pct_undocumented DESC, package ASC\nLIMIT 5;",
+        "sql_response_from_db": [
+          {
+            "package": "auto_ontology.catalog.model",
+            "public_symbols": 47,
+            "undocumented": 43,
+            "pct_undocumented": 91.48936170212765
+          },
+          {
+            "package": "dev_tools.fixtures",
+            "public_symbols": 25,
+            "undocumented": 14,
+            "pct_undocumented": 56.0
+          },
+          {
+            "package": "auto_ontology.server.model_interchange",
+            "public_symbols": 34,
+            "undocumented": 14,
+            "pct_undocumented": 41.1764705882353
+          },
+          {
+            "package": "auto_ontology.connectors",
+            "public_symbols": 162,
+            "undocumented": 58,
+            "pct_undocumented": 35.80246913580247
+          },
+          {
+            "package": "auto_ontology.retrieval.text_to_sql.agents",
+            "public_symbols": 104,
+            "undocumented": 35,
+            "pct_undocumented": 33.65384615384615
+          }
+        ]
+      }
+    }
+  ]
+}

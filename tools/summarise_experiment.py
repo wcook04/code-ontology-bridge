@@ -54,9 +54,12 @@ def tokens(record: dict) -> int | None:
 
 def main() -> int:
     runs = json.loads(Path(sys.argv[1]).read_text())
+    notes = runs.pop("_notes", {})
     if OUT.exists():
         shutil.rmtree(OUT)
-    summary = {"protocol": "docs/experiment-protocol.md", "models": MODELS, "runs": [], "questions": {}}
+    summary = {"protocol": "docs/experiment-protocol.md", "models": MODELS, "runs": [], "questions": {}, "notes": notes,
+               "question_text": {qset: {str(q["question_id"]): q["question"] for q in json.loads(files[0].read_text())}
+                                 for qset, files in SETS.items()}}
     for key, path in sorted(runs.items()):
         model, arm, qset = key.split("/")
         run = Path(path)
@@ -88,6 +91,9 @@ def main() -> int:
             q[f"{model}/{arm}"] = {"expected_rows": result["strict_rows_pass"], "rows": result.get("agent_rows"),
                                    "reference_rows": result.get("reference_rows"), "sql_runs": counts.get(result["question_id"], (0, 0))[0]}
     (OUT / "summary.json").write_text(json.dumps(summary, indent=2) + "\n")
+    discarded = Path(sys.argv[1]).parent / "discarded/README.txt"
+    if discarded.is_file():
+        shutil.copyfile(discarded, OUT / "discarded.txt")
     for r in summary["runs"]:
         print(f"{r['model']:9} {r['arm']:14} {r['set']:12} {r['expected_rows']}/{r['questions']}  median {r['median_seconds']} s  repaired {r['requests_repaired']}")
     return 0

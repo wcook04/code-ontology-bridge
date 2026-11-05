@@ -1,0 +1,75 @@
+{
+  "question_id": 8,
+  "status": 200,
+  "error": null,
+  "elapsed_s": 2.3,
+  "attempts": [
+    {
+      "sql": "SELECT c.callee_symbol_id AS symbol_id, CAST(COUNT(*) AS INTEGER) AS call_sites FROM code.calls c JOIN code.symbols callee ON c.callee_symbol_id = callee.symbol_id JOIN code.files callee_file ON callee.file_id = callee_file.file_id JOIN code.symbols caller ON c.caller_symbol_id = caller.symbol_id JOIN code.files caller_file ON caller.file_id = caller_file.file_id WHERE c.call_kind = 'direct' AND c.callee_symbol_id IS NOT NULL AND callee.kind IN ('function', 'method') AND callee_file.is_test = FALSE AND caller_file.is_test = FALSE GROUP BY c.callee_symbol_id ORDER BY call_sites DESC, symbol_id ASC LIMIT 10",
+      "error": null
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 2864,
+    "completion_tokens": 656,
+    "total_tokens": 3520,
+    "cost": 0.000361568,
+    "is_byok": 0
+  },
+  "request": {
+    "question": "Which ten non-test functions or methods are called from the most call sites in non-test code?\n\nHint: Count resolved direct call sites (call_kind 'direct') whose caller and callee are both outside test files. Ties are broken by symbol id.\n\nRequested output columns: symbol_id (string), call_sites (integer). Order the rows as the question asks.",
+    "arm": "schema_model",
+    "model": "deepseek/deepseek-v4.1-flash-1017"
+  },
+  "events": [
+    {
+      "type": "result",
+      "answer": {
+        "response": "This query counts resolved direct call sites for each function or method callee, keeping only calls where both the caller and callee are defined in non-test files. It groups by the callee symbol id, orders by descending call-site count with symbol id as the tie-breaker, and returns the top ten.",
+        "sql_code": "SELECT c.callee_symbol_id AS symbol_id, CAST(COUNT(*) AS INTEGER) AS call_sites FROM code.calls c JOIN code.symbols callee ON c.callee_symbol_id = callee.symbol_id JOIN code.files callee_file ON callee.file_id = callee_file.file_id JOIN code.symbols caller ON c.caller_symbol_id = caller.symbol_id JOIN code.files caller_file ON caller.file_id = caller_file.file_id WHERE c.call_kind = 'direct' AND c.callee_symbol_id IS NOT NULL AND callee.kind IN ('function', 'method') AND callee_file.is_test = FALSE AND caller_file.is_test = FALSE GROUP BY c.callee_symbol_id ORDER BY call_sites DESC, symbol_id ASC LIMIT 10",
+        "sql_response_from_db": [
+          {
+            "symbol_id": "auto_ontology/dal/session.py::store",
+            "call_sites": 311
+          },
+          {
+            "symbol_id": "auto_ontology/connectors/connection_string_factory.py::_enc",
+            "call_sites": 38
+          },
+          {
+            "symbol_id": "auto_ontology/dal/session.py::write_transaction",
+            "call_sites": 32
+          },
+          {
+            "symbol_id": "auto_ontology/retrieval/text_to_sql/agents/information_tools.py::_error",
+            "call_sites": 32
+          },
+          {
+            "symbol_id": "auto_ontology/connectors/connection_string_factory.py::_require",
+            "call_sites": 30
+          },
+          {
+            "symbol_id": "auto_ontology/utils/llm_invoke.py::invoke_with_structured_output",
+            "call_sites": 29
+          },
+          {
+            "symbol_id": "auto_ontology/retrieval/kumo/graph_cache.py::_term",
+            "call_sites": 25
+          },
+          {
+            "symbol_id": "auto_ontology/dal/users.py::resolve_accessible_catalog_ids",
+            "call_sites": 24
+          },
+          {
+            "symbol_id": "auto_ontology/retrieval/text_to_sql/base.py::agent_wrapper",
+            "call_sites": 21
+          },
+          {
+            "symbol_id": "auto_ontology/retrieval/text_to_sql/text_to_sql_graph.py::_make_node",
+            "call_sites": 18
+          }
+        ]
+      }
+    }
+  ]
+}

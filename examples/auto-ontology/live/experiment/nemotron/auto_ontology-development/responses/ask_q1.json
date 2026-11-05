@@ -1,0 +1,310 @@
+{
+  "request": {
+    "question": "Which functions call upsert_table_term?\n\nRequested output columns: caller_symbol_id (string).\nReturn every requested field using exactly its specified column alias. Preserve complete case-sensitive repository-relative paths and symbol IDs; do not substitute display names. Include all requested counts and provenance fields. Explain the query result in ordinary prose; do not emit placeholder text. These questions concern a static map of open-source Python code. Describe what the query computes and the assumptions it makes; the returned rows are reported separately. Questions asking which files, modules or symbols mean distinct identities, not one repeated row per matching import or call occurrence; preserve occurrence counts only when requested. Caller/callee graph questions include methods as well as standalone functions unless a symbol kind is explicitly restricted. Use files.is_test for test-file classification; test_links describe associations, not the complete set of test files. Use DOUBLE or DECIMAL, rather than single-precision REAL, for percentage calculations.",
+    "evidence": "A call's callee_symbol_id is set only when the callee was resolved; call_kind 'callback' rows are places where the function is passed by reference to another call. The function is defined in auto_ontology/dal/terms.py.",
+    "calculation_only": true
+  },
+  "status": 200,
+  "elapsed_s": 2053.6,
+  "events": [
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "question_intent",
+      "thought": null,
+      "label": "Classifying the question"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "question_intent",
+      "thought": null,
+      "label": "Classifying the question"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "question_extraction",
+      "thought": null,
+      "label": "Understanding the question"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "question_extraction",
+      "thought": null,
+      "label": "Understanding the question"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "retrieve_candidates",
+      "thought": null,
+      "label": "Retrieving candidates"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "retrieve_candidates",
+      "thought": null,
+      "label": "Retrieving candidates"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "prepare_candidates",
+      "thought": null,
+      "label": "Preparing candidates"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "prepare_candidates",
+      "thought": "The question asks for the `caller_symbol_id` of every function that calls `upsert_table_term`. The `calls` table stores both `caller_symbol_id` and the callee identifier (`callee_name`/`callee_symbol_id`), so it alone can filter for calls to `upsert_table_term` and return the required column. None of the other candidate tables provide a column needed in the answer, and removing them does not change which rows from `calls` qualify because no join or filter references those tables.",
+      "label": "Preparing candidates"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "refine_evidence",
+      "thought": null,
+      "label": "Refining evidence"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "refine_evidence",
+      "thought": "The sanitized question and the single piece of evidence (line 1) contain no factual errors regarding stored string representations, scalar constants, or predicate operators that can be anchored to the database schema or column sample values. The evidence describes the `calls` table structure and `callee_symbol_id`/`callee_name` semantics, but provides no sample values for `callee_name` or `callee_symbol_id` that would allow verification of `upsert_table_term`. The question's instructional statements (e.g., about `DOUBLE`/`DECIMAL`, `files.is_test`, occurrence counting) are general guidelines, not anchored values requiring correction. No certain mistakes were identified that fall under the allowed repairs (string_representation, constant_value, predicate_operator). Therefore, no repairs apply, and the question is returned unchanged.",
+      "label": "Refining evidence"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "construct_sql_from_candidates",
+      "thought": null,
+      "label": "Constructing SQL"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "construct_sql_from_candidates",
+      "thought": "The query filters the `calls` table for rows where `callee_name` equals 'upsert_table_term' and returns the distinct `caller_symbol_id` values. Assumption: each unique `caller_symbol_id` represents a distinct function, so DISTINCT is used to avoid duplicate rows from multiple call occurrences. The `calls` table alone is sufficient as it contains both `caller_symbol_id` and `callee_name`. No joins are needed. No test-file filtering is applied since the question doesn't mention test files. All call kinds (direct and callback) are included since the question doesn't restrict by call_kind.",
+      "label": "Constructing SQL"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "validate_sql_query",
+      "thought": null,
+      "label": "Validating SQL and intent"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "validate_sql_query",
+      "thought": "The generated SQL query `SELECT DISTINCT caller_symbol_id FROM auto_ontology_code.code.calls WHERE callee_name = 'upsert_table_term'` correctly answers the question 'Which functions call upsert_table_term?' by finding all rows in the calls table where the callee_name matches 'upsert_table_term' and returning the caller_symbol_id.\n\nCritical issue check:\n1. **Joins**: None are used, and the query is a simple direct selection from the calls table. No join-related critical issues.\n2. **Aggregations**: None are used. No aggregation-related critical issues.\n3. **Evidence compliance**: The authoritative evidence describes the data model ('A call's callee_symbol_id is set only when the callee was resolved; call_kind \\'callback\\' rows are places where the function is passed by reference to another call. The function is defined in auto_ontology/dal/terms.py') but does not prescribe specific query columns, filters, or formulas. The query uses `callee_name` — a verified column in the calls table — to filter for the target function, which is the appropriate approach. The evidence's descriptive statements about when callee_symbol_id is set or where the function is defined do not constitute mandatory query requirements. The query correctly uses the requested column alias `caller_symbol_id` and `SELECT DISTINCT` aligns with the instruction that distinct identities should not produce repeated rows.\n4. **Authoritative join paths**: The query has no joins, so these are not applicable.\n5. **Domain-specific custom analyses**: No SQL patterns from custom analyses conflict with or flag the generated query.\n\nThe query is valid with no critical issues. It reasonably answers the question using the correct table and column, with proper filtering and deduplication.",
+      "label": "Validating SQL and intent"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "reconstruct_sql",
+      "thought": null,
+      "label": "Reconstructing SQL"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "reconstruct_sql",
+      "thought": "LLM analysis returned None — defaulting to fixable.",
+      "label": "Reconstructing SQL"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "validate_sql_query",
+      "thought": null,
+      "label": "Validating SQL and intent"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "validate_sql_query",
+      "thought": null,
+      "label": "Validating SQL and intent"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "unconstructable_sql_response",
+      "thought": null,
+      "label": "SQL could not be constructed"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "unconstructable_sql_response",
+      "thought": null,
+      "label": "SQL could not be constructed"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "question_intent",
+      "thought": null,
+      "label": "Classifying the question"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "question_intent",
+      "thought": null,
+      "label": "Classifying the question"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "question_extraction",
+      "thought": null,
+      "label": "Understanding the question"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "question_extraction",
+      "thought": null,
+      "label": "Understanding the question"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "retrieve_candidates",
+      "thought": null,
+      "label": "Retrieving candidates"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "retrieve_candidates",
+      "thought": null,
+      "label": "Retrieving candidates"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "prepare_candidates",
+      "thought": null,
+      "label": "Preparing candidates"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "prepare_candidates",
+      "thought": "The query seeks distinct repository-relative caller symbol IDs for all functions/methods that call `upsert_table_term`. The `calls` table is the direct source of caller-callee edges via `caller_symbol_id` and `callee_symbol_id`. Tables that provide only aggregated counts, class hierarchy data, or metadata not involved in the call‑graph topology can be excluded if they add no filtering column and their removal does not alter which caller rows satisfy the callee match.",
+      "label": "Preparing candidates"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "refine_evidence",
+      "thought": null,
+      "label": "Refining evidence"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "refine_evidence",
+      "thought": "The sanitized question 'Which functions call upsert_table_term?' contains no string representation errors, no mistaken scalar constants, and no predicate operators that are unquestionably wrong relative to the provided evidence. The evidence line 1 describes call resolution and callback semantics without any stored-value anchors or sample values that conflict with the question. No repairs are required under the allowed repair categories (string_representation, constant_value, predicate_operator). The question is already valid with respect to the evidence.",
+      "label": "Refining evidence"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "construct_sql_from_candidates",
+      "thought": null,
+      "label": "Constructing SQL"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "construct_sql_from_candidates",
+      "thought": "I'm starting from the `calls` table since it contains the caller-callee edges via `caller_symbol_id` and `callee_symbol_id`. The question asks which functions call `upsert_table_term`, so I filter on `callee_name = 'upsert_table_term'` based on the schema description of callee_name as \"Callee as written at the call site\". I use DISTINCT because the question asks for distinct function identities (\"which functions\") rather than one row per call occurrence, per the rule that questions asking which files/symbols/modules mean distinct identities. I project only `caller_symbol_id` as the explicitly requested column. Assumptions: (1) callee_name contains the literal string \"upsert_table_term\" for calls to that function, per the column description; (2) caller_symbol_id is always non-null (schema is_nullable: false); (3) no test-file filtering is needed since the question doesn't mention it; (4) no time window filter applies since no period is specified; (5) DISTINCT is appropriate here because the question type explicitly asks for distinct identities, not because of FK fan-out.",
+      "label": "Constructing SQL"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "validate_sql_query",
+      "thought": null,
+      "label": "Validating SQL and intent"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "validate_sql_query",
+      "thought": "1. **Joins** – The generated SQL contains no joins; it only queries the single table `auto_ontology_code.code.calls`. There are no nonsensical or broken joins, and the absence of joins does not prevent the query from answering the question. 2. **Aggregations** – No aggregations are used; the question asks for caller identifiers, not counts or sums, so this is not an issue. 3. **Evidence compliance** – The SQL uses the exact table `auto_ontology_code.code.calls` and the column `callee_name` with the filter `= 'upsert_table_term'`, which matches the listed used SQL objects (`callee_name` and `caller_symbol_id`). The evidence statements describe background semantics (e.g., `callee_symbol_id` set only when resolved, callback handling) but do not impose mandatory filters or formula substitutions on this query. The query’s `WHERE callee_name = 'upsert_table_term'` correctly targets the intended callee, and the selected column `caller_symbol_id` is the requested output. 4. **Overall assessment** – The SQL is syntactically sound, references only the allowed table and columns, and directly answers “Which functions call upsert_table_term?” by returning the caller symbol IDs. There are no serious, critical problems that would render the query unusable. The query could reasonably work on the described schema. Therefore, the SQL is **VALID**.",
+      "label": "Validating SQL and intent"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "reconstruct_sql",
+      "thought": null,
+      "label": "Reconstructing SQL"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "reconstruct_sql",
+      "thought": "LLM analysis returned None — defaulting to fixable.",
+      "label": "Reconstructing SQL"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "validate_sql_query",
+      "thought": null,
+      "label": "Validating SQL and intent"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "validate_sql_query",
+      "thought": null,
+      "label": "Validating SQL and intent"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "unconstructable_sql_response",
+      "thought": null,
+      "label": "SQL could not be constructed"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "unconstructable_sql_response",
+      "thought": null,
+      "label": "SQL could not be constructed"
+    },
+    {
+      "type": "result",
+      "answer": {
+        "response": "SQL can't be constructed from the data.",
+        "sql_code": "SELECT DISTINCT caller_symbol_id FROM auto_ontology_code.code.calls AS c WHERE callee_name = 'upsert_table_term'",
+        "sql_columns": [],
+        "custom_analyses_used": [],
+        "sql_response_from_db": null,
+        "thoughts": "- Preparing candidates: The query seeks distinct repository-relative caller symbol IDs for all functions/methods that call `upsert_table_term`. The `calls` table is the direct source of caller-callee edges via `caller_symbol_id` and `callee_symbol_id`. Tables that provide only aggregated counts, class hierarchy data, or metadata not involved in the call‑graph topology can be excluded if they add no filtering column and their removal does not alter which caller rows satisfy the callee match.\n- Refining evidence: The sanitized question 'Which functions call upsert_table_term?' contains no string representation errors, no mistaken scalar constants, and no predicate operators that are unquestionably wrong relative to the provided evidence. The evidence line 1 describes call resolution and callback semantics without any stored-value anchors or sample values that conflict with the question. No repairs are required under the allowed repair categories (string_representation, constant_value, predicate_operator). The question is already valid with respect to the evidence.\n- Constructing SQL: I'm starting from the `calls` table since it contains the caller-callee edges via `caller_symbol_id` and `callee_symbol_id`. The question asks which functions call `upsert_table_term`, so I filter on `callee_name = 'upsert_table_term'` based on the schema description of callee_name as \"Callee as written at the call site\". I use DISTINCT because the question asks for distinct function identities (\"which functions\") rather than one row per call occurrence, per the rule that questions asking which files/symbols/modules mean distinct identities. I project only `caller_symbol_id` as the explicitly requested column. Assumptions: (1) callee_name contains the literal string \"upsert_table_term\" for calls to that function, per the column description; (2) caller_symbol_id is always non-null (schema is_nullable: false); (3) no test-file filtering is needed since the question doesn't mention it; (4) no time window filter applies since no period is specified; (5) DISTINCT is appropriate here because the question type explicitly asks for distinct identities, not because of FK fan-out.\n- Validating SQL and intent: 1. **Joins** – The generated SQL contains no joins; it only queries the single table `auto_ontology_code.code.calls`. There are no nonsensical or broken joins, and the absence of joins does not prevent the query from answering the question. 2. **Aggregations** – No aggregations are used; the question asks for caller identifiers, not counts or sums, so this is not an issue. 3. **Evidence compliance** – The SQL uses the exact table `auto_ontology_code.code.calls` and the column `callee_name` with the filter `= 'upsert_table_term'`, which matches the listed used SQL objects (`callee_name` and `caller_symbol_id`). The evidence statements describe background semantics (e.g., `callee_symbol_id` set only when resolved, callback handling) but do not impose mandatory filters or formula substitutions on this query. The query’s `WHERE callee_name = 'upsert_table_term'` correctly targets the intended callee, and the selected column `caller_symbol_id` is the requested output. 4. **Overall assessment** – The SQL is syntactically sound, references only the allowed table and columns, and directly answers “Which functions call upsert_table_term?” by returning the caller symbol IDs. There are no serious, critical problems that would render the query unusable. The query could reasonably work on the described schema. Therefore, the SQL is **VALID**.\n- Reconstructing SQL: LLM analysis returned None — defaulting to fixable."
+      }
+    }
+  ],
+  "question_id": 1,
+  "gold_sql": "SELECT DISTINCT c.caller_symbol_id\nFROM code.calls c\nJOIN code.symbols s ON s.symbol_id = c.callee_symbol_id\nWHERE s.name = 'upsert_table_term'\nORDER BY c.caller_symbol_id;",
+  "gold_row_count": 5,
+  "agent_sql": "SELECT DISTINCT caller_symbol_id FROM auto_ontology_code.code.calls AS c WHERE callee_name = 'upsert_table_term'",
+  "agent_answer": "SQL can't be constructed from the data.",
+  "agent_row_count": 0,
+  "correct_rows": false,
+  "error": null
+}

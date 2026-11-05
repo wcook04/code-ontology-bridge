@@ -41,7 +41,6 @@ export const FINDINGS: Record<number, Finding> = {
       return `${count(rows, "function")} call upsert_table_term; ${tests} of them are tests.`;
     },
     limit: STATIC_CALLS,
-    sqlNote: "The SQL keeps only callers whose kind is “function”, although the shared instructions say caller questions include methods. On this code the rows still matched the reference.",
   },
   2: {
     title: "What does the semantic package’s docstring say?",
@@ -123,7 +122,7 @@ export const FINDINGS: Record<number, Finding> = {
     view: "graph",
     says: (rows) => `${count(rows, "function")} reach it through calls. One, the scheduler, reaches it only because the extractor recorded a function passed to asyncio.to_thread.`,
     limit: STATIC_CALLS,
-    sqlNote: "The SQL removes test files from the final list; it can still pass through a test function while searching. The graph on the front page leaves test functions out of the search itself. Both give the same four callers here. The reference query stops at depth 6 (depth < 6), so it is not a correct reference for a deeper caller; every caller here is within depth 3.",
+    sqlNote: "The SQL leaves test functions out of the search itself, as the graph on the front page does, and records each path so a cycle cannot repeat. It follows every call kind, so the callback reference is included.",
   },
   12: {
     title: "Which five packages have the most lines in non-test files?",
@@ -263,30 +262,15 @@ export const PROSE_REVIEW_WORDS: Record<string, string> = {
 
 /**
  * How many times the SQL ran, from the execute_sql_query events in each saved response.
- * Six first attempts failed because the SQL named a table without its "code." schema; the agent rewrote it.
+ * Twelve first attempts failed because the SQL named a table without its "code." schema; the agent rewrote it.
  */
 export const ATTEMPTS: Record<number, { runs: number; schemaError: boolean; rewrites: number }> = {
-  1: { runs: 1, schemaError: false, rewrites: 0 }, 2: { runs: 2, schemaError: false, rewrites: 2 }, 3: { runs: 2, schemaError: true, rewrites: 1 },
-  4: { runs: 1, schemaError: false, rewrites: 0 }, 5: { runs: 2, schemaError: true, rewrites: 1 }, 6: { runs: 1, schemaError: false, rewrites: 0 },
-  7: { runs: 1, schemaError: false, rewrites: 0 }, 8: { runs: 1, schemaError: false, rewrites: 0 }, 9: { runs: 1, schemaError: false, rewrites: 0 },
-  10: { runs: 1, schemaError: false, rewrites: 0 }, 11: { runs: 2, schemaError: true, rewrites: 2 }, 12: { runs: 1, schemaError: false, rewrites: 0 },
-  13: { runs: 1, schemaError: false, rewrites: 0 }, 14: { runs: 1, schemaError: false, rewrites: 0 }, 15: { runs: 1, schemaError: false, rewrites: 0 },
-  16: { runs: 1, schemaError: false, rewrites: 0 }, 17: { runs: 1, schemaError: false, rewrites: 0 }, 18: { runs: 2, schemaError: true, rewrites: 1 },
-  19: { runs: 1, schemaError: false, rewrites: 0 }, 20: { runs: 1, schemaError: false, rewrites: 0 }, 21: { runs: 2, schemaError: true, rewrites: 1 },
-  22: { runs: 2, schemaError: true, rewrites: 1 },
+  1: { runs: 2, schemaError: true, rewrites: 1 }, 2: { runs: 3, schemaError: false, rewrites: 3 }, 3: { runs: 1, schemaError: false, rewrites: 0 }, 4: { runs: 2, schemaError: true, rewrites: 1 }, 5: { runs: 2, schemaError: true, rewrites: 1 }, 6: { runs: 1, schemaError: false, rewrites: 0 }, 7: { runs: 2, schemaError: true, rewrites: 1 }, 8: { runs: 2, schemaError: true, rewrites: 1 }, 9: { runs: 2, schemaError: true, rewrites: 1 }, 10: { runs: 1, schemaError: false, rewrites: 0 }, 11: { runs: 1, schemaError: false, rewrites: 2 }, 12: { runs: 1, schemaError: false, rewrites: 0 }, 13: { runs: 1, schemaError: false, rewrites: 0 }, 14: { runs: 2, schemaError: true, rewrites: 1 }, 15: { runs: 1, schemaError: false, rewrites: 0 }, 16: { runs: 2, schemaError: true, rewrites: 1 }, 17: { runs: 1, schemaError: false, rewrites: 0 }, 18: { runs: 2, schemaError: true, rewrites: 1 }, 19: { runs: 1, schemaError: false, rewrites: 0 }, 20: { runs: 2, schemaError: true, rewrites: 1 }, 21: { runs: 2, schemaError: true, rewrites: 1 }, 22: { runs: 1, schemaError: false, rewrites: 0 },
 };
 
-/** Where a rebuild with the corrected extractor gives a different reference answer (extractor-corrections.json). */
-export const CORRECTED: Record<number, string> = {
-  8: "Rebuilt with the corrected extractor, store is called from 311 places rather than 312; the ranking is otherwise unchanged.",
-  14: "Rebuilt with the corrected extractor, 9,428 of 30,949 direct calls (30.5%) are linked; the categories keep their order.",
-};
-export const CORRECTIONS_URL = "https://github.com/wcook04/code-ontology-bridge/blob/codex/paper-and-diagrams/examples/auto-ontology/auto_ontology_code/extractor-corrections.json";
-
-/** Seconds each recorded request took, from the elapsed_s field of its saved response (three requests ran at a time). */
+/** Seconds each recorded request took, from the elapsed_s field of its saved response. */
 export const ELAPSED: Record<number, number> = {
-  1: 270.4, 2: 197.4, 3: 110.8, 4: 198.6, 5: 167.3, 6: 50.2, 7: 274.2, 8: 196.6, 9: 81.1, 10: 133.5, 11: 246.2,
-  12: 233.3, 13: 122.3, 14: 116.0, 15: 166.6, 16: 104.7, 17: 120.8, 18: 123.2, 19: 159.2, 20: 93.4, 21: 105.5, 22: 263.0,
+  1: 182.8, 2: 568.3, 3: 72.0, 4: 149.5, 5: 132.9, 6: 78.4, 7: 412.1, 8: 187.6, 9: 99.0, 10: 78.5, 11: 324.5, 12: 90.9, 13: 218.3, 14: 101.3, 15: 135.0, 16: 293.0, 17: 342.1, 18: 184.4, 19: 167.4, 20: 214.6, 21: 121.7, 22: 249.1,
 };
 
 /** The output columns each summary was written against. A summary is shown only when the published question still has them. */
