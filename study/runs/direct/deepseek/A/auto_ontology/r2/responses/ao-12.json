@@ -1,0 +1,26 @@
+{
+  "question_id": "ao-12",
+  "arm": "A",
+  "model": "deepseek/deepseek-v4.1-flash-1017",
+  "error": null,
+  "elapsed_s": 0.85,
+  "attempts": [
+    {
+      "sql": "WITH RECURSIVE api AS (SELECT symbol_id FROM code.symbols WHERE file_id = 'auto_ontology/server/models.py' AND name = 'ApiModel' AND kind = 'class'), direct AS (SELECT cb.class_symbol_id FROM code.class_bases cb JOIN api ON cb.base_symbol_id = api.symbol_id), edges AS (SELECT cb.class_symbol_id AS child, cb.base_symbol_id AS parent FROM code.class_bases cb WHERE cb.base_symbol_id IS NOT NULL), chain AS (SELECT e.child AS class_symbol_id, e.parent AS cur, 1 AS depth FROM edges e JOIN api ON e.parent = api.symbol_id UNION ALL SELECT c.class_symbol_id, e.parent, c.depth + 1 FROM chain c JOIN edges e ON e.child = c.cur WHERE c.depth < 20) SELECT class_symbol_id, MIN(depth) AS depth FROM chain WHERE class_symbol_id NOT IN (SELECT class_symbol_id FROM direct) GROUP BY class_symbol_id ORDER BY depth, class_symbol_id",
+      "error": null
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 619,
+    "completion_tokens": 275,
+    "total_tokens": 894,
+    "cost": 0.000321072,
+    "providers": [
+      "Relace"
+    ]
+  },
+  "request": "Which classes inherit from ApiModel (auto_ontology/server/models.py) only indirectly, i.e. through at least one intermediate class of this repository, and do not name ApiModel directly in their class statement? An import alias of ApiModel (auto_ontology/server/responses.py imports it as _Payload) counts as naming ApiModel directly, and a subscripted base such as ListResponse[T] counts as its class. For each, give the class symbol ID and the length of the shortest inheritance chain to ApiModel (2 when the parent class directly subclasses ApiModel).\n\nRequested output columns: class_symbol_id (string), depth (integer).",
+  "explanation": "Finds ApiModel's symbol, then walks the class_bases graph upward from it to compute the shortest inheritance distance from every descendant class. Classes that name ApiModel directly (depth 1) are excluded, leaving only indirect descendants, each with its minimum chain length.",
+  "sql": "WITH RECURSIVE api AS (SELECT symbol_id FROM code.symbols WHERE file_id = 'auto_ontology/server/models.py' AND name = 'ApiModel' AND kind = 'class'), direct AS (SELECT cb.class_symbol_id FROM code.class_bases cb JOIN api ON cb.base_symbol_id = api.symbol_id), edges AS (SELECT cb.class_symbol_id AS child, cb.base_symbol_id AS parent FROM code.class_bases cb WHERE cb.base_symbol_id IS NOT NULL), chain AS (SELECT e.child AS class_symbol_id, e.parent AS cur, 1 AS depth FROM edges e JOIN api ON e.parent = api.symbol_id UNION ALL SELECT c.class_symbol_id, e.parent, c.depth + 1 FROM chain c JOIN edges e ON e.child = c.cur WHERE c.depth < 20) SELECT class_symbol_id, MIN(depth) AS depth FROM chain WHERE class_symbol_id NOT IN (SELECT class_symbol_id FROM direct) GROUP BY class_symbol_id ORDER BY depth, class_symbol_id",
+  "rows": []
+}

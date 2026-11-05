@@ -1,0 +1,31 @@
+{
+  "question_id": "rich-07",
+  "arm": "A",
+  "model": "nvidia/nemotron-3.5-lightning",
+  "error": null,
+  "elapsed_s": 2.84,
+  "attempts": [
+    {
+      "sql": "SELECT class_symbol_id, COUNT(*) AS method_count FROM code.symbols WHERE kind = 'method' AND is_public = FALSE AND file_id IN (SELECT file_id FROM code.files WHERE is_test = FALSE) GROUP BY class_symbol_id ORDER BY method_count DESC, class_symbol_id ASC LIMIT 5",
+      "error": "Binder Error: Referenced column \"class_symbol_id\" not found in FROM clause!"
+    },
+    {
+      "sql": "SELECT s.symbol_id AS class_symbol_id, COUNT(*) AS method_count FROM code.symbols s JOIN code.class_bases cb ON s.symbol_id = cb.class_symbol_id WHERE s.kind = 'method' AND s.is_public = FALSE AND s.file_id IN (SELECT file_id FROM code.files WHERE is_test = FALSE) GROUP BY s.symbol_id ORDER BY method_count DESC, s.symbol_id ASC LIMIT 5",
+      "error": null
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 1331,
+    "completion_tokens": 291,
+    "total_tokens": 1622,
+    "cost": 0.00015137,
+    "providers": [
+      "CoreWeave",
+      "CoreWeave"
+    ]
+  },
+  "request": "Which five classes outside the test suite define the most methods in their own class body? Count every method definition separately, so a property getter and its setter, or each @overload stub, count as separate methods. Give the class's symbol ID and the method count, ordered by count descending, ties broken by symbol ID ascending.\n\nRequested output columns: class_symbol_id (string), method_count (integer). Order the rows as the question asks.",
+  "explanation": "The corrected query joins code.symbols with code.class_bases to properly reference the class symbol ID, filters for method definitions in non-test files, groups by the symbol ID, and returns the top five classes by method count with symbol ID tiebreaker.",
+  "sql": "SELECT s.symbol_id AS class_symbol_id, COUNT(*) AS method_count FROM code.symbols s JOIN code.class_bases cb ON s.symbol_id = cb.class_symbol_id WHERE s.kind = 'method' AND s.is_public = FALSE AND s.file_id IN (SELECT file_id FROM code.files WHERE is_test = FALSE) GROUP BY s.symbol_id ORDER BY method_count DESC, s.symbol_id ASC LIMIT 5",
+  "rows": []
+}

@@ -1,0 +1,26 @@
+{
+  "question_id": "httpx-03",
+  "arm": "S",
+  "model": "nvidia/nemotron-3.5-lightning",
+  "error": null,
+  "elapsed_s": 1.99,
+  "attempts": [
+    {
+      "sql": "SELECT f.file_id AS file_path\nFROM code.files f\nWHERE f.is_test = FALSE\n  AND f.file_id NOT IN (\n    SELECT DISTINCT imported_file_id\n    FROM code.imports\n    WHERE is_internal = TRUE\n      AND imported_file_id IN (\n        SELECT file_id\n        FROM code.files\n        WHERE is_test = FALSE\n      )\n  )\n  AND f.file_id NOT IN (\n    SELECT target_file_id\n    FROM code.test_links\n    WHERE reason = 'name_match'\n  )\nORDER BY f.file_id;",
+      "error": null
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 5434,
+    "completion_tokens": 203,
+    "total_tokens": 5637,
+    "cost": 0.00026258,
+    "providers": [
+      "CoreWeave"
+    ]
+  },
+  "request": "Which Python files that are not test files (every file under tests/, including helpers such as tests/common.py and conftest.py, is a test file) have no associated test file at all, meaning no test file imports that module directly (importing only the top-level httpx package counts as importing httpx/__init__.py, not its submodules) and no test file's name is exactly test_ followed by the source file's name (e.g. test_asgi.py for asgi.py; test_decoders.py does not match _decoders.py)? Give the repository-relative file paths.\n\nRequested output columns: file_path (string).",
+  "explanation": "The query selects all non-test files that are not directly imported by any test file (only internal imports count, and submodule imports like httpx/__init__.py do not reach submodules) and are not matched by the name_match rule (test_<basename>.py). It therefore returns files that have no static test association at all.",
+  "sql": "SELECT f.file_id AS file_path\nFROM code.files f\nWHERE f.is_test = FALSE\n  AND f.file_id NOT IN (\n    SELECT DISTINCT imported_file_id\n    FROM code.imports\n    WHERE is_internal = TRUE\n      AND imported_file_id IN (\n        SELECT file_id\n        FROM code.files\n        WHERE is_test = FALSE\n      )\n  )\n  AND f.file_id NOT IN (\n    SELECT target_file_id\n    FROM code.test_links\n    WHERE reason = 'name_match'\n  )\nORDER BY f.file_id;",
+  "rows": []
+}

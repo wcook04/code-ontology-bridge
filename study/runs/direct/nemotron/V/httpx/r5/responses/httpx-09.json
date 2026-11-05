@@ -1,0 +1,36 @@
+{
+  "question_id": "httpx-09",
+  "arm": "V",
+  "model": "nvidia/nemotron-3.5-lightning",
+  "error": "Binder Error: Table \"f\" does not have a column named \"file_name\"",
+  "elapsed_s": 5.38,
+  "attempts": [
+    {
+      "sql": "WITH RECURSIVE call_chain AS (\n  -- Start from all direct callers of Client._send_single_request within httpx/_client.py\n  SELECT caller_symbol_id\n  FROM code.call_edges\n  WHERE callee_symbol_id = 'Client._send_single_request'\n    AND caller_file_id IN (\n      SELECT file_id FROM code.files WHERE file_name = '_client.py' AND package = 'httpx'\n    )\n    AND passes_as_callback = FALSE\n  UNION ALL\n  -- Recursively follow direct calls within the same file\n  SELECT ce.caller_symbol_id\n  FROM code.call_edges ce\n  JOIN call_chain cc ON ce.callee_symbol_id = cc.caller_symbol_id\n  WHERE ce.caller_file_id IN (\n      SELECT file_id FROM code.files WHERE file_name = '_client.py' AND package = 'httpx'\n    )\n    AND ce.passes_as_callback = FALSE\n    AND ce.caller_symbol_id != 'Client._send_single_request'\n)\nSELECT DISTINCT caller_symbol_id FROM call_chain WHERE caller_symbol_id != 'Client._send_single_request'",
+      "error": "Binder Error: Referenced column \"file_name\" not found in FROM clause!"
+    },
+    {
+      "sql": "WITH RECURSIVE call_chain AS (\n  -- Start from all direct callers of Client._send_single_request within httpx/_client.py\n  SELECT ce.caller_symbol_id\n  FROM code.call_edges ce\n  JOIN code.files f ON f.file_id = ce.caller_file_id\n  WHERE ce.callee_symbol_id = 'Client._send_single_request'\n    AND f.file_name = '_client.py'\n    AND f.package = 'httpx'\n    AND ce.passes_as_callback = FALSE\n  UNION ALL\n  -- Recursively follow direct calls within the same file\n  SELECT ce.caller_symbol_id\n  FROM code.call_edges ce\n  JOIN call_chain cc ON ce.callee_symbol_id = cc.caller_symbol_id\n  JOIN code.files f ON f.file_id = ce.caller_file_id\n  WHERE f.file_name = '_client.py'\n    AND f.package = 'httpx'\n    AND ce.passes_as_callback = FALSE\n    AND ce.caller_symbol_id != 'Client._send_single_request'\n)\nSELECT DISTINCT caller_symbol_id FROM call_chain WHERE caller_symbol_id != 'Client._send_single_request'",
+      "error": "Binder Error: Table \"f\" does not have a column named \"file_name\""
+    },
+    {
+      "sql": "WITH RECURSIVE call_chain AS (\n  -- Start from all direct callers of Client._send_single_request within httpx/_client.py\n  SELECT ce.caller_symbol_id\n  FROM code.call_edges ce\n  JOIN code.files f ON ce.caller_file_id = f.file_id\n  WHERE ce.callee_symbol_id = 'Client._send_single_request'\n    AND f.file_name = '_client.py'\n    AND f.package = 'httpx'\n    AND ce.passes_as_callback = FALSE\n  UNION ALL\n  -- Recursively follow direct calls within the same file\n  SELECT ce.caller_symbol_id\n  FROM code.call_edges ce\n  JOIN call_chain cc ON ce.callee_symbol_id = cc.caller_symbol_id\n  JOIN code.files f ON ce.caller_file_id = f.file_id\n  WHERE f.file_name = '_client.py'\n    AND f.package = 'httpx'\n    AND ce.passes_as_callback = FALSE\n    AND ce.caller_symbol_id != 'Client._send_single_request'\n)\nSELECT DISTINCT caller_symbol_id FROM call_chain WHERE caller_symbol_id != 'Client._send_single_request'",
+      "error": "Binder Error: Table \"f\" does not have a column named \"file_name\""
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 4050,
+    "completion_tokens": 973,
+    "total_tokens": 5023,
+    "cost": 0.00044642,
+    "providers": [
+      "CoreWeave",
+      "CoreWeave",
+      "CoreWeave"
+    ]
+  },
+  "request": "Within httpx/_client.py, which functions or methods eventually lead to a call of `Client._send_single_request`, through a chain of one or more direct calls whose every step is inside httpx/_client.py? Count direct calls only (no callbacks) and exclude `_send_single_request` itself. Give their symbol IDs.\n\nRequested output columns: symbol_id (string).",
+  "explanation": "The query explicitly qualifies the join condition (ce.caller_file_id = f.file_id) and then accesses f.file_name and f.package to restrict the call chain to httpx/_client.py, excluding callbacks and the target itself.",
+  "sql": "WITH RECURSIVE call_chain AS (\n  -- Start from all direct callers of Client._send_single_request within httpx/_client.py\n  SELECT ce.caller_symbol_id\n  FROM code.call_edges ce\n  JOIN code.files f ON ce.caller_file_id = f.file_id\n  WHERE ce.callee_symbol_id = 'Client._send_single_request'\n    AND f.file_name = '_client.py'\n    AND f.package = 'httpx'\n    AND ce.passes_as_callback = FALSE\n  UNION ALL\n  -- Recursively follow direct calls within the same file\n  SELECT ce.caller_symbol_id\n  FROM code.call_edges ce\n  JOIN call_chain cc ON ce.callee_symbol_id = cc.caller_symbol_id\n  JOIN code.files f ON ce.caller_file_id = f.file_id\n  WHERE f.file_name = '_client.py'\n    AND f.package = 'httpx'\n    AND ce.passes_as_callback = FALSE\n    AND ce.caller_symbol_id != 'Client._send_single_request'\n)\nSELECT DISTINCT caller_symbol_id FROM call_chain WHERE caller_symbol_id != 'Client._send_single_request'",
+  "rows": null
+}

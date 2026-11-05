@@ -1,0 +1,26 @@
+{
+  "question_id": "ao-01",
+  "arm": "A",
+  "model": "deepseek/deepseek-v4.1-flash-1017",
+  "error": null,
+  "elapsed_s": 1.96,
+  "attempts": [
+    {
+      "sql": "WITH base AS (SELECT s.symbol_id FROM code.symbols s JOIN code.files f ON f.file_id = s.file_id WHERE s.kind = 'class' AND s.name = 'SQLDatabase' AND f.module = 'auto_ontology/connectors/base.py'), connectors AS (SELECT DISTINCT cb.class_symbol_id FROM code.class_bases cb JOIN base b ON cb.base_symbol_id = b.symbol_id JOIN code.symbols cs ON cs.symbol_id = cb.class_symbol_id JOIN code.files cf ON cf.file_id = cs.file_id WHERE NOT cf.is_test AND cf.module NOT LIKE '%tests/%'), base_methods AS (SELECT s.name FROM code.symbols s JOIN base b ON s.file_id = (SELECT f.file_id FROM code.symbols f WHERE f.symbol_id = b.symbol_id) WHERE s.kind = 'method' AND s.name NOT LIKE '\\_%' ESCAPE '\\') SELECT DISTINCT c.class_symbol_id, m.name AS method_name FROM connectors c JOIN code.symbols m ON m.file_id = (SELECT file_id FROM code.symbols WHERE symbol_id = c.class_symbol_id) AND m.kind = 'method' AND m.line_start >= (SELECT line_start FROM code.symbols WHERE symbol_id = c.class_symbol_id) AND m.line_end <= (SELECT line_end FROM code.symbols WHERE symbol_id = c.class_symbol_id) WHERE m.name NOT LIKE '\\_%' ESCAPE '\\' AND m.name NOT IN (SELECT name FROM base_methods) ORDER BY c.class_symbol_id, m.name",
+      "error": null
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 645,
+    "completion_tokens": 417,
+    "total_tokens": 1062,
+    "cost": 0.000400995,
+    "providers": [
+      "Cohere"
+    ]
+  },
+  "request": "The production database connectors are the classes that directly subclass SQLDatabase (defined in auto_ontology/connectors/base.py), excluding any class defined in test code (every file under a tests/ folder counts as test code). For each such connector class, which public methods does the class define in its own body that SQLDatabase itself does not define? A method is public when its name does not start with an underscore (so __init__ and other dunder methods are excluded); anything written with def directly in the class body counts as a method, including properties and context-manager methods. Methods inherited without being redefined do not count. Return one row per (connector class symbol ID, method name).\n\nRequested output columns: class_symbol_id (string), method_name (string).",
+  "explanation": "Finds the SQLDatabase class in auto_ontology/connectors/base.py, then finds all non-test classes that directly subclass it via class_bases. For each connector class, it selects methods defined within the class's line range whose names don't start with an underscore and that SQLDatabase does not itself define, returning one row per (class, method).",
+  "sql": "WITH base AS (SELECT s.symbol_id FROM code.symbols s JOIN code.files f ON f.file_id = s.file_id WHERE s.kind = 'class' AND s.name = 'SQLDatabase' AND f.module = 'auto_ontology/connectors/base.py'), connectors AS (SELECT DISTINCT cb.class_symbol_id FROM code.class_bases cb JOIN base b ON cb.base_symbol_id = b.symbol_id JOIN code.symbols cs ON cs.symbol_id = cb.class_symbol_id JOIN code.files cf ON cf.file_id = cs.file_id WHERE NOT cf.is_test AND cf.module NOT LIKE '%tests/%'), base_methods AS (SELECT s.name FROM code.symbols s JOIN base b ON s.file_id = (SELECT f.file_id FROM code.symbols f WHERE f.symbol_id = b.symbol_id) WHERE s.kind = 'method' AND s.name NOT LIKE '\\_%' ESCAPE '\\') SELECT DISTINCT c.class_symbol_id, m.name AS method_name FROM connectors c JOIN code.symbols m ON m.file_id = (SELECT file_id FROM code.symbols WHERE symbol_id = c.class_symbol_id) AND m.kind = 'method' AND m.line_start >= (SELECT line_start FROM code.symbols WHERE symbol_id = c.class_symbol_id) AND m.line_end <= (SELECT line_end FROM code.symbols WHERE symbol_id = c.class_symbol_id) WHERE m.name NOT LIKE '\\_%' ESCAPE '\\' AND m.name NOT IN (SELECT name FROM base_methods) ORDER BY c.class_symbol_id, m.name",
+  "rows": []
+}

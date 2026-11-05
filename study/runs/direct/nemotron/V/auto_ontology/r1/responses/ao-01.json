@@ -1,0 +1,36 @@
+{
+  "question_id": "ao-01",
+  "arm": "V",
+  "model": "nvidia/nemotron-3.5-lightning",
+  "error": "the reply had no SQL",
+  "elapsed_s": 14.16,
+  "attempts": [
+    {
+      "sql": "WITH production_files AS (\n  SELECT file_id\n  FROM code.files\n  WHERE is_test = FALSE\n    AND file_name = 'base.py'\n    AND package = 'auto_ontology.connectors'\n),\nconnector_classes AS (\n  SELECT s.symbol_id AS class_symbol_id,\n         s.name AS class_name,\n         s.file_id\n  FROM code.symbols s\n  JOIN production_files p ON s.file_id = p.file_id\n  WHERE s.kind = 'class'\n    AND s.enclosing_class_symbol_id IS NULL\n),\nclass_methods AS (\n  SELECT s.symbol_id AS method_symbol_id,\n         s.name AS method_name,\n         s.file_id,\n         s.qualname,\n         s.kind\n  FROM code.symbols s\n  JOIN connector_classes c ON s.file_id = c.file_id\n  WHERE s.kind IN ('function', 'method')\n    AND s.name NOT LIKE '_%'\n),\nsuper_methods AS (\n  SELECT DISTINCT cm.method_symbol_id,\n          cm.method_name\n  FROM class_methods cm\n  JOIN code.class_ancestry ca\n    ON ca.class_symbol_id = c.class_symbol_id\n   AND ca.ancestor_symbol_id = (SELECT symbol_id FROM code.symbols WHERE name = 'SQLDatabase' AND file_id = (SELECT file_id FROM code.files WHERE file_name = 'base.py' AND package = 'auto_ontology.connectors'))\n),\nconnector_own_methods AS (\n  SELECT DISTINCT cm.class_symbol_id,\n          cm.method_name\n  FROM class_methods cm\n  LEFT JOIN super_methods sm\n    ON cm.method_symbol_id = sm.method_symbol_id\n   AND cm.method_name = sm.method_name\n  WHERE sm.method_symbol_id IS NULL\n)\nSELECT class_symbol_id,\n       method_name\nFROM connector_own_methods\nORDER BY class_symbol_id,\n         method_name;",
+      "error": "Binder Error: Referenced column \"file_name\" not found in FROM clause!"
+    },
+    {
+      "sql": "",
+      "error": "the reply had no SQL"
+    },
+    {
+      "sql": "",
+      "error": "the reply had no SQL"
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 4813,
+    "completion_tokens": 1496,
+    "total_tokens": 6309,
+    "cost": 0.00029984499999999997,
+    "providers": [
+      "Darkbloom",
+      "Darkbloom",
+      "Darkbloom"
+    ]
+  },
+  "request": "The production database connectors are the classes that directly subclass SQLDatabase (defined in auto_ontology/connectors/base.py), excluding any class defined in test code (every file under a tests/ folder counts as test code). For each such connector class, which public methods does the class define in its own body that SQLDatabase itself does not define? A method is public when its name does not start with an underscore (so __init__ and other dunder methods are excluded); anything written with def directly in the class body counts as a method, including properties and context-manager methods. Methods inherited without being redefined do not count. Return one row per (connector class symbol ID, method name).\n\nRequested output columns: class_symbol_id (string), method_name (string).",
+  "explanation": "",
+  "sql": "",
+  "rows": null
+}

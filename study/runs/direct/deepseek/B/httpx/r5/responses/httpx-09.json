@@ -1,0 +1,63 @@
+{
+  "question_id": "httpx-09",
+  "arm": "B",
+  "model": "deepseek/deepseek-v4.1-flash-1017",
+  "error": null,
+  "elapsed_s": 5.38,
+  "attempts": [
+    {
+      "sql": "WITH RECURSIVE edges AS (\n  SELECT caller_symbol_id AS src, callee_symbol_id AS dst\n  FROM code.calls\n  WHERE call_kind = 'direct'\n    AND callee_symbol_id IS NOT NULL\n    AND caller_symbol_id LIKE 'httpx/_client.py::%'\n    AND callee_symbol_id LIKE 'httpx/_client.py::%'\n),\nreach(symbol_id) AS (\n  SELECT symbol_id FROM code.symbols\n  WHERE file_id = 'httpx/_client.py' AND qualname = 'Client._send_single_request'\n  UNION\n  SELECT e.src FROM edges e JOIN reach r ON e.dst = r.symbol_id\n)\nSELECT DISTINCT r.symbol_id\nFROM reach r\nJOIN code.symbols s ON s.symbol_id = r.symbol_id\nWHERE s.qualname <> 'Client._send_single_request'\nORDER BY r.symbol_id",
+      "error": null
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 2727,
+    "completion_tokens": 272,
+    "total_tokens": 2999,
+    "cost": 0.000150058,
+    "providers": [
+      "Relace"
+    ]
+  },
+  "request": "Within httpx/_client.py, which functions or methods eventually lead to a call of `Client._send_single_request`, through a chain of one or more direct calls whose every step is inside httpx/_client.py? Count direct calls only (no callbacks) and exclude `_send_single_request` itself. Give their symbol IDs.\n\nRequested output columns: symbol_id (string).",
+  "explanation": "Builds a graph of direct call edges restricted to httpx/_client.py, then walks it backwards from Client._send_single_request to find all symbols that can reach it through one or more in-file direct calls. Callback rows are excluded and the target itself is filtered out.",
+  "sql": "WITH RECURSIVE edges AS (\n  SELECT caller_symbol_id AS src, callee_symbol_id AS dst\n  FROM code.calls\n  WHERE call_kind = 'direct'\n    AND callee_symbol_id IS NOT NULL\n    AND caller_symbol_id LIKE 'httpx/_client.py::%'\n    AND callee_symbol_id LIKE 'httpx/_client.py::%'\n),\nreach(symbol_id) AS (\n  SELECT symbol_id FROM code.symbols\n  WHERE file_id = 'httpx/_client.py' AND qualname = 'Client._send_single_request'\n  UNION\n  SELECT e.src FROM edges e JOIN reach r ON e.dst = r.symbol_id\n)\nSELECT DISTINCT r.symbol_id\nFROM reach r\nJOIN code.symbols s ON s.symbol_id = r.symbol_id\nWHERE s.qualname <> 'Client._send_single_request'\nORDER BY r.symbol_id",
+  "rows": [
+    {
+      "symbol_id": "httpx/_client.py::Client._send_handling_auth"
+    },
+    {
+      "symbol_id": "httpx/_client.py::Client._send_handling_redirects"
+    },
+    {
+      "symbol_id": "httpx/_client.py::Client.delete"
+    },
+    {
+      "symbol_id": "httpx/_client.py::Client.get"
+    },
+    {
+      "symbol_id": "httpx/_client.py::Client.head"
+    },
+    {
+      "symbol_id": "httpx/_client.py::Client.options"
+    },
+    {
+      "symbol_id": "httpx/_client.py::Client.patch"
+    },
+    {
+      "symbol_id": "httpx/_client.py::Client.post"
+    },
+    {
+      "symbol_id": "httpx/_client.py::Client.put"
+    },
+    {
+      "symbol_id": "httpx/_client.py::Client.request"
+    },
+    {
+      "symbol_id": "httpx/_client.py::Client.send"
+    },
+    {
+      "symbol_id": "httpx/_client.py::Client.stream"
+    }
+  ]
+}

@@ -1,0 +1,57 @@
+{
+  "question_id": "rich-07",
+  "arm": "A",
+  "model": "nvidia/nemotron-3.5-lightning",
+  "error": null,
+  "elapsed_s": 8.63,
+  "attempts": [
+    {
+      "sql": "SELECT class_symbol_id, COUNT(*) AS method_count FROM code.symbols WHERE kind = 'method' AND is_public = FALSE AND file_id IN (SELECT file_id FROM code.files WHERE is_test = FALSE) GROUP BY class_symbol_id ORDER BY method_count DESC, class_symbol_id ASC LIMIT 5",
+      "error": "Binder Error: Referenced column \"class_symbol_id\" not found in FROM clause!"
+    },
+    {
+      "sql": "SELECT s.class_symbol_id, COUNT(*) AS method_count FROM code.symbols s WHERE s.kind = 'method' AND s.is_public = FALSE AND s.file_id IN (SELECT f.file_id FROM code.files f WHERE f.is_test = FALSE) GROUP BY s.class_symbol_id ORDER BY method_count DESC, s.class_symbol_id ASC LIMIT 5",
+      "error": "Binder Error: Table \"s\" does not have a column named \"class_symbol_id\""
+    },
+    {
+      "sql": "SELECT s.symbol_id, COUNT(*) AS method_count FROM code.symbols s WHERE s.kind = 'method' AND s.is_public = FALSE AND s.file_id IN (SELECT f.file_id FROM code.files f WHERE f.is_test = FALSE) GROUP BY s.symbol_id ORDER BY method_count DESC, s.symbol_id ASC LIMIT 5",
+      "error": null
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 2260,
+    "completion_tokens": 420,
+    "total_tokens": 2680,
+    "cost": 0.000144305,
+    "providers": [
+      "CoreWeave",
+      "Darkbloom",
+      "Darkbloom"
+    ]
+  },
+  "request": "Which five classes outside the test suite define the most methods in their own class body? Count every method definition separately, so a property getter and its setter, or each @overload stub, count as separate methods. Give the class's symbol ID and the method count, ordered by count descending, ties broken by symbol ID ascending.\n\nRequested output columns: class_symbol_id (string), method_count (integer). Order the rows as the question asks.",
+  "explanation": "The corrected query uses the actual column name symbol_id from code.symbols instead of class_symbol_id, which does not exist in that table. The query groups by symbol_id, counts each method definition, filters to non-public methods in non-test files, and returns the top five ordered by count descending with symbol_id ascending for ties.",
+  "sql": "SELECT s.symbol_id, COUNT(*) AS method_count FROM code.symbols s WHERE s.kind = 'method' AND s.is_public = FALSE AND s.file_id IN (SELECT f.file_id FROM code.files f WHERE f.is_test = FALSE) GROUP BY s.symbol_id ORDER BY method_count DESC, s.symbol_id ASC LIMIT 5",
+  "rows": [
+    {
+      "symbol_id": "benchmarks/benchmarks.py::SyntaxWrappingSuite._print_with_width",
+      "method_count": 1
+    },
+    {
+      "symbol_id": "benchmarks/benchmarks.py::TableSuite._print_table",
+      "method_count": 1
+    },
+    {
+      "symbol_id": "examples/fullscreen.py::Header.__rich__",
+      "method_count": 1
+    },
+    {
+      "symbol_id": "examples/layout.py::Clock.__rich__",
+      "method_count": 1
+    },
+    {
+      "symbol_id": "examples/repr.py::Bird.__init__",
+      "method_count": 1
+    }
+  ]
+}

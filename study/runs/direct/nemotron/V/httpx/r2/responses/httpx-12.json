@@ -1,0 +1,26 @@
+{
+  "question_id": "httpx-12",
+  "arm": "V",
+  "model": "nvidia/nemotron-3.5-lightning",
+  "error": null,
+  "elapsed_s": 2.61,
+  "attempts": [
+    {
+      "sql": "SELECT DISTINCT s.symbol_id\nFROM code.call_edges e\nJOIN code.symbols s ON s.symbol_id = e.callee_symbol_id\nWHERE e.caller_symbol_id IN (\n    SELECT s2.symbol_id\n    FROM code.symbols s2\n    WHERE s2.file_id IN (\n        SELECT f.file_id\n        FROM code.files f\n        WHERE f.module = '_main' AND f.package = 'httpx'\n    )\n    AND s2.name = 'main'\n)\n  AND e.passes_as_callback = TRUE\n  AND e.caller_file_id IN (\n    SELECT f.file_id\n    FROM code.files f\n    WHERE f.module = '_main' AND f.package = 'httpx'\n  )\nORDER BY s.symbol_id;",
+      "error": null
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 997,
+    "completion_tokens": 255,
+    "total_tokens": 1252,
+    "cost": 5.5525e-05,
+    "providers": [
+      "Darkbloom"
+    ]
+  },
+  "request": "Which functions in httpx/_main.py are handed over by name as a callback argument to another call (not called directly; a function given to functools.partial counts as handed over) in the CLI command function `main` in httpx/_main.py, counting the arguments of the click decorators applied to `main` as part of `main`? Give their symbol IDs.\n\nRequested output columns: symbol_id (string).",
+  "explanation": "The query finds all call edges where the caller is the `main` function in httpx/_main.py and the callee is passed as a callback (passes_as_callback = TRUE). It then returns the distinct symbol IDs of those callee functions. The subqueries locate the `main` function and the source file by module and package name.",
+  "sql": "SELECT DISTINCT s.symbol_id\nFROM code.call_edges e\nJOIN code.symbols s ON s.symbol_id = e.callee_symbol_id\nWHERE e.caller_symbol_id IN (\n    SELECT s2.symbol_id\n    FROM code.symbols s2\n    WHERE s2.file_id IN (\n        SELECT f.file_id\n        FROM code.files f\n        WHERE f.module = '_main' AND f.package = 'httpx'\n    )\n    AND s2.name = 'main'\n)\n  AND e.passes_as_callback = TRUE\n  AND e.caller_file_id IN (\n    SELECT f.file_id\n    FROM code.files f\n    WHERE f.module = '_main' AND f.package = 'httpx'\n  )\nORDER BY s.symbol_id;",
+  "rows": []
+}

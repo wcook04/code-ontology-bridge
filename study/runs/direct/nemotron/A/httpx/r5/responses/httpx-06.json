@@ -1,0 +1,26 @@
+{
+  "question_id": "httpx-06",
+  "arm": "A",
+  "model": "nvidia/nemotron-3.5-lightning",
+  "error": null,
+  "elapsed_s": 1.82,
+  "attempts": [
+    {
+      "sql": "SELECT s.symbol_id, COUNT(*) AS method_count\nFROM code.symbols s\nJOIN code.files f ON s.file_id = f.file_id\nWHERE f.is_test = FALSE\n  AND s.kind = 'class'\n  AND s.symbol_id IN (\n    SELECT class_symbol_id\n    FROM code.class_bases\n    WHERE ordinal = 0\n  )\nGROUP BY s.symbol_id\nHAVING COUNT(*) >= 20\nORDER BY method_count DESC, s.symbol_id ASC;",
+      "error": null
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 580,
+    "completion_tokens": 225,
+    "total_tokens": 805,
+    "cost": 8.56e-05,
+    "providers": [
+      "CoreWeave"
+    ]
+  },
+  "request": "Which classes in the non-test code define at least 20 methods directly in their own body? Count every method definition separately (a property getter and its setter count as two; inherited methods and methods of nested classes do not count). Return each class's symbol ID and its method count, largest count first, ties broken by symbol ID alphabetically.\n\nRequested output columns: symbol_id (string), method_count (integer). Order the rows as the question asks.",
+  "explanation": "The query filters symbols to only non-test classes (kind='class' and is_test=FALSE). It then restricts to class symbols that have a base entry with ordinal=0, which represents the class's own body (inherited methods have higher ordinals). Grouping by symbol_id and counting gives the number of methods directly defined in each class body. The HAVING clause keeps only those with at least 20 methods, and results are ordered by descending count then alphabetically by symbol_id.",
+  "sql": "SELECT s.symbol_id, COUNT(*) AS method_count\nFROM code.symbols s\nJOIN code.files f ON s.file_id = f.file_id\nWHERE f.is_test = FALSE\n  AND s.kind = 'class'\n  AND s.symbol_id IN (\n    SELECT class_symbol_id\n    FROM code.class_bases\n    WHERE ordinal = 0\n  )\nGROUP BY s.symbol_id\nHAVING COUNT(*) >= 20\nORDER BY method_count DESC, s.symbol_id ASC;",
+  "rows": []
+}

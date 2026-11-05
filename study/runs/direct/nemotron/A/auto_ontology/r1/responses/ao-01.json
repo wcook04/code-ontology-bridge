@@ -1,0 +1,26 @@
+{
+  "question_id": "ao-01",
+  "arm": "A",
+  "model": "nvidia/nemotron-3.5-lightning",
+  "error": null,
+  "elapsed_s": 4.07,
+  "attempts": [
+    {
+      "sql": "WITH production_files AS (\n  SELECT s.symbol_id AS class_symbol_id, s.qualname, s.file_id\n  FROM code.symbols s\n  WHERE s.kind = 'class'\n    AND s.file_id IN (\n      SELECT f.file_id\n      FROM code.files f\n      WHERE NOT (f.module LIKE 'tests.%' OR f.module LIKE '%/tests/' OR f.module LIKE '%tests/' OR f.module = 'tests')\n    )\n),\nconnector_classes AS (\n  SELECT p.class_symbol_id, p.qualname, p.file_id\n  FROM production_files p\n  WHERE EXISTS (\n    SELECT 1\n    FROM code.class_bases cb\n    WHERE cb.base_symbol_id = p.class_symbol_id\n      AND cb.base_name = 'SQLDatabase'\n  )\n),\nconnector_methods AS (\n  SELECT DISTINCT cm.class_symbol_id, h.value AS method_name\n  FROM connector_classes cm\n  JOIN code.headings h ON cm.file_id = h.file_id\n  WHERE h.ordinal = 1\n    AND h.heading = 'def'\n    AND h.value NOT LIKE '_%'\n),\nbase_methods AS (\n  SELECT DISTINCT cb.class_symbol_id, cb.base_name\n  FROM code.class_bases cb\n  WHERE cb.base_name = 'SQLDatabase'\n)\nSELECT cm.class_symbol_id, cm.method_name\nFROM connector_methods cm\nLEFT JOIN base_methods bm ON cm.class_symbol_id = bm.class_symbol_id AND cm.method_name = bm.base_name\nWHERE bm.class_symbol_id IS NULL\nORDER BY cm.class_symbol_id, cm.method_name;",
+      "error": null
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 644,
+    "completion_tokens": 443,
+    "total_tokens": 1087,
+    "cost": 0.00013368,
+    "providers": [
+      "CoreWeave"
+    ]
+  },
+  "request": "The production database connectors are the classes that directly subclass SQLDatabase (defined in auto_ontology/connectors/base.py), excluding any class defined in test code (every file under a tests/ folder counts as test code). For each such connector class, which public methods does the class define in its own body that SQLDatabase itself does not define? A method is public when its name does not start with an underscore (so __init__ and other dunder methods are excluded); anything written with def directly in the class body counts as a method, including properties and context-manager methods. Methods inherited without being redefined do not count. Return one row per (connector class symbol ID, method name).\n\nRequested output columns: class_symbol_id (string), method_name (string).",
+  "explanation": "The query first identifies production files (excluding any under a tests/ folder), then finds classes that directly subclass SQLDatabase. It extracts all public method definitions (def statements not starting with underscore) from those class bodies, and finally removes any method name that also appears as a base class (SQLDatabase) attribute, leaving only methods defined directly in the connector class body.",
+  "sql": "WITH production_files AS (\n  SELECT s.symbol_id AS class_symbol_id, s.qualname, s.file_id\n  FROM code.symbols s\n  WHERE s.kind = 'class'\n    AND s.file_id IN (\n      SELECT f.file_id\n      FROM code.files f\n      WHERE NOT (f.module LIKE 'tests.%' OR f.module LIKE '%/tests/' OR f.module LIKE '%tests/' OR f.module = 'tests')\n    )\n),\nconnector_classes AS (\n  SELECT p.class_symbol_id, p.qualname, p.file_id\n  FROM production_files p\n  WHERE EXISTS (\n    SELECT 1\n    FROM code.class_bases cb\n    WHERE cb.base_symbol_id = p.class_symbol_id\n      AND cb.base_name = 'SQLDatabase'\n  )\n),\nconnector_methods AS (\n  SELECT DISTINCT cm.class_symbol_id, h.value AS method_name\n  FROM connector_classes cm\n  JOIN code.headings h ON cm.file_id = h.file_id\n  WHERE h.ordinal = 1\n    AND h.heading = 'def'\n    AND h.value NOT LIKE '_%'\n),\nbase_methods AS (\n  SELECT DISTINCT cb.class_symbol_id, cb.base_name\n  FROM code.class_bases cb\n  WHERE cb.base_name = 'SQLDatabase'\n)\nSELECT cm.class_symbol_id, cm.method_name\nFROM connector_methods cm\nLEFT JOIN base_methods bm ON cm.class_symbol_id = bm.class_symbol_id AND cm.method_name = bm.base_name\nWHERE bm.class_symbol_id IS NULL\nORDER BY cm.class_symbol_id, cm.method_name;",
+  "rows": []
+}

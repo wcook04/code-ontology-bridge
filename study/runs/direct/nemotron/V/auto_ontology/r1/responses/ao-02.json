@@ -1,0 +1,36 @@
+{
+  "question_id": "ao-02",
+  "arm": "V",
+  "model": "nvidia/nemotron-3.5-lightning",
+  "error": "Binder Error: No function matches the given name and argument types '~~(BIGINT, STRING_LITERAL)'. You might need to add explicit type casts.",
+  "elapsed_s": 5.72,
+  "attempts": [
+    {
+      "sql": "SELECT DISTINCT symbol_id FROM code.symbols WHERE kind = 'function' AND file_id IN (SELECT file_id FROM code.file_dependencies WHERE imported_names LIKE '%text_to_sql_graph%' OR imported_names LIKE '%create_graph%') AND symbol_id IN (SELECT symbol_id FROM code.symbol_profile WHERE outgoing_call_sites > 0) ORDER BY symbol_id",
+      "error": "Binder Error: No function matches the given name and argument types '~~(BIGINT, STRING_LITERAL)'. You might need to add explicit type casts."
+    },
+    {
+      "sql": "SELECT DISTINCT symbol_id FROM code.symbols WHERE kind = 'function' AND file_id IN (SELECT file_id FROM code.file_dependencies WHERE imported_names LIKE '%text_to_sql_graph%' OR imported_names LIKE '%create_graph%') AND symbol_id IN (SELECT symbol_id FROM code.symbol_profile WHERE outgoing_call_sites IS NOT NULL) ORDER BY symbol_id",
+      "error": "Binder Error: No function matches the given name and argument types '~~(BIGINT, STRING_LITERAL)'. You might need to add explicit type casts."
+    },
+    {
+      "sql": "SELECT DISTINCT s.symbol_id FROM code.symbols s JOIN code.symbol_profile sp ON s.symbol_id = sp.symbol_id WHERE s.kind = 'function' AND s.file_id IN (SELECT fd.file_id FROM code.file_dependencies fd WHERE fd.imported_names LIKE '%text_to_sql_graph%' OR fd.imported_names LIKE '%create_graph%') AND sp.outgoing_call_sites IS NOT NULL ORDER BY s.symbol_id",
+      "error": "Binder Error: No function matches the given name and argument types '~~(BIGINT, STRING_LITERAL)'. You might need to add explicit type casts."
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 3756,
+    "completion_tokens": 392,
+    "total_tokens": 4148,
+    "cost": 0.0002831,
+    "providers": [
+      "Darkbloom",
+      "CoreWeave",
+      "CoreWeave"
+    ]
+  },
+  "request": "When the text-to-SQL LangGraph is assembled by create_graph in auto_ontology/retrieval/text_to_sql/text_to_sql_graph.py, which functions or methods of this repository does create_graph hand over by reference, i.e. pass the function object itself as an argument to another call (as with graph.add_conditional_edges(node, router_fn, ...)) rather than calling it? Count only plain names passed directly as call arguments; functions that create_graph calls itself, values that are the result of a call (such as _make_soft_check_router(...)), lambdas, and local variables holding nodes do not count. Functions passed only inside an if/else branch of create_graph count. Return each distinct function's symbol ID.\n\nRequested output columns: symbol_id (string).",
+  "explanation": "The query joins symbols with symbol_profile to find function symbols in files importing text_to_sql_graph or create_graph that have outgoing call sites, indicating they are passed as references.",
+  "sql": "SELECT DISTINCT s.symbol_id FROM code.symbols s JOIN code.symbol_profile sp ON s.symbol_id = sp.symbol_id WHERE s.kind = 'function' AND s.file_id IN (SELECT fd.file_id FROM code.file_dependencies fd WHERE fd.imported_names LIKE '%text_to_sql_graph%' OR fd.imported_names LIKE '%create_graph%') AND sp.outgoing_call_sites IS NOT NULL ORDER BY s.symbol_id",
+  "rows": null
+}

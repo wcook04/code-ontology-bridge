@@ -1,0 +1,31 @@
+{
+  "question_id": "ao-10",
+  "arm": "A",
+  "model": "nvidia/nemotron-3.5-lightning",
+  "error": null,
+  "elapsed_s": 1.85,
+  "attempts": [
+    {
+      "sql": "SELECT folder_path, SUM(line_count) AS total_lines FROM (\n  SELECT\n    CASE\n      WHEN file_id = 'auto_ontology/server' THEN NULL\n      ELSE SUBSTR(file_id, 1, INSTR(SUBSTR(file_id, 13), '/') + 12)\n    END AS folder_path,\n    line_count\n  FROM code.files\n  WHERE file_id LIKE 'auto_ontology/server/%'\n    AND (module LIKE '%.py' OR file_id LIKE '%.py')\n)\nGROUP BY folder_path\nHAVING total_lines > 1000\nORDER BY total_lines DESC",
+      "error": null
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 592,
+    "completion_tokens": 200,
+    "total_tokens": 792,
+    "cost": 8.144e-05,
+    "providers": [
+      "CoreWeave"
+    ]
+  },
+  "request": "Within auto_ontology/server/, which immediate subfolders contain more than 1,000 lines of Python in total? Count every .py file anywhere inside the subfolder, including its test files and __init__.py; files directly in auto_ontology/server/ itself belong to no subfolder. Return the subfolder's repository-relative path (e.g. auto_ontology/server/chat) and its total line count.\n\nRequested output columns: folder_path (string), total_lines (integer).",
+  "explanation": "The query extracts the immediate subfolder from each file path under auto_ontology/server/, groups files by that folder, sums their line counts, and filters to only those subfolders exceeding 1,000 total lines of Python code.",
+  "sql": "SELECT folder_path, SUM(line_count) AS total_lines FROM (\n  SELECT\n    CASE\n      WHEN file_id = 'auto_ontology/server' THEN NULL\n      ELSE SUBSTR(file_id, 1, INSTR(SUBSTR(file_id, 13), '/') + 12)\n    END AS folder_path,\n    line_count\n  FROM code.files\n  WHERE file_id LIKE 'auto_ontology/server/%'\n    AND (module LIKE '%.py' OR file_id LIKE '%.py')\n)\nGROUP BY folder_path\nHAVING total_lines > 1000\nORDER BY total_lines DESC",
+  "rows": [
+    {
+      "folder_path": "auto_ontology/",
+      "total_lines": 14362
+    }
+  ]
+}

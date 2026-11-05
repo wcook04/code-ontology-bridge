@@ -1,0 +1,39 @@
+{
+  "question_id": "httpx-12",
+  "arm": "A",
+  "model": "deepseek/deepseek-v4.1-flash-1017",
+  "error": null,
+  "elapsed_s": 0.7,
+  "attempts": [
+    {
+      "sql": "WITH main_sym AS (SELECT symbol_id, file_id, line_start, line_end FROM code.symbols WHERE file_id = 'httpx/_main.py' AND name = 'main' AND kind = 'function'), main_span AS (SELECT file_id, line_start, MIN(line_start) OVER () AS dummy, line_end FROM main_sym), decorator_calls AS (SELECT c.callee_symbol_id, c.callee_name, c.line FROM code.calls c JOIN main_sym m ON c.caller_symbol_id = m.symbol_id), handed AS (SELECT DISTINCT c.callee_symbol_id FROM code.calls c JOIN main_sym m ON c.caller_symbol_id = m.symbol_id WHERE c.call_kind IN ('callback','argument','reference') OR c.resolution = 'callback'), partial_args AS (SELECT DISTINCT c2.callee_symbol_id FROM code.calls c2 JOIN main_sym m ON c2.caller_symbol_id = m.symbol_id WHERE c2.callee_name = 'partial'), all_handed AS (SELECT callee_symbol_id FROM handed UNION SELECT callee_symbol_id FROM partial_args) SELECT DISTINCT s.symbol_id FROM all_handed a JOIN code.symbols s ON s.symbol_id = a.callee_symbol_id WHERE s.file_id = 'httpx/_main.py' AND s.kind = 'function' ORDER BY s.symbol_id",
+      "error": null
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 577,
+    "completion_tokens": 374,
+    "total_tokens": 951,
+    "cost": 0.000397572,
+    "providers": [
+      "Relace"
+    ]
+  },
+  "request": "Which functions in httpx/_main.py are handed over by name as a callback argument to another call (not called directly; a function given to functools.partial counts as handed over) in the CLI command function `main` in httpx/_main.py, counting the arguments of the click decorators applied to `main` as part of `main`? Give their symbol IDs.\n\nRequested output columns: symbol_id (string).",
+  "explanation": "Finds calls made by the `main` function in httpx/_main.py whose call kind or resolution indicates the callee is passed as a callback/argument rather than invoked directly, plus arguments to functools.partial, then returns the symbol IDs of those functions defined in httpx/_main.py.",
+  "sql": "WITH main_sym AS (SELECT symbol_id, file_id, line_start, line_end FROM code.symbols WHERE file_id = 'httpx/_main.py' AND name = 'main' AND kind = 'function'), main_span AS (SELECT file_id, line_start, MIN(line_start) OVER () AS dummy, line_end FROM main_sym), decorator_calls AS (SELECT c.callee_symbol_id, c.callee_name, c.line FROM code.calls c JOIN main_sym m ON c.caller_symbol_id = m.symbol_id), handed AS (SELECT DISTINCT c.callee_symbol_id FROM code.calls c JOIN main_sym m ON c.caller_symbol_id = m.symbol_id WHERE c.call_kind IN ('callback','argument','reference') OR c.resolution = 'callback'), partial_args AS (SELECT DISTINCT c2.callee_symbol_id FROM code.calls c2 JOIN main_sym m ON c2.caller_symbol_id = m.symbol_id WHERE c2.callee_name = 'partial'), all_handed AS (SELECT callee_symbol_id FROM handed UNION SELECT callee_symbol_id FROM partial_args) SELECT DISTINCT s.symbol_id FROM all_handed a JOIN code.symbols s ON s.symbol_id = a.callee_symbol_id WHERE s.file_id = 'httpx/_main.py' AND s.kind = 'function' ORDER BY s.symbol_id",
+  "rows": [
+    {
+      "symbol_id": "httpx/_main.py::handle_help"
+    },
+    {
+      "symbol_id": "httpx/_main.py::trace"
+    },
+    {
+      "symbol_id": "httpx/_main.py::validate_auth"
+    },
+    {
+      "symbol_id": "httpx/_main.py::validate_json"
+    }
+  ]
+}

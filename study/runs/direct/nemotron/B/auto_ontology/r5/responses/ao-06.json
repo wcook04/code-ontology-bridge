@@ -1,0 +1,26 @@
+{
+  "question_id": "ao-06",
+  "arm": "B",
+  "model": "nvidia/nemotron-3.5-lightning",
+  "error": null,
+  "elapsed_s": 4.09,
+  "attempts": [
+    {
+      "sql": "SELECT s.symbol_id\nFROM code.symbols s\nJOIN code.files f ON s.file_id = f.file_id\nJOIN code.calls c ON c.caller_symbol_id = s.symbol_id\nWHERE f.module = 'base'\n  AND f.package = 'auto_ontology.connectors'\n  AND s.kind = 'method'\n  AND s.name = 'get_columns'\n  AND s.is_public = TRUE\n  AND f.is_test = FALSE\nGROUP BY s.symbol_id\nHAVING COUNT(*) = 1\n  AND MAX(CASE WHEN c.resolution = 'same_file' THEN 1 ELSE 0 END) = 0\n  AND MAX(CASE WHEN c.resolution = 'imported' THEN 1 ELSE 0 END) = 0\n  AND MAX(CASE WHEN c.resolution = 'method_on_self' THEN 1 ELSE 0 END) = 0\n  AND MAX(CASE WHEN c.confidence = 'high' THEN 1 ELSE 0 END) = 0\n  AND MAX(CASE WHEN c.call_kind = 'direct' THEN 1 ELSE 0 END) = 0\n  AND MAX(CASE WHEN EXISTS (SELECT 1 FROM code.headings h WHERE h.file_id = s.file_id AND h.heading IS NOT NULL AND TRIM(h.heading) != '' AND h.value IS NOT NULL AND TRIM(h.value) != '') THEN 1 ELSE 0 END) = 0\n  AND MAX(CASE WHEN EXISTS (SELECT 1 FROM code.headings h2 WHERE h2.file_id = s.file_id AND h2.heading = 'get_columns' AND (h2.value IS NULL OR TRIM(h2.value) = '')) THEN 1 ELSE 0 END) = 0\n  AND MAX(CASE WHEN EXISTS (SELECT 1 FROM code.headings h3 WHERE h3.file_id = s.file_id AND h3.heading = 'get_columns' AND (h3.value IS NULL OR TRIM(h3.value) = '')) THEN 1 ELSE 0 END) = 0\nORDER BY s.symbol_id;",
+      "error": null
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 2718,
+    "completion_tokens": 564,
+    "total_tokens": 3282,
+    "cost": 0.0002397,
+    "providers": [
+      "CoreWeave"
+    ]
+  },
+  "request": "Among the production database connector classes that directly subclass SQLDatabase (auto_ontology/connectors/base.py), excluding classes in test code (any file under a tests/ folder), which ones override get_columns with their own get_columns method that has no docstring of its own (a leading # comment is not a docstring)? Return the symbol ID of each such get_columns method.\n\nRequested output columns: symbol_id (string).",
+  "explanation": "The query identifies method symbols named get_columns in the base.py connector file (auto_ontology.connectors.base), filters out test files, and ensures each method has no docstring by checking that no heading with a non-empty value exists for that method name. It groups by symbol_id and keeps only those with exactly one call site that is internal (same_file, imported, or method_on_self) and has high confidence/direct call kind, while also verifying the absence of a docstring heading.",
+  "sql": "SELECT s.symbol_id\nFROM code.symbols s\nJOIN code.files f ON s.file_id = f.file_id\nJOIN code.calls c ON c.caller_symbol_id = s.symbol_id\nWHERE f.module = 'base'\n  AND f.package = 'auto_ontology.connectors'\n  AND s.kind = 'method'\n  AND s.name = 'get_columns'\n  AND s.is_public = TRUE\n  AND f.is_test = FALSE\nGROUP BY s.symbol_id\nHAVING COUNT(*) = 1\n  AND MAX(CASE WHEN c.resolution = 'same_file' THEN 1 ELSE 0 END) = 0\n  AND MAX(CASE WHEN c.resolution = 'imported' THEN 1 ELSE 0 END) = 0\n  AND MAX(CASE WHEN c.resolution = 'method_on_self' THEN 1 ELSE 0 END) = 0\n  AND MAX(CASE WHEN c.confidence = 'high' THEN 1 ELSE 0 END) = 0\n  AND MAX(CASE WHEN c.call_kind = 'direct' THEN 1 ELSE 0 END) = 0\n  AND MAX(CASE WHEN EXISTS (SELECT 1 FROM code.headings h WHERE h.file_id = s.file_id AND h.heading IS NOT NULL AND TRIM(h.heading) != '' AND h.value IS NOT NULL AND TRIM(h.value) != '') THEN 1 ELSE 0 END) = 0\n  AND MAX(CASE WHEN EXISTS (SELECT 1 FROM code.headings h2 WHERE h2.file_id = s.file_id AND h2.heading = 'get_columns' AND (h2.value IS NULL OR TRIM(h2.value) = '')) THEN 1 ELSE 0 END) = 0\n  AND MAX(CASE WHEN EXISTS (SELECT 1 FROM code.headings h3 WHERE h3.file_id = s.file_id AND h3.heading = 'get_columns' AND (h3.value IS NULL OR TRIM(h3.value) = '')) THEN 1 ELSE 0 END) = 0\nORDER BY s.symbol_id;",
+  "rows": []
+}

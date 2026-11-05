@@ -1,0 +1,36 @@
+{
+  "question_id": "ao-01",
+  "arm": "A",
+  "model": "nvidia/nemotron-3.5-lightning",
+  "error": "Binder Error: Referenced table \"cc\" not found!",
+  "elapsed_s": 9.35,
+  "attempts": [
+    {
+      "sql": "WITH production_files AS (\n  SELECT file_id\n  FROM code.files\n  WHERE is_test = FALSE\n    AND module LIKE '%connectors%'\n),\nconnector_classes AS (\n  SELECT s.symbol_id AS class_symbol_id,\n         s.qualname,\n         s.file_id\n  FROM code.symbols s\n  JOIN production_files p ON s.file_id = p.file_id\n  WHERE s.kind = 'class'\n),\nconnector_bases AS (\n  SELECT cb.class_symbol_id,\n         cb.base_symbol_id\n  FROM code.class_bases cb\n  JOIN connector_classes cc ON cb.class_symbol_id = cc.class_symbol_id\n  WHERE cb.base_name = 'SQLDatabase'\n),\nconnector_methods AS (\n  SELECT DISTINCT s.symbol_id AS class_symbol_id,\n                s.name AS method_name\n  FROM code.symbols s\n  JOIN connector_bases cb ON s.file_id = cb.class_symbol_id  -- reuse file_id from connector_classes? No, need correct join.\n  WHERE s.kind = 'method'\n    AND s.name NOT LIKE '_%'\n),\nall_sql_methods AS (\n  SELECT class_symbol_id,\n         name AS method_name\n  FROM code.symbols\n  WHERE kind = 'method'\n    AND name NOT LIKE '_%'\n    AND qualname LIKE '%SQLDatabase%'\n)\nSELECT cm.class_symbol_id,\n       cm.method_name\nFROM connector_methods cm\nLEFT JOIN all_sql_methods asm ON cm.class_symbol_id = asm.class_symbol_id\n                           AND cm.method_name = asm.method_name\nWHERE asm.method_name IS NULL;",
+      "error": "Binder Error: Referenced column \"class_symbol_id\" not found in FROM clause!"
+    },
+    {
+      "sql": "WITH production_files AS (\n  SELECT file_id\n  FROM code.files\n  WHERE is_test = FALSE\n    AND module LIKE '%connectors%'\n),\nconnector_classes AS (\n  SELECT s.symbol_id AS class_symbol_id,\n         s.qualname,\n         s.file_id\n  FROM code.symbols s\n  JOIN production_files p ON s.file_id = p.file_id\n  WHERE s.kind = 'class'\n),\nconnector_bases AS (\n  SELECT cb.class_symbol_id,\n         cb.base_symbol_id\n  FROM code.class_bases cb\n  JOIN connector_classes cc ON cb.class_symbol_id = cc.class_symbol_id\n  WHERE cb.base_name = 'SQLDatabase'\n),\nconnector_methods AS (\n  SELECT DISTINCT cb.class_symbol_id,\n                s.name AS method_name\n  FROM code.symbols s\n  JOIN connector_bases cb ON s.file_id = cb.class_symbol_id\n  WHERE s.kind = 'method'\n    AND s.name NOT LIKE '_%'\n),\nall_sql_methods AS (\n  SELECT class_symbol_id,\n         name AS method_name\n  FROM code.symbols\n  WHERE kind = 'method'\n    AND name NOT LIKE '_%'\n    AND qualname LIKE '%SQLDatabase%'\n)\nSELECT cm.class_symbol_id,\n       cm.method_name\nFROM connector_methods cm\nLEFT JOIN all_sql_methods asm ON cm.class_symbol_id = asm.class_symbol_id\n                           AND cm.method_name = asm.method_name\nWHERE asm.method_name IS NULL;",
+      "error": "Binder Error: Referenced column \"class_symbol_id\" not found in FROM clause!"
+    },
+    {
+      "sql": "WITH production_files AS (\n  SELECT file_id\n  FROM code.files\n  WHERE is_test = FALSE\n    AND module LIKE '%connectors%'\n),\nconnector_classes AS (\n  SELECT s.symbol_id AS class_symbol_id,\n         s.file_id\n  FROM code.symbols s\n  JOIN production_files p ON s.file_id = p.file_id\n  WHERE s.kind = 'class'\n),\nconnector_bases AS (\n  SELECT cb.class_symbol_id\n  FROM code.class_bases cb\n  JOIN connector_classes cc ON cb.class_symbol_id = cc.class_symbol_id\n  WHERE cb.base_name = 'SQLDatabase'\n),\nconnector_methods AS (\n  SELECT DISTINCT cb.class_symbol_id,\n                s.name AS method_name\n  FROM code.symbols s\n  JOIN connector_bases cb ON s.file_id = cc.file_id\n  WHERE s.kind = 'method'\n    AND s.name NOT LIKE '_%'\n),\nall_sql_methods AS (\n  SELECT symbol_id AS class_symbol_id,\n         name AS method_name\n  FROM code.symbols\n  WHERE kind = 'method'\n    AND name NOT LIKE '_%'\n    AND qualname LIKE '%SQLDatabase%'\n)\nSELECT cm.class_symbol_id,\n       cm.method_name\nFROM connector_methods cm\nLEFT JOIN all_sql_methods asm ON cm.class_symbol_id = asm.class_symbol_id\n                           AND cm.method_name = asm.method_name\nWHERE asm.method_name IS NULL;",
+      "error": "Binder Error: Referenced table \"cc\" not found!"
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 3278,
+    "completion_tokens": 1183,
+    "total_tokens": 4461,
+    "cost": 0.00046606,
+    "providers": [
+      "CoreWeave",
+      "CoreWeave",
+      "CoreWeave"
+    ]
+  },
+  "request": "The production database connectors are the classes that directly subclass SQLDatabase (defined in auto_ontology/connectors/base.py), excluding any class defined in test code (every file under a tests/ folder counts as test code). For each such connector class, which public methods does the class define in its own body that SQLDatabase itself does not define? A method is public when its name does not start with an underscore (so __init__ and other dunder methods are excluded); anything written with def directly in the class body counts as a method, including properties and context-manager methods. Methods inherited without being redefined do not count. Return one row per (connector class symbol ID, method name).\n\nRequested output columns: class_symbol_id (string), method_name (string).",
+  "explanation": "Reorganized the CTEs so connector_methods references class_symbol_id from connector_bases and uses the correct file_id from connector_classes via a subquery alias, avoiding undefined column references.",
+  "sql": "WITH production_files AS (\n  SELECT file_id\n  FROM code.files\n  WHERE is_test = FALSE\n    AND module LIKE '%connectors%'\n),\nconnector_classes AS (\n  SELECT s.symbol_id AS class_symbol_id,\n         s.file_id\n  FROM code.symbols s\n  JOIN production_files p ON s.file_id = p.file_id\n  WHERE s.kind = 'class'\n),\nconnector_bases AS (\n  SELECT cb.class_symbol_id\n  FROM code.class_bases cb\n  JOIN connector_classes cc ON cb.class_symbol_id = cc.class_symbol_id\n  WHERE cb.base_name = 'SQLDatabase'\n),\nconnector_methods AS (\n  SELECT DISTINCT cb.class_symbol_id,\n                s.name AS method_name\n  FROM code.symbols s\n  JOIN connector_bases cb ON s.file_id = cc.file_id\n  WHERE s.kind = 'method'\n    AND s.name NOT LIKE '_%'\n),\nall_sql_methods AS (\n  SELECT symbol_id AS class_symbol_id,\n         name AS method_name\n  FROM code.symbols\n  WHERE kind = 'method'\n    AND name NOT LIKE '_%'\n    AND qualname LIKE '%SQLDatabase%'\n)\nSELECT cm.class_symbol_id,\n       cm.method_name\nFROM connector_methods cm\nLEFT JOIN all_sql_methods asm ON cm.class_symbol_id = asm.class_symbol_id\n                           AND cm.method_name = asm.method_name\nWHERE asm.method_name IS NULL;",
+  "rows": null
+}

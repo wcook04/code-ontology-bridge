@@ -1,0 +1,47 @@
+{
+  "question_id": "ao-12",
+  "arm": "A",
+  "model": "deepseek/deepseek-v4.1-flash-1017",
+  "error": null,
+  "elapsed_s": 2.24,
+  "attempts": [
+    {
+      "sql": "WITH RECURSIVE target AS (\n  SELECT symbol_id FROM code.symbols\n  WHERE file_id = 'auto_ontology/server/models.py' AND name = 'ApiModel'\n),\ndirect AS (\n  SELECT cb.class_symbol_id\n  FROM code.class_bases cb, target t\n  WHERE cb.base_symbol_id = t.symbol_id\n     OR (cb.base_symbol_id IS NULL AND cb.base_name = 'ApiModel')\n     OR (cb.base_symbol_id IS NULL AND cb.base_name = '_Payload')\n     OR (cb.base_symbol_id IS NULL AND regexp_extract(cb.base_name, '^([A-Za-z_][A-Za-z0-9_]*)', 1) = 'ApiModel')\n     OR (cb.base_symbol_id IS NULL AND regexp_extract(cb.base_name, '^([A-Za-z_][A-Za-z0-9_]*)', 1) = '_Payload')\n),\nchain AS (\n  SELECT class_symbol_id, 1 AS depth FROM direct\n  UNION ALL\n  SELECT cb.class_symbol_id, ch.depth + 1\n  FROM code.class_bases cb\n  JOIN chain ch ON cb.base_symbol_id = ch.class_symbol_id\n  WHERE cb.class_symbol_id <> ch.class_symbol_id\n),\nbest AS (\n  SELECT class_symbol_id, MIN(depth) AS depth\n  FROM chain GROUP BY class_symbol_id\n)\nSELECT b.class_symbol_id, b.depth\nFROM best b\nWHERE NOT EXISTS (\n  SELECT 1 FROM direct d WHERE d.class_symbol_id = b.class_symbol_id\n)\nORDER BY b.class_symbol_id",
+      "error": null
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 619,
+    "completion_tokens": 432,
+    "total_tokens": 1051,
+    "cost": 0.000355644,
+    "providers": [
+      "DigitalOcean"
+    ]
+  },
+  "request": "Which classes inherit from ApiModel (auto_ontology/server/models.py) only indirectly, i.e. through at least one intermediate class of this repository, and do not name ApiModel directly in their class statement? An import alias of ApiModel (auto_ontology/server/responses.py imports it as _Payload) counts as naming ApiModel directly, and a subscripted base such as ListResponse[T] counts as its class. For each, give the class symbol ID and the length of the shortest inheritance chain to ApiModel (2 when the parent class directly subclasses ApiModel).\n\nRequested output columns: class_symbol_id (string), depth (integer).",
+  "explanation": "Finds ApiModel in models.py, then computes direct subclasses (including the _Payload alias and subscripted bases) and recursively derives inheritance depths for all descending classes. It keeps the minimum depth per class and excludes classes that directly name ApiModel, leaving only indirect subclasses with their shortest chain length to ApiModel.",
+  "sql": "WITH RECURSIVE target AS (\n  SELECT symbol_id FROM code.symbols\n  WHERE file_id = 'auto_ontology/server/models.py' AND name = 'ApiModel'\n),\ndirect AS (\n  SELECT cb.class_symbol_id\n  FROM code.class_bases cb, target t\n  WHERE cb.base_symbol_id = t.symbol_id\n     OR (cb.base_symbol_id IS NULL AND cb.base_name = 'ApiModel')\n     OR (cb.base_symbol_id IS NULL AND cb.base_name = '_Payload')\n     OR (cb.base_symbol_id IS NULL AND regexp_extract(cb.base_name, '^([A-Za-z_][A-Za-z0-9_]*)', 1) = 'ApiModel')\n     OR (cb.base_symbol_id IS NULL AND regexp_extract(cb.base_name, '^([A-Za-z_][A-Za-z0-9_]*)', 1) = '_Payload')\n),\nchain AS (\n  SELECT class_symbol_id, 1 AS depth FROM direct\n  UNION ALL\n  SELECT cb.class_symbol_id, ch.depth + 1\n  FROM code.class_bases cb\n  JOIN chain ch ON cb.base_symbol_id = ch.class_symbol_id\n  WHERE cb.class_symbol_id <> ch.class_symbol_id\n),\nbest AS (\n  SELECT class_symbol_id, MIN(depth) AS depth\n  FROM chain GROUP BY class_symbol_id\n)\nSELECT b.class_symbol_id, b.depth\nFROM best b\nWHERE NOT EXISTS (\n  SELECT 1 FROM direct d WHERE d.class_symbol_id = b.class_symbol_id\n)\nORDER BY b.class_symbol_id",
+  "rows": [
+    {
+      "class_symbol_id": "auto_ontology/server/models.py::TableExplorationTerm",
+      "depth": 2
+    },
+    {
+      "class_symbol_id": "auto_ontology/server/models.py::Term",
+      "depth": 2
+    },
+    {
+      "class_symbol_id": "auto_ontology/server/models.py::TermDetail",
+      "depth": 3
+    },
+    {
+      "class_symbol_id": "auto_ontology/server/models.py::TermListItem",
+      "depth": 3
+    },
+    {
+      "class_symbol_id": "auto_ontology/server/responses.py::PagedListResponse",
+      "depth": 2
+    }
+  ]
+}

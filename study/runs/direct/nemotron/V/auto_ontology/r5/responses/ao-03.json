@@ -1,0 +1,123 @@
+{
+  "question_id": "ao-03",
+  "arm": "V",
+  "model": "nvidia/nemotron-3.5-lightning",
+  "error": null,
+  "elapsed_s": 2.2,
+  "attempts": [
+    {
+      "sql": "SELECT DISTINCT c1.caller_symbol_id AS symbol_id\nFROM code.call_edges c1\nWHERE c1.calls_directly = TRUE\n  AND c1.caller_symbol_id IN (\n    SELECT c2.caller_symbol_id\n    FROM code.call_edges c2\n    WHERE c2.calls_directly = TRUE\n      AND c2.callee_symbol_id IN (\n        SELECT s.symbol_id\n        FROM code.symbols s\n        WHERE s.qualname = 'invoke_with_structured_output'\n          AND s.kind IN ('function', 'method')\n      )\n  )\n  AND c1.caller_symbol_id NOT IN (\n    SELECT s2.symbol_id\n    FROM code.symbols s2\n    WHERE s2.qualname = 'invoke_with_structured_output'\n      AND s2.kind IN ('function', 'method')\n  )\nORDER BY symbol_id;",
+      "error": null
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 1093,
+    "completion_tokens": 276,
+    "total_tokens": 1369,
+    "cost": 0.00010003,
+    "providers": [
+      "CoreWeave"
+    ]
+  },
+  "request": "invoke_with_structured_output in auto_ontology/utils/llm_invoke.py is the main structured-LLM-call wrapper. Which functions or methods in non-test code (every file under a tests/ folder is test code) reach it at exactly two hops: they do not call invoke_with_structured_output directly themselves, but they directly call at least one function or method that does call it directly? Consider direct calls only on both hops, and follow only calls to a named function or to a method on self (a call through another object's attribute, such as self._backend.classify(), is not followed); a function passed as an argument (e.g. pool.submit(f)) does not count as calling it. The intermediate function may live anywhere, including test code, but the functions you list must be in non-test code. Return their symbol IDs.\n\nRequested output columns: symbol_id (string).",
+  "explanation": "The query finds all direct callers of functions/methods named invoke_with_structured_output, then filters to those that are themselves called directly by another function/method (two-hop path), excluding the target itself. It returns distinct caller symbol IDs that sit exactly two hops above the target via direct calls only.",
+  "sql": "SELECT DISTINCT c1.caller_symbol_id AS symbol_id\nFROM code.call_edges c1\nWHERE c1.calls_directly = TRUE\n  AND c1.caller_symbol_id IN (\n    SELECT c2.caller_symbol_id\n    FROM code.call_edges c2\n    WHERE c2.calls_directly = TRUE\n      AND c2.callee_symbol_id IN (\n        SELECT s.symbol_id\n        FROM code.symbols s\n        WHERE s.qualname = 'invoke_with_structured_output'\n          AND s.kind IN ('function', 'method')\n      )\n  )\n  AND c1.caller_symbol_id NOT IN (\n    SELECT s2.symbol_id\n    FROM code.symbols s2\n    WHERE s2.qualname = 'invoke_with_structured_output'\n      AND s2.kind IN ('function', 'method')\n  )\nORDER BY symbol_id;",
+  "rows": [
+    {
+      "symbol_id": "auto_ontology/pii_detection/detector.py::LlmPiiClassifier.classify"
+    },
+    {
+      "symbol_id": "auto_ontology/retrieval/entity_coverage/agents/question_extraction.py::QuestionExtractionAgent.execute"
+    },
+    {
+      "symbol_id": "auto_ontology/retrieval/text_to_sql/agents/candidates_preparation.py::CandidatePreparationAgent._filter_custom_analyses_by_relevance"
+    },
+    {
+      "symbol_id": "auto_ontology/retrieval/text_to_sql/agents/candidates_preparation.py::CandidatePreparationAgent._filter_tables_by_relevance"
+    },
+    {
+      "symbol_id": "auto_ontology/retrieval/text_to_sql/agents/candidates_preparation.py::CandidatePreparationAgent._identify_anchor"
+    },
+    {
+      "symbol_id": "auto_ontology/retrieval/text_to_sql/agents/candidates_retrieval.py::_llm_filter"
+    },
+    {
+      "symbol_id": "auto_ontology/retrieval/text_to_sql/agents/candidates_retrieval.py::_llm_filter_both"
+    },
+    {
+      "symbol_id": "auto_ontology/retrieval/text_to_sql/agents/candidates_retrieval.py::_llm_filter_candidates"
+    },
+    {
+      "symbol_id": "auto_ontology/retrieval/text_to_sql/agents/empty_like_result_check.py::EmptyLikeResultCheckAgent.execute"
+    },
+    {
+      "symbol_id": "auto_ontology/retrieval/text_to_sql/agents/information_agent.py::InformationAgent.execute"
+    },
+    {
+      "symbol_id": "auto_ontology/retrieval/text_to_sql/agents/question_intent.py::QuestionIntentAgent.execute"
+    },
+    {
+      "symbol_id": "auto_ontology/retrieval/text_to_sql/agents/sql_from_tables.py::SQLFromTablesAgent.execute"
+    },
+    {
+      "symbol_id": "auto_ontology/retrieval/text_to_sql/agents/sql_parse_validation.py::SQLValidationAgent._validate_intent"
+    },
+    {
+      "symbol_id": "auto_ontology/retrieval/text_to_sql/agents/sql_reconstruction.py::SQLReconstructionAgent._analyze_error"
+    },
+    {
+      "symbol_id": "auto_ontology/retrieval/text_to_sql/agents/sql_reconstruction.py::SQLReconstructionAgent.execute"
+    },
+    {
+      "symbol_id": "auto_ontology/retrieval/text_to_sql/agents/sql_value_validation.py::SQLValueValidationAgent.execute"
+    },
+    {
+      "symbol_id": "auto_ontology/retrieval/text_to_sql/follow_up.py::resolve_follow_up"
+    },
+    {
+      "symbol_id": "auto_ontology/retrieval/text_to_sql/visualization/analyze.py::analyze_and_visualize"
+    },
+    {
+      "symbol_id": "auto_ontology/semantic/bridge_tables.py::_generate_bridge_sql_attribute"
+    },
+    {
+      "symbol_id": "auto_ontology/semantic/deterministic.py::_describe_column_batch"
+    },
+    {
+      "symbol_id": "auto_ontology/semantic/fk_suggester.py::suggest_potential_foreign_keys"
+    },
+    {
+      "symbol_id": "auto_ontology/semantic/semantic_fk.py::_llm_pick_hit"
+    },
+    {
+      "symbol_id": "auto_ontology/semantic/semantic_fk.py::_select_join_default_with_llm"
+    },
+    {
+      "symbol_id": "auto_ontology/semantic/sql_attribute_suggester.py::_judge_with_llm"
+    },
+    {
+      "symbol_id": "auto_ontology/semantic/term_extractor.py::_extract_synonyms"
+    },
+    {
+      "symbol_id": "auto_ontology/semantic/term_extractor.py::extract_term"
+    },
+    {
+      "symbol_id": "auto_ontology/server/sql_attributes/description_suggester.py::suggest_sql_attribute_description"
+    },
+    {
+      "symbol_id": "auto_ontology/utils/llm_invoke.py::safe_invoke_structured_nr"
+    },
+    {
+      "symbol_id": "auto_ontology/utils/tests/test_llm_invoke.py::test_bound_non_reasoning_client_falls_back"
+    },
+    {
+      "symbol_id": "auto_ontology/utils/tests/test_llm_invoke.py::test_missing_reasoning_client_keeps_the_original_failure"
+    },
+    {
+      "symbol_id": "auto_ontology/utils/tests/test_llm_invoke.py::test_reasoning_structured_call_does_not_switch_models"
+    },
+    {
+      "symbol_id": "auto_ontology/utils/tests/test_llm_invoke.py::test_structured_non_reasoning_call_falls_back_to_reasoning"
+    }
+  ]
+}

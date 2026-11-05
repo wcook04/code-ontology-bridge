@@ -1,0 +1,51 @@
+{
+  "question_id": "ao-04",
+  "arm": "S",
+  "model": "deepseek/deepseek-v4.1-flash-1017",
+  "error": null,
+  "elapsed_s": 2.29,
+  "attempts": [
+    {
+      "sql": "WITH base AS (SELECT symbol_id FROM code.symbols WHERE file_id = 'auto_ontology/retrieval/text_to_sql/base.py' AND name = 'BaseAgent' AND kind = 'class'), agents AS (SELECT s.symbol_id FROM code.symbols s JOIN code.class_bases b ON b.class_symbol_id = s.symbol_id JOIN base ON b.base_symbol_id = base.symbol_id WHERE s.kind = 'class' AND s.file_id NOT LIKE '%tests/%' AND s.file_id NOT LIKE '%test/%' AND s.file_id NOT LIKE '%test_%' AND s.file_id NOT LIKE '%_test.py' AND s.file_id NOT LIKE '%conftest.py'), constructed AS (SELECT DISTINCT c.callee_symbol_id AS symbol_id, c.caller_symbol_id FROM code.calls c JOIN code.symbols caller ON caller.symbol_id = c.caller_symbol_id WHERE c.call_kind = 'direct' AND c.callee_symbol_id IS NOT NULL AND caller.kind IN ('function','method')) SELECT DISTINCT a.symbol_id AS class_symbol_id FROM agents a JOIN constructed cn ON cn.symbol_id = a.symbol_id JOIN code.symbols caller ON caller.symbol_id = cn.caller_symbol_id WHERE caller.file_id NOT LIKE '%tests/%' AND caller.file_id NOT LIKE '%test/%' AND caller.file_id NOT LIKE '%test_%' AND caller.file_id NOT LIKE '%_test.py' AND caller.file_id NOT LIKE '%conftest.py' AND NOT EXISTS (SELECT 1 FROM constructed ct JOIN code.symbols tc ON tc.symbol_id = ct.caller_symbol_id WHERE ct.symbol_id = a.symbol_id AND (tc.file_id LIKE '%tests/%' OR tc.file_id LIKE '%test/%' OR tc.file_id LIKE '%test_%' OR tc.file_id LIKE '%_test.py' OR tc.file_id LIKE '%conftest.py')) ORDER BY class_symbol_id",
+      "error": null
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 5497,
+    "completion_tokens": 472,
+    "total_tokens": 5969,
+    "cost": 0.00051085,
+    "providers": [
+      "Particle AI"
+    ]
+  },
+  "request": "Consider the agent classes defined in non-test code that directly subclass BaseAgent from auto_ontology/retrieval/text_to_sql/base.py (every file under a tests/ folder, conftest.py and helpers included, is test code). Which of these agent classes are constructed (the class is called by name, e.g. ResponseAgent()) somewhere in non-test code but are never constructed anywhere in test code? Count only direct constructor calls written in a function or method body; patching or referencing a class without calling it does not count, and a test that calls a function which constructs the class does not count as constructing it. Return their class symbol IDs.\n\nRequested output columns: class_symbol_id (string).",
+  "explanation": "Finds BaseAgent in base.py, then its direct subclasses in non-test files. It keeps those classes that are directly called (constructed) from a non-test function or method body and excludes any that are also directly constructed from a test file.",
+  "sql": "WITH base AS (SELECT symbol_id FROM code.symbols WHERE file_id = 'auto_ontology/retrieval/text_to_sql/base.py' AND name = 'BaseAgent' AND kind = 'class'), agents AS (SELECT s.symbol_id FROM code.symbols s JOIN code.class_bases b ON b.class_symbol_id = s.symbol_id JOIN base ON b.base_symbol_id = base.symbol_id WHERE s.kind = 'class' AND s.file_id NOT LIKE '%tests/%' AND s.file_id NOT LIKE '%test/%' AND s.file_id NOT LIKE '%test_%' AND s.file_id NOT LIKE '%_test.py' AND s.file_id NOT LIKE '%conftest.py'), constructed AS (SELECT DISTINCT c.callee_symbol_id AS symbol_id, c.caller_symbol_id FROM code.calls c JOIN code.symbols caller ON caller.symbol_id = c.caller_symbol_id WHERE c.call_kind = 'direct' AND c.callee_symbol_id IS NOT NULL AND caller.kind IN ('function','method')) SELECT DISTINCT a.symbol_id AS class_symbol_id FROM agents a JOIN constructed cn ON cn.symbol_id = a.symbol_id JOIN code.symbols caller ON caller.symbol_id = cn.caller_symbol_id WHERE caller.file_id NOT LIKE '%tests/%' AND caller.file_id NOT LIKE '%test/%' AND caller.file_id NOT LIKE '%test_%' AND caller.file_id NOT LIKE '%_test.py' AND caller.file_id NOT LIKE '%conftest.py' AND NOT EXISTS (SELECT 1 FROM constructed ct JOIN code.symbols tc ON tc.symbol_id = ct.caller_symbol_id WHERE ct.symbol_id = a.symbol_id AND (tc.file_id LIKE '%tests/%' OR tc.file_id LIKE '%test/%' OR tc.file_id LIKE '%test_%' OR tc.file_id LIKE '%_test.py' OR tc.file_id LIKE '%conftest.py')) ORDER BY class_symbol_id",
+  "rows": [
+    {
+      "class_symbol_id": "auto_ontology/retrieval/entity_coverage/agents/coverage.py::CoverageGradeAgent"
+    },
+    {
+      "class_symbol_id": "auto_ontology/retrieval/text_to_sql/agents/empty_like_result_check.py::EmptyLikeResultCheckAgent"
+    },
+    {
+      "class_symbol_id": "auto_ontology/retrieval/text_to_sql/agents/join_path_check.py::JoinPathCheckAgent"
+    },
+    {
+      "class_symbol_id": "auto_ontology/retrieval/text_to_sql/agents/jsonb_path_check.py::JsonbPathCheckAgent"
+    },
+    {
+      "class_symbol_id": "auto_ontology/retrieval/text_to_sql/agents/kumo_prediction.py::KumoPredictionAgent"
+    },
+    {
+      "class_symbol_id": "auto_ontology/retrieval/text_to_sql/agents/prediction_graph.py::PredictionGraphAgent"
+    },
+    {
+      "class_symbol_id": "auto_ontology/retrieval/text_to_sql/agents/proactive_value_check.py::ProactiveValueCheckAgent"
+    },
+    {
+      "class_symbol_id": "auto_ontology/retrieval/text_to_sql/agents/response.py::ResponseAgent"
+    }
+  ]
+}

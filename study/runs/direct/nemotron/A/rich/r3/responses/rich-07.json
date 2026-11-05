@@ -1,0 +1,52 @@
+{
+  "question_id": "rich-07",
+  "arm": "A",
+  "model": "nvidia/nemotron-3.5-lightning",
+  "error": null,
+  "elapsed_s": 2.5,
+  "attempts": [
+    {
+      "sql": "SELECT class_symbol_id, COUNT(*) AS method_count\nFROM code.symbols\nWHERE kind = 'method'\n  AND file_id IN (\n    SELECT file_id\n    FROM code.files\n    WHERE is_test = FALSE\n  )\nGROUP BY class_symbol_id\nORDER BY method_count DESC, class_symbol_id ASC\nLIMIT 5",
+      "error": "Binder Error: Referenced column \"class_symbol_id\" not found in FROM clause!"
+    },
+    {
+      "sql": "SELECT s.symbol_id AS class_symbol_id, COUNT(*) AS method_count\nFROM code.symbols s\nJOIN code.files f ON s.file_id = f.file_id\nWHERE s.kind = 'method'\n  AND f.is_test = FALSE\nGROUP BY s.symbol_id\nORDER BY method_count DESC, s.symbol_id ASC\nLIMIT 5",
+      "error": null
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 1319,
+    "completion_tokens": 262,
+    "total_tokens": 1581,
+    "cost": 0.00014473,
+    "providers": [
+      "CoreWeave",
+      "CoreWeave"
+    ]
+  },
+  "request": "Which five classes outside the test suite define the most methods in their own class body? Count every method definition separately, so a property getter and its setter, or each @overload stub, count as separate methods. Give the class's symbol ID and the method count, ordered by count descending, ties broken by symbol ID ascending.\n\nRequested output columns: class_symbol_id (string), method_count (integer). Order the rows as the question asks.",
+  "explanation": "The corrected query joins symbols with files to access the is_test column, filters for method kind in non-test files, groups by the symbol ID, and returns the top five classes ordered by method count descending and symbol ID ascending for ties.",
+  "sql": "SELECT s.symbol_id AS class_symbol_id, COUNT(*) AS method_count\nFROM code.symbols s\nJOIN code.files f ON s.file_id = f.file_id\nWHERE s.kind = 'method'\n  AND f.is_test = FALSE\nGROUP BY s.symbol_id\nORDER BY method_count DESC, s.symbol_id ASC\nLIMIT 5",
+  "rows": [
+    {
+      "class_symbol_id": "benchmarks/benchmarks.py::ColorSuite.setup",
+      "method_count": 1
+    },
+    {
+      "class_symbol_id": "benchmarks/benchmarks.py::ColorSuite.time_downgrade_to_eight_bit",
+      "method_count": 1
+    },
+    {
+      "class_symbol_id": "benchmarks/benchmarks.py::ColorSuite.time_downgrade_to_standard",
+      "method_count": 1
+    },
+    {
+      "class_symbol_id": "benchmarks/benchmarks.py::ColorSuite.time_downgrade_to_windows",
+      "method_count": 1
+    },
+    {
+      "class_symbol_id": "benchmarks/benchmarks.py::ColorSuiteCached.setup",
+      "method_count": 1
+    }
+  ]
+}

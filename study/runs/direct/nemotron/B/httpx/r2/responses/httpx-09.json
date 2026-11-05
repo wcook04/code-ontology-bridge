@@ -1,0 +1,26 @@
+{
+  "question_id": "httpx-09",
+  "arm": "B",
+  "model": "nvidia/nemotron-3.5-lightning",
+  "error": null,
+  "elapsed_s": 2.06,
+  "attempts": [
+    {
+      "sql": "WITH RECURSIVE call_chain AS (\n  -- Start from all direct call sites of _send_single_request within httpx/_client.py\n  SELECT caller_symbol_id\n  FROM code.calls\n  WHERE callee_symbol_id = 'httpx/_client.py::Client._send_single_request'\n    AND callee_name = '_send_single_request'\n    AND resolution = 'same_file'\n    AND call_kind = 'direct'\n  UNION ALL\n  -- Recursively find callers of those callers\n  SELECT c.caller_symbol_id\n  FROM code.calls c\n  JOIN call_chain cc ON c.callee_symbol_id = cc.caller_symbol_id\n  WHERE c.callee_symbol_id IS NOT NULL\n    AND c.resolution = 'same_file'\n    AND c.call_kind = 'direct'\n    AND c.callee_name != '_send_single_request'\n)\nSELECT DISTINCT caller_symbol_id\nFROM call_chain\nORDER BY caller_symbol_id;",
+      "error": null
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 2709,
+    "completion_tokens": 312,
+    "total_tokens": 3021,
+    "cost": 0.00018867,
+    "providers": [
+      "CoreWeave"
+    ]
+  },
+  "request": "Within httpx/_client.py, which functions or methods eventually lead to a call of `Client._send_single_request`, through a chain of one or more direct calls whose every step is inside httpx/_client.py? Count direct calls only (no callbacks) and exclude `_send_single_request` itself. Give their symbol IDs.\n\nRequested output columns: symbol_id (string).",
+  "explanation": "The query uses a recursive CTE to trace back from all direct call sites of `Client._send_single_request` in httpx/_client.py. It first finds every function/method that directly calls `_send_single_request`, then repeatedly follows call edges backward through same-file direct calls, stopping before `_send_single_request` itself. The final SELECT returns distinct caller symbol IDs that are part of any such chain.",
+  "sql": "WITH RECURSIVE call_chain AS (\n  -- Start from all direct call sites of _send_single_request within httpx/_client.py\n  SELECT caller_symbol_id\n  FROM code.calls\n  WHERE callee_symbol_id = 'httpx/_client.py::Client._send_single_request'\n    AND callee_name = '_send_single_request'\n    AND resolution = 'same_file'\n    AND call_kind = 'direct'\n  UNION ALL\n  -- Recursively find callers of those callers\n  SELECT c.caller_symbol_id\n  FROM code.calls c\n  JOIN call_chain cc ON c.callee_symbol_id = cc.caller_symbol_id\n  WHERE c.callee_symbol_id IS NOT NULL\n    AND c.resolution = 'same_file'\n    AND c.call_kind = 'direct'\n    AND c.callee_name != '_send_single_request'\n)\nSELECT DISTINCT caller_symbol_id\nFROM call_chain\nORDER BY caller_symbol_id;",
+  "rows": []
+}

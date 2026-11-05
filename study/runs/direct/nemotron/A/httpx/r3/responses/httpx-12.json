@@ -1,0 +1,26 @@
+{
+  "question_id": "httpx-12",
+  "arm": "A",
+  "model": "nvidia/nemotron-3.5-lightning",
+  "error": null,
+  "elapsed_s": 2.39,
+  "attempts": [
+    {
+      "sql": "SELECT DISTINCT cb.callee_symbol_id AS symbol_id \nFROM code.calls cb \nWHERE cb.caller_symbol_id IN (\n    SELECT s.symbol_id \n    FROM code.symbols s \n    WHERE s.file_id IN (\n        SELECT f.file_id \n        FROM code.files f \n        WHERE f.module = '_main' AND f.package = 'httpx'\n    ) \n    AND s.name = 'main' \n    AND s.kind = 'function'\n) \n  AND cb.call_kind = 'call'\n  AND cb.confidence IN ('high', 'medium')\n  AND cb.callee_name IN (\n    SELECT h.value \n    FROM code.headings h \n    WHERE h.file_id IN (\n        SELECT f.file_id \n        FROM code.files f \n        WHERE f.module = '_main' AND f.package = 'httpx'\n    )\n    AND h.heading = 'decorator'\n  )\n  AND cb.line > 0",
+      "error": null
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 576,
+    "completion_tokens": 327,
+    "total_tokens": 903,
+    "cost": 0.00010572,
+    "providers": [
+      "CoreWeave"
+    ]
+  },
+  "request": "Which functions in httpx/_main.py are handed over by name as a callback argument to another call (not called directly; a function given to functools.partial counts as handed over) in the CLI command function `main` in httpx/_main.py, counting the arguments of the click decorators applied to `main` as part of `main`? Give their symbol IDs.\n\nRequested output columns: symbol_id (string).",
+  "explanation": "The query first identifies the `main` function symbol in httpx/_main.py by matching file and name. It then finds all calls originating from that function. By cross-referencing headings in the same file, it filters to only those calls whose callee name matches a click decorator applied to `main`. Finally, it selects the distinct callee symbol IDs of those callback-style calls, excluding direct calls and those with low confidence.",
+  "sql": "SELECT DISTINCT cb.callee_symbol_id AS symbol_id \nFROM code.calls cb \nWHERE cb.caller_symbol_id IN (\n    SELECT s.symbol_id \n    FROM code.symbols s \n    WHERE s.file_id IN (\n        SELECT f.file_id \n        FROM code.files f \n        WHERE f.module = '_main' AND f.package = 'httpx'\n    ) \n    AND s.name = 'main' \n    AND s.kind = 'function'\n) \n  AND cb.call_kind = 'call'\n  AND cb.confidence IN ('high', 'medium')\n  AND cb.callee_name IN (\n    SELECT h.value \n    FROM code.headings h \n    WHERE h.file_id IN (\n        SELECT f.file_id \n        FROM code.files f \n        WHERE f.module = '_main' AND f.package = 'httpx'\n    )\n    AND h.heading = 'decorator'\n  )\n  AND cb.line > 0",
+  "rows": []
+}

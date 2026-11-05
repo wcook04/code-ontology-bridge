@@ -1,0 +1,60 @@
+{
+  "question_id": "httpx-06",
+  "arm": "S",
+  "model": "deepseek/deepseek-v4.1-flash-1017",
+  "error": null,
+  "elapsed_s": 2.08,
+  "attempts": [
+    {
+      "sql": "SELECT s.symbol_id, COUNT(*) AS method_count FROM code.symbols s JOIN code.symbols c ON s.enclosing_class_symbol_id = c.symbol_id WHERE s.kind = 'method' AND c.kind = 'class' AND c.file_id NOT IN (SELECT file_id FROM code.files WHERE is_test) GROUP BY s.symbol_id, c.symbol_id HAVING COUNT(*) >= 20 ORDER BY method_count DESC, s.symbol_id ASC",
+      "error": "Binder Error: Table \"s\" does not have a column named \"enclosing_class_symbol_id\""
+    },
+    {
+      "sql": "SELECT c.symbol_id, COUNT(*) AS method_count FROM code.symbol_profile m JOIN code.symbol_profile c ON m.enclosing_class_symbol_id = c.symbol_id WHERE m.is_method AND c.is_class AND NOT c.in_test_file GROUP BY c.symbol_id HAVING COUNT(*) >= 20 ORDER BY method_count DESC, c.symbol_id ASC",
+      "error": null
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 11094,
+    "completion_tokens": 312,
+    "total_tokens": 11406,
+    "cost": 0.000296736,
+    "providers": [
+      "Wafer",
+      "Wafer"
+    ]
+  },
+  "request": "Which classes in the non-test code define at least 20 methods directly in their own body? Count every method definition separately (a property getter and its setter count as two; inherited methods and methods of nested classes do not count). Return each class's symbol ID and its method count, largest count first, ties broken by symbol ID alphabetically.\n\nRequested output columns: symbol_id (string), method_count (integer). Order the rows as the question asks.",
+  "explanation": "This joins each method to its enclosing class via symbol_profile, restricts to classes in non-test files, and counts method definitions per class. Each method definition counts separately, and nested classes' methods are attributed to their own enclosing class. Results are ordered by count descending, then symbol ID.",
+  "sql": "SELECT c.symbol_id, COUNT(*) AS method_count FROM code.symbol_profile m JOIN code.symbol_profile c ON m.enclosing_class_symbol_id = c.symbol_id WHERE m.is_method AND c.is_class AND NOT c.in_test_file GROUP BY c.symbol_id HAVING COUNT(*) >= 20 ORDER BY method_count DESC, c.symbol_id ASC",
+  "rows": [
+    {
+      "symbol_id": "httpx/_models.py::Response",
+      "method_count": 42
+    },
+    {
+      "symbol_id": "httpx/_client.py::BaseClient",
+      "method_count": 32
+    },
+    {
+      "symbol_id": "httpx/_urls.py::URL",
+      "method_count": 28
+    },
+    {
+      "symbol_id": "httpx/_urls.py::QueryParams",
+      "method_count": 22
+    },
+    {
+      "symbol_id": "httpx/_client.py::AsyncClient",
+      "method_count": 20
+    },
+    {
+      "symbol_id": "httpx/_client.py::Client",
+      "method_count": 20
+    },
+    {
+      "symbol_id": "httpx/_models.py::Headers",
+      "method_count": 20
+    }
+  ]
+}

@@ -1,0 +1,26 @@
+{
+  "question_id": "ao-11",
+  "arm": "A",
+  "model": "deepseek/deepseek-v4.1-flash-1017",
+  "error": null,
+  "elapsed_s": 1.31,
+  "attempts": [
+    {
+      "sql": "WITH pkg AS (\n  SELECT file_id FROM code.files\n  WHERE package = 'auto_ontology/retrieval/kumo' AND NOT is_test\n), syms AS (\n  SELECT s.symbol_id, s.kind, s.name, s.qualname\n  FROM code.symbols s JOIN pkg p ON s.file_id = p.file_id\n  WHERE s.is_public AND s.name NOT LIKE '\\_%' ESCAPE '\\'\n), classified AS (\n  SELECT CASE\n    WHEN kind = 'class' AND qualname NOT LIKE '%.%' THEN 'class'\n    WHEN kind = 'function' AND qualname NOT LIKE '%.%' THEN 'function'\n    WHEN kind = 'method' THEN 'method'\n  END AS kind\n  FROM syms\n)\nSELECT kind, COUNT(*)::INTEGER AS public_count\nFROM classified\nWHERE kind IS NOT NULL\nGROUP BY kind\nORDER BY kind",
+      "error": null
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 614,
+    "completion_tokens": 293,
+    "total_tokens": 907,
+    "cost": 0.00031311,
+    "providers": [
+      "Cohere"
+    ]
+  },
+  "request": "How many public classes, public module-level functions and public methods are defined in the non-test code of the auto_ontology/retrieval/kumo/ package (files under its tests/ folder excluded)? A name is public when it does not start with an underscore, so dunder methods such as __init__ are not public, and methods of a class whose name starts with an underscore are not public either. Nested functions and nested classes are not counted. Return one row per kind, with kind being 'class', 'function' or 'method'.\n\nRequested output columns: kind (string), public_count (integer).",
+  "explanation": "Restricts to non-test files in the auto_ontology/retrieval/kumo package, keeps public symbols whose names don't start with an underscore, and classifies them as class, function, or method based on kind and whether the qualname is top-level. Nested classes/functions (qualnames containing a dot) are excluded, and counts are grouped by kind.",
+  "sql": "WITH pkg AS (\n  SELECT file_id FROM code.files\n  WHERE package = 'auto_ontology/retrieval/kumo' AND NOT is_test\n), syms AS (\n  SELECT s.symbol_id, s.kind, s.name, s.qualname\n  FROM code.symbols s JOIN pkg p ON s.file_id = p.file_id\n  WHERE s.is_public AND s.name NOT LIKE '\\_%' ESCAPE '\\'\n), classified AS (\n  SELECT CASE\n    WHEN kind = 'class' AND qualname NOT LIKE '%.%' THEN 'class'\n    WHEN kind = 'function' AND qualname NOT LIKE '%.%' THEN 'function'\n    WHEN kind = 'method' THEN 'method'\n  END AS kind\n  FROM syms\n)\nSELECT kind, COUNT(*)::INTEGER AS public_count\nFROM classified\nWHERE kind IS NOT NULL\nGROUP BY kind\nORDER BY kind",
+  "rows": []
+}

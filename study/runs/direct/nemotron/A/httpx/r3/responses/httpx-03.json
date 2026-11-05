@@ -1,0 +1,81 @@
+{
+  "question_id": "httpx-03",
+  "arm": "A",
+  "model": "nvidia/nemotron-3.5-lightning",
+  "error": null,
+  "elapsed_s": 2.37,
+  "attempts": [
+    {
+      "sql": "SELECT DISTINCT f.file_id AS file_path\nFROM code.files f\nWHERE f.is_test = FALSE\n  AND f.file_id NOT IN (\n    SELECT DISTINCT i.imported_file_id\n    FROM code.imports i\n    WHERE i.is_internal = TRUE\n      AND i.imported_file_id LIKE 'tests/%'\n  )\n  AND f.file_id NOT IN (\n    SELECT t.target_file_id\n    FROM code.test_links t\n  );",
+      "error": null
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 624,
+    "completion_tokens": 164,
+    "total_tokens": 788,
+    "cost": 7.648e-05,
+    "providers": [
+      "CoreWeave"
+    ]
+  },
+  "request": "Which Python files that are not test files (every file under tests/, including helpers such as tests/common.py and conftest.py, is a test file) have no associated test file at all, meaning no test file imports that module directly (importing only the top-level httpx package counts as importing httpx/__init__.py, not its submodules) and no test file's name is exactly test_ followed by the source file's name (e.g. test_asgi.py for asgi.py; test_decoders.py does not match _decoders.py)? Give the repository-relative file paths.\n\nRequested output columns: file_path (string).",
+  "explanation": "The query selects all non-test files whose file_id does not appear in the imports from any test file (excluding the tests/ directory itself) and does not have a corresponding entry in the test_links table, which captures the explicit test file naming convention (test_*.py).",
+  "sql": "SELECT DISTINCT f.file_id AS file_path\nFROM code.files f\nWHERE f.is_test = FALSE\n  AND f.file_id NOT IN (\n    SELECT DISTINCT i.imported_file_id\n    FROM code.imports i\n    WHERE i.is_internal = TRUE\n      AND i.imported_file_id LIKE 'tests/%'\n  )\n  AND f.file_id NOT IN (\n    SELECT t.target_file_id\n    FROM code.test_links t\n  );",
+  "rows": [
+    {
+      "file_path": "httpx/_api.py"
+    },
+    {
+      "file_path": "httpx/_auth.py"
+    },
+    {
+      "file_path": "httpx/_client.py"
+    },
+    {
+      "file_path": "httpx/_decoders.py"
+    },
+    {
+      "file_path": "httpx/_exceptions.py"
+    },
+    {
+      "file_path": "httpx/_models.py"
+    },
+    {
+      "file_path": "httpx/_multipart.py"
+    },
+    {
+      "file_path": "httpx/_transports/__init__.py"
+    },
+    {
+      "file_path": "httpx/_transports/base.py"
+    },
+    {
+      "file_path": "httpx/_types.py"
+    },
+    {
+      "file_path": "httpx/_urls.py"
+    },
+    {
+      "file_path": "httpx/__version__.py"
+    },
+    {
+      "file_path": "httpx/_config.py"
+    },
+    {
+      "file_path": "httpx/_content.py"
+    },
+    {
+      "file_path": "httpx/_main.py"
+    },
+    {
+      "file_path": "httpx/_status_codes.py"
+    },
+    {
+      "file_path": "httpx/_transports/default.py"
+    },
+    {
+      "file_path": "httpx/_transports/mock.py"
+    }
+  ]
+}

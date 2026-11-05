@@ -1,0 +1,30 @@
+{
+  "question_id": "httpx-12",
+  "arm": "A",
+  "model": "deepseek/deepseek-v4.1-flash-1017",
+  "error": null,
+  "elapsed_s": 3.31,
+  "attempts": [
+    {
+      "sql": "WITH main_sym AS (SELECT symbol_id FROM code.symbols WHERE file_id = 'httpx/_main.py' AND name = 'main' AND kind = 'function'), main_lines AS (SELECT line_start, line_end FROM code.symbols WHERE symbol_id = (SELECT symbol_id FROM main_sym)), handed AS (SELECT DISTINCT c.callee_symbol_id AS symbol_id FROM code.calls c JOIN main_sym m ON c.caller_symbol_id = m.symbol_id JOIN main_lines ml ON c.line BETWEEN ml.line_start AND ml.line_end WHERE c.callee_symbol_id IS NOT NULL AND c.call_kind <> 'direct' UNION SELECT DISTINCT c.callee_symbol_id FROM code.calls c JOIN main_sym m ON c.caller_symbol_id = m.symbol_id JOIN main_lines ml ON c.line BETWEEN ml.line_start AND ml.line_end WHERE c.callee_symbol_id IS NOT NULL AND c.callee_name = 'partial') SELECT s.symbol_id FROM code.symbols s JOIN handed h ON s.symbol_id = h.symbol_id WHERE s.file_id = 'httpx/_main.py' AND s.kind = 'function' ORDER BY s.symbol_id",
+      "error": null
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 577,
+    "completion_tokens": 335,
+    "total_tokens": 912,
+    "cost": 0.00019635,
+    "providers": [
+      "Particle AI"
+    ]
+  },
+  "request": "Which functions in httpx/_main.py are handed over by name as a callback argument to another call (not called directly; a function given to functools.partial counts as handed over) in the CLI command function `main` in httpx/_main.py, counting the arguments of the click decorators applied to `main` as part of `main`? Give their symbol IDs.\n\nRequested output columns: symbol_id (string).",
+  "explanation": "Finds the `main` function in httpx/_main.py and its line range, then selects calls made from within that range whose callee is passed as a callback (non-direct call kind, or via functools.partial). Returns the symbol IDs of the functions in httpx/_main.py that are handed over by name.",
+  "sql": "WITH main_sym AS (SELECT symbol_id FROM code.symbols WHERE file_id = 'httpx/_main.py' AND name = 'main' AND kind = 'function'), main_lines AS (SELECT line_start, line_end FROM code.symbols WHERE symbol_id = (SELECT symbol_id FROM main_sym)), handed AS (SELECT DISTINCT c.callee_symbol_id AS symbol_id FROM code.calls c JOIN main_sym m ON c.caller_symbol_id = m.symbol_id JOIN main_lines ml ON c.line BETWEEN ml.line_start AND ml.line_end WHERE c.callee_symbol_id IS NOT NULL AND c.call_kind <> 'direct' UNION SELECT DISTINCT c.callee_symbol_id FROM code.calls c JOIN main_sym m ON c.caller_symbol_id = m.symbol_id JOIN main_lines ml ON c.line BETWEEN ml.line_start AND ml.line_end WHERE c.callee_symbol_id IS NOT NULL AND c.callee_name = 'partial') SELECT s.symbol_id FROM code.symbols s JOIN handed h ON s.symbol_id = h.symbol_id WHERE s.file_id = 'httpx/_main.py' AND s.kind = 'function' ORDER BY s.symbol_id",
+  "rows": [
+    {
+      "symbol_id": "httpx/_main.py::trace"
+    }
+  ]
+}

@@ -1,0 +1,26 @@
+{
+  "question_id": "ao-01",
+  "arm": "B",
+  "model": "deepseek/deepseek-v4.1-flash-1017",
+  "error": null,
+  "elapsed_s": 1.64,
+  "attempts": [
+    {
+      "sql": "WITH base AS (SELECT s.symbol_id FROM code.symbols s WHERE s.kind = 'class' AND s.qualname = 'SQLDatabase' AND s.file_id = 'auto_ontology/connectors/base.py'), connectors AS (SELECT s.symbol_id, s.file_id FROM code.symbols s JOIN code.class_bases cb ON cb.class_symbol_id = s.symbol_id JOIN base b ON cb.base_symbol_id = b.symbol_id WHERE s.kind = 'class' AND NOT (s.file_id LIKE 'tests/%' OR s.file_id LIKE '%/tests/%')), base_methods AS (SELECT DISTINCT m.name FROM code.symbols m JOIN base b ON m.file_id = b.symbol_id WHERE m.kind = 'method' AND m.qualname NOT LIKE '%.%') SELECT DISTINCT c.symbol_id AS class_symbol_id, m.name AS method_name FROM connectors c JOIN code.symbols m ON m.file_id = c.file_id AND m.kind = 'method' AND m.qualname LIKE c.symbol_id || '::%' WHERE m.name NOT LIKE '\\_%' ESCAPE '\\' AND m.name NOT IN (SELECT name FROM base_methods) ORDER BY class_symbol_id, method_name",
+      "error": null
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 2804,
+    "completion_tokens": 345,
+    "total_tokens": 3149,
+    "cost": 0.00029064,
+    "providers": [
+      "Cohere"
+    ]
+  },
+  "request": "The production database connectors are the classes that directly subclass SQLDatabase (defined in auto_ontology/connectors/base.py), excluding any class defined in test code (every file under a tests/ folder counts as test code). For each such connector class, which public methods does the class define in its own body that SQLDatabase itself does not define? A method is public when its name does not start with an underscore (so __init__ and other dunder methods are excluded); anything written with def directly in the class body counts as a method, including properties and context-manager methods. Methods inherited without being redefined do not count. Return one row per (connector class symbol ID, method name).\n\nRequested output columns: class_symbol_id (string), method_name (string).",
+  "explanation": "Finds the SQLDatabase class in auto_ontology/connectors/base.py, then finds classes that directly subclass it via class_bases, excluding files under tests/. For each connector class it lists methods defined in that class's own body (qualname prefixed by the class) whose names are public and not already defined on SQLDatabase.",
+  "sql": "WITH base AS (SELECT s.symbol_id FROM code.symbols s WHERE s.kind = 'class' AND s.qualname = 'SQLDatabase' AND s.file_id = 'auto_ontology/connectors/base.py'), connectors AS (SELECT s.symbol_id, s.file_id FROM code.symbols s JOIN code.class_bases cb ON cb.class_symbol_id = s.symbol_id JOIN base b ON cb.base_symbol_id = b.symbol_id WHERE s.kind = 'class' AND NOT (s.file_id LIKE 'tests/%' OR s.file_id LIKE '%/tests/%')), base_methods AS (SELECT DISTINCT m.name FROM code.symbols m JOIN base b ON m.file_id = b.symbol_id WHERE m.kind = 'method' AND m.qualname NOT LIKE '%.%') SELECT DISTINCT c.symbol_id AS class_symbol_id, m.name AS method_name FROM connectors c JOIN code.symbols m ON m.file_id = c.file_id AND m.kind = 'method' AND m.qualname LIKE c.symbol_id || '::%' WHERE m.name NOT LIKE '\\_%' ESCAPE '\\' AND m.name NOT IN (SELECT name FROM base_methods) ORDER BY class_symbol_id, method_name",
+  "rows": []
+}

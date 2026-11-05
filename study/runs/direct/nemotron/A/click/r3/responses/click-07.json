@@ -1,0 +1,26 @@
+{
+  "question_id": "click-07",
+  "arm": "A",
+  "model": "nvidia/nemotron-3.5-lightning",
+  "error": null,
+  "elapsed_s": 2.68,
+  "attempts": [
+    {
+      "sql": "WITH function_calls AS (\n  SELECT\n    c.caller_symbol_id AS passing_symbol_id,\n    c.callee_symbol_id AS passed_symbol_id,\n    c.callee_name AS passed_name,\n    c.call_kind,\n    s.kind AS caller_kind,\n    s.qualname AS caller_qualname\n  FROM code.calls c\n  JOIN code.symbols s ON s.symbol_id = c.caller_symbol_id\n  WHERE s.file_id LIKE 'src/click/%'\n    AND s.kind IN ('function', 'method')\n),\npassed_args AS (\n  SELECT\n    passing_symbol_id,\n    passed_symbol_id\n  FROM function_calls\n  WHERE call_kind = 'call'\n)\nSELECT DISTINCT\n  passing_symbol_id,\n  passed_symbol_id\nFROM passed_args\nORDER BY passing_symbol_id, passed_symbol_id;",
+      "error": null
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 605,
+    "completion_tokens": 301,
+    "total_tokens": 906,
+    "cost": 0.00010255,
+    "providers": [
+      "CoreWeave"
+    ]
+  },
+  "request": "Inside the bodies of functions and methods in the click library (src/click/), where is a module-level function or a method defined in the repository passed by reference as an argument to another call (so the receiving call is expected to invoke it) rather than being called at that point? Module-level code outside any function, and nested helper functions, do not count. Give the symbol ID of the function or method containing the call and the symbol ID of the function passed, one row per distinct pair.\n\nRequested output columns: passing_symbol_id (string), passed_symbol_id (string).",
+  "explanation": "The query first identifies all function and method definitions in the click library (src/click/), then filters calls where the call kind is 'call' (indicating the callee is invoked). It extracts the distinct pairs of the caller (the function/method containing the call) and the callee (the function passed as an argument). Nested functions and module-level code outside functions are excluded by filtering on symbol kind 'function' or 'method'.",
+  "sql": "WITH function_calls AS (\n  SELECT\n    c.caller_symbol_id AS passing_symbol_id,\n    c.callee_symbol_id AS passed_symbol_id,\n    c.callee_name AS passed_name,\n    c.call_kind,\n    s.kind AS caller_kind,\n    s.qualname AS caller_qualname\n  FROM code.calls c\n  JOIN code.symbols s ON s.symbol_id = c.caller_symbol_id\n  WHERE s.file_id LIKE 'src/click/%'\n    AND s.kind IN ('function', 'method')\n),\npassed_args AS (\n  SELECT\n    passing_symbol_id,\n    passed_symbol_id\n  FROM function_calls\n  WHERE call_kind = 'call'\n)\nSELECT DISTINCT\n  passing_symbol_id,\n  passed_symbol_id\nFROM passed_args\nORDER BY passing_symbol_id, passed_symbol_id;",
+  "rows": []
+}

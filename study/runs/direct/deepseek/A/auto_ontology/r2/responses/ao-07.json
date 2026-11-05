@@ -1,0 +1,42 @@
+{
+  "question_id": "ao-07",
+  "arm": "A",
+  "model": "deepseek/deepseek-v4.1-flash-1017",
+  "error": null,
+  "elapsed_s": 1.94,
+  "attempts": [
+    {
+      "sql": "WITH tx AS (SELECT DISTINCT caller_symbol_id AS sid FROM code.calls WHERE callee_name = 'write_transaction'), st AS (SELECT DISTINCT caller_symbol_id AS sid FROM code.calls WHERE callee_name = 'store') SELECT DISTINCT s.symbol_id FROM code.symbols s JOIN tx ON tx.sid = s.symbol_id LEFT JOIN st ON st.sid = s.symbol_id WHERE st.sid IS NULL AND s.kind IN ('function','method') AND s.file_id NOT LIKE '%/tests/%' AND s.file_id NOT LIKE 'tests/%' AND s.file_id NOT LIKE 'auto_ontology/dal/%' ORDER BY s.symbol_id",
+      "error": null
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 612,
+    "completion_tokens": 188,
+    "total_tokens": 800,
+    "cost": 0.00010292,
+    "providers": [
+      "Wafer"
+    ]
+  },
+  "request": "auto_ontology/dal/session.py provides store() (the active connection handle) and write_transaction() (a context manager that groups store() queries into one transaction). Outside the auto_ontology/dal/ folder, and excluding test code (every file under a tests/ folder), which functions or methods open a transaction themselves by calling write_transaction directly (e.g. `with write_transaction():`) but never call store() directly anywhere in their own body? Only direct calls count; calls made by helpers they invoke do not. Return their symbol IDs.\n\nRequested output columns: symbol_id (string).",
+  "explanation": "Finds symbols that directly call write_transaction, excludes those that also directly call store, and filters to functions/methods outside auto_ontology/dal and tests folders.",
+  "sql": "WITH tx AS (SELECT DISTINCT caller_symbol_id AS sid FROM code.calls WHERE callee_name = 'write_transaction'), st AS (SELECT DISTINCT caller_symbol_id AS sid FROM code.calls WHERE callee_name = 'store') SELECT DISTINCT s.symbol_id FROM code.symbols s JOIN tx ON tx.sid = s.symbol_id LEFT JOIN st ON st.sid = s.symbol_id WHERE st.sid IS NULL AND s.kind IN ('function','method') AND s.file_id NOT LIKE '%/tests/%' AND s.file_id NOT LIKE 'tests/%' AND s.file_id NOT LIKE 'auto_ontology/dal/%' ORDER BY s.symbol_id",
+  "rows": [
+    {
+      "symbol_id": "auto_ontology/catalog/store/schemas.py::add_schemas_edge"
+    },
+    {
+      "symbol_id": "auto_ontology/catalog/write.py::populate_fks"
+    },
+    {
+      "symbol_id": "auto_ontology/catalog/write.py::populate_pks"
+    },
+    {
+      "symbol_id": "auto_ontology/server/rules/router.py::create_rule"
+    },
+    {
+      "symbol_id": "auto_ontology/server/tags/router.py::detach_tag"
+    }
+  ]
+}

@@ -1,0 +1,26 @@
+{
+  "question_id": "rich-12",
+  "arm": "A",
+  "model": "nvidia/nemotron-3.5-lightning",
+  "error": null,
+  "elapsed_s": 1.74,
+  "attempts": [
+    {
+      "sql": "SELECT f.file_id, f.line_count\nFROM code.files f\nWHERE f.package = 'rich'\n  AND f.module NOT LIKE '%/%'\n  AND f.line_count >= 100\n  AND NOT EXISTS (\n    SELECT 1\n    FROM code.imports i\n    WHERE i.imported_file_id = f.file_id\n      AND i.is_internal = TRUE\n  )\n  AND NOT EXISTS (\n    SELECT 1\n    FROM code.files t\n    WHERE t.module = 'test_' || f.module\n      AND t.is_test = TRUE\n  )",
+      "error": null
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 568,
+    "completion_tokens": 189,
+    "total_tokens": 757,
+    "cost": 7.756e-05,
+    "providers": [
+      "CoreWeave"
+    ]
+  },
+  "request": "Which Python files sitting directly in the rich/ folder (not in its subfolders) are at least 100 lines long yet have no test file associated with them, where a test is associated when it imports the file or its name is test_<filename>.py? Give the file path and its line count.\n\nRequested output columns: file_id (string), line_count (integer).",
+  "explanation": "The query filters files in the rich package at the top level (no subfolder in module), checks that they are 100+ lines, and excludes those that are imported internally or have a corresponding test file named test_<module>.py.",
+  "sql": "SELECT f.file_id, f.line_count\nFROM code.files f\nWHERE f.package = 'rich'\n  AND f.module NOT LIKE '%/%'\n  AND f.line_count >= 100\n  AND NOT EXISTS (\n    SELECT 1\n    FROM code.imports i\n    WHERE i.imported_file_id = f.file_id\n      AND i.is_internal = TRUE\n  )\n  AND NOT EXISTS (\n    SELECT 1\n    FROM code.files t\n    WHERE t.module = 'test_' || f.module\n      AND t.is_test = TRUE\n  )",
+  "rows": []
+}

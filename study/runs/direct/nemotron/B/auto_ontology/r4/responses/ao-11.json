@@ -1,0 +1,44 @@
+{
+  "question_id": "ao-11",
+  "arm": "B",
+  "model": "nvidia/nemotron-3.5-lightning",
+  "error": null,
+  "elapsed_s": 2.25,
+  "attempts": [
+    {
+      "sql": "SELECT kind, COUNT(*) AS public_count FROM (\n  SELECT 'class' AS kind, symbol_id FROM code.symbols WHERE kind = 'class' AND is_public = TRUE\n  UNION ALL\n  SELECT 'function' AS kind, symbol_id FROM code.symbols WHERE kind = 'function' AND is_public = TRUE\n  UNION ALL\n  SELECT 'method' AS kind, symbol_id FROM code.symbols WHERE kind = 'method' AND is_public = TRUE\n) AS all_public\nWHERE file_id NOT IN (\n  SELECT file_id FROM code.files WHERE is_test = TRUE\n)\nGROUP BY kind\nORDER BY kind",
+      "error": "Binder Error: Referenced column \"file_id\" not found in FROM clause!"
+    },
+    {
+      "sql": "SELECT kind, COUNT(*) AS public_count FROM (\n  SELECT 'class' AS kind, symbol_id, file_id FROM code.symbols WHERE kind = 'class' AND is_public = TRUE\n  UNION ALL\n  SELECT 'function' AS kind, symbol_id, file_id FROM code.symbols WHERE kind = 'function' AND is_public = TRUE\n  UNION ALL\n  SELECT 'method' AS kind, symbol_id, file_id FROM code.symbols WHERE kind = 'method' AND is_public = TRUE\n) AS all_public\nWHERE file_id NOT IN (\n  SELECT file_id FROM code.files WHERE is_test = TRUE\n)\nGROUP BY kind\nORDER BY kind",
+      "error": null
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 5763,
+    "completion_tokens": 402,
+    "total_tokens": 6165,
+    "cost": 0.00035709,
+    "providers": [
+      "CoreWeave",
+      "CoreWeave"
+    ]
+  },
+  "request": "How many public classes, public module-level functions and public methods are defined in the non-test code of the auto_ontology/retrieval/kumo/ package (files under its tests/ folder excluded)? A name is public when it does not start with an underscore, so dunder methods such as __init__ are not public, and methods of a class whose name starts with an underscore are not public either. Nested functions and nested classes are not counted. Return one row per kind, with kind being 'class', 'function' or 'method'.\n\nRequested output columns: kind (string), public_count (integer).",
+  "explanation": "The subquery now includes file_id from code.symbols so the outer WHERE clause can reference it. The filter excludes any symbol whose defining file is marked as a test file.",
+  "sql": "SELECT kind, COUNT(*) AS public_count FROM (\n  SELECT 'class' AS kind, symbol_id, file_id FROM code.symbols WHERE kind = 'class' AND is_public = TRUE\n  UNION ALL\n  SELECT 'function' AS kind, symbol_id, file_id FROM code.symbols WHERE kind = 'function' AND is_public = TRUE\n  UNION ALL\n  SELECT 'method' AS kind, symbol_id, file_id FROM code.symbols WHERE kind = 'method' AND is_public = TRUE\n) AS all_public\nWHERE file_id NOT IN (\n  SELECT file_id FROM code.files WHERE is_test = TRUE\n)\nGROUP BY kind\nORDER BY kind",
+  "rows": [
+    {
+      "kind": "class",
+      "public_count": 336
+    },
+    {
+      "kind": "function",
+      "public_count": 808
+    },
+    {
+      "kind": "method",
+      "public_count": 291
+    }
+  ]
+}

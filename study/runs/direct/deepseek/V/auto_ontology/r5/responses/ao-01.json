@@ -1,0 +1,88 @@
+{
+  "question_id": "ao-01",
+  "arm": "V",
+  "model": "deepseek/deepseek-v4.1-flash-1017",
+  "error": null,
+  "elapsed_s": 3.67,
+  "attempts": [
+    {
+      "sql": "WITH base AS (SELECT s.symbol_id FROM code.symbols s JOIN code.files f ON f.file_id = s.file_id WHERE s.kind = 'class' AND s.name = 'SQLDatabase' AND f.file_id = 'auto_ontology/connectors/base.py'), connectors AS (SELECT DISTINCT cb.class_symbol_id FROM code.class_bases cb JOIN base b ON cb.base_symbol_id = b.symbol_id JOIN code.symbols cs ON cs.symbol_id = cb.class_symbol_id JOIN code.files cf ON cf.file_id = cs.file_id WHERE NOT cf.is_test AND cf.file_id NOT LIKE '%/tests/%' AND cf.file_id NOT LIKE 'tests/%'), base_methods AS (SELECT DISTINCT s.name FROM code.symbols s JOIN base b ON s.enclosing_class_symbol_id = b.symbol_id WHERE s.kind = 'method'), own_methods AS (SELECT s.enclosing_class_symbol_id AS class_symbol_id, s.name AS method_name FROM code.symbols s JOIN connectors c ON s.enclosing_class_symbol_id = c.class_symbol_id WHERE s.kind = 'method' AND s.name NOT LIKE '\\_%' ESCAPE '\\') SELECT DISTINCT om.class_symbol_id, om.method_name FROM own_methods om WHERE om.method_name NOT IN (SELECT name FROM base_methods) ORDER BY om.class_symbol_id, om.method_name",
+      "error": "Binder Error: Table \"s\" does not have a column named \"enclosing_class_symbol_id\""
+    },
+    {
+      "sql": "WITH base AS (SELECT s.symbol_id FROM code.symbols s WHERE s.kind = 'class' AND s.name = 'SQLDatabase' AND s.file_id = 'auto_ontology/connectors/base.py'), connectors AS (SELECT DISTINCT cb.class_symbol_id FROM code.class_bases cb JOIN base b ON cb.base_symbol_id = b.symbol_id JOIN code.symbols cs ON cs.symbol_id = cb.class_symbol_id JOIN code.files cf ON cf.file_id = cs.file_id WHERE NOT cf.is_test AND cf.file_id NOT LIKE '%/tests/%' AND cf.file_id NOT LIKE 'tests/%'), base_methods AS (SELECT DISTINCT sp.name FROM code.symbol_profile sp JOIN base b ON sp.enclosing_class_symbol_id = b.symbol_id WHERE sp.kind = 'method'), own_methods AS (SELECT sp.enclosing_class_symbol_id AS class_symbol_id, sp.name AS method_name FROM code.symbol_profile sp JOIN connectors c ON sp.enclosing_class_symbol_id = c.class_symbol_id WHERE sp.kind = 'method' AND sp.name NOT LIKE '\\_%' ESCAPE '\\') SELECT DISTINCT om.class_symbol_id, om.method_name FROM own_methods om WHERE om.method_name NOT IN (SELECT name FROM base_methods) ORDER BY om.class_symbol_id, om.method_name",
+      "error": null
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 2584,
+    "completion_tokens": 735,
+    "total_tokens": 3319,
+    "cost": 0.000997104,
+    "providers": [
+      "PrimeIntellect",
+      "PrimeIntellect"
+    ]
+  },
+  "request": "The production database connectors are the classes that directly subclass SQLDatabase (defined in auto_ontology/connectors/base.py), excluding any class defined in test code (every file under a tests/ folder counts as test code). For each such connector class, which public methods does the class define in its own body that SQLDatabase itself does not define? A method is public when its name does not start with an underscore (so __init__ and other dunder methods are excluded); anything written with def directly in the class body counts as a method, including properties and context-manager methods. Methods inherited without being redefined do not count. Return one row per (connector class symbol ID, method name).\n\nRequested output columns: class_symbol_id (string), method_name (string).",
+  "explanation": "Finds SQLDatabase in auto_ontology/connectors/base.py, then finds all non-test classes that directly subclass it via class_bases. Using symbol_profile (which has enclosing_class_symbol_id), it collects public methods defined directly in each connector class body and excludes method names that SQLDatabase itself defines, returning one row per connector class and method name.",
+  "sql": "WITH base AS (SELECT s.symbol_id FROM code.symbols s WHERE s.kind = 'class' AND s.name = 'SQLDatabase' AND s.file_id = 'auto_ontology/connectors/base.py'), connectors AS (SELECT DISTINCT cb.class_symbol_id FROM code.class_bases cb JOIN base b ON cb.base_symbol_id = b.symbol_id JOIN code.symbols cs ON cs.symbol_id = cb.class_symbol_id JOIN code.files cf ON cf.file_id = cs.file_id WHERE NOT cf.is_test AND cf.file_id NOT LIKE '%/tests/%' AND cf.file_id NOT LIKE 'tests/%'), base_methods AS (SELECT DISTINCT sp.name FROM code.symbol_profile sp JOIN base b ON sp.enclosing_class_symbol_id = b.symbol_id WHERE sp.kind = 'method'), own_methods AS (SELECT sp.enclosing_class_symbol_id AS class_symbol_id, sp.name AS method_name FROM code.symbol_profile sp JOIN connectors c ON sp.enclosing_class_symbol_id = c.class_symbol_id WHERE sp.kind = 'method' AND sp.name NOT LIKE '\\_%' ESCAPE '\\') SELECT DISTINCT om.class_symbol_id, om.method_name FROM own_methods om WHERE om.method_name NOT IN (SELECT name FROM base_methods) ORDER BY om.class_symbol_id, om.method_name",
+  "rows": [
+    {
+      "class_symbol_id": "auto_ontology/connectors/clickhouse.py::ClickHouseDatabase",
+      "method_name": "ping"
+    },
+    {
+      "class_symbol_id": "auto_ontology/connectors/databricks.py::DatabricksDatabase",
+      "method_name": "auth_mode"
+    },
+    {
+      "class_symbol_id": "auto_ontology/connectors/databricks.py::DatabricksDatabase",
+      "method_name": "get_schemas"
+    },
+    {
+      "class_symbol_id": "auto_ontology/connectors/databricks.py::DatabricksDatabase",
+      "method_name": "ping"
+    },
+    {
+      "class_symbol_id": "auto_ontology/connectors/databricks.py::DatabricksDatabase",
+      "method_name": "reuse_connection"
+    },
+    {
+      "class_symbol_id": "auto_ontology/connectors/heavydb.py::HeavyDBDatabase",
+      "method_name": "ping"
+    },
+    {
+      "class_symbol_id": "auto_ontology/connectors/kyuubi.py::KyuubiDatabase",
+      "method_name": "get_schemas"
+    },
+    {
+      "class_symbol_id": "auto_ontology/connectors/kyuubi.py::KyuubiDatabase",
+      "method_name": "ping"
+    },
+    {
+      "class_symbol_id": "auto_ontology/connectors/mysql.py::MySQLDatabase",
+      "method_name": "ping"
+    },
+    {
+      "class_symbol_id": "auto_ontology/connectors/postgres.py::PostgresDatabase",
+      "method_name": "ping"
+    },
+    {
+      "class_symbol_id": "auto_ontology/connectors/snowflake.py::SnowflakeDatabase",
+      "method_name": "get_schemas"
+    },
+    {
+      "class_symbol_id": "auto_ontology/connectors/snowflake.py::SnowflakeDatabase",
+      "method_name": "ping"
+    },
+    {
+      "class_symbol_id": "auto_ontology/connectors/trino.py::TrinoDatabase",
+      "method_name": "get_schemas"
+    },
+    {
+      "class_symbol_id": "auto_ontology/connectors/trino.py::TrinoDatabase",
+      "method_name": "ping"
+    }
+  ]
+}

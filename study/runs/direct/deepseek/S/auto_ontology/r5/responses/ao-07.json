@@ -1,0 +1,42 @@
+{
+  "question_id": "ao-07",
+  "arm": "S",
+  "model": "deepseek/deepseek-v4.1-flash-1017",
+  "error": null,
+  "elapsed_s": 2.41,
+  "attempts": [
+    {
+      "sql": "SELECT DISTINCT ce.caller_symbol_id AS symbol_id FROM code.call_edges ce JOIN code.symbols s ON s.symbol_id = ce.callee_symbol_id WHERE ce.calls_directly AND s.name = 'write_transaction' AND s.file_id = 'auto_ontology/dal/session.py' AND ce.caller_file_id NOT LIKE 'auto_ontology/dal/%' AND NOT ce.caller_in_test_file AND ce.caller_file_id NOT LIKE '%tests/%' AND NOT EXISTS (SELECT 1 FROM code.call_edges ce2 JOIN code.symbols s2 ON s2.symbol_id = ce2.callee_symbol_id WHERE ce2.caller_symbol_id = ce.caller_symbol_id AND ce2.calls_directly AND s2.name = 'store' AND s2.file_id = 'auto_ontology/dal/session.py')",
+      "error": null
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 5476,
+    "completion_tokens": 244,
+    "total_tokens": 5720,
+    "cost": 0.000181008,
+    "providers": [
+      "Wafer"
+    ]
+  },
+  "request": "auto_ontology/dal/session.py provides store() (the active connection handle) and write_transaction() (a context manager that groups store() queries into one transaction). Outside the auto_ontology/dal/ folder, and excluding test code (every file under a tests/ folder), which functions or methods open a transaction themselves by calling write_transaction directly (e.g. `with write_transaction():`) but never call store() directly anywhere in their own body? Only direct calls count; calls made by helpers they invoke do not. Return their symbol IDs.\n\nRequested output columns: symbol_id (string).",
+  "explanation": "Finds call edges where the callee is write_transaction defined in auto_ontology/dal/session.py, restricts callers to non-test files outside the dal folder, and excludes any caller that also directly calls store() from that same module.",
+  "sql": "SELECT DISTINCT ce.caller_symbol_id AS symbol_id FROM code.call_edges ce JOIN code.symbols s ON s.symbol_id = ce.callee_symbol_id WHERE ce.calls_directly AND s.name = 'write_transaction' AND s.file_id = 'auto_ontology/dal/session.py' AND ce.caller_file_id NOT LIKE 'auto_ontology/dal/%' AND NOT ce.caller_in_test_file AND ce.caller_file_id NOT LIKE '%tests/%' AND NOT EXISTS (SELECT 1 FROM code.call_edges ce2 JOIN code.symbols s2 ON s2.symbol_id = ce2.callee_symbol_id WHERE ce2.caller_symbol_id = ce.caller_symbol_id AND ce2.calls_directly AND s2.name = 'store' AND s2.file_id = 'auto_ontology/dal/session.py')",
+  "rows": [
+    {
+      "symbol_id": "auto_ontology/catalog/write.py::populate_fks"
+    },
+    {
+      "symbol_id": "auto_ontology/catalog/store/schemas.py::add_schemas_edge"
+    },
+    {
+      "symbol_id": "auto_ontology/server/tags/router.py::detach_tag"
+    },
+    {
+      "symbol_id": "auto_ontology/server/rules/router.py::create_rule"
+    },
+    {
+      "symbol_id": "auto_ontology/catalog/write.py::populate_pks"
+    }
+  ]
+}

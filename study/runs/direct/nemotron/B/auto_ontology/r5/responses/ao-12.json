@@ -1,0 +1,43 @@
+{
+  "question_id": "ao-12",
+  "arm": "B",
+  "model": "nvidia/nemotron-3.5-lightning",
+  "error": null,
+  "elapsed_s": 4.74,
+  "attempts": [
+    {
+      "sql": "WITH RECURSIVE inheritance_tree AS (\n  -- Seed: classes that directly name ApiModel in their class statement\n  SELECT s.symbol_id AS class_symbol_id, 1 AS depth\n  FROM code.symbols s\n  JOIN code.class_bases cb ON s.symbol_id = cb.class_symbol_id\n  WHERE cb.base_name = 'ApiModel'\n  UNION ALL\n  -- Recursive step: find classes that inherit from a class already in the tree\n  SELECT s.symbol_id, it.depth + 1\n  FROM code.symbols s\n  JOIN code.class_bases cb ON s.symbol_id = cb.class_symbol_id\n  JOIN inheritance_tree it ON cb.base_symbol_id = it.class_symbol_id\n  WHERE s.symbol_id NOT IN (SELECT class_symbol_id FROM inheritance_tree)\n)\nSELECT class_symbol_id, depth\nFROM inheritance_tree\nWHERE depth > 1\nORDER BY depth, class_symbol_id;",
+      "error": null
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 2764,
+    "completion_tokens": 311,
+    "total_tokens": 3075,
+    "cost": 0.00010642,
+    "providers": [
+      "Darkbloom"
+    ]
+  },
+  "request": "Which classes inherit from ApiModel (auto_ontology/server/models.py) only indirectly, i.e. through at least one intermediate class of this repository, and do not name ApiModel directly in their class statement? An import alias of ApiModel (auto_ontology/server/responses.py imports it as _Payload) counts as naming ApiModel directly, and a subscripted base such as ListResponse[T] counts as its class. For each, give the class symbol ID and the length of the shortest inheritance chain to ApiModel (2 when the parent class directly subclasses ApiModel).\n\nRequested output columns: class_symbol_id (string), depth (integer).",
+  "explanation": "The recursive CTE first seeds the tree with classes that directly name ApiModel in their class statement (depth 1). It then repeatedly adds classes whose base_symbol_id matches a class already in the tree, incrementing depth. The final SELECT filters out the seed (depth > 1) so only indirect subclasses remain, and each row shows the class symbol ID and the length of the shortest inheritance chain to ApiModel (2 means the parent directly subclasses ApiModel).",
+  "sql": "WITH RECURSIVE inheritance_tree AS (\n  -- Seed: classes that directly name ApiModel in their class statement\n  SELECT s.symbol_id AS class_symbol_id, 1 AS depth\n  FROM code.symbols s\n  JOIN code.class_bases cb ON s.symbol_id = cb.class_symbol_id\n  WHERE cb.base_name = 'ApiModel'\n  UNION ALL\n  -- Recursive step: find classes that inherit from a class already in the tree\n  SELECT s.symbol_id, it.depth + 1\n  FROM code.symbols s\n  JOIN code.class_bases cb ON s.symbol_id = cb.class_symbol_id\n  JOIN inheritance_tree it ON cb.base_symbol_id = it.class_symbol_id\n  WHERE s.symbol_id NOT IN (SELECT class_symbol_id FROM inheritance_tree)\n)\nSELECT class_symbol_id, depth\nFROM inheritance_tree\nWHERE depth > 1\nORDER BY depth, class_symbol_id;",
+  "rows": [
+    {
+      "class_symbol_id": "auto_ontology/server/models.py::TableExplorationTerm",
+      "depth": 2
+    },
+    {
+      "class_symbol_id": "auto_ontology/server/models.py::Term",
+      "depth": 2
+    },
+    {
+      "class_symbol_id": "auto_ontology/server/models.py::TermDetail",
+      "depth": 3
+    },
+    {
+      "class_symbol_id": "auto_ontology/server/models.py::TermListItem",
+      "depth": 3
+    }
+  ]
+}

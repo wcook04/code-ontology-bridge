@@ -1,0 +1,26 @@
+{
+  "question_id": "rich-09",
+  "arm": "A",
+  "model": "nvidia/nemotron-3.5-lightning",
+  "error": null,
+  "elapsed_s": 1.95,
+  "attempts": [
+    {
+      "sql": "SELECT caller_symbol_id, usage FROM (\n  SELECT caller_symbol_id, 'direct' AS usage\n  FROM code.calls\n  WHERE callee_symbol_id = 'rich.progress.Progress.get_renderable'\n  UNION ALL\n  SELECT DISTINCT caller_symbol_id, 'callback' AS usage\n  FROM code.calls c1\n  WHERE EXISTS (\n    SELECT 1\n    FROM code.calls c2\n    WHERE c2.caller_symbol_id = c1.caller_symbol_id\n      AND c2.callee_symbol_id = 'rich.progress.Progress.get_renderable'\n  )\n  AND c1.call_kind = 'callback'\n)\nORDER BY caller_symbol_id",
+      "error": null
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 567,
+    "completion_tokens": 200,
+    "total_tokens": 767,
+    "cost": 7.969e-05,
+    "providers": [
+      "CoreWeave"
+    ]
+  },
+  "request": "Progress.get_renderable in rich/progress.py builds what a progress display shows. Which functions or methods use it, either by calling it directly or by passing the method itself as an argument to another call (a callback reference)? Give the user's symbol ID and how it is used, as 'direct' or 'callback'.\n\nRequested output columns: caller_symbol_id (string), usage (string).",
+  "explanation": "The query finds all symbols that directly call Progress.get_renderable and separately identifies symbols that pass it as a callback (via call_kind='callback'). It returns each unique caller symbol ID with the usage type.",
+  "sql": "SELECT caller_symbol_id, usage FROM (\n  SELECT caller_symbol_id, 'direct' AS usage\n  FROM code.calls\n  WHERE callee_symbol_id = 'rich.progress.Progress.get_renderable'\n  UNION ALL\n  SELECT DISTINCT caller_symbol_id, 'callback' AS usage\n  FROM code.calls c1\n  WHERE EXISTS (\n    SELECT 1\n    FROM code.calls c2\n    WHERE c2.caller_symbol_id = c1.caller_symbol_id\n      AND c2.callee_symbol_id = 'rich.progress.Progress.get_renderable'\n  )\n  AND c1.call_kind = 'callback'\n)\nORDER BY caller_symbol_id",
+  "rows": []
+}

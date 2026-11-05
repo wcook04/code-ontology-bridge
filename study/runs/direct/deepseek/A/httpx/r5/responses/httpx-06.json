@@ -1,0 +1,55 @@
+{
+  "question_id": "httpx-06",
+  "arm": "A",
+  "model": "deepseek/deepseek-v4.1-flash-1017",
+  "error": null,
+  "elapsed_s": 2.4,
+  "attempts": [
+    {
+      "sql": "SELECT c.symbol_id, COUNT(*)::INTEGER AS method_count FROM code.symbols c JOIN code.symbols m ON m.file_id = c.file_id AND m.kind = 'method' AND m.line_start > c.line_start AND m.line_end <= c.line_end JOIN code.files f ON f.file_id = c.file_id WHERE c.kind = 'class' AND f.is_test = false GROUP BY c.symbol_id HAVING COUNT(*) >= 20 ORDER BY method_count DESC, c.symbol_id ASC",
+      "error": null
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 582,
+    "completion_tokens": 218,
+    "total_tokens": 800,
+    "cost": 0.000245,
+    "providers": [
+      "ModelRun"
+    ]
+  },
+  "request": "Which classes in the non-test code define at least 20 methods directly in their own body? Count every method definition separately (a property getter and its setter count as two; inherited methods and methods of nested classes do not count). Return each class's symbol ID and its method count, largest count first, ties broken by symbol ID alphabetically.\n\nRequested output columns: symbol_id (string), method_count (integer). Order the rows as the question asks.",
+  "explanation": "Joins each class symbol to method symbols in the same file whose line range falls within the class's line range, which captures methods defined directly in the class body (excluding nested classes' methods since those lie outside the class's own span only if nested class spans are separate; methods of nested classes are contained within the outer class span, so this may overcount). Counts methods per class, keeps classes with at least 20, and orders by count descending then symbol ID.",
+  "sql": "SELECT c.symbol_id, COUNT(*)::INTEGER AS method_count FROM code.symbols c JOIN code.symbols m ON m.file_id = c.file_id AND m.kind = 'method' AND m.line_start > c.line_start AND m.line_end <= c.line_end JOIN code.files f ON f.file_id = c.file_id WHERE c.kind = 'class' AND f.is_test = false GROUP BY c.symbol_id HAVING COUNT(*) >= 20 ORDER BY method_count DESC, c.symbol_id ASC",
+  "rows": [
+    {
+      "symbol_id": "httpx/_models.py::Response",
+      "method_count": 42
+    },
+    {
+      "symbol_id": "httpx/_client.py::BaseClient",
+      "method_count": 32
+    },
+    {
+      "symbol_id": "httpx/_urls.py::URL",
+      "method_count": 28
+    },
+    {
+      "symbol_id": "httpx/_urls.py::QueryParams",
+      "method_count": 22
+    },
+    {
+      "symbol_id": "httpx/_client.py::AsyncClient",
+      "method_count": 20
+    },
+    {
+      "symbol_id": "httpx/_client.py::Client",
+      "method_count": 20
+    },
+    {
+      "symbol_id": "httpx/_models.py::Headers",
+      "method_count": 20
+    }
+  ]
+}

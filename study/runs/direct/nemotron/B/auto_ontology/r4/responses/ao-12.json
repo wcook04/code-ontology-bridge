@@ -1,0 +1,283 @@
+{
+  "question_id": "ao-12",
+  "arm": "B",
+  "model": "nvidia/nemotron-3.5-lightning",
+  "error": null,
+  "elapsed_s": 1.84,
+  "attempts": [
+    {
+      "sql": "WITH RECURSIVE inheritance_tree AS (\n  -- Start from all classes that directly name ApiModel in their class statement\n  SELECT\n    s.symbol_id AS class_symbol_id,\n    1 AS depth\n  FROM code.symbols s\n  JOIN code.class_bases cb ON s.symbol_id = cb.class_symbol_id\n  WHERE cb.base_name = 'ApiModel'\n  UNION ALL\n  -- Recursively find classes that inherit from intermediate classes\n  SELECT\n    s.symbol_id AS class_symbol_id,\n    it.depth + 1 AS depth\n  FROM inheritance_tree it\n  JOIN code.class_bases cb ON it.class_symbol_id = cb.class_symbol_id\n  JOIN code.symbols s ON cb.base_symbol_id = s.symbol_id\n  WHERE cb.base_name != 'ApiModel'  -- exclude direct ApiModel\n    AND cb.base_name NOT IN ('ListResponse', 'DictResponse', 'PaginatedResponse')  -- exclude subscripted bases that count as their class\n    AND s.kind = 'class'\n)\nSELECT\n  class_symbol_id,\n  MIN(depth) AS depth\nFROM inheritance_tree\nGROUP BY class_symbol_id\nORDER BY depth, class_symbol_id;",
+      "error": null
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 2764,
+    "completion_tokens": 369,
+    "total_tokens": 3133,
+    "cost": 0.00020392,
+    "providers": [
+      "CoreWeave"
+    ]
+  },
+  "request": "Which classes inherit from ApiModel (auto_ontology/server/models.py) only indirectly, i.e. through at least one intermediate class of this repository, and do not name ApiModel directly in their class statement? An import alias of ApiModel (auto_ontology/server/responses.py imports it as _Payload) counts as naming ApiModel directly, and a subscripted base such as ListResponse[T] counts as its class. For each, give the class symbol ID and the length of the shortest inheritance chain to ApiModel (2 when the parent class directly subclasses ApiModel).\n\nRequested output columns: class_symbol_id (string), depth (integer).",
+  "explanation": "The query uses a recursive CTE to traverse the inheritance graph starting from classes that directly name ApiModel. The base case identifies classes with ApiModel as a direct base. The recursive step finds classes that inherit from those intermediate classes, incrementing depth. The final SELECT groups by class_symbol_id and takes the minimum depth, giving the shortest chain length. Filters exclude direct ApiModel bases and subscripted bases like ListResponse[T] which count as their class.",
+  "sql": "WITH RECURSIVE inheritance_tree AS (\n  -- Start from all classes that directly name ApiModel in their class statement\n  SELECT\n    s.symbol_id AS class_symbol_id,\n    1 AS depth\n  FROM code.symbols s\n  JOIN code.class_bases cb ON s.symbol_id = cb.class_symbol_id\n  WHERE cb.base_name = 'ApiModel'\n  UNION ALL\n  -- Recursively find classes that inherit from intermediate classes\n  SELECT\n    s.symbol_id AS class_symbol_id,\n    it.depth + 1 AS depth\n  FROM inheritance_tree it\n  JOIN code.class_bases cb ON it.class_symbol_id = cb.class_symbol_id\n  JOIN code.symbols s ON cb.base_symbol_id = s.symbol_id\n  WHERE cb.base_name != 'ApiModel'  -- exclude direct ApiModel\n    AND cb.base_name NOT IN ('ListResponse', 'DictResponse', 'PaginatedResponse')  -- exclude subscripted bases that count as their class\n    AND s.kind = 'class'\n)\nSELECT\n  class_symbol_id,\n  MIN(depth) AS depth\nFROM inheritance_tree\nGROUP BY class_symbol_id\nORDER BY depth, class_symbol_id;",
+  "rows": [
+    {
+      "class_symbol_id": "auto_ontology/server/models.py::ColumnAttribute",
+      "depth": 1
+    },
+    {
+      "class_symbol_id": "auto_ontology/server/models.py::ColumnAttributeExplorationColumn",
+      "depth": 1
+    },
+    {
+      "class_symbol_id": "auto_ontology/server/models.py::ColumnAttributeExplorationDetails",
+      "depth": 1
+    },
+    {
+      "class_symbol_id": "auto_ontology/server/models.py::ColumnExplorationAttribute",
+      "depth": 1
+    },
+    {
+      "class_symbol_id": "auto_ontology/server/models.py::ColumnExplorationDetails",
+      "depth": 1
+    },
+    {
+      "class_symbol_id": "auto_ontology/server/models.py::ColumnExplorationForeignKeyColumn",
+      "depth": 1
+    },
+    {
+      "class_symbol_id": "auto_ontology/server/models.py::ColumnRef",
+      "depth": 1
+    },
+    {
+      "class_symbol_id": "auto_ontology/server/models.py::ColumnSummary",
+      "depth": 1
+    },
+    {
+      "class_symbol_id": "auto_ontology/server/models.py::CustomAnalysis",
+      "depth": 1
+    },
+    {
+      "class_symbol_id": "auto_ontology/server/models.py::DataExplorationGraph",
+      "depth": 1
+    },
+    {
+      "class_symbol_id": "auto_ontology/server/models.py::DataGraphNode",
+      "depth": 1
+    },
+    {
+      "class_symbol_id": "auto_ontology/server/models.py::DatabaseSummary",
+      "depth": 1
+    },
+    {
+      "class_symbol_id": "auto_ontology/server/models.py::EntityCoverageCandidate",
+      "depth": 1
+    },
+    {
+      "class_symbol_id": "auto_ontology/server/models.py::EntityCoverageResult",
+      "depth": 1
+    },
+    {
+      "class_symbol_id": "auto_ontology/server/models.py::ExplorationEdge",
+      "depth": 1
+    },
+    {
+      "class_symbol_id": "auto_ontology/server/models.py::ExplorationLinkPath",
+      "depth": 1
+    },
+    {
+      "class_symbol_id": "auto_ontology/server/models.py::ExplorationLinkPathHop",
+      "depth": 1
+    },
+    {
+      "class_symbol_id": "auto_ontology/server/models.py::ExplorationLinkPathNode",
+      "depth": 1
+    },
+    {
+      "class_symbol_id": "auto_ontology/server/models.py::ExplorationRelatedNode",
+      "depth": 1
+    },
+    {
+      "class_symbol_id": "auto_ontology/server/models.py::ExplorationRelatedNodes",
+      "depth": 1
+    },
+    {
+      "class_symbol_id": "auto_ontology/server/models.py::ForeignKeyRef",
+      "depth": 1
+    },
+    {
+      "class_symbol_id": "auto_ontology/server/models.py::GlobalSearchBreadcrumb",
+      "depth": 1
+    },
+    {
+      "class_symbol_id": "auto_ontology/server/models.py::GlobalSearchItem",
+      "depth": 1
+    },
+    {
+      "class_symbol_id": "auto_ontology/server/models.py::GraphLink",
+      "depth": 1
+    },
+    {
+      "class_symbol_id": "auto_ontology/server/models.py::Group",
+      "depth": 1
+    },
+    {
+      "class_symbol_id": "auto_ontology/server/models.py::GroupRole",
+      "depth": 1
+    },
+    {
+      "class_symbol_id": "auto_ontology/server/models.py::GroupUser",
+      "depth": 1
+    },
+    {
+      "class_symbol_id": "auto_ontology/server/models.py::IdRef",
+      "depth": 1
+    },
+    {
+      "class_symbol_id": "auto_ontology/server/models.py::NodeUpdateResult",
+      "depth": 1
+    },
+    {
+      "class_symbol_id": "auto_ontology/server/models.py::Owner",
+      "depth": 1
+    },
+    {
+      "class_symbol_id": "auto_ontology/server/models.py::PqlAnalysis",
+      "depth": 1
+    },
+    {
+      "class_symbol_id": "auto_ontology/server/models.py::PublicConnection",
+      "depth": 1
+    },
+    {
+      "class_symbol_id": "auto_ontology/server/models.py::Rule",
+      "depth": 1
+    },
+    {
+      "class_symbol_id": "auto_ontology/server/models.py::RuleFilters",
+      "depth": 1
+    },
+    {
+      "class_symbol_id": "auto_ontology/server/models.py::SchemaSummary",
+      "depth": 1
+    },
+    {
+      "class_symbol_id": "auto_ontology/server/models.py::SemanticExplorationGraph",
+      "depth": 1
+    },
+    {
+      "class_symbol_id": "auto_ontology/server/models.py::SemanticGraphNode",
+      "depth": 1
+    },
+    {
+      "class_symbol_id": "auto_ontology/server/models.py::SqlAttribute",
+      "depth": 1
+    },
+    {
+      "class_symbol_id": "auto_ontology/server/models.py::SqlAttributeExplorationDetails",
+      "depth": 1
+    },
+    {
+      "class_symbol_id": "auto_ontology/server/models.py::SqlAttributeExplorationSql",
+      "depth": 1
+    },
+    {
+      "class_symbol_id": "auto_ontology/server/models.py::SqlExplorationColumn",
+      "depth": 1
+    },
+    {
+      "class_symbol_id": "auto_ontology/server/models.py::SqlExplorationCustomAnalysis",
+      "depth": 1
+    },
+    {
+      "class_symbol_id": "auto_ontology/server/models.py::SqlExplorationDetails",
+      "depth": 1
+    },
+    {
+      "class_symbol_id": "auto_ontology/server/models.py::SqlExplorationSqlAttribute",
+      "depth": 1
+    },
+    {
+      "class_symbol_id": "auto_ontology/server/models.py::SqlExplorationTable",
+      "depth": 1
+    },
+    {
+      "class_symbol_id": "auto_ontology/server/models.py::SqlExpressionValidationResult",
+      "depth": 1
+    },
+    {
+      "class_symbol_id": "auto_ontology/server/models.py::SqlValidationResult",
+      "depth": 1
+    },
+    {
+      "class_symbol_id": "auto_ontology/server/models.py::SsoFederationState",
+      "depth": 1
+    },
+    {
+      "class_symbol_id": "auto_ontology/server/models.py::TableColumns",
+      "depth": 1
+    },
+    {
+      "class_symbol_id": "auto_ontology/server/models.py::TableExplorationDetails",
+      "depth": 1
+    },
+    {
+      "class_symbol_id": "auto_ontology/server/models.py::TableSqlQuery",
+      "depth": 1
+    },
+    {
+      "class_symbol_id": "auto_ontology/server/models.py::TableSummary",
+      "depth": 1
+    },
+    {
+      "class_symbol_id": "auto_ontology/server/models.py::Tag",
+      "depth": 1
+    },
+    {
+      "class_symbol_id": "auto_ontology/server/models.py::TagChip",
+      "depth": 1
+    },
+    {
+      "class_symbol_id": "auto_ontology/server/models.py::TagItem",
+      "depth": 1
+    },
+    {
+      "class_symbol_id": "auto_ontology/server/models.py::TagItemRule",
+      "depth": 1
+    },
+    {
+      "class_symbol_id": "auto_ontology/server/models.py::TermCountEntry",
+      "depth": 1
+    },
+    {
+      "class_symbol_id": "auto_ontology/server/models.py::TermExplorationDetails",
+      "depth": 1
+    },
+    {
+      "class_symbol_id": "auto_ontology/server/models.py::TermExplorationTable",
+      "depth": 1
+    },
+    {
+      "class_symbol_id": "auto_ontology/server/models.py::TermSummary",
+      "depth": 1
+    },
+    {
+      "class_symbol_id": "auto_ontology/server/models.py::TermTable",
+      "depth": 1
+    },
+    {
+      "class_symbol_id": "auto_ontology/server/models.py::Zone",
+      "depth": 1
+    },
+    {
+      "class_symbol_id": "auto_ontology/server/models.py::ZoneChip",
+      "depth": 1
+    },
+    {
+      "class_symbol_id": "auto_ontology/server/models.py::ZoneItem",
+      "depth": 1
+    }
+  ]
+}

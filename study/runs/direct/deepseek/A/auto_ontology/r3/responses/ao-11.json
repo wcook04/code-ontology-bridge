@@ -1,0 +1,26 @@
+{
+  "question_id": "ao-11",
+  "arm": "A",
+  "model": "deepseek/deepseek-v4.1-flash-1017",
+  "error": null,
+  "elapsed_s": 1.27,
+  "attempts": [
+    {
+      "sql": "WITH pkg AS (SELECT file_id FROM code.files WHERE is_test = false AND (package = 'auto_ontology/retrieval/kumo' OR package LIKE 'auto_ontology/retrieval/kumo/%') AND file_id NOT LIKE '%/tests/%'), syms AS (SELECT s.symbol_id, s.kind, s.name, s.qualname, s.file_id FROM code.symbols s JOIN pkg p ON s.file_id = p.file_id WHERE s.is_public AND s.name NOT LIKE '\\_%' ESCAPE '\\'), classified AS (SELECT CASE WHEN kind = 'class' THEN 'class' WHEN kind = 'function' AND qualname NOT LIKE '%.%' THEN 'function' WHEN kind = 'method' AND qualname NOT LIKE '%<locals>%' AND split_part(qualname, '.', 1) NOT LIKE '\\_%' ESCAPE '\\' THEN 'method' END AS kind FROM syms) SELECT kind, COUNT(*)::INTEGER AS public_count FROM classified WHERE kind IS NOT NULL GROUP BY kind ORDER BY kind",
+      "error": null
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 614,
+    "completion_tokens": 312,
+    "total_tokens": 926,
+    "cost": 0.0005586,
+    "providers": [
+      "Mistral"
+    ]
+  },
+  "request": "How many public classes, public module-level functions and public methods are defined in the non-test code of the auto_ontology/retrieval/kumo/ package (files under its tests/ folder excluded)? A name is public when it does not start with an underscore, so dunder methods such as __init__ are not public, and methods of a class whose name starts with an underscore are not public either. Nested functions and nested classes are not counted. Return one row per kind, with kind being 'class', 'function' or 'method'.\n\nRequested output columns: kind (string), public_count (integer).",
+  "explanation": "Selects non-test files in the auto_ontology/retrieval/kumo package (excluding tests/ paths), then counts public symbols by kind. Classes count as 'class', module-level functions (qualname without a dot) as 'function', and methods whose owning class name doesn't start with an underscore as 'method', excluding nested symbols.",
+  "sql": "WITH pkg AS (SELECT file_id FROM code.files WHERE is_test = false AND (package = 'auto_ontology/retrieval/kumo' OR package LIKE 'auto_ontology/retrieval/kumo/%') AND file_id NOT LIKE '%/tests/%'), syms AS (SELECT s.symbol_id, s.kind, s.name, s.qualname, s.file_id FROM code.symbols s JOIN pkg p ON s.file_id = p.file_id WHERE s.is_public AND s.name NOT LIKE '\\_%' ESCAPE '\\'), classified AS (SELECT CASE WHEN kind = 'class' THEN 'class' WHEN kind = 'function' AND qualname NOT LIKE '%.%' THEN 'function' WHEN kind = 'method' AND qualname NOT LIKE '%<locals>%' AND split_part(qualname, '.', 1) NOT LIKE '\\_%' ESCAPE '\\' THEN 'method' END AS kind FROM syms) SELECT kind, COUNT(*)::INTEGER AS public_count FROM classified WHERE kind IS NOT NULL GROUP BY kind ORDER BY kind",
+  "rows": []
+}

@@ -1,0 +1,26 @@
+{
+  "question_id": "httpx-11",
+  "arm": "B",
+  "model": "nvidia/nemotron-3.5-lightning",
+  "error": null,
+  "elapsed_s": 1.3,
+  "attempts": [
+    {
+      "sql": "SELECT s.symbol_id\nFROM code.symbols s\nJOIN code.files f ON s.file_id = f.file_id\nJOIN code.imports imp ON f.file_id = imp.file_id\nJOIN code.calls c ON s.symbol_id = c.caller_symbol_id\nWHERE f.file_id = 'tests/client/test_redirects.py'\n  AND s.kind = 'function'\n  AND s.name = 'redirects'\n  AND imp.imported_file_id IS NOT NULL\n  AND imp.module_name = 'httpx'\n  AND EXISTS (SELECT 1 FROM code.calls c2\n              WHERE c2.caller_symbol_id = s.symbol_id\n                AND c2.callee_name = 'AsyncClient')\nGROUP BY s.symbol_id\nORDER BY s.symbol_id",
+      "error": null
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 2690,
+    "completion_tokens": 248,
+    "total_tokens": 2938,
+    "cost": 0.00017454,
+    "providers": [
+      "CoreWeave"
+    ]
+  },
+  "request": "In tests/client/test_redirects.py, which test functions both pass that module's `redirects` handler function as an argument (for example to a mock transport) and create an `httpx.AsyncClient`? Give their symbol IDs.\n\nRequested output columns: symbol_id (string).",
+  "explanation": "The query finds the 'redirects' function in tests/client/test_redirects.py, verifies it is imported from httpx, and then checks that the same symbol is passed as an argument to a call that creates an httpx.AsyncClient. It returns the symbol IDs of matching test functions.",
+  "sql": "SELECT s.symbol_id\nFROM code.symbols s\nJOIN code.files f ON s.file_id = f.file_id\nJOIN code.imports imp ON f.file_id = imp.file_id\nJOIN code.calls c ON s.symbol_id = c.caller_symbol_id\nWHERE f.file_id = 'tests/client/test_redirects.py'\n  AND s.kind = 'function'\n  AND s.name = 'redirects'\n  AND imp.imported_file_id IS NOT NULL\n  AND imp.module_name = 'httpx'\n  AND EXISTS (SELECT 1 FROM code.calls c2\n              WHERE c2.caller_symbol_id = s.symbol_id\n                AND c2.callee_name = 'AsyncClient')\nGROUP BY s.symbol_id\nORDER BY s.symbol_id",
+  "rows": []
+}

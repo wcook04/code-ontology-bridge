@@ -1,0 +1,51 @@
+{
+  "question_id": "rich-04",
+  "arm": "B",
+  "model": "deepseek/deepseek-v4.1-flash-1017",
+  "error": null,
+  "elapsed_s": 2.12,
+  "attempts": [
+    {
+      "sql": "WITH direct AS (SELECT DISTINCT caller_symbol_id FROM code.calls WHERE call_kind = 'direct' AND callee_symbol_id = 'rich/markup.py::render'), mid AS (SELECT DISTINCT c.caller_symbol_id AS mid_id FROM code.calls c JOIN direct d ON c.callee_symbol_id = d.caller_symbol_id WHERE c.call_kind = 'direct'), two AS (SELECT DISTINCT c.caller_symbol_id AS sym FROM code.calls c JOIN mid m ON c.callee_symbol_id = m.mid_id WHERE c.call_kind = 'direct' AND c.caller_symbol_id IS NOT NULL) SELECT s.symbol_id FROM code.symbols s JOIN two t ON s.symbol_id = t.sym WHERE s.file_id LIKE 'rich/%' AND s.kind IN ('function','method') AND s.symbol_id NOT IN (SELECT caller_symbol_id FROM code.calls WHERE call_kind = 'direct' AND callee_symbol_id = 'rich/markup.py::render' AND caller_symbol_id IS NOT NULL) ORDER BY s.symbol_id",
+      "error": null
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 2734,
+    "completion_tokens": 295,
+    "total_tokens": 3029,
+    "cost": 0.00025908,
+    "providers": [
+      "DigitalOcean"
+    ]
+  },
+  "request": "The markup parser's entry point is the render function in rich/markup.py. Which functions and methods defined under the rich/ folder reach it through exactly one intermediate step (they directly call some function or method that itself directly calls rich/markup.py's render) but do not call render directly themselves? Direct calls only; callback references do not count. Give their symbol IDs.\n\nRequested output columns: symbol_id (string).",
+  "explanation": "Builds chains of direct calls: callers of render, callers of those callers (one intermediate step), then keeps functions/methods under rich/ that are not themselves direct callers of render. Callback rows are excluded by requiring call_kind='direct'.",
+  "sql": "WITH direct AS (SELECT DISTINCT caller_symbol_id FROM code.calls WHERE call_kind = 'direct' AND callee_symbol_id = 'rich/markup.py::render'), mid AS (SELECT DISTINCT c.caller_symbol_id AS mid_id FROM code.calls c JOIN direct d ON c.callee_symbol_id = d.caller_symbol_id WHERE c.call_kind = 'direct'), two AS (SELECT DISTINCT c.caller_symbol_id AS sym FROM code.calls c JOIN mid m ON c.callee_symbol_id = m.mid_id WHERE c.call_kind = 'direct' AND c.caller_symbol_id IS NOT NULL) SELECT s.symbol_id FROM code.symbols s JOIN two t ON s.symbol_id = t.sym WHERE s.file_id LIKE 'rich/%' AND s.kind IN ('function','method') AND s.symbol_id NOT IN (SELECT caller_symbol_id FROM code.calls WHERE call_kind = 'direct' AND callee_symbol_id = 'rich/markup.py::render' AND caller_symbol_id IS NOT NULL) ORDER BY s.symbol_id",
+  "rows": [
+    {
+      "symbol_id": "rich/_inspect.py::Inspect.__rich__"
+    },
+    {
+      "symbol_id": "rich/console.py::Console.log"
+    },
+    {
+      "symbol_id": "rich/console.py::Console.print"
+    },
+    {
+      "symbol_id": "rich/console.py::Console.render"
+    },
+    {
+      "symbol_id": "rich/console.py::Console.render_lines"
+    },
+    {
+      "symbol_id": "rich/console.py::Console.update_screen_lines"
+    },
+    {
+      "symbol_id": "rich/logging.py::RichHandler.emit"
+    },
+    {
+      "symbol_id": "rich/traceback.py::Traceback.__rich_console__"
+    }
+  ]
+}

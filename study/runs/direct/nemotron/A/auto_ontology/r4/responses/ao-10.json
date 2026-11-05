@@ -1,0 +1,26 @@
+{
+  "question_id": "ao-10",
+  "arm": "A",
+  "model": "nvidia/nemotron-3.5-lightning",
+  "error": null,
+  "elapsed_s": 1.11,
+  "attempts": [
+    {
+      "sql": "SELECT folder_path, SUM(line_count) AS total_lines FROM (\n  SELECT\n    CASE\n      WHEN file_id = 'root' THEN NULL\n      ELSE file_id\n    END AS folder_path,\n    line_count\n  FROM code.files\n  WHERE package = 'auto_ontology'\n    AND module LIKE 'server/%'\n    AND module NOT LIKE 'server/%/%'\n    AND module != 'server'\n  )\nGROUP BY folder_path\nHAVING SUM(line_count) > 1000\nORDER BY total_lines DESC;",
+      "error": null
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 592,
+    "completion_tokens": 210,
+    "total_tokens": 802,
+    "cost": 8.344e-05,
+    "providers": [
+      "CoreWeave"
+    ]
+  },
+  "request": "Within auto_ontology/server/, which immediate subfolders contain more than 1,000 lines of Python in total? Count every .py file anywhere inside the subfolder, including its test files and __init__.py; files directly in auto_ontology/server/ itself belong to no subfolder. Return the subfolder's repository-relative path (e.g. auto_ontology/server/chat) and its total line count.\n\nRequested output columns: folder_path (string), total_lines (integer).",
+  "explanation": "The query first identifies all Python files under auto_ontology/server/ that are directly inside an immediate subfolder (e.g., server/chat). It groups them by that subfolder's file_id, sums their line_count, and filters to only those subfolders exceeding 1,000 total lines. Files directly in server/ are excluded by the NOT LIKE and module != conditions.",
+  "sql": "SELECT folder_path, SUM(line_count) AS total_lines FROM (\n  SELECT\n    CASE\n      WHEN file_id = 'root' THEN NULL\n      ELSE file_id\n    END AS folder_path,\n    line_count\n  FROM code.files\n  WHERE package = 'auto_ontology'\n    AND module LIKE 'server/%'\n    AND module NOT LIKE 'server/%/%'\n    AND module != 'server'\n  )\nGROUP BY folder_path\nHAVING SUM(line_count) > 1000\nORDER BY total_lines DESC;",
+  "rows": []
+}

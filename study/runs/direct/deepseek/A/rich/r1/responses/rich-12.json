@@ -1,0 +1,51 @@
+{
+  "question_id": "rich-12",
+  "arm": "A",
+  "model": "deepseek/deepseek-v4.1-flash-1017",
+  "error": null,
+  "elapsed_s": 1.57,
+  "attempts": [
+    {
+      "sql": "SELECT f.file_id, f.line_count\nFROM code.files f\nWHERE regexp_matches(f.file_id, '^rich/[^/]+\\.py$')\n  AND f.line_count >= 100\n  AND NOT EXISTS (\n    SELECT 1\n    FROM code.files t\n    WHERE t.is_test\n      AND (regexp_matches(t.file_id, '^rich/test_[^/]+\\.py$') AND t.file_id = regexp_replace(f.file_id, '^rich/', 'rich/test_'))\n  )\n  AND NOT EXISTS (\n    SELECT 1\n    FROM code.imports i\n    JOIN code.files t2 ON t2.file_id = i.file_id\n    WHERE i.imported_file_id = f.file_id\n      AND t2.is_test\n  )\nORDER BY f.file_id",
+      "error": null
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 567,
+    "completion_tokens": 265,
+    "total_tokens": 832,
+    "cost": 0.000226044,
+    "providers": [
+      "DigitalOcean"
+    ]
+  },
+  "request": "Which Python files sitting directly in the rich/ folder (not in its subfolders) are at least 100 lines long yet have no test file associated with them, where a test is associated when it imports the file or its name is test_<filename>.py? Give the file path and its line count.\n\nRequested output columns: file_id (string), line_count (integer).",
+  "explanation": "Finds Python files directly under rich/ (path matches rich/<name>.py with no subdirectories) whose line_count is at least 100. It then excludes files that are imported by any test file, and also excludes files whose sibling test_<filename>.py exists. The remaining files are returned with their paths and line counts.",
+  "sql": "SELECT f.file_id, f.line_count\nFROM code.files f\nWHERE regexp_matches(f.file_id, '^rich/[^/]+\\.py$')\n  AND f.line_count >= 100\n  AND NOT EXISTS (\n    SELECT 1\n    FROM code.files t\n    WHERE t.is_test\n      AND (regexp_matches(t.file_id, '^rich/test_[^/]+\\.py$') AND t.file_id = regexp_replace(f.file_id, '^rich/', 'rich/test_'))\n  )\n  AND NOT EXISTS (\n    SELECT 1\n    FROM code.imports i\n    JOIN code.files t2 ON t2.file_id = i.file_id\n    WHERE i.imported_file_id = f.file_id\n      AND t2.is_test\n  )\nORDER BY f.file_id",
+  "rows": [
+    {
+      "file_id": "rich/_emoji_codes.py",
+      "line_count": 3610
+    },
+    {
+      "file_id": "rich/_spinners.py",
+      "line_count": 482
+    },
+    {
+      "file_id": "rich/default_styles.py",
+      "line_count": 196
+    },
+    {
+      "file_id": "rich/jupyter.py",
+      "line_count": 101
+    },
+    {
+      "file_id": "rich/palette.py",
+      "line_count": 100
+    },
+    {
+      "file_id": "rich/terminal_theme.py",
+      "line_count": 153
+    }
+  ]
+}

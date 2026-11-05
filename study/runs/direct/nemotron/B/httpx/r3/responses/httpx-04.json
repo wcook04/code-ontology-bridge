@@ -1,0 +1,26 @@
+{
+  "question_id": "httpx-04",
+  "arm": "B",
+  "model": "nvidia/nemotron-3.5-lightning",
+  "error": null,
+  "elapsed_s": 3.56,
+  "attempts": [
+    {
+      "sql": "SELECT s.symbol_id\nFROM code.symbols s\nJOIN code.files f ON s.file_id = f.file_id\nWHERE f.file_id = 'httpx/_client.py'\n  AND f.module = 'httpx._client'\n  AND s.kind = 'method'\n  AND s.line_start > (SELECT MIN(c.line)\n                     FROM code.calls c\n                     WHERE c.caller_symbol_id = s.symbol_id\n                       AND c.resolution = 'same_file')\n  AND NOT EXISTS (\n        SELECT 1\n        FROM code.symbols inner_base\n        WHERE inner_base.file_id = 'httpx/_client.py'\n          AND inner_base.qualname = 'BaseClient'\n          AND s.symbol_id LIKE inner_base.symbol_id || '::%'\n      )\n  AND s.summary = ''\nORDER BY s.symbol_id;",
+      "error": null
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 2686,
+    "completion_tokens": 286,
+    "total_tokens": 2972,
+    "cost": 7.587e-05,
+    "providers": [
+      "Darkbloom"
+    ]
+  },
+  "request": "Which methods defined directly in the body of the synchronous `Client` class in httpx/_client.py have no docstring? Include private and dunder methods; exclude methods inherited from BaseClient. Give their symbol IDs.\n\nRequested output columns: symbol_id (string).",
+  "explanation": "The query selects methods defined in httpx/_client.py that are not inherited from BaseClient and have an empty summary (no docstring). It filters for kind='method', checks that the method's definition line is after its first same_file call site (ensuring it's defined in the class body), excludes any symbol whose qualified name starts with BaseClient's qualified name, and returns those with no summary text.",
+  "sql": "SELECT s.symbol_id\nFROM code.symbols s\nJOIN code.files f ON s.file_id = f.file_id\nWHERE f.file_id = 'httpx/_client.py'\n  AND f.module = 'httpx._client'\n  AND s.kind = 'method'\n  AND s.line_start > (SELECT MIN(c.line)\n                     FROM code.calls c\n                     WHERE c.caller_symbol_id = s.symbol_id\n                       AND c.resolution = 'same_file')\n  AND NOT EXISTS (\n        SELECT 1\n        FROM code.symbols inner_base\n        WHERE inner_base.file_id = 'httpx/_client.py'\n          AND inner_base.qualname = 'BaseClient'\n          AND s.symbol_id LIKE inner_base.symbol_id || '::%'\n      )\n  AND s.summary = ''\nORDER BY s.symbol_id;",
+  "rows": []
+}

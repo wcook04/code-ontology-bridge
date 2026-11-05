@@ -1,0 +1,26 @@
+{
+  "question_id": "click-07",
+  "arm": "A",
+  "model": "nvidia/nemotron-3.5-lightning",
+  "error": null,
+  "elapsed_s": 2.9,
+  "attempts": [
+    {
+      "sql": "WITH function_calls AS (\n    SELECT\n        c.caller_symbol_id AS passing_symbol_id,\n        c.callee_symbol_id AS passed_symbol_id\n    FROM code.calls c\n    WHERE c.caller_symbol_id IN (\n        SELECT s.symbol_id\n        FROM code.symbols s\n        WHERE s.qualname LIKE '%click%' OR s.file_id IN (\n            SELECT f.file_id\n            FROM code.files f\n            WHERE f.package = 'click' AND f.module LIKE 'src/click/%'\n        )\n    )\n    AND c.call_kind = 'call'\n),\nfiltered AS (\n    SELECT DISTINCT passing_symbol_id, passed_symbol_id\n    FROM function_calls\n    WHERE passed_symbol_id IN (\n        SELECT s.symbol_id\n        FROM code.symbols s\n        WHERE s.kind IN ('function', 'method')\n          AND s.qualname NOT LIKE '%.%'  -- module-level or top-level in click\n          AND s.file_id NOT IN (\n              SELECT f.file_id\n              FROM code.files f\n              WHERE NOT (f.package = 'click' AND f.module LIKE 'src/click/%')\n          )\n    )\n)\nSELECT passing_symbol_id, passed_symbol_id\nFROM filtered\nORDER BY passing_symbol_id, passed_symbol_id;",
+      "error": null
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 605,
+    "completion_tokens": 378,
+    "total_tokens": 983,
+    "cost": 0.00011795,
+    "providers": [
+      "CoreWeave"
+    ]
+  },
+  "request": "Inside the bodies of functions and methods in the click library (src/click/), where is a module-level function or a method defined in the repository passed by reference as an argument to another call (so the receiving call is expected to invoke it) rather than being called at that point? Module-level code outside any function, and nested helper functions, do not count. Give the symbol ID of the function or method containing the call and the symbol ID of the function passed, one row per distinct pair.\n\nRequested output columns: passing_symbol_id (string), passed_symbol_id (string).",
+  "explanation": "The query first identifies all call events where the caller is a symbol from the click library (src/click/). It then filters to only those calls where the callee is a function or method defined at module level within the click package (excluding nested helpers and non-click code). Finally, it returns distinct symbol ID pairs representing the function/method containing the call and the function passed as an argument.",
+  "sql": "WITH function_calls AS (\n    SELECT\n        c.caller_symbol_id AS passing_symbol_id,\n        c.callee_symbol_id AS passed_symbol_id\n    FROM code.calls c\n    WHERE c.caller_symbol_id IN (\n        SELECT s.symbol_id\n        FROM code.symbols s\n        WHERE s.qualname LIKE '%click%' OR s.file_id IN (\n            SELECT f.file_id\n            FROM code.files f\n            WHERE f.package = 'click' AND f.module LIKE 'src/click/%'\n        )\n    )\n    AND c.call_kind = 'call'\n),\nfiltered AS (\n    SELECT DISTINCT passing_symbol_id, passed_symbol_id\n    FROM function_calls\n    WHERE passed_symbol_id IN (\n        SELECT s.symbol_id\n        FROM code.symbols s\n        WHERE s.kind IN ('function', 'method')\n          AND s.qualname NOT LIKE '%.%'  -- module-level or top-level in click\n          AND s.file_id NOT IN (\n              SELECT f.file_id\n              FROM code.files f\n              WHERE NOT (f.package = 'click' AND f.module LIKE 'src/click/%')\n          )\n    )\n)\nSELECT passing_symbol_id, passed_symbol_id\nFROM filtered\nORDER BY passing_symbol_id, passed_symbol_id;",
+  "rows": []
+}

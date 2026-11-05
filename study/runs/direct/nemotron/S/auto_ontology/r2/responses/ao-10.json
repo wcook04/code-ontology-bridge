@@ -1,0 +1,45 @@
+{
+  "question_id": "ao-10",
+  "arm": "S",
+  "model": "nvidia/nemotron-3.5-lightning",
+  "error": null,
+  "elapsed_s": 3.88,
+  "attempts": [
+    {
+      "sql": "WITH file_lines AS (\n  SELECT file_id, line_count\n  FROM code.files\n  WHERE file_name LIKE '%.py'\n    AND file_id LIKE 'auto_ontology/server/%'\n),\nfolder_totals AS (\n  SELECT\n    SUBSTRING_INDEX(file_id, '/', 3) AS folder_path,\n    SUM(line_count) AS total_lines\n  FROM file_lines\n  GROUP BY folder_path\n)\nSELECT folder_path, total_lines\nFROM folder_totals\nWHERE total_lines > 1000\nORDER BY total_lines DESC;",
+      "error": "Binder Error: Referenced column \"file_name\" not found in FROM clause!"
+    },
+    {
+      "sql": "WITH file_lines AS (\n  SELECT file_id, line_count\n  FROM code.files\n  WHERE file_id LIKE 'auto_ontology/server/%'\n    AND file_id LIKE '%.py'\n),\nfolder_totals AS (\n  SELECT\n    SUBSTRING_INDEX(SUBSTRING_INDEX(file_id, '/', 3), '/', -1) AS folder_path,\n    SUM(line_count) AS total_lines\n  FROM file_lines\n  GROUP BY folder_path\n)\nSELECT folder_path, total_lines\nFROM folder_totals\nWHERE total_lines > 1000\nORDER BY total_lines DESC;",
+      "error": "Catalog Error: Scalar Function with name substring_index does not exist!"
+    },
+    {
+      "sql": "WITH file_lines AS (\n  SELECT file_id, line_count\n  FROM code.files\n  WHERE file_id LIKE 'auto_ontology/server/%'\n    AND file_id LIKE '%.py'\n),\nfolder_totals AS (\n  SELECT\n    CASE\n      WHEN file_id LIKE 'auto_ontology/server/%/%' THEN SUBSTRING(file_id, 1, INSTR(SUBSTRING(file_id, 17), '/') + 16)\n      ELSE NULL\n    END AS folder_path,\n    SUM(line_count) AS total_lines\n  FROM file_lines\n  GROUP BY folder_path\n)\nSELECT folder_path, total_lines\nFROM folder_totals\nWHERE total_lines > 1000\nORDER BY total_lines DESC;",
+      "error": null
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 16923,
+    "completion_tokens": 633,
+    "total_tokens": 17556,
+    "cost": 0.00083601,
+    "providers": [
+      "CoreWeave",
+      "CoreWeave",
+      "CoreWeave"
+    ]
+  },
+  "request": "Within auto_ontology/server/, which immediate subfolders contain more than 1,000 lines of Python in total? Count every .py file anywhere inside the subfolder, including its test files and __init__.py; files directly in auto_ontology/server/ itself belong to no subfolder. Return the subfolder's repository-relative path (e.g. auto_ontology/server/chat) and its total line count.\n\nRequested output columns: folder_path (string), total_lines (integer).",
+  "explanation": "The query selects .py files under auto_ontology/server/, extracts the immediate subfolder path by finding the first slash after the fixed prefix, groups by that folder, sums line_count, and filters to groups exceeding 1,000 lines.",
+  "sql": "WITH file_lines AS (\n  SELECT file_id, line_count\n  FROM code.files\n  WHERE file_id LIKE 'auto_ontology/server/%'\n    AND file_id LIKE '%.py'\n),\nfolder_totals AS (\n  SELECT\n    CASE\n      WHEN file_id LIKE 'auto_ontology/server/%/%' THEN SUBSTRING(file_id, 1, INSTR(SUBSTRING(file_id, 17), '/') + 16)\n      ELSE NULL\n    END AS folder_path,\n    SUM(line_count) AS total_lines\n  FROM file_lines\n  GROUP BY folder_path\n)\nSELECT folder_path, total_lines\nFROM folder_totals\nWHERE total_lines > 1000\nORDER BY total_lines DESC;",
+  "rows": [
+    {
+      "folder_path": "auto_ontology/server/",
+      "total_lines": 12405
+    },
+    {
+      "folder_path": null,
+      "total_lines": 1957
+    }
+  ]
+}

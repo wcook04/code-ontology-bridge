@@ -1,0 +1,57 @@
+{
+  "question_id": "rich-07",
+  "arm": "B",
+  "model": "nvidia/nemotron-3.5-lightning",
+  "error": null,
+  "elapsed_s": 3.56,
+  "attempts": [
+    {
+      "sql": "SELECT class_symbol_id, COUNT(*) AS method_count\nFROM code.symbols\nWHERE kind = 'function' AND file_id IN (\n    SELECT file_id\n    FROM code.symbols\n    WHERE kind = 'class'\n)\nGROUP BY class_symbol_id\nORDER BY method_count DESC, class_symbol_id ASC\nLIMIT 5",
+      "error": "Binder Error: Referenced column \"class_symbol_id\" not found in FROM clause!"
+    },
+    {
+      "sql": "SELECT class_symbol_id, COUNT(*) AS method_count\nFROM code.symbols\nWHERE kind = 'function'\n  AND file_id IN (\n      SELECT file_id\n      FROM code.symbols\n      WHERE kind = 'class'\n    )\nGROUP BY class_symbol_id\nORDER BY method_count DESC, class_symbol_id ASC\nLIMIT 5",
+      "error": "Binder Error: Referenced column \"class_symbol_id\" not found in FROM clause!"
+    },
+    {
+      "sql": "SELECT s1.symbol_id AS class_symbol_id, COUNT(s2.symbol_id) AS method_count\nFROM code.symbols s1\nJOIN code.symbols s2 ON s2.file_id = s1.file_id AND s2.kind = 'function'\nWHERE s1.kind = 'class'\nGROUP BY s1.symbol_id\nORDER BY method_count DESC, s1.symbol_id ASC\nLIMIT 5",
+      "error": null
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 8683,
+    "completion_tokens": 430,
+    "total_tokens": 9113,
+    "cost": 0.00050373,
+    "providers": [
+      "CoreWeave",
+      "CoreWeave",
+      "CoreWeave"
+    ]
+  },
+  "request": "Which five classes outside the test suite define the most methods in their own class body? Count every method definition separately, so a property getter and its setter, or each @overload stub, count as separate methods. Give the class's symbol ID and the method count, ordered by count descending, ties broken by symbol ID ascending.\n\nRequested output columns: class_symbol_id (string), method_count (integer). Order the rows as the question asks.",
+  "explanation": "The query joins the symbols table to itself: s1 identifies each class by symbol_id and file_id, while s2 selects function symbols defined in the same file. Grouping by s1.symbol_id counts the methods per class, and results are ordered by count descending with symbol ID ascending for ties.",
+  "sql": "SELECT s1.symbol_id AS class_symbol_id, COUNT(s2.symbol_id) AS method_count\nFROM code.symbols s1\nJOIN code.symbols s2 ON s2.file_id = s1.file_id AND s2.kind = 'function'\nWHERE s1.kind = 'class'\nGROUP BY s1.symbol_id\nORDER BY method_count DESC, s1.symbol_id ASC\nLIMIT 5",
+  "rows": [
+    {
+      "class_symbol_id": "tests/test_console.py::BrokenRenderable",
+      "method_count": 97
+    },
+    {
+      "class_symbol_id": "tests/test_pretty.py::Empty",
+      "method_count": 52
+    },
+    {
+      "class_symbol_id": "tests/test_pretty.py::ExampleDataclass",
+      "method_count": 52
+    },
+    {
+      "class_symbol_id": "tests/test_pretty.py::StockKeepingUnit",
+      "method_count": 52
+    },
+    {
+      "class_symbol_id": "tests/test_progress.py::MockClock",
+      "method_count": 37
+    }
+  ]
+}

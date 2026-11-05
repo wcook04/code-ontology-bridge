@@ -1,0 +1,36 @@
+{
+  "question_id": "rich-11",
+  "arm": "V",
+  "model": "nvidia/nemotron-3.5-lightning",
+  "error": "Binder Error: Table \"f\" does not have a column named \"directory\"",
+  "elapsed_s": 3.83,
+  "attempts": [
+    {
+      "sql": "SELECT file_id, COUNT(*) AS undocumented_count FROM code.symbol_profile WHERE is_function = TRUE OR is_method = TRUE AND is_public = TRUE AND has_docstring = FALSE AND file_id IN (SELECT file_id FROM code.files WHERE directory = 'rich') GROUP BY file_id ORDER BY undocumented_count DESC, file_id ASC LIMIT 5",
+      "error": "Binder Error: Referenced column \"directory\" not found in FROM clause!"
+    },
+    {
+      "sql": "SELECT s.file_id, COUNT(*) AS undocumented_count FROM code.symbol_profile s JOIN code.files f ON s.file_id = f.file_id WHERE f.directory = 'rich' AND (s.is_function = TRUE OR s.is_method = TRUE) AND s.is_public = TRUE AND s.has_docstring = FALSE GROUP BY s.file_id ORDER BY undocumented_count DESC, s.file_id ASC LIMIT 5",
+      "error": "Binder Error: Table \"f\" does not have a column named \"directory\""
+    },
+    {
+      "sql": "SELECT s.file_id, COUNT(*) AS undocumented_count FROM code.symbol_profile s JOIN code.files f USING (file_id) WHERE f.directory = 'rich' AND (s.is_function = TRUE OR s.is_method = TRUE) AND s.is_public = TRUE AND s.has_docstring = FALSE GROUP BY s.file_id ORDER BY undocumented_count DESC, s.file_id ASC LIMIT 5",
+      "error": "Binder Error: Table \"f\" does not have a column named \"directory\""
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 3601,
+    "completion_tokens": 415,
+    "total_tokens": 4016,
+    "cost": 0.00030339,
+    "providers": [
+      "CoreWeave",
+      "CoreWeave",
+      "CoreWeave"
+    ]
+  },
+  "request": "Under the rich/ folder, which five files contain the most public functions and methods that have no docstring? A function or method is public when neither its own name nor the name of its enclosing class starts with an underscore (so dunder methods are not public); classes themselves are not counted, and every definition counts separately (each @overload stub and each property getter or setter). Give the file path and the count, ordered by count descending, ties broken by file path ascending.\n\nRequested output columns: file_id (string), undocumented_count (integer). Order the rows as the question asks.",
+  "explanation": "The query joins symbol_profile and files using the shared file_id column, filters for public functions/methods without a docstring in the rich/ directory, groups by file, and returns the top five sorted by count descending and file path ascending.",
+  "sql": "SELECT s.file_id, COUNT(*) AS undocumented_count FROM code.symbol_profile s JOIN code.files f USING (file_id) WHERE f.directory = 'rich' AND (s.is_function = TRUE OR s.is_method = TRUE) AND s.is_public = TRUE AND s.has_docstring = FALSE GROUP BY s.file_id ORDER BY undocumented_count DESC, s.file_id ASC LIMIT 5",
+  "rows": null
+}

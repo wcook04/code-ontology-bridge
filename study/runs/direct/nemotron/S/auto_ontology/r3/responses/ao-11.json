@@ -1,0 +1,44 @@
+{
+  "question_id": "ao-11",
+  "arm": "S",
+  "model": "nvidia/nemotron-3.5-lightning",
+  "error": null,
+  "elapsed_s": 1.81,
+  "attempts": [
+    {
+      "sql": "SELECT kind, COUNT(*) AS public_count FROM code.symbol_profile WHERE is_public = true AND is_test = false AND kind IN ('class', 'function', 'method') GROUP BY kind ORDER BY kind",
+      "error": "Binder Error: Referenced column \"is_test\" not found in FROM clause!"
+    },
+    {
+      "sql": "SELECT kind, COUNT(*) AS public_count FROM code.symbol_profile WHERE is_public = true AND file_id NOT IN (SELECT file_id FROM code.file_profile WHERE is_test = true) AND kind IN ('class', 'function', 'method') GROUP BY kind ORDER BY kind",
+      "error": null
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 10990,
+    "completion_tokens": 210,
+    "total_tokens": 11200,
+    "cost": 0.0004945,
+    "providers": [
+      "CoreWeave",
+      "CoreWeave"
+    ]
+  },
+  "request": "How many public classes, public module-level functions and public methods are defined in the non-test code of the auto_ontology/retrieval/kumo/ package (files under its tests/ folder excluded)? A name is public when it does not start with an underscore, so dunder methods such as __init__ are not public, and methods of a class whose name starts with an underscore are not public either. Nested functions and nested classes are not counted. Return one row per kind, with kind being 'class', 'function' or 'method'.\n\nRequested output columns: kind (string), public_count (integer).",
+  "explanation": "The corrected query excludes test files by checking that each symbol's file_id is not in the set of test file IDs from code.file_profile, ensuring only non-test code symbols are counted.",
+  "sql": "SELECT kind, COUNT(*) AS public_count FROM code.symbol_profile WHERE is_public = true AND file_id NOT IN (SELECT file_id FROM code.file_profile WHERE is_test = true) AND kind IN ('class', 'function', 'method') GROUP BY kind ORDER BY kind",
+  "rows": [
+    {
+      "kind": "class",
+      "public_count": 336
+    },
+    {
+      "kind": "function",
+      "public_count": 808
+    },
+    {
+      "kind": "method",
+      "public_count": 291
+    }
+  ]
+}

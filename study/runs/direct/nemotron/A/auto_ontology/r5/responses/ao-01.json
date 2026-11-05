@@ -1,0 +1,31 @@
+{
+  "question_id": "ao-01",
+  "arm": "A",
+  "model": "nvidia/nemotron-3.5-lightning",
+  "error": null,
+  "elapsed_s": 8.09,
+  "attempts": [
+    {
+      "sql": "WITH production_files AS (\n  SELECT file_id\n  FROM code.files\n  WHERE is_test = FALSE\n    AND module LIKE '%connectors/base%' OR module LIKE '%connectors%' OR file_id IN (\n      SELECT file_id\n      FROM code.files\n      WHERE package LIKE '%connectors%' OR module LIKE '%connectors%' OR description LIKE '%connector%'\n    )\n),\nconnector_symbols AS (\n  SELECT s.symbol_id AS class_symbol_id,\n         s.file_id,\n         s.name,\n         s.qualname,\n         s.kind\n  FROM code.symbols s\n  JOIN production_files p ON s.file_id = p.file_id\n  WHERE s.kind = 'class'\n    AND s.qualname LIKE '%SQLDatabase%'\n),\nall_methods AS (\n  SELECT s.symbol_id AS class_symbol_id,\n         h.name AS method_name\n  FROM code.symbols s\n  JOIN code.headings h ON s.file_id = h.file_id\n  WHERE s.symbol_id IN (SELECT class_symbol_id FROM connector_symbols)\n    AND h.ordinal = 0  -- only top-level definitions in the class body\n    AND h.name NOT LIKE '_%'  -- exclude dunder methods\n),\ndb_methods AS (\n  SELECT DISTINCT class_symbol_id,\n         name AS method_name\n  FROM all_methods\n  WHERE class_symbol_id IN (\n    SELECT class_symbol_id\n    FROM connector_symbols\n    WHERE qualname = 'SQLDatabase'\n  )\n)\nSELECT class_symbol_id,\n       method_name\nFROM all_methods\nWHERE class_symbol_id NOT IN (SELECT class_symbol_id FROM db_methods)\nORDER BY class_symbol_id,\n         method_name;",
+      "error": "Binder Error: Table \"h\" does not have a column named \"name\""
+    },
+    {
+      "sql": "WITH production_files AS (\n  SELECT file_id\n  FROM code.files\n  WHERE is_test = FALSE\n    AND (module LIKE '%connectors/base%' OR module LIKE '%connectors%' OR description LIKE '%connector%')\n),\nconnector_symbols AS (\n  SELECT s.symbol_id AS class_symbol_id,\n         s.file_id,\n         s.name,\n         s.qualname,\n         s.kind\n  FROM code.symbols s\n  JOIN production_files p ON s.file_id = p.file_id\n  WHERE s.kind = 'class'\n    AND s.qualname LIKE '%SQLDatabase%'\n),\nall_methods AS (\n  SELECT s.symbol_id AS class_symbol_id,\n         h.value AS method_name\n  FROM code.symbols s\n  JOIN code.headings h ON s.file_id = h.file_id\n  WHERE s.symbol_id IN (SELECT class_symbol_id FROM connector_symbols)\n    AND h.ordinal = 0\n    AND h.value NOT LIKE '_%'\n),\ndb_methods AS (\n  SELECT DISTINCT class_symbol_id,\n         method_name\n  FROM all_methods\n  WHERE class_symbol_id IN (\n    SELECT class_symbol_id\n    FROM connector_symbols\n    WHERE qualname = 'SQLDatabase'\n  )\n)\nSELECT class_symbol_id,\n       method_name\nFROM all_methods\nWHERE class_symbol_id NOT IN (SELECT class_symbol_id FROM db_methods)\nORDER BY class_symbol_id,\n         method_name;",
+      "error": null
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 1818,
+    "completion_tokens": 909,
+    "total_tokens": 2727,
+    "cost": 0.00024071999999999999,
+    "providers": [
+      "Darkbloom",
+      "CoreWeave"
+    ]
+  },
+  "request": "The production database connectors are the classes that directly subclass SQLDatabase (defined in auto_ontology/connectors/base.py), excluding any class defined in test code (every file under a tests/ folder counts as test code). For each such connector class, which public methods does the class define in its own body that SQLDatabase itself does not define? A method is public when its name does not start with an underscore (so __init__ and other dunder methods are excluded); anything written with def directly in the class body counts as a method, including properties and context-manager methods. Methods inherited without being redefined do not count. Return one row per (connector class symbol ID, method name).\n\nRequested output columns: class_symbol_id (string), method_name (string).",
+  "explanation": "The query identifies production files containing connector classes, isolates symbols that subclass SQLDatabase, and then captures all public method names from the headings table (using the 'value' column, which stores the method/heading name). It excludes dunder methods and filters out any method that SQLDatabase itself defines, leaving only the publicly defined methods unique to each connector class.",
+  "sql": "WITH production_files AS (\n  SELECT file_id\n  FROM code.files\n  WHERE is_test = FALSE\n    AND (module LIKE '%connectors/base%' OR module LIKE '%connectors%' OR description LIKE '%connector%')\n),\nconnector_symbols AS (\n  SELECT s.symbol_id AS class_symbol_id,\n         s.file_id,\n         s.name,\n         s.qualname,\n         s.kind\n  FROM code.symbols s\n  JOIN production_files p ON s.file_id = p.file_id\n  WHERE s.kind = 'class'\n    AND s.qualname LIKE '%SQLDatabase%'\n),\nall_methods AS (\n  SELECT s.symbol_id AS class_symbol_id,\n         h.value AS method_name\n  FROM code.symbols s\n  JOIN code.headings h ON s.file_id = h.file_id\n  WHERE s.symbol_id IN (SELECT class_symbol_id FROM connector_symbols)\n    AND h.ordinal = 0\n    AND h.value NOT LIKE '_%'\n),\ndb_methods AS (\n  SELECT DISTINCT class_symbol_id,\n         method_name\n  FROM all_methods\n  WHERE class_symbol_id IN (\n    SELECT class_symbol_id\n    FROM connector_symbols\n    WHERE qualname = 'SQLDatabase'\n  )\n)\nSELECT class_symbol_id,\n       method_name\nFROM all_methods\nWHERE class_symbol_id NOT IN (SELECT class_symbol_id FROM db_methods)\nORDER BY class_symbol_id,\n         method_name;",
+  "rows": []
+}

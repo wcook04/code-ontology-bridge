@@ -1,0 +1,44 @@
+{
+  "question_id": "rich-12",
+  "arm": "S",
+  "model": "nvidia/nemotron-3.5-lightning",
+  "error": null,
+  "elapsed_s": 2.86,
+  "attempts": [
+    {
+      "sql": "SELECT f.file_id, f.line_count\nFROM code.files f\nWHERE f.directory = 'rich'\n  AND f.is_test = FALSE\n  AND f.line_count >= 100\n  AND NOT EXISTS (\n      SELECT 1\n      FROM code.file_dependencies dep\n      WHERE dep.importer_file_id = f.file_id\n        AND dep.imported_file_id IS NOT NULL\n      UNION ALL\n      SELECT t.file_id\n      FROM code.files t\n      WHERE t.is_test = TRUE\n        AND (t.file_id LIKE 'test_' || f.file_id OR t.file_id LIKE '%/test_' || f.file_id)\n  )\nORDER BY f.file_id",
+      "error": "Binder Error: Table \"f\" does not have a column named \"directory\""
+    },
+    {
+      "sql": "SELECT f.file_id, f.line_count\nFROM code.files f\nWHERE f.file_id LIKE 'rich/%'\n  AND f.is_test = FALSE\n  AND f.line_count >= 100\n  AND NOT EXISTS (\n      SELECT 1\n      FROM code.file_dependencies dep\n      WHERE dep.importer_file_id = f.file_id\n        AND dep.imported_file_id IS NOT NULL\n      UNION ALL\n      SELECT t.file_id\n      FROM code.files t\n      WHERE t.is_test = TRUE\n        AND (t.file_id LIKE 'test_' || f.file_id OR t.file_id LIKE '%/test_' || f.file_id)\n  )\nORDER BY f.file_id",
+      "error": null
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 11028,
+    "completion_tokens": 469,
+    "total_tokens": 11497,
+    "cost": 0.00054896,
+    "providers": [
+      "CoreWeave",
+      "CoreWeave"
+    ]
+  },
+  "request": "Which Python files sitting directly in the rich/ folder (not in its subfolders) are at least 100 lines long yet have no test file associated with them, where a test is associated when it imports the file or its name is test_<filename>.py? Give the file path and its line count.\n\nRequested output columns: file_id (string), line_count (integer).",
+  "explanation": "The query selects files in the rich/ folder that are not test files, have at least 100 lines, and have no associated test file. It uses the file_id prefix to identify files directly in the rich/ folder, checks for test associations via imports or name matching, and excludes those with links. The NOT EXISTS clause ensures only files without any test association are included.",
+  "sql": "SELECT f.file_id, f.line_count\nFROM code.files f\nWHERE f.file_id LIKE 'rich/%'\n  AND f.is_test = FALSE\n  AND f.line_count >= 100\n  AND NOT EXISTS (\n      SELECT 1\n      FROM code.file_dependencies dep\n      WHERE dep.importer_file_id = f.file_id\n        AND dep.imported_file_id IS NOT NULL\n      UNION ALL\n      SELECT t.file_id\n      FROM code.files t\n      WHERE t.is_test = TRUE\n        AND (t.file_id LIKE 'test_' || f.file_id OR t.file_id LIKE '%/test_' || f.file_id)\n  )\nORDER BY f.file_id",
+  "rows": [
+    {
+      "file_id": "rich/_emoji_codes.py",
+      "line_count": 3610
+    },
+    {
+      "file_id": "rich/_ratio.py",
+      "line_count": 153
+    },
+    {
+      "file_id": "rich/_spinners.py",
+      "line_count": 482
+    }
+  ]
+}

@@ -1,0 +1,31 @@
+{
+  "question_id": "ao-01",
+  "arm": "S",
+  "model": "nvidia/nemotron-3.5-lightning",
+  "error": null,
+  "elapsed_s": 5.74,
+  "attempts": [
+    {
+      "sql": "WITH connector_classes AS (\n  SELECT s.symbol_id AS class_symbol_id, s.qualname, s.file_id\n  FROM code.symbols s\n  JOIN code.class_bases cb ON s.symbol_id = cb.class_symbol_id\n  WHERE cb.base_name = 'SQLDatabase'\n    AND s.file_id NOT IN (SELECT file_id FROM code.files WHERE is_test = TRUE)\n    AND s.kind = 'class'\n),\nconnector_methods AS (\n  SELECT s.symbol_id, s.name AS method_name, s.file_id\n  FROM code.symbols s\n  WHERE s.kind = 'method'\n    AND s.file_id IN (SELECT class_symbol_id FROM connector_classes)\n    AND s.name NOT LIKE '_%'\n),\nconnector_method_own AS (\n  SELECT cm.symbol_id AS class_symbol_id, cm.method_name, cm.file_id,\n         COUNT(DISTINCT cb.base_symbol_id) AS base_count\n  FROM connector_methods cm\n  LEFT JOIN code.class_bases cb ON cm.class_symbol_id = cb.class_symbol_id\n  GROUP BY cm.symbol_id, cm.method_name, cm.file_id\n),\nclass_has_base AS (\n  SELECT class_symbol_id FROM connector_classes\n  GROUP BY class_symbol_id\n  HAVING COUNT(*) > 0\n)\nSELECT cmo.class_symbol_id, cmo.method_name\nFROM connector_method_own cmo\nWHERE cmo.class_symbol_id IN (SELECT class_symbol_id FROM class_has_base)\n  AND cmo.base_count > 0\nORDER BY cmo.class_symbol_id, cmo.method_name;",
+      "error": "Binder Error: Values list \"cm\" does not have a column named \"class_symbol_id\""
+    },
+    {
+      "sql": "WITH connector_classes AS (\n  SELECT s.symbol_id AS class_symbol_id, s.qualname, s.file_id\n  FROM code.symbols s\n  JOIN code.class_bases cb ON s.symbol_id = cb.class_symbol_id\n  WHERE cb.base_name = 'SQLDatabase'\n    AND s.file_id NOT IN (SELECT file_id FROM code.files WHERE is_test = TRUE)\n    AND s.kind = 'class'\n),\nconnector_methods AS (\n  SELECT s.symbol_id, s.name AS method_name, s.file_id\n  FROM code.symbols s\n  WHERE s.kind = 'method'\n    AND s.file_id IN (SELECT class_symbol_id FROM connector_classes)\n    AND s.name NOT LIKE '_%'\n),\nconnector_method_own AS (\n  SELECT cm.symbol_id, cm.method_name, cm.file_id,\n         COUNT(DISTINCT cb.class_symbol_id) AS base_count\n  FROM connector_methods cm\n  LEFT JOIN code.class_bases cb ON cm.file_id = cb.class_symbol_id\n  GROUP BY cm.symbol_id, cm.method_name, cm.file_id\n),\nclass_has_base AS (\n  SELECT class_symbol_id FROM connector_classes\n  GROUP BY class_symbol_id\n  HAVING COUNT(*) > 0\n)\nSELECT cmo.symbol_id AS class_symbol_id, cmo.method_name\nFROM connector_method_own cmo\nWHERE cmo.symbol_id IN (SELECT class_symbol_id FROM class_has_base)\n  AND cmo.base_count > 0\nORDER BY cmo.symbol_id, cmo.method_name;",
+      "error": null
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 11409,
+    "completion_tokens": 897,
+    "total_tokens": 12306,
+    "cost": 0.00066123,
+    "providers": [
+      "CoreWeave",
+      "CoreWeave"
+    ]
+  },
+  "request": "The production database connectors are the classes that directly subclass SQLDatabase (defined in auto_ontology/connectors/base.py), excluding any class defined in test code (every file under a tests/ folder counts as test code). For each such connector class, which public methods does the class define in its own body that SQLDatabase itself does not define? A method is public when its name does not start with an underscore (so __init__ and other dunder methods are excluded); anything written with def directly in the class body counts as a method, including properties and context-manager methods. Methods inherited without being redefined do not count. Return one row per (connector class symbol ID, method name).\n\nRequested output columns: class_symbol_id (string), method_name (string).",
+  "explanation": "The corrected query fixes the column reference: connector_method_own now uses cm.symbol_id (the method's symbol_id, which equals the class symbol_id) instead of cm.class_symbol_id. The base count is computed by joining class_bases on the class's file_id matching cb.class_symbol_id. Only methods in classes that directly subclass SQLDatabase and have at least one base are returned.",
+  "sql": "WITH connector_classes AS (\n  SELECT s.symbol_id AS class_symbol_id, s.qualname, s.file_id\n  FROM code.symbols s\n  JOIN code.class_bases cb ON s.symbol_id = cb.class_symbol_id\n  WHERE cb.base_name = 'SQLDatabase'\n    AND s.file_id NOT IN (SELECT file_id FROM code.files WHERE is_test = TRUE)\n    AND s.kind = 'class'\n),\nconnector_methods AS (\n  SELECT s.symbol_id, s.name AS method_name, s.file_id\n  FROM code.symbols s\n  WHERE s.kind = 'method'\n    AND s.file_id IN (SELECT class_symbol_id FROM connector_classes)\n    AND s.name NOT LIKE '_%'\n),\nconnector_method_own AS (\n  SELECT cm.symbol_id, cm.method_name, cm.file_id,\n         COUNT(DISTINCT cb.class_symbol_id) AS base_count\n  FROM connector_methods cm\n  LEFT JOIN code.class_bases cb ON cm.file_id = cb.class_symbol_id\n  GROUP BY cm.symbol_id, cm.method_name, cm.file_id\n),\nclass_has_base AS (\n  SELECT class_symbol_id FROM connector_classes\n  GROUP BY class_symbol_id\n  HAVING COUNT(*) > 0\n)\nSELECT cmo.symbol_id AS class_symbol_id, cmo.method_name\nFROM connector_method_own cmo\nWHERE cmo.symbol_id IN (SELECT class_symbol_id FROM class_has_base)\n  AND cmo.base_count > 0\nORDER BY cmo.symbol_id, cmo.method_name;",
+  "rows": []
+}

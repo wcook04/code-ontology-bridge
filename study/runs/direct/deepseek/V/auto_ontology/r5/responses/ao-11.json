@@ -1,0 +1,44 @@
+{
+  "question_id": "ao-11",
+  "arm": "V",
+  "model": "deepseek/deepseek-v4.1-flash-1017",
+  "error": null,
+  "elapsed_s": 4.6,
+  "attempts": [
+    {
+      "sql": "WITH syms AS (SELECT s.symbol_id, s.name, s.qualname, s.kind, s.file_id, s.line_start, s.line_end, f.package, f.module, f.is_test FROM code.symbols s JOIN code.files f ON f.file_id = s.file_id WHERE f.package = 'auto_ontology/retrieval/kumo' AND NOT f.is_test AND s.name NOT LIKE '\\_%' ESCAPE '\\'), classes AS (SELECT symbol_id, name, qualname, line_start, line_end, file_id FROM syms WHERE kind = 'class'), methods AS (SELECT s.symbol_id, s.name, s.qualname, s.file_id, s.line_start, s.line_end FROM syms s WHERE s.kind = 'method' AND EXISTS (SELECT 1 FROM classes c WHERE c.file_id = s.file_id AND c.line_start < s.line_start AND c.line_end >= s.line_end AND c.name NOT LIKE '\\_%' ESCAPE '\\') AND NOT EXISTS (SELECT 1 FROM classes c2 WHERE c2.file_id = s.file_id AND c2.line_start < s.line_start AND c2.line_end >= s.line_end AND c2.name LIKE '\\_%' ESCAPE '\\')), funcs AS (SELECT s.symbol_id FROM syms s WHERE s.kind = 'function' AND NOT EXISTS (SELECT 1 FROM classes c WHERE c.file_id = s.file_id AND c.line_start < s.line_start AND c.line_end >= s.line_end) AND NOT EXISTS (SELECT 1 FROM syms outer WHERE outer.kind = 'function' AND outer.file_id = s.file_id AND outer.symbol_id <> s.symbol_id AND outer.line_start < s.line_start AND outer.line_end >= s.line_end)) SELECT 'class' AS kind, COUNT(*)::INTEGER AS public_count FROM classes UNION ALL SELECT 'function', COUNT(*)::INTEGER FROM funcs UNION ALL SELECT 'method', COUNT(*)::INTEGER FROM methods",
+      "error": "Parser Error: syntax error at or near \"outer\""
+    },
+    {
+      "sql": "WITH syms AS (SELECT s.symbol_id, s.name, s.qualname, s.kind, s.file_id, s.line_start, s.line_end FROM code.symbols s JOIN code.files f ON f.file_id = s.file_id WHERE f.package = 'auto_ontology/retrieval/kumo' AND NOT f.is_test AND s.name NOT LIKE '\\_%' ESCAPE '\\'), classes AS (SELECT symbol_id, name, qualname, line_start, line_end, file_id FROM syms WHERE kind = 'class'), methods AS (SELECT s.symbol_id FROM syms s WHERE s.kind = 'method' AND EXISTS (SELECT 1 FROM classes c WHERE c.file_id = s.file_id AND c.line_start < s.line_start AND c.line_end >= s.line_end) AND NOT EXISTS (SELECT 1 FROM syms c2 WHERE c2.kind = 'class' AND c2.file_id = s.file_id AND c2.line_start < s.line_start AND c2.line_end >= s.line_end AND c2.name LIKE '\\_%' ESCAPE '\\')), funcs AS (SELECT s.symbol_id FROM syms s WHERE s.kind = 'function' AND NOT EXISTS (SELECT 1 FROM syms c WHERE c.kind = 'class' AND c.file_id = s.file_id AND c.line_start < s.line_start AND c.line_end >= s.line_end) AND NOT EXISTS (SELECT 1 FROM syms o WHERE o.kind = 'function' AND o.file_id = s.file_id AND o.symbol_id <> s.symbol_id AND o.line_start < s.line_start AND o.line_end >= s.line_end)) SELECT 'class' AS kind, COUNT(*)::INTEGER AS public_count FROM classes UNION ALL SELECT 'function', COUNT(*)::INTEGER FROM funcs UNION ALL SELECT 'method', COUNT(*)::INTEGER FROM methods",
+      "error": null
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 2648,
+    "completion_tokens": 990,
+    "total_tokens": 3638,
+    "cost": 0.000693465,
+    "providers": [
+      "StepFun",
+      "Wafer"
+    ]
+  },
+  "request": "How many public classes, public module-level functions and public methods are defined in the non-test code of the auto_ontology/retrieval/kumo/ package (files under its tests/ folder excluded)? A name is public when it does not start with an underscore, so dunder methods such as __init__ are not public, and methods of a class whose name starts with an underscore are not public either. Nested functions and nested classes are not counted. Return one row per kind, with kind being 'class', 'function' or 'method'.\n\nRequested output columns: kind (string), public_count (integer).",
+  "explanation": "Filters symbols to non-test files in the auto_ontology/retrieval/kumo package and keeps only names not starting with an underscore. Classes are counted directly; methods are counted only when nested inside a public class; functions are counted only when not nested inside any class or another function. The three counts are returned as one row per kind.",
+  "sql": "WITH syms AS (SELECT s.symbol_id, s.name, s.qualname, s.kind, s.file_id, s.line_start, s.line_end FROM code.symbols s JOIN code.files f ON f.file_id = s.file_id WHERE f.package = 'auto_ontology/retrieval/kumo' AND NOT f.is_test AND s.name NOT LIKE '\\_%' ESCAPE '\\'), classes AS (SELECT symbol_id, name, qualname, line_start, line_end, file_id FROM syms WHERE kind = 'class'), methods AS (SELECT s.symbol_id FROM syms s WHERE s.kind = 'method' AND EXISTS (SELECT 1 FROM classes c WHERE c.file_id = s.file_id AND c.line_start < s.line_start AND c.line_end >= s.line_end) AND NOT EXISTS (SELECT 1 FROM syms c2 WHERE c2.kind = 'class' AND c2.file_id = s.file_id AND c2.line_start < s.line_start AND c2.line_end >= s.line_end AND c2.name LIKE '\\_%' ESCAPE '\\')), funcs AS (SELECT s.symbol_id FROM syms s WHERE s.kind = 'function' AND NOT EXISTS (SELECT 1 FROM syms c WHERE c.kind = 'class' AND c.file_id = s.file_id AND c.line_start < s.line_start AND c.line_end >= s.line_end) AND NOT EXISTS (SELECT 1 FROM syms o WHERE o.kind = 'function' AND o.file_id = s.file_id AND o.symbol_id <> s.symbol_id AND o.line_start < s.line_start AND o.line_end >= s.line_end)) SELECT 'class' AS kind, COUNT(*)::INTEGER AS public_count FROM classes UNION ALL SELECT 'function', COUNT(*)::INTEGER FROM funcs UNION ALL SELECT 'method', COUNT(*)::INTEGER FROM methods",
+  "rows": [
+    {
+      "kind": "class",
+      "public_count": 0
+    },
+    {
+      "kind": "function",
+      "public_count": 0
+    },
+    {
+      "kind": "method",
+      "public_count": 0
+    }
+  ]
+}

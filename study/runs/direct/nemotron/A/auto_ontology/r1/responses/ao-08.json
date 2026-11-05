@@ -1,0 +1,36 @@
+{
+  "question_id": "ao-08",
+  "arm": "A",
+  "model": "nvidia/nemotron-3.5-lightning",
+  "error": "Binder Error: Referenced column \"symbol_id\" not found in FROM clause!",
+  "elapsed_s": 4.25,
+  "attempts": [
+    {
+      "sql": "SELECT symbol_id, COUNT(DISTINCT caller_symbol_id) AS caller_count FROM code.calls WHERE callee_symbol_id IN (SELECT symbol_id FROM code.symbols WHERE file_id IN (SELECT file_id FROM code.files WHERE package = 'auto_ontology.dal' AND module != 'session' AND is_test = FALSE) AND kind = 'function') AND caller_file_id NOT IN (SELECT file_id FROM code.files WHERE is_test = TRUE) AND caller_file_id NOT IN (SELECT file_id FROM code.files WHERE package LIKE 'auto_ontology.dal%') GROUP BY symbol_id ORDER BY caller_count DESC, symbol_id ASC LIMIT 5",
+      "error": "Binder Error: Referenced column \"caller_file_id\" not found in FROM clause!"
+    },
+    {
+      "sql": "SELECT symbol_id, COUNT(DISTINCT caller_symbol_id) AS caller_count FROM code.calls WHERE callee_symbol_id IN (SELECT symbol_id FROM code.symbols WHERE file_id IN (SELECT file_id FROM code.files WHERE package = 'auto_ontology.dal' AND module != 'session' AND is_test = FALSE) AND kind = 'function') AND caller_symbol_id IN (SELECT symbol_id FROM code.symbols WHERE file_id NOT IN (SELECT file_id FROM code.files WHERE is_test = TRUE) AND file_id NOT IN (SELECT file_id FROM code.files WHERE package LIKE 'auto_ontology.dal%')) GROUP BY symbol_id ORDER BY caller_count DESC, symbol_id ASC LIMIT 5",
+      "error": "Binder Error: Referenced column \"symbol_id\" not found in FROM clause!"
+    },
+    {
+      "sql": "SELECT symbol_id, COUNT(DISTINCT caller_symbol_id) AS caller_count FROM code.calls c WHERE callee_symbol_id IN (SELECT symbol_id FROM code.symbols s WHERE s.file_id IN (SELECT file_id FROM code.files f WHERE f.package = 'auto_ontology.dal' AND f.module != 'session' AND f.is_test = FALSE) AND s.kind = 'function') AND caller_symbol_id IN (SELECT symbol_id FROM code.symbols s2 WHERE s2.file_id NOT IN (SELECT file_id FROM code.files f2 WHERE f2.is_test = TRUE) AND s2.file_id NOT IN (SELECT file_id FROM code.files f2 WHERE f2.package LIKE 'auto_ontology.dal%')) GROUP BY symbol_id ORDER BY caller_count DESC, symbol_id ASC LIMIT 5",
+      "error": "Binder Error: Referenced column \"symbol_id\" not found in FROM clause!"
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 2766,
+    "completion_tokens": 626,
+    "total_tokens": 3392,
+    "cost": 0.00031882,
+    "providers": [
+      "CoreWeave",
+      "CoreWeave",
+      "CoreWeave"
+    ]
+  },
+  "request": "Which five functions in the data-access layer are used most widely by the rest of the codebase? Consider module-level functions (not methods or classes) defined in non-test files under auto_ontology/dal/, excluding auto_ontology/dal/session.py. Rank them by the number of distinct functions or methods that call them directly, counting only callers that are in non-test files (every file under a tests/ folder is test code) located outside auto_ontology/dal/. Calls through a module alias (e.g. `dal.fetch_databases()` after `from auto_ontology.dal import datasources as dal`) or an import alias count; a function passed by reference without being called does not. Highest count first; break ties by symbol ID ascending and return exactly five rows. Return the symbol ID and the caller count.\n\nRequested output columns: symbol_id (string), caller_count (integer). Order the rows as the question asks.",
+  "explanation": "The query now references code.symbols s and code.symbols s2 with proper aliases to access the symbol_id column, avoiding the ambiguous column reference error while still filtering callees and callers by the required file conditions.",
+  "sql": "SELECT symbol_id, COUNT(DISTINCT caller_symbol_id) AS caller_count FROM code.calls c WHERE callee_symbol_id IN (SELECT symbol_id FROM code.symbols s WHERE s.file_id IN (SELECT file_id FROM code.files f WHERE f.package = 'auto_ontology.dal' AND f.module != 'session' AND f.is_test = FALSE) AND s.kind = 'function') AND caller_symbol_id IN (SELECT symbol_id FROM code.symbols s2 WHERE s2.file_id NOT IN (SELECT file_id FROM code.files f2 WHERE f2.is_test = TRUE) AND s2.file_id NOT IN (SELECT file_id FROM code.files f2 WHERE f2.package LIKE 'auto_ontology.dal%')) GROUP BY symbol_id ORDER BY caller_count DESC, symbol_id ASC LIMIT 5",
+  "rows": null
+}

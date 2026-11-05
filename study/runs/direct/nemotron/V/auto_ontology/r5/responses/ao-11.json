@@ -1,0 +1,36 @@
+{
+  "question_id": "ao-11",
+  "arm": "V",
+  "model": "nvidia/nemotron-3.5-lightning",
+  "error": "Binder Error: Referenced column \"enclosing_class_symbol_id\" not found in FROM clause!",
+  "elapsed_s": 4.24,
+  "attempts": [
+    {
+      "sql": "SELECT kind, COUNT(*) AS public_count FROM (\n  SELECT 'class' AS kind, symbol_id FROM code.symbols WHERE kind = 'class' AND is_public = TRUE AND file_id NOT IN (SELECT file_id FROM code.files WHERE is_test = TRUE)\n  UNION ALL\n  SELECT 'function' AS kind, symbol_id FROM code.symbols WHERE kind = 'function' AND is_public = TRUE AND is_method = FALSE AND is_class = FALSE AND file_id NOT IN (SELECT file_id FROM code.files WHERE is_test = TRUE)\n  UNION ALL\n  SELECT 'method' AS kind, symbol_id FROM code.symbols WHERE kind = 'method' AND is_public = TRUE AND is_method = TRUE AND file_id NOT IN (SELECT file_id FROM code.files WHERE is_test = TRUE)\n) sub GROUP BY kind ORDER BY kind",
+      "error": "Binder Error: Referenced column \"is_method\" not found in FROM clause!"
+    },
+    {
+      "sql": "SELECT kind, COUNT(*) AS public_count FROM (\n  SELECT 'class' AS kind, symbol_id FROM code.symbols WHERE kind = 'class' AND is_public = TRUE AND file_id NOT IN (SELECT file_id FROM code.files WHERE is_test = TRUE)\n  UNION ALL\n  SELECT 'function' AS kind, symbol_id FROM code.symbols WHERE kind = 'function' AND is_public = TRUE AND is_dunder = FALSE AND enclosing_class_symbol_id IS NULL AND file_id NOT IN (SELECT file_id FROM code.files WHERE is_test = TRUE)\n  UNION ALL\n  SELECT 'method' AS kind, symbol_id FROM code.symbols WHERE is_public = TRUE AND is_dunder = FALSE AND enclosing_class_symbol_id IS NOT NULL AND file_id NOT IN (SELECT file_id FROM code.files WHERE is_test = TRUE)\n) sub GROUP BY kind ORDER BY kind",
+      "error": "Binder Error: Referenced column \"is_dunder\" not found in FROM clause!"
+    },
+    {
+      "sql": "SELECT kind, COUNT(*) AS public_count FROM (\n  SELECT 'class' AS kind, symbol_id FROM code.symbols WHERE kind = 'class' AND is_public = TRUE AND file_id NOT IN (SELECT file_id FROM code.files WHERE is_test = TRUE)\n  UNION ALL\n  SELECT 'function' AS kind, symbol_id FROM code.symbols WHERE kind = 'function' AND is_public = TRUE AND name NOT LIKE '%' || '_' || '%' AND enclosing_class_symbol_id IS NULL AND file_id NOT IN (SELECT file_id FROM code.files WHERE is_test = TRUE)\n  UNION ALL\n  SELECT 'method' AS kind, symbol_id FROM code.symbols WHERE is_public = TRUE AND name NOT LIKE '%' || '_' || '%' AND enclosing_class_symbol_id IS NOT NULL AND file_id NOT IN (SELECT file_id FROM code.files WHERE is_test = TRUE)\n) sub GROUP BY kind ORDER BY kind",
+      "error": "Binder Error: Referenced column \"enclosing_class_symbol_id\" not found in FROM clause!"
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 3971,
+    "completion_tokens": 739,
+    "total_tokens": 4710,
+    "cost": 0.00039408999999999994,
+    "providers": [
+      "CoreWeave",
+      "CoreWeave",
+      "CoreWeave"
+    ]
+  },
+  "request": "How many public classes, public module-level functions and public methods are defined in the non-test code of the auto_ontology/retrieval/kumo/ package (files under its tests/ folder excluded)? A name is public when it does not start with an underscore, so dunder methods such as __init__ are not public, and methods of a class whose name starts with an underscore are not public either. Nested functions and nested classes are not counted. Return one row per kind, with kind being 'class', 'function' or 'method'.\n\nRequested output columns: kind (string), public_count (integer).",
+  "explanation": "The query checks that the symbol name does not contain an underscore to exclude dunder names, and uses enclosing_class_symbol_id to distinguish methods from top-level functions, avoiding unavailable columns.",
+  "sql": "SELECT kind, COUNT(*) AS public_count FROM (\n  SELECT 'class' AS kind, symbol_id FROM code.symbols WHERE kind = 'class' AND is_public = TRUE AND file_id NOT IN (SELECT file_id FROM code.files WHERE is_test = TRUE)\n  UNION ALL\n  SELECT 'function' AS kind, symbol_id FROM code.symbols WHERE kind = 'function' AND is_public = TRUE AND name NOT LIKE '%' || '_' || '%' AND enclosing_class_symbol_id IS NULL AND file_id NOT IN (SELECT file_id FROM code.files WHERE is_test = TRUE)\n  UNION ALL\n  SELECT 'method' AS kind, symbol_id FROM code.symbols WHERE is_public = TRUE AND name NOT LIKE '%' || '_' || '%' AND enclosing_class_symbol_id IS NOT NULL AND file_id NOT IN (SELECT file_id FROM code.files WHERE is_test = TRUE)\n) sub GROUP BY kind ORDER BY kind",
+  "rows": null
+}

@@ -1,0 +1,36 @@
+{
+  "question_id": "rich-05",
+  "arm": "A",
+  "model": "nvidia/nemotron-3.5-lightning",
+  "error": "Catalog Error: Table with name \"code.code.imports\" does not exist because schema \"code.code\" does not exist.",
+  "elapsed_s": 3.92,
+  "attempts": [
+    {
+      "sql": "SELECT DISTINCT imported_file FROM code.imports WHERE file_id = (SELECT file_id FROM code.files WHERE module = 'table') AND imported_file IS NOT NULL ORDER BY imported_file",
+      "error": "Binder Error: Referenced column \"imported_file\" not found in FROM clause!"
+    },
+    {
+      "sql": "SELECT DISTINCT code.imports.imported_file FROM code.imports WHERE code.imports.file_id = (SELECT code.files.file_id FROM code.files WHERE code.files.module = 'table') AND code.imports.imported_file IS NOT NULL ORDER BY code.imports.imported_file",
+      "error": "Binder Error: Table \"imports\" does not have a column named \"imported_file\""
+    },
+    {
+      "sql": "SELECT DISTINCT code.imports.imported_file FROM code.code.imports WHERE code.code.files.file_id = (SELECT code.code.files.file_id FROM code.code.files WHERE code.code.files.module = 'table') AND code.code.imports.imported_file IS NOT NULL ORDER BY code.code.imports.imported_file",
+      "error": "Catalog Error: Table with name \"code.code.imports\" does not exist because schema \"code.code\" does not exist."
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 2155,
+    "completion_tokens": 314,
+    "total_tokens": 2469,
+    "cost": 0.00021365,
+    "providers": [
+      "CoreWeave",
+      "CoreWeave",
+      "CoreWeave"
+    ]
+  },
+  "request": "Which of Rich's own Python files does rich/table.py import? Count every import statement anywhere in the file, including type-checking-only imports and the imports in its `if __name__ == \"__main__\"` demo block, and list each imported file once by its repository-relative path. A statement such as `from . import box` imports rich/box.py, not rich/__init__.py.\n\nRequested output columns: imported_file (string).",
+  "explanation": "The query uses fully qualified names with the code.code schema prefix for both the imports and files tables, ensuring all column references are unambiguously resolved against the correct table definitions.",
+  "sql": "SELECT DISTINCT code.imports.imported_file FROM code.code.imports WHERE code.code.files.file_id = (SELECT code.code.files.file_id FROM code.code.files WHERE code.code.files.module = 'table') AND code.code.imports.imported_file IS NOT NULL ORDER BY code.code.imports.imported_file",
+  "rows": null
+}

@@ -1,0 +1,51 @@
+{
+  "question_id": "ao-04",
+  "arm": "B",
+  "model": "deepseek/deepseek-v4.1-flash-1017",
+  "error": null,
+  "elapsed_s": 2.39,
+  "attempts": [
+    {
+      "sql": "WITH base AS (\n  SELECT symbol_id FROM code.symbols\n  WHERE file_id = 'auto_ontology/retrieval/text_to_sql/base.py' AND name = 'BaseAgent' AND kind = 'class'\n),\nagents AS (\n  SELECT s.symbol_id, s.file_id, s.name\n  FROM code.class_bases cb\n  JOIN base b ON cb.base_symbol_id = b.symbol_id\n  JOIN code.symbols s ON s.symbol_id = cb.class_symbol_id\n  JOIN code.files f ON f.file_id = s.file_id\n  WHERE s.kind = 'class' AND f.is_test = FALSE\n),\nconstructed AS (\n  SELECT DISTINCT c.callee_symbol_id AS symbol_id, f.is_test\n  FROM code.calls c\n  JOIN code.files f ON f.file_id = split_part(c.caller_symbol_id, '::', 1)\n  WHERE c.call_kind = 'direct'\n    AND c.callee_symbol_id IS NOT NULL\n    AND c.callee_name = split_part(c.callee_symbol_id, '::', 2)\n)\nSELECT a.symbol_id AS class_symbol_id\nFROM agents a\nWHERE EXISTS (SELECT 1 FROM constructed c WHERE c.symbol_id = a.symbol_id AND c.is_test = FALSE)\n  AND NOT EXISTS (SELECT 1 FROM constructed c WHERE c.symbol_id = a.symbol_id AND c.is_test = TRUE)\nORDER BY a.symbol_id",
+      "error": null
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 2792,
+    "completion_tokens": 400,
+    "total_tokens": 3192,
+    "cost": 0.00064672,
+    "providers": [
+      "Wafer"
+    ]
+  },
+  "request": "Consider the agent classes defined in non-test code that directly subclass BaseAgent from auto_ontology/retrieval/text_to_sql/base.py (every file under a tests/ folder, conftest.py and helpers included, is test code). Which of these agent classes are constructed (the class is called by name, e.g. ResponseAgent()) somewhere in non-test code but are never constructed anywhere in test code? Count only direct constructor calls written in a function or method body; patching or referencing a class without calling it does not count, and a test that calls a function which constructs the class does not count as constructing it. Return their class symbol IDs.\n\nRequested output columns: class_symbol_id (string).",
+  "explanation": "Finds BaseAgent in base.py, then all non-test classes that directly subclass it via class_bases. It then checks direct constructor calls (callee_name equal to the class's bare name) from non-test callers versus test callers, returning agent classes constructed in non-test code but never constructed in test code.",
+  "sql": "WITH base AS (\n  SELECT symbol_id FROM code.symbols\n  WHERE file_id = 'auto_ontology/retrieval/text_to_sql/base.py' AND name = 'BaseAgent' AND kind = 'class'\n),\nagents AS (\n  SELECT s.symbol_id, s.file_id, s.name\n  FROM code.class_bases cb\n  JOIN base b ON cb.base_symbol_id = b.symbol_id\n  JOIN code.symbols s ON s.symbol_id = cb.class_symbol_id\n  JOIN code.files f ON f.file_id = s.file_id\n  WHERE s.kind = 'class' AND f.is_test = FALSE\n),\nconstructed AS (\n  SELECT DISTINCT c.callee_symbol_id AS symbol_id, f.is_test\n  FROM code.calls c\n  JOIN code.files f ON f.file_id = split_part(c.caller_symbol_id, '::', 1)\n  WHERE c.call_kind = 'direct'\n    AND c.callee_symbol_id IS NOT NULL\n    AND c.callee_name = split_part(c.callee_symbol_id, '::', 2)\n)\nSELECT a.symbol_id AS class_symbol_id\nFROM agents a\nWHERE EXISTS (SELECT 1 FROM constructed c WHERE c.symbol_id = a.symbol_id AND c.is_test = FALSE)\n  AND NOT EXISTS (SELECT 1 FROM constructed c WHERE c.symbol_id = a.symbol_id AND c.is_test = TRUE)\nORDER BY a.symbol_id",
+  "rows": [
+    {
+      "class_symbol_id": "auto_ontology/retrieval/entity_coverage/agents/coverage.py::CoverageGradeAgent"
+    },
+    {
+      "class_symbol_id": "auto_ontology/retrieval/text_to_sql/agents/empty_like_result_check.py::EmptyLikeResultCheckAgent"
+    },
+    {
+      "class_symbol_id": "auto_ontology/retrieval/text_to_sql/agents/join_path_check.py::JoinPathCheckAgent"
+    },
+    {
+      "class_symbol_id": "auto_ontology/retrieval/text_to_sql/agents/jsonb_path_check.py::JsonbPathCheckAgent"
+    },
+    {
+      "class_symbol_id": "auto_ontology/retrieval/text_to_sql/agents/kumo_prediction.py::KumoPredictionAgent"
+    },
+    {
+      "class_symbol_id": "auto_ontology/retrieval/text_to_sql/agents/prediction_graph.py::PredictionGraphAgent"
+    },
+    {
+      "class_symbol_id": "auto_ontology/retrieval/text_to_sql/agents/proactive_value_check.py::ProactiveValueCheckAgent"
+    },
+    {
+      "class_symbol_id": "auto_ontology/retrieval/text_to_sql/agents/response.py::ResponseAgent"
+    }
+  ]
+}

@@ -1,0 +1,57 @@
+{
+  "question_id": "rich-11",
+  "arm": "V",
+  "model": "nvidia/nemotron-3.5-lightning",
+  "error": null,
+  "elapsed_s": 3.81,
+  "attempts": [
+    {
+      "sql": "SELECT file_id, COUNT(*) AS undocumented_count FROM code.symbol_profile WHERE is_function = TRUE OR is_method = TRUE AND is_public = TRUE AND has_docstring = FALSE AND file_id IN (SELECT file_id FROM code.files WHERE directory = 'rich') GROUP BY file_id ORDER BY undocumented_count DESC, file_id ASC LIMIT 5",
+      "error": "Binder Error: Referenced column \"directory\" not found in FROM clause!"
+    },
+    {
+      "sql": "SELECT f.file_id, COUNT(*) AS undocumented_count FROM code.symbol_profile sp JOIN code.files f ON sp.file_id = f.file_id WHERE (sp.is_function = TRUE OR sp.is_method = TRUE) AND sp.is_public = TRUE AND sp.has_docstring = FALSE AND f.directory = 'rich' GROUP BY f.file_id ORDER BY undocumented_count DESC, f.file_id ASC LIMIT 5",
+      "error": "Binder Error: Table \"f\" does not have a column named \"directory\""
+    },
+    {
+      "sql": "SELECT f.file_id, COUNT(*) AS undocumented_count FROM code.symbol_profile sp JOIN code.files f ON sp.file_id = f.file_id WHERE (sp.is_function = TRUE OR sp.is_method = TRUE) AND sp.is_public = TRUE AND sp.has_docstring = FALSE AND f.package = 'rich' GROUP BY f.file_id ORDER BY undocumented_count DESC, f.file_id ASC LIMIT 5",
+      "error": null
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 3611,
+    "completion_tokens": 417,
+    "total_tokens": 4028,
+    "cost": 0.00033617,
+    "providers": [
+      "CoreWeave",
+      "CoreWeave",
+      "CoreWeave"
+    ]
+  },
+  "request": "Under the rich/ folder, which five files contain the most public functions and methods that have no docstring? A function or method is public when neither its own name nor the name of its enclosing class starts with an underscore (so dunder methods are not public); classes themselves are not counted, and every definition counts separately (each @overload stub and each property getter or setter). Give the file path and the count, ordered by count descending, ties broken by file path ascending.\n\nRequested output columns: file_id (string), undocumented_count (integer). Order the rows as the question asks.",
+  "explanation": "The corrected query uses the package column from code.files instead of directory, filters for public functions/methods without a docstring in the rich package, and returns the top five files ordered by count descending and file path ascending.",
+  "sql": "SELECT f.file_id, COUNT(*) AS undocumented_count FROM code.symbol_profile sp JOIN code.files f ON sp.file_id = f.file_id WHERE (sp.is_function = TRUE OR sp.is_method = TRUE) AND sp.is_public = TRUE AND sp.has_docstring = FALSE AND f.package = 'rich' GROUP BY f.file_id ORDER BY undocumented_count DESC, f.file_id ASC LIMIT 5",
+  "rows": [
+    {
+      "file_id": "rich/markdown.py",
+      "undocumented_count": 21
+    },
+    {
+      "file_id": "rich/_null_file.py",
+      "undocumented_count": 15
+    },
+    {
+      "file_id": "rich/progress.py",
+      "undocumented_count": 9
+    },
+    {
+      "file_id": "rich/repr.py",
+      "undocumented_count": 5
+    },
+    {
+      "file_id": "rich/containers.py",
+      "undocumented_count": 4
+    }
+  ]
+}
