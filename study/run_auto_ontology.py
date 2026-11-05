@@ -32,7 +32,7 @@ REPO = "auto_ontology"
 
 def main() -> int:
     p = argparse.ArgumentParser()
-    p.add_argument("variant", choices=["base", "semantics"])
+    p.add_argument("variant", choices=["native", "base", "semantics"])
     p.add_argument("model", choices=list(MODELS))
     p.add_argument("out", type=Path)
     p.add_argument("upstream", type=Path)
@@ -58,8 +58,8 @@ def main() -> int:
     data = ROOT / "study/data" / REPO
     model_file = data / ("base.model.yaml" if args.variant == "base" else "semantic.model.yaml")
     db = data / f"{REPO}_code.duckdb"
-    if args.variant == "base":
-        # The base variant's database holds no layer views, so the agent cannot find them by introspection.
+    if args.variant in ("base", "native"):
+        # The base and native variants' database holds no layer views, so the agent cannot find them by introspection.
         base_db = ROOT / "build/study/base" / f"{REPO}_code.duckdb"
         db = base_db
     manifest = {
@@ -83,9 +83,24 @@ def main() -> int:
         "AO_EVALUATION_FILE": str(inputs / "evaluation.json"), "AO_WORKERS": str(args.workers),
         "AO_DUCKDB_FILE": str(db), "AO_SKIP_SYNC": "1", "UV_CACHE_DIR": str(ROOT / "build/uv-cache"), "PYTHONUNBUFFERED": "1",
     })
-    with (out / "runner.log").open("w") as log:
-        code = subprocess.call(["sh", str(ROOT / "examples/auto-ontology/live/run_live.sh"), "--with-key", str(args.env_file)],
-                               cwd=ROOT, env=env, stdout=log, stderr=subprocess.STDOUT)
+    script = ROOT / "examples/auto-ontology/live/run_live.sh"
+    if args.variant == "native":
+        # Same script with the model import removed: the agent sees only the catalog Auto Ontology builds itself.
+        # Written next to run_live.sh (it finds its helpers from its own directory) and removed afterwards.
+        text = script.read_text()
+        start = text.index('  psql_db $DB3 -At -f "$HERE/sql/live_catalog_ids.sql"')
+        end = text.index("  psql_db $DB3 -q -f \"$HERE/sql/frontend_configurations.sql\"\n  : > \"$LOGS/ingestion_keyed.compile_marker\"")
+        native = script.with_name(f".run_live_native_{os.getpid()}.sh")
+        native.write_text(text[:start] + '  echo "model import skipped (C-native)" > "$RESP/10c_model_import_skipped.txt"\n' + text[end:])
+        (inputs / "run_live_native.sh").write_text(native.read_text())
+        script = native
+    try:
+        with (out / "runner.log").open("w") as log:
+            code = subprocess.call(["sh", str(script), "--with-key", str(args.env_file)],
+                                   cwd=ROOT, env=env, stdout=log, stderr=subprocess.STDOUT)
+    finally:
+        if args.variant == "native":
+            script.unlink(missing_ok=True)
     responses = out / "responses"
     responses.mkdir()
     for i, qid in ids.items():
