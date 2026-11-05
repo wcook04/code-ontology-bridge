@@ -1,0 +1,73 @@
+{
+  "question_id": 8,
+  "status": 200,
+  "error": null,
+  "elapsed_s": 37.4,
+  "attempts": [
+    {
+      "sql": "SELECT c.callee_symbol_id AS symbol_id, COUNT(*) AS call_sites FROM code.calls c JOIN code.symbols caller_s ON c.caller_symbol_id = caller_s.symbol_id JOIN code.files caller_f ON caller_s.file_id = caller_f.file_id JOIN code.symbols callee_s ON c.callee_symbol_id = callee_s.symbol_id JOIN code.files callee_f ON callee_s.file_id = callee_f.file_id WHERE c.call_kind = 'direct' AND caller_f.is_test = FALSE AND callee_f.is_test = FALSE GROUP BY c.callee_symbol_id ORDER BY call_sites DESC, symbol_id ASC LIMIT 10;",
+      "error": null
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 680,
+    "completion_tokens": 2978,
+    "total_tokens": 3658
+  },
+  "request": {
+    "question": "Which ten non-test functions or methods are called from the most call sites in non-test code?\n\nHint: Count resolved direct call sites (call_kind 'direct') whose caller and callee are both outside test files. Ties are broken by symbol id.\n\nRequested output columns: symbol_id (string), call_sites (integer). Order the rows as the question asks.",
+    "arm": "schema",
+    "model": "nvidia/nemotron-3.5-lightning-30b-a3b"
+  },
+  "events": [
+    {
+      "type": "result",
+      "answer": {
+        "response": "The query identifies resolved direct call sites where both the caller and callee live in non-test files by joining calls with symbols and files twice (once for caller, once for callee). It groups by the callee's symbol ID, counts the number of qualifying direct call sites per symbol, and returns the top 10 symbols ranked by call site count descending, with symbol ID used as the tiebreaker ascending.",
+        "sql_code": "SELECT c.callee_symbol_id AS symbol_id, COUNT(*) AS call_sites FROM code.calls c JOIN code.symbols caller_s ON c.caller_symbol_id = caller_s.symbol_id JOIN code.files caller_f ON caller_s.file_id = caller_f.file_id JOIN code.symbols callee_s ON c.callee_symbol_id = callee_s.symbol_id JOIN code.files callee_f ON callee_s.file_id = callee_f.file_id WHERE c.call_kind = 'direct' AND caller_f.is_test = FALSE AND callee_f.is_test = FALSE GROUP BY c.callee_symbol_id ORDER BY call_sites DESC, symbol_id ASC LIMIT 10;",
+        "sql_response_from_db": [
+          {
+            "symbol_id": "auto_ontology/dal/session.py::store",
+            "call_sites": 311
+          },
+          {
+            "symbol_id": "auto_ontology/connectors/connection_string_factory.py::_enc",
+            "call_sites": 38
+          },
+          {
+            "symbol_id": "auto_ontology/dal/session.py::write_transaction",
+            "call_sites": 32
+          },
+          {
+            "symbol_id": "auto_ontology/retrieval/text_to_sql/agents/information_tools.py::_error",
+            "call_sites": 32
+          },
+          {
+            "symbol_id": "auto_ontology/connectors/connection_string_factory.py::_require",
+            "call_sites": 30
+          },
+          {
+            "symbol_id": "auto_ontology/utils/llm_invoke.py::invoke_with_structured_output",
+            "call_sites": 29
+          },
+          {
+            "symbol_id": "auto_ontology/retrieval/kumo/graph_cache.py::_term",
+            "call_sites": 25
+          },
+          {
+            "symbol_id": "auto_ontology/dal/users.py::resolve_accessible_catalog_ids",
+            "call_sites": 24
+          },
+          {
+            "symbol_id": "auto_ontology/retrieval/text_to_sql/base.py::agent_wrapper",
+            "call_sites": 21
+          },
+          {
+            "symbol_id": "auto_ontology/retrieval/text_to_sql/text_to_sql_graph.py::_make_node",
+            "call_sites": 18
+          }
+        ]
+      }
+    }
+  ]
+}

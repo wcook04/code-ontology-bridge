@@ -23,7 +23,7 @@ def repository(tmp_path):
         p.parent.mkdir(parents=True, exist_ok=True)
         p.write_text('')
     (tmp_path / 'README.md').write_text('\n'.join(f'[read]({name})' for name in (
-        'docs/case-study.md', 'docs/reproduction.md', 'docs/README.md',
+        'docs/case-study.md', 'docs/reproduction.md', 'docs/README.md', 'docs/inspection-api.md',
         'examples/auto-ontology/live/RESULTS.md', 'CONTRIBUTING.md')))
     (tmp_path / 'pyproject.toml').write_text('[project]\nreadme = "README.md"\n')
     (tmp_path / '.gitignore').write_text('/build/\n')
@@ -73,4 +73,18 @@ def test_superseded_capture_directory_rejected(repository):
     p = repository / 'examples/auto-ontology/live/evidence/old/backend.log'
     p.parent.mkdir(parents=True)
     p.write_text('superseded evidence')
+    assert any('no directory role' in problem for problem in checker.check(repository))
+
+
+def test_shared_figure_assets_have_a_specific_home(repository):
+    p = repository / 'docs/figures/architecture.png'
+    p.parent.mkdir(parents=True)
+    p.write_bytes(b'figure')
+    (repository / 'docs/README.md').write_text('![Diagram](figures/architecture.png)')
+    assert checker.check(repository) == []
+    git(repository, 'add', '.')
+    assert checker.check(repository, True) == []
+    p.unlink()
+    assert any('broken link' in problem for problem in checker.check(repository))
+    (repository / 'docs/loose-image.png').write_bytes(b'misplaced')
     assert any('no directory role' in problem for problem in checker.check(repository))

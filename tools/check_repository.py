@@ -16,13 +16,20 @@ ROOT_FILES = {
 REQUIRED = {
     'README.md', 'CONTRIBUTING.md', 'GAPS.md', 'SPEC.md', 'LICENSE', 'pyproject.toml',
     'docs/README.md', 'docs/case-study.md', 'docs/case-study.pdf',
-    'docs/reproduction.md', 'docs/governance.md',
+    'docs/reproduction.md', 'docs/governance.md', 'docs/inspection-api.md',
+    'code_ontology_bridge/inspection/bundle.py', 'code_ontology_bridge/inspection/api.py',
+    'code_ontology_bridge/inspection/contract.py', 'code_ontology_bridge/inspection/http.py',
+    'docs/frontend-handoff.md', 'docs/deployment.md',
+    'tools/build_publication.py', 'tools/stage_publication.py', 'tools/verify_publication.py',
+    'code_ontology_bridge/inspection/walkthrough.py',
+    'code_ontology_bridge/inspection/models.py', 'code_ontology_bridge/inspection/publication.py',
+    'examples/auto-ontology/live/caller-chain-case.json',
     'code_ontology_bridge/cli.py', 'tools/check_repository.py',
+    'site/README.md', 'site/package.json', 'site/package-lock.json', 'site/index.html', 'tools/stage_site.py',
     'tools/build_paper.sh', 'tools/build_paper.py', '.github/workflows/checks.yml',
     'examples/auto-ontology/live/RESULTS.md',
     'examples/auto-ontology/live/current/manifest.json',
     'examples/auto-ontology/live/current/score.json',
-    'examples/auto-ontology/live/current/review.json',
     'examples/auto-ontology/live/current/artifacts.json',
 }
 
@@ -45,7 +52,22 @@ def allowed(name: str) -> bool:
         return name in ROOT_FILES
     owner = p.parts[0]
     if owner == 'docs':
+        if p.parts[1] == 'figures':
+            return len(p.parts) == 3 and p.suffix in {'.md', '.png'}
         return p.suffix in {'.md', '.pdf'}
+    if owner == 'site':
+        # The reading website: Vite/React source, its lockfile, tests and static assets.
+        # Built output (site/dist) and installed packages (site/node_modules) stay ignored.
+        if len(p.parts) == 2:
+            return p.name in {'README.md', 'package.json', 'package-lock.json', 'tsconfig.json',
+                              'vite.config.ts', 'index.html', '.gitignore'}
+        if p.parts[1] == 'src':
+            return p.suffix in {'.ts', '.tsx', '.css', '.json'}
+        if p.parts[1] == 'tests':
+            return p.suffix == '.ts'
+        if p.parts[1] == 'public':
+            return p.suffix == '.svg'
+        return False
     if owner == 'tools':
         return len(p.parts) == 2 and p.suffix in {'.py', '.sh'}
     if owner == 'tests':
@@ -53,7 +75,8 @@ def allowed(name: str) -> bool:
     if owner == '.github':
         return p.parts[1] == 'workflows' and p.suffix in {'.yml', '.yaml'}
     if owner == 'eval':
-        return name in {'eval/auto_ontology_questions.json', 'eval/custom_analyses.json', 'eval/answer_contracts.json'}
+        return name in {'eval/auto_ontology_questions.json', 'eval/custom_analyses.json', 'eval/answer_contracts.json',
+                        'eval/heldout_questions.json', 'eval/heldout_contracts.json'}
     if owner == 'code_ontology_bridge':
         return p.suffix == '.py' or (p.suffix == '.json' and
             p.parts[1:3] == ('governance', 'examples'))
@@ -112,7 +135,7 @@ def check(root: Path, index: bool = False) -> list[str]:
                 if unquote(parts.fragment) not in anchors(read(target)):
                     problems.append(f'{name}: missing heading {url}')
     if 'README.md' in names:
-        for route in ('docs/case-study.md', 'docs/reproduction.md', 'docs/README.md',
+        for route in ('docs/case-study.md', 'docs/reproduction.md', 'docs/README.md', 'docs/inspection-api.md',
                       'examples/auto-ontology/live/RESULTS.md', 'CONTRIBUTING.md'):
             if f']({route})' not in read('README.md'):
                 problems.append(f'README.md: missing reader route {route}')

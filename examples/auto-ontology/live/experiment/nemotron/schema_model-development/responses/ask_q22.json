@@ -1,0 +1,37 @@
+{
+  "question_id": 22,
+  "status": 200,
+  "error": null,
+  "elapsed_s": 49.0,
+  "attempts": [
+    {
+      "sql": "WITH base_classes AS (\n  SELECT s.symbol_id\n  FROM code.symbols s\n  JOIN code.files f ON s.file_id = f.file_id\n  WHERE s.kind = 'class'\n    AND s.is_public = TRUE\n    AND f.file_id LIKE 'auto_ontology/connectors/%'\n    AND f.is_test = FALSE\n),\nsubclass_count AS (\n  SELECT cb.base_symbol_id, COUNT(DISTINCT cb.class_symbol_id) AS subclasses\n  FROM code.class_bases cb\n  JOIN code.symbols sub ON cb.class_symbol_id = sub.symbol_id\n  JOIN code.files sub_f ON sub.file_id = sub_f.file_id\n  WHERE sub.kind = 'class'\n    AND sub_f.is_test = FALSE\n    AND cb.base_symbol_id IN (SELECT symbol_id FROM base_classes)\n  GROUP BY cb.base_symbol_id\n),\nconstructed AS (\n  SELECT DISTINCT callee_symbol_id\n  FROM code.calls\n  WHERE callee_symbol_id IS NOT NULL\n    AND callee_symbol_id IN (SELECT symbol_id FROM base_classes)\n)\nSELECT bc.symbol_id, sc.subclasses\nFROM base_classes bc\nJOIN subclass_count sc ON bc.symbol_id = sc.base_symbol_id\nWHERE sc.subclasses > 0\n  AND bc.symbol_id NOT IN (SELECT callee_symbol_id FROM constructed)",
+      "error": null
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 2841,
+    "completion_tokens": 5981,
+    "total_tokens": 8822
+  },
+  "request": {
+    "question": "Which public classes in auto_ontology/connectors are used only as base classes: subclassed by other non-test classes but never constructed by a resolved call? Give the number of non-test subclasses of each.\n\nHint: code.class_bases records the base classes named in each class statement; base_symbol_id is the internal class a base resolves to. Calling a class name creates an instance.\n\nRequested output columns: symbol_id (string), subclasses (integer).",
+    "arm": "schema_model",
+    "model": "nvidia/nemotron-3.5-lightning-30b-a3b"
+  },
+  "events": [
+    {
+      "type": "result",
+      "answer": {
+        "response": "The query finds public, non-test classes in the auto_ontology/connectors package that are subclassed by other non-test classes but are never used as a constructor target in a resolved call (no code.calls row has their symbol_id as callee_symbol_id). It counts distinct non-test subclasses per class and returns only those with at least one subclass.",
+        "sql_code": "WITH base_classes AS (\n  SELECT s.symbol_id\n  FROM code.symbols s\n  JOIN code.files f ON s.file_id = f.file_id\n  WHERE s.kind = 'class'\n    AND s.is_public = TRUE\n    AND f.file_id LIKE 'auto_ontology/connectors/%'\n    AND f.is_test = FALSE\n),\nsubclass_count AS (\n  SELECT cb.base_symbol_id, COUNT(DISTINCT cb.class_symbol_id) AS subclasses\n  FROM code.class_bases cb\n  JOIN code.symbols sub ON cb.class_symbol_id = sub.symbol_id\n  JOIN code.files sub_f ON sub.file_id = sub_f.file_id\n  WHERE sub.kind = 'class'\n    AND sub_f.is_test = FALSE\n    AND cb.base_symbol_id IN (SELECT symbol_id FROM base_classes)\n  GROUP BY cb.base_symbol_id\n),\nconstructed AS (\n  SELECT DISTINCT callee_symbol_id\n  FROM code.calls\n  WHERE callee_symbol_id IS NOT NULL\n    AND callee_symbol_id IN (SELECT symbol_id FROM base_classes)\n)\nSELECT bc.symbol_id, sc.subclasses\nFROM base_classes bc\nJOIN subclass_count sc ON bc.symbol_id = sc.base_symbol_id\nWHERE sc.subclasses > 0\n  AND bc.symbol_id NOT IN (SELECT callee_symbol_id FROM constructed)",
+        "sql_response_from_db": [
+          {
+            "symbol_id": "auto_ontology/connectors/base.py::SQLDatabase",
+            "subclasses": 10
+          }
+        ]
+      }
+    }
+  ]
+}

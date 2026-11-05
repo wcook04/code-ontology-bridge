@@ -1,0 +1,195 @@
+{
+  "request": {
+    "question": "Which non-test files have no docstring description?\n\nRequested output columns: file_id (string).\nReturn every requested field using exactly its specified column alias. Preserve complete case-sensitive repository-relative paths and symbol IDs; do not substitute display names. Include all requested counts and provenance fields. Explain the query result in ordinary prose; do not emit placeholder text. These questions concern a static map of open-source Python code. Describe what the query computes and the assumptions it makes; the returned rows are reported separately. Questions asking which files, modules or symbols mean distinct identities, not one repeated row per matching import or call occurrence; preserve occurrence counts only when requested. Caller/callee graph questions include methods as well as standalone functions unless a symbol kind is explicitly restricted. Use files.is_test for test-file classification; test_links describe associations, not the complete set of test files. Use DOUBLE or DECIMAL, rather than single-precision REAL, for percentage calculations.",
+    "evidence": "description_source is 'none' when a file has no module docstring.",
+    "calculation_only": true
+  },
+  "status": 200,
+  "elapsed_s": 72.0,
+  "events": [
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "question_intent",
+      "thought": null,
+      "label": "Classifying the question"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "question_intent",
+      "thought": null,
+      "label": "Classifying the question"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "question_extraction",
+      "thought": null,
+      "label": "Understanding the question"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "question_extraction",
+      "thought": null,
+      "label": "Understanding the question"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "retrieve_candidates",
+      "thought": null,
+      "label": "Retrieving candidates"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "retrieve_candidates",
+      "thought": null,
+      "label": "Retrieving candidates"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "prepare_candidates",
+      "thought": null,
+      "label": "Preparing candidates"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "prepare_candidates",
+      "thought": "Only auto_ontology_code.code.files is needed: it contains file_id, is_test, and description (plus description_source) to identify non-test files whose module docstring description is empty and to return the full repository-relative path. No other candidate table is required to filter or return the requested file rows.",
+      "label": "Preparing candidates"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "refine_evidence",
+      "thought": null,
+      "label": "Refining evidence"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "refine_evidence",
+      "thought": "The goal is to find files that are not tests AND have no description. The evidence specifies that `files.is_test` classifies test files, and `files.description_source` being 'none' indicates no module docstring.\n\n1. 'non-test files' is grounded to `files.is_test = false`.\n2. 'no docstring description' is grounded to `files.description_source = 'none'` (as derived from the description_source evidence).\n3. The required return column `file_id` maps directly to the allowed column `",
+      "label": "Refining evidence"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "construct_sql_from_candidates",
+      "thought": null,
+      "label": "Constructing SQL"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "construct_sql_from_candidates",
+      "thought": "The evidence states that description_source is 'none' when a file has no module docstring, so the missing-description condition is mapped to description_source = 'none' rather than an empty description test. Non-test classification uses files.is_test (evidence explicitly requires it), so I filter NOT is_test. Only file_id is projected, aliased as file_id, preserving the full case-sensitive repository-relative path. Assumption: files with is_test NULL are excluded implicitly since NOT is_test requires a true value, matching the non-test requirement; no DISTINCT is needed because file_id is the primary identity of a file, so each file appears once. Ordering by file_id gives deterministic output since no ranking or limit was requested.",
+      "label": "Constructing SQL"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "validate_sql_query",
+      "thought": null,
+      "label": "Validating SQL and intent"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "validate_sql_query",
+      "thought": "The query uses only the files table, which is the correct starting table per the semantic hint. It filters `NOT is_test` for non-test classification and `description_source = 'none'` for files lacking a docstring description, both matching the Authoritative Evidence exactly. No joins are used (none are needed), and no aggregations are involved, so there is nothing to be wrong. The output column is `file_id`, which is the required alias/provenance for the complete case-sensitive repository-relative path, and each file appears once (satisfying the distinct-identity requirement). No critical issues found.",
+      "label": "Validating SQL and intent"
+    },
+    {
+      "type": "sql",
+      "node": "validate_sql_query",
+      "sql": "SELECT file_id FROM auto_ontology_code.code.files WHERE NOT is_test AND description_source = 'none' ORDER BY file_id;"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "execute_sql_query",
+      "thought": null,
+      "label": "Executing SQL"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "execute_sql_query",
+      "thought": null,
+      "label": "Executing SQL"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "check_empty_like_result",
+      "thought": null,
+      "label": "Checking results"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "check_empty_like_result",
+      "thought": null,
+      "label": "Checking results"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "check_value_repair",
+      "thought": null,
+      "label": "Checking values"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "check_value_repair",
+      "thought": null,
+      "label": "Checking values"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "format_and_respond",
+      "thought": null,
+      "label": "Formatting response"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "format_and_respond",
+      "thought": null,
+      "label": "Formatting response"
+    },
+    {
+      "type": "result",
+      "answer": {
+        "response": "This lists the repository-relative paths of Python files that are not marked as tests yet have no module docstring description. It filters the files table using the test-file flag and the description source, returning only the file path for each matching file, sorted alphabetically.",
+        "sql_code": "SELECT file_id FROM auto_ontology_code.code.files WHERE NOT is_test AND description_source = 'none' ORDER BY file_id;",
+        "sql_columns": [
+          "ad71ee93-72fb-4035-92c0-3b16057746f7",
+          "6c69532d-d5ad-4a41-af33-dc4de1f70c23",
+          "4aefaeb1-bce4-49ad-bc8b-4342b8dddb36"
+        ],
+        "custom_analyses_used": [],
+        "sql_response_from_db": [
+          "[{\"file_id\":\"auto_ontology\\/__init__.py\"},{\"file_id\":\"auto_ontology\\/connectors\\/__init__.py\"},{\"file_id\":\"auto_ontology\\/infra\\/__init__.py\"},{\"file_id\":\"auto_ontology\\/ingestion_service\\/__init__.py\"},{\"file_id\":\"auto_ontology\\/ingestion_service\\/ingest.py\"},{\"file_id\":\"auto_ontology\\/retrieval\\/interactive\\/__init__.py\"},{\"file_id\":\"auto_ontology\\/retrieval\\/interactive\\/completeness.py\"},{\"file_id\":\"auto_ontology\\/retrieval\\/interactive\\/coordinator.py\"},{\"file_id\":\"auto_ontology\\/retrieval\\/interactive\\/evidence.py\"},{\"file_id\":\"auto_ontology\\/retrieval\\/interactive\\/followup_merge.py\"},{\"file_id\":\"auto_ontology\\/retrieval\\/interactive\\/grounding.py\"},{\"file_id\":\"auto_ontology\\/retrieval\\/interactive\\/merge.py\"},{\"file_id\":\"auto_ontology\\/retrieval\\/interactive\\/state.py\"},{\"file_id\":\"auto_ontology\\/retrieval\\/interactive\\/types.py\"},{\"file_id\":\"auto_ontology\\/retrieval\\/text_to_sql\\/__init__.py\"},{\"file_id\":\"auto_ontology\\/retrieval\\/text_to_sql\\/agents\\/__init__.py\"},{\"file_id\":\"auto_ontology\\/retrieval\\/text_to_sql\\/main.py\"},{\"file_id\":\"auto_ontology\\/retrieval\\/text_to_sql\\/models.py\"},{\"file_id\":\"auto_ontology\\/retrieval\\/text_to_sql\\/prompts.py\"},{\"file_id\":\"auto_ontology\\/retrieval\\/text_to_sql\\/text_to_sql_graph.py\"},{\"file_id\":\"auto_ontology\\/server\\/__init__.py\"},{\"file_id\":\"auto_ontology\\/server\\/chat\\/__init__.py\"},{\"file_id\":\"auto_ontology\\/server\\/exploration\\/__init__.py\"},{\"file_id\":\"auto_ontology\\/server\\/health\\/__init__.py\"},{\"file_id\":\"auto_ontology\\/server\\/ingestion\\/__init__.py\"},{\"file_id\":\"auto_ontology\\/server\\/metadata\\/__init__.py\"},{\"file_id\":\"auto_ontology\\/server\\/pql_analyses\\/__init__.py\"},{\"file_id\":\"auto_ontology\\/server\\/search\\/__init__.py\"},{\"file_id\":\"auto_ontology\\/server\\/semantic_compilation\\/__init__.py\"},{\"file_id\":\"auto_ontology\\/server\\/sql_attributes\\/__init__.py\"},{\"file_id\":\"auto_ontology\\/server\\/terms\\/__init__.py\"},{\"file_id\":\"dev_tools\\/__init__.py\"}]"
+        ],
+        "thoughts": "- Preparing candidates: The question’s requested output is the repository-relative file path, which maps to code.files.file_id; the other constraints filter rows but do not define the returned identity column.\n- Preparing candidates: Only auto_ontology_code.code.files is needed: it contains file_id, is_test, and description (plus description_source) to identify non-test files whose module docstring description is empty and to return the full repository-relative path. No other candidate table is required to filter or return the requested file rows.\n- Refining evidence: The goal is to find files that are not tests AND have no description. The evidence specifies that `files.is_test` classifies test files, and `files.description_source` being 'none' indicates no module docstring.\n\n1. 'non-test files' is grounded to `files.is_test = false`.\n2. 'no docstring description' is grounded to `files.description_source = 'none'` (as derived from the description_source evidence).\n3. The required return column `file_id` maps directly to the allowed column `\n- Constructing SQL: The evidence states that description_source is 'none' when a file has no module docstring, so the missing-description condition is mapped to description_source = 'none' rather than an empty description test. Non-test classification uses files.is_test (evidence explicitly requires it), so I filter NOT is_test. Only file_id is projected, aliased as file_id, preserving the full case-sensitive repository-relative path. Assumption: files with is_test NULL are excluded implicitly since NOT is_test requires a true value, matching the non-test requirement; no DISTINCT is needed because file_id is the primary identity of a file, so each file appears once. Ordering by file_id gives deterministic output since no ranking or limit was requested.\n- Validating SQL and intent: The query uses only the files table, which is the correct starting table per the semantic hint. It filters `NOT is_test` for non-test classification and `description_source = 'none'` for files lacking a docstring description, both matching the Authoritative Evidence exactly. No joins are used (none are needed), and no aggregations are involved, so there is nothing to be wrong. The output column is `file_id`, which is the required alias/provenance for the complete case-sensitive repository-relative path, and each file appears once (satisfying the distinct-identity requirement). No critical issues found."
+      }
+    }
+  ],
+  "question_id": 3,
+  "gold_sql": "SELECT file_id\nFROM code.files\nWHERE description_source = 'none' AND NOT is_test\nORDER BY file_id;",
+  "gold_row_count": 32,
+  "agent_sql": "SELECT file_id FROM auto_ontology_code.code.files WHERE NOT is_test AND description_source = 'none' ORDER BY file_id;",
+  "agent_answer": "This lists the repository-relative paths of Python files that are not marked as tests yet have no module docstring description. It filters the files table using the test-file flag and the description source, returning only the file path for each matching file, sorted alphabetically.",
+  "agent_row_count": 32,
+  "correct_rows": true,
+  "error": null
+}

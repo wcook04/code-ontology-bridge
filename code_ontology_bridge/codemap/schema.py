@@ -198,7 +198,7 @@ IMPORTS = Table(
 
 TEST_LINKS = Table(
     "test_links",
-    "Static links from test files to the source files they exercise.",
+    "Static associations between a test file and a source file, inferred because the test imports the file or its name matches. They are not measured test execution or coverage.",
     (
         _c("test_file_id", "TEXT", "Test file."),
         _c("target_file_id", "TEXT", "Non-test file the test is linked to."),
@@ -241,7 +241,7 @@ GROUP BY s.symbol_id, s.file_id, s.name, s.qualname, s.kind, s.is_public""",
     ),
     View(
         "untested_public_symbols",
-        "Public symbols in non-test files whose file no test file links to.",
+        "Public symbols in non-test files whose file has no recorded test association (no test imports it or matches its name). This does not show that the symbol is never tested.",
         """SELECT s.symbol_id, s.file_id, s.name, s.qualname, s.kind
 FROM code.symbols s
 JOIN code.files f ON f.file_id = s.file_id

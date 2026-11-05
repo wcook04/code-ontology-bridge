@@ -63,6 +63,7 @@ def test_committed_worked_example_matches_a_fresh_build(worked_example):
         name = f"code.{table.name}.csv"
         assert (committed / "data" / name).read_bytes() == (worked_example.dataset / "data" / name).read_bytes(), name
     assert json.loads((committed / "evaluation.json").read_text()) == json.loads((worked_example.dataset / "evaluation.json").read_text())
+    assert json.loads((committed / "heldout_evaluation.json").read_text()) == json.loads((worked_example.dataset / "heldout_evaluation.json").read_text())
     summary = json.loads((EXAMPLE / "summary.json").read_text())
     assert summary == worked_example.code_map.stats
 

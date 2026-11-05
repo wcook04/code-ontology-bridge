@@ -1,0 +1,246 @@
+{
+  "request": {
+    "question": "Which non-test functions or methods call themselves directly?\n\nRequested output columns: caller_symbol_id (string).\nReturn every requested field using exactly its specified column alias. Preserve complete case-sensitive repository-relative paths and symbol IDs; do not substitute display names. Include all requested counts and provenance fields. Explain the query result in ordinary prose; do not emit placeholder text. These questions concern a static map of open-source Python code. Describe what the query computes and the assumptions it makes; the returned rows are reported separately. Questions asking which files, modules or symbols mean distinct identities, not one repeated row per matching import or call occurrence; preserve occurrence counts only when requested. Caller/callee graph questions include methods as well as standalone functions unless a symbol kind is explicitly restricted. Use files.is_test for test-file classification; test_links describe associations, not the complete set of test files. Use DOUBLE or DECIMAL, rather than single-precision REAL, for percentage calculations.",
+    "calculation_only": true
+  },
+  "status": 200,
+  "elapsed_s": 336.4,
+  "events": [
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "question_intent",
+      "thought": null,
+      "label": "Classifying the question"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "question_intent",
+      "thought": null,
+      "label": "Classifying the question"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "question_extraction",
+      "thought": null,
+      "label": "Understanding the question"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "question_extraction",
+      "thought": null,
+      "label": "Understanding the question"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "retrieve_candidates",
+      "thought": null,
+      "label": "Retrieving candidates"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "retrieve_candidates",
+      "thought": null,
+      "label": "Retrieving candidates"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "prepare_candidates",
+      "thought": null,
+      "label": "Preparing candidates"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "prepare_candidates",
+      "thought": "The query needs `calls` for the direct self-call (`caller_symbol_id = callee_symbol_id`, `call_kind = 'direct'`) and for returning `caller_symbol_id`. It needs `symbols` to restrict the caller to `kind IN ('function','method')`, and `files` to exclude test files via `files.is_test = false`. The join chain `calls -> symbols -> files` must be kept.",
+      "label": "Preparing candidates"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "refine_evidence",
+      "thought": null,
+      "label": "Refining evidence"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "refine_evidence",
+      "thought": null,
+      "label": "Refining evidence"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "construct_sql_from_candidates",
+      "thought": null,
+      "label": "Constructing SQL"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "construct_sql_from_candidates",
+      "thought": "The question asks for every distinct non-test function or method that directly calls itself. I start from the call graph table, keeping only rows where the caller and the callee are the same symbol (a self-call) and where call_kind is 'direct' so callback references are excluded. Because the graph also contains classes and other symbol kinds, the caller is joined to the symbol table to restrict kind to 'function' or 'method' (methods included, per the evidence). The symbol is then joined to the file table and filtered on is_test = false so symbols defined in test files are excluded; this uses files.is_test rather than test_links, as the evidence requires. DISTINCT is applied because the question asks for each distinct caller symbol identity, not one row per call occurrence, and callee_symbol_id is available on every direct self-call row so no null handling is required beyond the equality test. Results are ordered by the symbol ID for a stable, readable listing; no LIMIT is added because the question asks for all matching symbols.",
+      "label": "Constructing SQL"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "validate_sql_query",
+      "thought": null,
+      "label": "Validating SQL and intent"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "validate_sql_query",
+      "thought": "The SQL is valid. It correctly identifies direct self-calls by requiring `calls.call_kind = 'direct'` and `calls.callee_symbol_id = calls.caller_symbol_id`. It joins `calls` to `symbols` through the caller symbol ID to restrict callers to `function` or `method`, and joins to `files` to enforce `files.is_test = false`. The output is `SELECT DISTINCT c.caller_symbol_id AS caller_symbol_id`, which matches the requested distinct caller symbol ID column and uses the exact alias. No critical join, aggregation, or evidence-compliance issue is present.",
+      "label": "Validating SQL and intent"
+    },
+    {
+      "type": "sql",
+      "node": "validate_sql_query",
+      "sql": "SELECT DISTINCT c.caller_symbol_id AS caller_symbol_id FROM calls AS c JOIN symbols AS s ON c.caller_symbol_id = s.symbol_id JOIN files AS f ON s.file_id = f.file_id WHERE c.call_kind = 'direct' AND c.callee_symbol_id = c.caller_symbol_id AND s.kind IN ('function', 'method') AND f.is_test = false ORDER BY caller_symbol_id"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "execute_sql_query",
+      "thought": null,
+      "label": "Executing SQL"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "execute_sql_query",
+      "thought": "Query failed, rewriting it: Catalog Error: Table with name calls does not exist! Did you mean \"code.calls\"? LINE 1: ...ELECT DISTINCT c.caller_symbol_id AS caller_symbol_id FROM calls AS c JOIN symbols AS s ON c.caller_symbol_id = s.symb... ^",
+      "label": "Executing SQL"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "reconstruct_sql",
+      "thought": null,
+      "label": "Reconstructing SQL"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "reconstruct_sql",
+      "thought": "The only defect is table qualification: the bare identifiers are not visible without their catalog/schema prefix, so all three relations must be referenced by their full documented names (auto_ontology_code.code.calls, .symbols, .files). Every earlier assumption still holds and is restated here: (1) a 'self-call' means one call row whose caller and callee are the same symbol identity, tested with callee_symbol_id = caller_symbol_id, with no NULL handling needed because a self-call row necessarily carries a callee; (2) only call_kind = 'direct' counts, since callback rows pass a function as an argument rather than invoking it; (3) caller kind is restricted to 'function' and 'method' so classes are excluded, and methods are included per the evidence that caller/callee graph questions cover methods as well as standalone functions; (4) non-test classification comes from files.is_test = false, not from test_links, since test_links only records associations; (5) DISTINCT is required because the question asks which symbols self-call, i.e. distinct symbol identities rather than one row per call site occurrence; (6) the caller_symbol_id is projected verbatim as the exact symbol ID string under the alias caller_symbol_id; (7) results are ordered by the symbol ID for a stable listing and no LIMIT is applied since every matching symbol is requested.",
+      "label": "Reconstructing SQL"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "validate_sql_query",
+      "thought": null,
+      "label": "Validating SQL and intent"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "validate_sql_query",
+      "thought": "The SQL answers the normalized question correctly. It starts from `calls`, filters to `call_kind = 'direct'`, identifies self-calls with `callee_symbol_id = caller_symbol_id`, and returns `DISTINCT caller_symbol_id` as the requested alias. It joins to `symbols` to restrict to `kind IN ('function','method')` and joins to `files` to enforce `is_test = false`. Although the authoritative structural bridge lists `calls.callee_symbol_id = symbols.symbol_id`, the SQL joins on `calls.caller_symbol_id`, which is also a valid FK to `symbols.symbol_id`; because the self-call predicate enforces caller = callee, this produces the same symbol for kind/file classification and is not a critical issue. No incorrect aggregation or nonsensical joins are present. It respects the requirement for distinct identities rather than occurrence counts.",
+      "label": "Validating SQL and intent"
+    },
+    {
+      "type": "sql",
+      "node": "validate_sql_query",
+      "sql": "SELECT DISTINCT c.caller_symbol_id AS caller_symbol_id FROM auto_ontology_code.code.calls AS c JOIN auto_ontology_code.code.symbols AS s ON c.caller_symbol_id = s.symbol_id JOIN auto_ontology_code.code.files AS f ON s.file_id = f.file_id WHERE c.call_kind = 'direct' AND c.callee_symbol_id = c.caller_symbol_id AND s.kind IN ('function', 'method') AND f.is_test = false ORDER BY caller_symbol_id"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "execute_sql_query",
+      "thought": null,
+      "label": "Executing SQL"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "execute_sql_query",
+      "thought": null,
+      "label": "Executing SQL"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "check_empty_like_result",
+      "thought": null,
+      "label": "Checking results"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "check_empty_like_result",
+      "thought": null,
+      "label": "Checking results"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "check_value_repair",
+      "thought": null,
+      "label": "Checking values"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "check_value_repair",
+      "thought": null,
+      "label": "Checking values"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "format_and_respond",
+      "thought": null,
+      "label": "Formatting response"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "format_and_respond",
+      "thought": null,
+      "label": "Formatting response"
+    },
+    {
+      "type": "result",
+      "answer": {
+        "response": "This lists the distinct function and method symbols that directly invoke themselves, identified by their exact symbol IDs rather than display names. It reads the call graph, keeps only direct calls whose callee identity equals the caller identity, then restricts callers to functions and methods and excludes anything defined in a file classified as a test file. Duplicate call sites are collapsed so each self-calling symbol appears once, and the output is sorted by symbol ID.",
+        "sql_code": "SELECT DISTINCT c.caller_symbol_id AS caller_symbol_id FROM auto_ontology_code.code.calls AS c JOIN auto_ontology_code.code.symbols AS s ON c.caller_symbol_id = s.symbol_id JOIN auto_ontology_code.code.files AS f ON s.file_id = f.file_id WHERE c.call_kind = 'direct' AND c.callee_symbol_id = c.caller_symbol_id AND s.kind IN ('function', 'method') AND f.is_test = false ORDER BY caller_symbol_id",
+        "sql_columns": [
+          "37787b87-0e65-46ff-8e58-2f5eb86d9d00",
+          "8b0eb5ed-3e94-452e-b48c-db70c12bb8b9",
+          "74218517-ebb7-42d3-9007-d1a19b1f63de",
+          "dfc57b65-8353-42fb-b068-4dda36ea633d",
+          "0c7b8533-654f-4259-9818-325b50da646f",
+          "68066889-2575-41cf-83b2-597a7bac3c4b",
+          "8068de41-b92a-4498-b746-f3b154dbdf8d",
+          "837c4c11-ecc6-4a5b-9966-b89b878aca28"
+        ],
+        "custom_analyses_used": [],
+        "sql_response_from_db": [
+          "[{\"caller_symbol_id\":\"auto_ontology\\/catalog\\/model\\/schema.py::Schema.get_column_node\"},{\"caller_symbol_id\":\"auto_ontology\\/catalog\\/normalize.py::flat_list_recursive\"},{\"caller_symbol_id\":\"auto_ontology\\/catalog\\/store\\/rows.py::resolve_id\"},{\"caller_symbol_id\":\"auto_ontology\\/retrieval\\/text_to_sql\\/agents\\/empty_like_result_check.py::_is_empty_db_result\"},{\"caller_symbol_id\":\"auto_ontology\\/retrieval\\/text_to_sql\\/agents\\/information_agent.py::_collect_column_ids\"},{\"caller_symbol_id\":\"auto_ontology\\/retrieval\\/text_to_sql\\/agents\\/information_agent.py::_collect_ids\"},{\"caller_symbol_id\":\"auto_ontology\\/retrieval\\/text_to_sql\\/agents\\/information_tools.py::_safe\"},{\"caller_symbol_id\":\"auto_ontology\\/retrieval\\/text_to_sql\\/agents\\/sql_reconstruction.py::_error_to_text\"},{\"caller_symbol_id\":\"auto_ontology\\/retrieval\\/text_to_sql\\/formatters_util.py::_plain_cell\"},{\"caller_symbol_id\":\"auto_ontology\\/semantic\\/visit_enter.py::_json_ready_sample\"},{\"caller_symbol_id\":\"auto_ontology\\/vdb\\/postgres.py::_flatten\"},{\"caller_symbol_id\":\"dev_tools\\/fixtures\\/capture_dal_golden.py::normalise\"}]"
+        ],
+        "thoughts": "- Preparing candidates: The query needs `calls` for the direct self-call (`caller_symbol_id = callee_symbol_id`, `call_kind = 'direct'`) and for returning `caller_symbol_id`. It needs `symbols` to restrict the caller to `kind IN ('function','method')`, and `files` to exclude test files via `files.is_test = false`. The join chain `calls -> symbols -> files` must be kept.\n- Constructing SQL: The question asks for every distinct non-test function or method that directly calls itself. I start from the call graph table, keeping only rows where the caller and the callee are the same symbol (a self-call) and where call_kind is 'direct' so callback references are excluded. Because the graph also contains classes and other symbol kinds, the caller is joined to the symbol table to restrict kind to 'function' or 'method' (methods included, per the evidence). The symbol is then joined to the file table and filtered on is_test = false so symbols defined in test files are excluded; this uses files.is_test rather than test_links, as the evidence requires. DISTINCT is applied because the question asks for each distinct caller symbol identity, not one row per call occurrence, and callee_symbol_id is available on every direct self-call row so no null handling is required beyond the equality test. Results are ordered by the symbol ID for a stable, readable listing; no LIMIT is added because the question asks for all matching symbols.\n- Validating SQL and intent: The SQL is valid. It correctly identifies direct self-calls by requiring `calls.call_kind = 'direct'` and `calls.callee_symbol_id = calls.caller_symbol_id`. It joins `calls` to `symbols` through the caller symbol ID to restrict callers to `function` or `method`, and joins to `files` to enforce `files.is_test = false`. The output is `SELECT DISTINCT c.caller_symbol_id AS caller_symbol_id`, which matches the requested distinct caller symbol ID column and uses the exact alias. No critical join, aggregation, or evidence-compliance issue is present.\n- Executing SQL: Query failed, rewriting it: Catalog Error: Table with name calls does not exist! Did you mean \"code.calls\"? LINE 1: ...ELECT DISTINCT c.caller_symbol_id AS caller_symbol_id FROM calls AS c JOIN symbols AS s ON c.caller_symbol_id = s.symb... ^\n- Reconstructing SQL: The table exists as code.calls, but the query referenced it as calls. This is a schema-qualification/catalog resolution error, not missing data. Rewrite the query using the qualified table name (e.g., code.calls) and consistently qualify related tables if needed.\n- Reconstructing SQL: The only defect is table qualification: the bare identifiers are not visible without their catalog/schema prefix, so all three relations must be referenced by their full documented names (auto_ontology_code.code.calls, .symbols, .files). Every earlier assumption still holds and is restated here: (1) a 'self-call' means one call row whose caller and callee are the same symbol identity, tested with callee_symbol_id = caller_symbol_id, with no NULL handling needed because a self-call row necessarily carries a callee; (2) only call_kind = 'direct' counts, since callback rows pass a function as an argument rather than invoking it; (3) caller kind is restricted to 'function' and 'method' so classes are excluded, and methods are included per the evidence that caller/callee graph questions cover methods as well as standalone functions; (4) non-test classification comes from files.is_test = false, not from test_links, since test_links only records associations; (5) DISTINCT is required because the question asks which symbols self-call, i.e. distinct symbol identities rather than one row per call site occurrence; (6) the caller_symbol_id is projected verbatim as the exact symbol ID string under the alias caller_symbol_id; (7) results are ordered by the symbol ID for a stable listing and no LIMIT is applied since every matching symbol is requested.\n- Validating SQL and intent: The SQL answers the normalized question correctly. It starts from `calls`, filters to `call_kind = 'direct'`, identifies self-calls with `callee_symbol_id = caller_symbol_id`, and returns `DISTINCT caller_symbol_id` as the requested alias. It joins to `symbols` to restrict to `kind IN ('function','method')` and joins to `files` to enforce `is_test = false`. Although the authoritative structural bridge lists `calls.callee_symbol_id = symbols.symbol_id`, the SQL joins on `calls.caller_symbol_id`, which is also a valid FK to `symbols.symbol_id`; because the self-call predicate enforces caller = callee, this produces the same symbol for kind/file classification and is not a critical issue. No incorrect aggregation or nonsensical joins are present. It respects the requirement for distinct identities rather than occurrence counts."
+      }
+    }
+  ],
+  "question_id": 115,
+  "gold_sql": "SELECT DISTINCT c.caller_symbol_id\nFROM code.calls c\nJOIN code.symbols s ON s.symbol_id = c.caller_symbol_id\nJOIN code.files f ON f.file_id = s.file_id\nWHERE c.callee_symbol_id = c.caller_symbol_id AND c.call_kind = 'direct' AND NOT f.is_test\nORDER BY c.caller_symbol_id;",
+  "gold_row_count": 12,
+  "agent_sql": "SELECT DISTINCT c.caller_symbol_id AS caller_symbol_id FROM auto_ontology_code.code.calls AS c JOIN auto_ontology_code.code.symbols AS s ON c.caller_symbol_id = s.symbol_id JOIN auto_ontology_code.code.files AS f ON s.file_id = f.file_id WHERE c.call_kind = 'direct' AND c.callee_symbol_id = c.caller_symbol_id AND s.kind IN ('function', 'method') AND f.is_test = false ORDER BY caller_symbol_id",
+  "agent_answer": "This lists the distinct function and method symbols that directly invoke themselves, identified by their exact symbol IDs rather than display names. It reads the call graph, keeps only direct calls whose callee identity equals the caller identity, then restricts callers to functions and methods and excludes anything defined in a file classified as a test file. Duplicate call sites are collapsed so each self-calling symbol appears once, and the output is sorted by symbol ID.",
+  "agent_row_count": 12,
+  "correct_rows": true,
+  "error": null
+}

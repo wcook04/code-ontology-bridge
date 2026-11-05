@@ -1,0 +1,384 @@
+{
+  "request": {
+    "question": "Which functions does _run_semantic_compilation call, and where are they defined?\n\nRequested output columns: callee_symbol_id (string).\nReturn every requested field using exactly its specified column alias. Preserve complete case-sensitive repository-relative paths and symbol IDs; do not substitute display names. Include all requested counts and provenance fields. Explain the query result in ordinary prose; do not emit placeholder text. These questions concern a static map of open-source Python code. Describe what the query computes and the assumptions it makes; the returned rows are reported separately. Questions asking which files, modules or symbols mean distinct identities, not one repeated row per matching import or call occurrence; preserve occurrence counts only when requested. Caller/callee graph questions include methods as well as standalone functions unless a symbol kind is explicitly restricted. Use files.is_test for test-file classification; test_links describe associations, not the complete set of test files. Use DOUBLE or DECIMAL, rather than single-precision REAL, for percentage calculations.",
+    "evidence": "Unresolved calls have no callee symbol; list only the resolved ones.",
+    "calculation_only": true
+  },
+  "status": 200,
+  "elapsed_s": 1349.2,
+  "events": [
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "question_intent",
+      "thought": null,
+      "label": "Classifying the question"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "question_intent",
+      "thought": null,
+      "label": "Classifying the question"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "question_extraction",
+      "thought": null,
+      "label": "Understanding the question"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "question_extraction",
+      "thought": null,
+      "label": "Understanding the question"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "retrieve_candidates",
+      "thought": null,
+      "label": "Retrieving candidates"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "retrieve_candidates",
+      "thought": null,
+      "label": "Retrieving candidates"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "prepare_candidates",
+      "thought": null,
+      "label": "Preparing candidates"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "prepare_candidates",
+      "thought": "To answer 'Which functions does _run_semantic_compilation calls, and where are they defined?', the query must locate call records where `_run_semantic_compilation` is the caller, extract the callee symbol IDs, and resolve their definition locations (file path, line numbers). The `calls` table provides the caller/callee symbol IDs and call-site details, while `symbols` supplies the definition metadata (file_id, line_start, line_end, qualname). Three candidate tables are not required for this resolution: each supplies no column the answer requires, and removing each does not change the row qualification set because they lie outside the necessary join chain between `calls` and `symbols`.",
+      "label": "Preparing candidates"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "refine_evidence",
+      "thought": null,
+      "label": "Refining evidence"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "refine_evidence",
+      "thought": "The provided evidence line 1 (`Unresolved calls have no callee symbol; list only the resolved ones.`) contains no factual or representational errors relative to the schema descriptions. The sanitized question (`Which functions does _run_semantic_compilation call, and where are they defined?`) has no incorrect string constants, scalar values, or predicate operators that can be definitively corrected using value anchors or column sample values. The term `_run_semantic_compilation` is consistent with the `is_public` semantics in the symbols table (private symbols start with underscore), but no mismatch exists that requires casing or representation repair. No `=`/`!=`/`<>/etc.` operators are present to evaluate. Therefore, no repairs are certain, and the evidence may already be valid.",
+      "label": "Refining evidence"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "construct_sql_from_candidates",
+      "thought": null,
+      "label": "Constructing SQL"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "construct_sql_from_candidates",
+      "thought": "I need to find all call records where `_run_semantic_compilation` is the caller, extract the callee symbol IDs, and filter to only resolved calls per the evidence rule. The calls table contains both caller_symbol_id and callee_symbol_id, plus a resolution column. I'll select from the calls table directly, filter by caller_symbol_id matching the given function name, and exclude resolution='unresolved' since the evidence states 'Unresolved calls have no callee symbol; list only the resolved ones.' Assumption: the caller_symbol_id value `_run_semantic_compilation` matches the format stored in the database exactly. Assumption: resolution != 'unresolved' correctly captures all resolved call types (same_file, imported, method_on_self, builtin, external, dynamic_attribute) as specified in the resolution column description.",
+      "label": "Constructing SQL"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "validate_sql_query",
+      "thought": null,
+      "label": "Validating SQL and intent"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "validate_sql_query",
+      "thought": "The generated SQL query `SELECT c.callee_symbol_id FROM auto_ontology_code.code.calls AS c WHERE c.caller_symbol_id = '_run_semantic_compilation' AND c.resolution != 'unresolved'` has no critical issues. Here's my analysis:\n\n1. **Joins**: The query has no JOIN clauses - it operates solely on the `auto_ontology_code.code.calls` table. There are no nonsensical or broken joins to flag.\n\n2. **Aggregations**: There are no aggregations (COUNT, SUM, etc.) in this query - no critical issues here.\n\n3. **Evidence compliance**: The query strictly follows the authoritative evidence:\n   - The filter `c.resolution != 'unresolved'` directly implements the evidence rule: \"Unresolved calls have no callee symbol; list only the resolved ones.\"\n   - The table `auto_ontology_code.code.calls` matches the used tables specification.\n   - The column `c.callee_symbol_id` matches the requested output column alias.\n   - The column `c.caller_symbol_id` with value `'_run_semantic_compilation'` correctly filters for the specified caller.\n   - The column `c.resolution` with the `!= 'unresolved'` operator matches the resolution column's described values.\n\n4. **Domain-specific custom analyses**: The query follows the custom analysis by excluding unresolved calls and including only resolved ones.\n\n5. **Authoritative join paths**: The query contains no joins, so these paths are not applicable.\n\nThe query could reasonably answer the question by returning callee symbol IDs of functions called by `_run_semantic_compilation` that have been resolved (i.e., have a defined callee). No serious, critical errors exist that would make the query unusable.",
+      "label": "Validating SQL and intent"
+    },
+    {
+      "type": "sql",
+      "node": "validate_sql_query",
+      "sql": "SELECT c.callee_symbol_id FROM auto_ontology_code.code.calls AS c WHERE c.caller_symbol_id = '_run_semantic_compilation' AND c.resolution != 'unresolved'"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "execute_sql_query",
+      "thought": null,
+      "label": "Executing SQL"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "execute_sql_query",
+      "thought": null,
+      "label": "Executing SQL"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "check_empty_like_result",
+      "thought": null,
+      "label": "Checking results"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "check_empty_like_result",
+      "thought": null,
+      "label": "Checking results"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "check_value_repair",
+      "thought": null,
+      "label": "Checking values"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "check_value_repair",
+      "thought": null,
+      "label": "Checking values"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "reconstruct_sql",
+      "thought": null,
+      "label": "Reconstructing SQL"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "reconstruct_sql",
+      "thought": "The original query filters `calls.caller_symbol_id` and `calls.resolution`, but `caller_symbol_id` is absent from the explicitly resolved `calls` column list (which only includes `resolution`, `confidence`, `call_kind`, and `untested_public_symbols.file_id`). The feedback indicates the query asks the wrong question of the data, pointing to a column/table reference mismatch rather than absent data. The `_run_semantic_compilation` symbol name likely needs to be resolved via a join to the `symbols` table (e.g., matching `symbols.name` or `symbols.symbol_id`), after which the `calls` table can supply the callee functions. All required data exists in the available tables `calls` and `symbols`, so the query is fixable with corrected column references or a join.",
+      "label": "Reconstructing SQL"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "validate_sql_query",
+      "thought": null,
+      "label": "Validating SQL and intent"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "validate_sql_query",
+      "thought": null,
+      "label": "Validating SQL and intent"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "unconstructable_sql_response",
+      "thought": null,
+      "label": "SQL could not be constructed"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "unconstructable_sql_response",
+      "thought": null,
+      "label": "SQL could not be constructed"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "question_intent",
+      "thought": null,
+      "label": "Classifying the question"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "question_intent",
+      "thought": null,
+      "label": "Classifying the question"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "question_extraction",
+      "thought": null,
+      "label": "Understanding the question"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "question_extraction",
+      "thought": null,
+      "label": "Understanding the question"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "retrieve_candidates",
+      "thought": null,
+      "label": "Retrieving candidates"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "retrieve_candidates",
+      "thought": null,
+      "label": "Retrieving candidates"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "prepare_candidates",
+      "thought": null,
+      "label": "Preparing candidates"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "prepare_candidates",
+      "thought": "The question asks which functions _run_semantic_compilation calls and where they are defined. Among the provided column attributes, `code.symbols.symbol_id` directly maps to the callee's identity (qualified name) and definition location (file path, qualified name, and @L<definition-line>). The evidence rule states that unresolved calls have no callee symbol and only resolved ones should be listed, which aligns with this attribute representing resolved function calls and their definitions. The other attributes describe call kind, confidence level, or resolution category—none of which directly answer 'which functions' or 'where defined'.",
+      "label": "Preparing candidates"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "refine_evidence",
+      "thought": null,
+      "label": "Refining evidence"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "refine_evidence",
+      "thought": "The sanitized question asks about functions called by `_run_semantic_compilation` and their definitions. The provided evidence consists of a single line (`1| Unresolved calls have no callee symbol; list only the resolved ones.`) and column/schema metadata for tables `code.calls` and `code.symbols`. There are no actual database rows, no verified value anchors for `_run_semantic_compilation` in stored form, and no sample data values that prove exact stored representations. The evidence line is a general rule about query behavior, not mutable data. No string representations, scalar constants, or predicate operators in the evidence are certain to be mistaken per the allowed repairs. The question contains no incorrect values that can be anchored or sampled. Therefore, no repairs are certain, the evidence is already valid, and the question is unchanged.",
+      "label": "Refining evidence"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "construct_sql_from_candidates",
+      "thought": null,
+      "label": "Constructing SQL"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "construct_sql_from_candidates",
+      "thought": "I need to find all resolved function calls made by _run_semantic_compilation. The approach is to join the calls table with the symbols table on caller_symbol_id to identify calls made by _run_semantic_compilation, then filter for resolved calls (resolution != 'unresolved') per the authoritative evidence. DISTINCT is used because the question asks for distinct function identities, not one row per call occurrence. Assumptions: (1) _run_semantic_compilation exists in symbols with name '_run_semantic_compilation' — if missing, returns no rows; (2) calls exist with caller_symbol_id matching that symbol_id — if none, returns no rows; (3) resolution values use exact string 'unresolved' for unresolved calls — case-sensitive filter; (4) DISTINCT correctly gives unique callee identities per the question's guidance; (5) resolved calls have non-NULL callee_symbol_id per the evidence that 'Unresolved calls have no callee symbol'.",
+      "label": "Constructing SQL"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "validate_sql_query",
+      "thought": null,
+      "label": "Validating SQL and intent"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "validate_sql_query",
+      "thought": "The SQL query checks out against all critical validation criteria:\n\n1. **Joins**: The join `JOIN auto_ontology_code.code.symbols AS s ON c.caller_symbol_id = s.symbol_id` follows the verified foreign key relationship described in the column metadata (caller_symbol_id references code.symbols.symbol_id). This is a valid, sensible join path.\n\n2. **Aggregations**: There are no aggregations in this query, so this check does not apply.\n\n3. **Evidence compliance**: The authoritative evidence states \"Unresolved calls have no callee symbol; list only the resolved ones.\" The SQL correctly includes `AND c.resolution != 'unresolved'` to filter out unresolved calls, complying with this instruction exactly.\n\n4. **Output column**: The SELECT of `c.callee_symbol_id` matches the requested output column alias exactly.\n\n5. **Question answering**: The query correctly identifies functions called by `_run_semantic_compilation` (via the `s.name = '_run_semantic_compilation'` filter on the caller symbol) and returns their definition locations via `callee_symbol_id`, with resolution filtering ensuring only resolved calls are included.\n\nThe query is reasonable, follows the verified schema paths, complies with the evidence requirements, and would successfully answer the user's question. There are no critical issues.",
+      "label": "Validating SQL and intent"
+    },
+    {
+      "type": "sql",
+      "node": "validate_sql_query",
+      "sql": "SELECT DISTINCT c.callee_symbol_id FROM auto_ontology_code.code.calls AS c JOIN auto_ontology_code.code.symbols AS s ON c.caller_symbol_id = s.symbol_id WHERE s.name = '_run_semantic_compilation' AND c.resolution != 'unresolved';"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "execute_sql_query",
+      "thought": null,
+      "label": "Executing SQL"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "execute_sql_query",
+      "thought": null,
+      "label": "Executing SQL"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "check_empty_like_result",
+      "thought": null,
+      "label": "Checking results"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "check_empty_like_result",
+      "thought": null,
+      "label": "Checking results"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "check_value_repair",
+      "thought": null,
+      "label": "Checking values"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "check_value_repair",
+      "thought": null,
+      "label": "Checking values"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "format_and_respond",
+      "thought": null,
+      "label": "Formatting response"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "format_and_respond",
+      "thought": null,
+      "label": "Formatting response"
+    },
+    {
+      "type": "result",
+      "answer": {
+        "response": "This query finds all resolved function calls made by _run_semantic_compilation by joining the calls table with the symbols table on caller_symbol_id, filtering for calls where the caller symbol name matches _run_semantic_compilation and the resolution is not 'unresolved', and returning distinct callee symbol IDs. It uses the calls and symbols tables with a join on the caller_symbol_id foreign key and filters out unresolved calls per the evidence rule.",
+        "sql_code": "SELECT DISTINCT c.callee_symbol_id FROM auto_ontology_code.code.calls AS c JOIN auto_ontology_code.code.symbols AS s ON c.caller_symbol_id = s.symbol_id WHERE s.name = '_run_semantic_compilation' AND c.resolution != 'unresolved';",
+        "sql_columns": [
+          "3dcad4e0-898f-41cd-943e-a830f533e2e6",
+          "0ca89ebb-5cb2-4dfd-880b-06cee25a6dac",
+          "a9b2df95-9ff4-47be-8bb5-ceebdb65edaf",
+          "021d41c0-9945-4f5b-a64c-eea1907e0a47",
+          "786b512c-f22a-44ef-8ea8-74ccaab3d559"
+        ],
+        "custom_analyses_used": [],
+        "sql_response_from_db": [
+          "[{\"callee_symbol_id\":\"auto_ontology\\/semantic\\/pipeline.py::compile_semantic_layer\"},{\"callee_symbol_id\":\"auto_ontology\\/semantic\\/cancellation.py::is_cancelled\"},{\"callee_symbol_id\":\"auto_ontology\\/semantic\\/bridge_tables.py::build_bridge_tables_sql_attributes\"},{\"callee_symbol_id\":\"auto_ontology\\/semantic\\/domain.py::load_domain_summary\"},{\"callee_symbol_id\":\"auto_ontology\\/semantic\\/embed.py::build_semantic_embedder\"},{\"callee_symbol_id\":\"auto_ontology\\/semantic\\/sql_attribute_suggester.py::suggest_sql_attributes\"},{\"callee_symbol_id\":\"auto_ontology\\/semantic\\/semantic_fk.py::resolve_semantic_fks\"},{\"callee_symbol_id\":null}]"
+        ],
+        "thoughts": "- Preparing candidates: The question asks which functions _run_semantic_compilation calls and where they are defined. Among the provided column attributes, `code.symbols.symbol_id` directly maps to the callee's identity (qualified name) and definition location (file path, qualified name, and @L<definition-line>). The evidence rule states that unresolved calls have no callee symbol and only resolved ones should be listed, which aligns with this attribute representing resolved function calls and their definitions. The other attributes describe call kind, confidence level, or resolution category—none of which directly answer 'which functions' or 'where defined'.\n- Refining evidence: The sanitized question asks about functions called by `_run_semantic_compilation` and their definitions. The provided evidence consists of a single line (`1| Unresolved calls have no callee symbol; list only the resolved ones.`) and column/schema metadata for tables `code.calls` and `code.symbols`. There are no actual database rows, no verified value anchors for `_run_semantic_compilation` in stored form, and no sample data values that prove exact stored representations. The evidence line is a general rule about query behavior, not mutable data. No string representations, scalar constants, or predicate operators in the evidence are certain to be mistaken per the allowed repairs. The question contains no incorrect values that can be anchored or sampled. Therefore, no repairs are certain, the evidence is already valid, and the question is unchanged.\n- Constructing SQL: I need to find all resolved function calls made by _run_semantic_compilation. The approach is to join the calls table with the symbols table on caller_symbol_id to identify calls made by _run_semantic_compilation, then filter for resolved calls (resolution != 'unresolved') per the authoritative evidence. DISTINCT is used because the question asks for distinct function identities, not one row per call occurrence. Assumptions: (1) _run_semantic_compilation exists in symbols with name '_run_semantic_compilation' — if missing, returns no rows; (2) calls exist with caller_symbol_id matching that symbol_id — if none, returns no rows; (3) resolution values use exact string 'unresolved' for unresolved calls — case-sensitive filter; (4) DISTINCT correctly gives unique callee identities per the question's guidance; (5) resolved calls have non-NULL callee_symbol_id per the evidence that 'Unresolved calls have no callee symbol'.\n- Validating SQL and intent: The SQL query checks out against all critical validation criteria:\n\n1. **Joins**: The join `JOIN auto_ontology_code.code.symbols AS s ON c.caller_symbol_id = s.symbol_id` follows the verified foreign key relationship described in the column metadata (caller_symbol_id references code.symbols.symbol_id). This is a valid, sensible join path.\n\n2. **Aggregations**: There are no aggregations in this query, so this check does not apply.\n\n3. **Evidence compliance**: The authoritative evidence states \"Unresolved calls have no callee symbol; list only the resolved ones.\" The SQL correctly includes `AND c.resolution != 'unresolved'` to filter out unresolved calls, complying with this instruction exactly.\n\n4. **Output column**: The SELECT of `c.callee_symbol_id` matches the requested output column alias exactly.\n\n5. **Question answering**: The query correctly identifies functions called by `_run_semantic_compilation` (via the `s.name = '_run_semantic_compilation'` filter on the caller symbol) and returns their definition locations via `callee_symbol_id`, with resolution filtering ensuring only resolved calls are included.\n\nThe query is reasonable, follows the verified schema paths, complies with the evidence requirements, and would successfully answer the user's question. There are no critical issues."
+      }
+    }
+  ],
+  "question_id": 17,
+  "gold_sql": "SELECT DISTINCT c.callee_symbol_id\nFROM code.calls c\nJOIN code.symbols s ON s.symbol_id = c.caller_symbol_id\nWHERE s.name = '_run_semantic_compilation'\n  AND c.callee_symbol_id IS NOT NULL\nORDER BY c.callee_symbol_id;",
+  "gold_row_count": 7,
+  "agent_sql": "SELECT DISTINCT c.callee_symbol_id FROM auto_ontology_code.code.calls AS c JOIN auto_ontology_code.code.symbols AS s ON c.caller_symbol_id = s.symbol_id WHERE s.name = '_run_semantic_compilation' AND c.resolution != 'unresolved';",
+  "agent_answer": "This query finds all resolved function calls made by _run_semantic_compilation by joining the calls table with the symbols table on caller_symbol_id, filtering for calls where the caller symbol name matches _run_semantic_compilation and the resolution is not 'unresolved', and returning distinct callee symbol IDs. It uses the calls and symbols tables with a join on the caller_symbol_id foreign key and filters out unresolved calls per the evidence rule.",
+  "agent_row_count": 8,
+  "correct_rows": false,
+  "error": null
+}

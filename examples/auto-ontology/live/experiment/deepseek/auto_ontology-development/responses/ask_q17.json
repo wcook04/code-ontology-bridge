@@ -1,0 +1,196 @@
+{
+  "request": {
+    "question": "Which functions does _run_semantic_compilation call, and where are they defined?\n\nRequested output columns: callee_symbol_id (string).\nReturn every requested field using exactly its specified column alias. Preserve complete case-sensitive repository-relative paths and symbol IDs; do not substitute display names. Include all requested counts and provenance fields. Explain the query result in ordinary prose; do not emit placeholder text. These questions concern a static map of open-source Python code. Describe what the query computes and the assumptions it makes; the returned rows are reported separately. Questions asking which files, modules or symbols mean distinct identities, not one repeated row per matching import or call occurrence; preserve occurrence counts only when requested. Caller/callee graph questions include methods as well as standalone functions unless a symbol kind is explicitly restricted. Use files.is_test for test-file classification; test_links describe associations, not the complete set of test files. Use DOUBLE or DECIMAL, rather than single-precision REAL, for percentage calculations.",
+    "evidence": "Unresolved calls have no callee symbol; list only the resolved ones.",
+    "calculation_only": true
+  },
+  "status": 200,
+  "elapsed_s": 342.1,
+  "events": [
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "question_intent",
+      "thought": null,
+      "label": "Classifying the question"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "question_intent",
+      "thought": null,
+      "label": "Classifying the question"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "question_extraction",
+      "thought": null,
+      "label": "Understanding the question"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "question_extraction",
+      "thought": null,
+      "label": "Understanding the question"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "retrieve_candidates",
+      "thought": null,
+      "label": "Retrieving candidates"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "retrieve_candidates",
+      "thought": null,
+      "label": "Retrieving candidates"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "prepare_candidates",
+      "thought": null,
+      "label": "Preparing candidates"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "prepare_candidates",
+      "thought": "The query needs calls to find callees of _run_semantic_compilation and symbols to resolve the caller/callee symbol IDs and definitions. The other candidate tables neither supply required columns nor restrict the qualifying call rows.",
+      "label": "Preparing candidates"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "refine_evidence",
+      "thought": null,
+      "label": "Refining evidence"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "refine_evidence",
+      "thought": "No certain string-representation, constant-value, or predicate-operator repair applies.",
+      "label": "Refining evidence"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "construct_sql_from_candidates",
+      "thought": null,
+      "label": "Constructing SQL"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "construct_sql_from_candidates",
+      "thought": "The question asks for the distinct symbols called by the function named `_run_semantic_compilation`. I start from the calls table and join to symbols on the caller side to filter by the caller's bare name. Per the authoritative evidence, only resolved calls are listed, so `callee_symbol_id` must be non-NULL; unresolved calls carry a NULL callee_symbol_id and are excluded. Because the question asks which functions (distinct identities), not how many call sites exist, I use DISTINCT on `callee_symbol_id` and return only that column with the exact alias requested. No symbol-kind restriction is applied, since the evidence does not require one and caller/callee graph questions include methods as well as standalone functions.",
+      "label": "Constructing SQL"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "validate_sql_query",
+      "thought": null,
+      "label": "Validating SQL and intent"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "validate_sql_query",
+      "thought": "The SQL correctly finds resolved callees of the symbol named _run_semantic_compilation by joining calls.caller_symbol_id to symbols.symbol_id, filters out unresolved calls via callee_symbol_id IS NOT NULL, and returns distinct callee_symbol_id values as requested.",
+      "label": "Validating SQL and intent"
+    },
+    {
+      "type": "sql",
+      "node": "validate_sql_query",
+      "sql": "SELECT DISTINCT c.callee_symbol_id AS callee_symbol_id FROM auto_ontology_code.code.calls AS c JOIN auto_ontology_code.code.symbols AS s ON c.caller_symbol_id = s.symbol_id WHERE s.name = '_run_semantic_compilation' AND c.callee_symbol_id IS NOT NULL ORDER BY callee_symbol_id"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "execute_sql_query",
+      "thought": null,
+      "label": "Executing SQL"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "execute_sql_query",
+      "thought": null,
+      "label": "Executing SQL"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "check_empty_like_result",
+      "thought": null,
+      "label": "Checking results"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "check_empty_like_result",
+      "thought": null,
+      "label": "Checking results"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "check_value_repair",
+      "thought": null,
+      "label": "Checking values"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "check_value_repair",
+      "thought": null,
+      "label": "Checking values"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "format_and_respond",
+      "thought": null,
+      "label": "Formatting response"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "format_and_respond",
+      "thought": null,
+      "label": "Formatting response"
+    },
+    {
+      "type": "result",
+      "answer": {
+        "response": "This lists the distinct resolved callees of the function named `_run_semantic_compilation`. It joins call records to the caller symbol to identify the right function, keeps only calls whose callee symbol is resolved, and returns each callee symbol identifier once. Calls that could not be resolved are excluded, so the output shows only targets that are known definitions in the repository.",
+        "sql_code": "SELECT DISTINCT c.callee_symbol_id AS callee_symbol_id FROM auto_ontology_code.code.calls AS c JOIN auto_ontology_code.code.symbols AS s ON c.caller_symbol_id = s.symbol_id WHERE s.name = '_run_semantic_compilation' AND c.callee_symbol_id IS NOT NULL ORDER BY callee_symbol_id",
+        "sql_columns": [
+          "9391dda5-3e1e-484d-82ab-07974321eb75",
+          "ce65fbe5-40fa-4570-99de-d7a039f5bf18",
+          "1ecd238c-3755-4169-8a05-d9a41ff1cb77",
+          "9b40b3e4-b074-436b-a07a-11a473a4138a"
+        ],
+        "custom_analyses_used": [],
+        "sql_response_from_db": [
+          "[{\"callee_symbol_id\":\"auto_ontology\\/semantic\\/bridge_tables.py::build_bridge_tables_sql_attributes\"},{\"callee_symbol_id\":\"auto_ontology\\/semantic\\/cancellation.py::is_cancelled\"},{\"callee_symbol_id\":\"auto_ontology\\/semantic\\/domain.py::load_domain_summary\"},{\"callee_symbol_id\":\"auto_ontology\\/semantic\\/embed.py::build_semantic_embedder\"},{\"callee_symbol_id\":\"auto_ontology\\/semantic\\/pipeline.py::compile_semantic_layer\"},{\"callee_symbol_id\":\"auto_ontology\\/semantic\\/semantic_fk.py::resolve_semantic_fks\"},{\"callee_symbol_id\":\"auto_ontology\\/semantic\\/sql_attribute_suggester.py::suggest_sql_attributes\"}]"
+        ],
+        "thoughts": "- Preparing candidates: The user is asking for the unique identifiers (`callee_symbol_id`) of functions that are called by a specific function. Therefore, the attribute that represents the definition/ID of the called function is the primary focus.\n- Preparing candidates: The query needs calls to find callees of _run_semantic_compilation and symbols to resolve the caller/callee symbol IDs and definitions. The other candidate tables neither supply required columns nor restrict the qualifying call rows.\n- Refining evidence: Recognized the explicit question field reference callee_symbol_id and mapped it to the supplied exact column reference. Applied the evidence rule that unresolved calls have no callee symbol and only resolved calls should be listed. Left other fields unchanged because they are not explicitly mapped by the evidence or lack supplied exact physical references.\n- Refining evidence: No certain string-representation, constant-value, or predicate-operator repair applies.\n- Constructing SQL: The question asks for the distinct symbols called by the function named `_run_semantic_compilation`. I start from the calls table and join to symbols on the caller side to filter by the caller's bare name. Per the authoritative evidence, only resolved calls are listed, so `callee_symbol_id` must be non-NULL; unresolved calls carry a NULL callee_symbol_id and are excluded. Because the question asks which functions (distinct identities), not how many call sites exist, I use DISTINCT on `callee_symbol_id` and return only that column with the exact alias requested. No symbol-kind restriction is applied, since the evidence does not require one and caller/callee graph questions include methods as well as standalone functions.\n- Validating SQL and intent: The SQL correctly finds resolved callees of the symbol named _run_semantic_compilation by joining calls.caller_symbol_id to symbols.symbol_id, filters out unresolved calls via callee_symbol_id IS NOT NULL, and returns distinct callee_symbol_id values as requested."
+      }
+    }
+  ],
+  "question_id": 17,
+  "gold_sql": "SELECT DISTINCT c.callee_symbol_id\nFROM code.calls c\nJOIN code.symbols s ON s.symbol_id = c.caller_symbol_id\nWHERE s.name = '_run_semantic_compilation'\n  AND c.callee_symbol_id IS NOT NULL\nORDER BY c.callee_symbol_id;",
+  "gold_row_count": 7,
+  "agent_sql": "SELECT DISTINCT c.callee_symbol_id AS callee_symbol_id FROM auto_ontology_code.code.calls AS c JOIN auto_ontology_code.code.symbols AS s ON c.caller_symbol_id = s.symbol_id WHERE s.name = '_run_semantic_compilation' AND c.callee_symbol_id IS NOT NULL ORDER BY callee_symbol_id",
+  "agent_answer": "This lists the distinct resolved callees of the function named `_run_semantic_compilation`. It joins call records to the caller symbol to identify the right function, keeps only calls whose callee symbol is resolved, and returns each callee symbol identifier once. Calls that could not be resolved are excluded, so the output shows only targets that are known definitions in the repository.",
+  "agent_row_count": 7,
+  "correct_rows": true,
+  "error": null
+}

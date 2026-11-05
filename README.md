@@ -1,59 +1,140 @@
 # code-ontology-bridge
 
-Turn a Python repository into a database that [NVIDIA Auto Ontology](https://github.com/NVIDIA/auto-ontology) can query. The bridge extracts files, functions, calls and docstrings, then exports the data and its semantic model through Auto Ontology's existing interfaces.
+**Make a Python repository queryable by NVIDIA Auto Ontology's SQL agent.**
 
-The worked example is Auto Ontology's own source. Its question-answering agent used the resulting database to find callers of a function, trace package dependencies and inspect class inheritance.
+code-ontology-bridge reads a Python repository and writes two files that [Auto Ontology](https://github.com/NVIDIA/auto-ontology) already imports: a DuckDB database of the code's files, functions, methods, classes, calls, imports, base classes, docstrings and test links, and a semantic model in Auto Ontology's own YAML format that says what each table and column means and how the tables join. Auto Ontology needs no code-specific connector: its existing model import and DuckDB connector take it from there. The model also carries the table keys and joins: at the pinned revision Auto Ontology's DuckDB connector reports no primary or foreign keys (`get_pks` and `get_fks` return empty tables), so the exported model declares a key for each of the 10 tables and 10 joins, such as `code.calls.callee_symbol_id` → `code.symbols.symbol_id`.
 
-[Read the case study](docs/case-study.md) · [Inspect the results](examples/auto-ontology/live/RESULTS.md) · [Try it locally](#try-it-locally) · [Reproduce the experiment](docs/reproduction.md)
+**What the comparison shows.** We exported Auto Ontology's own repository (473 Python files; 5,319 functions, methods and classes) and asked about its code three ways, with two language models, under a [protocol](docs/experiment-protocol.md) committed before any run: the model given the schema alone (A), the schema plus this project's semantic model (B), and Auto Ontology with the model imported (C). Questions answered with exactly the expected rows:
 
-## One question, all the way through
+| | Nemotron 3.5 Lightning, held-out | DeepSeek v4.1 Flash, held-out | DeepSeek v4.1 Flash, development |
+| --- | ---: | ---: | ---: |
+| A, schema only | 6 of 16 | 13 of 16 | 14 of 22 |
+| B, + semantic model | 13 of 16 | 16 of 16 | 18 of 22 |
+| C, Auto Ontology | no result* | 14 of 16 | **22 of 22** |
 
-> Which caller symbols reach `resolve_semantic_fks`, directly or indirectly, outside tests, and at what shortest depth?
+\* Nemotron's held-out run inside Auto Ontology, and its repeats, were rate-limited by the NVIDIA API and are discarded and listed. The 16 held-out questions were committed before any model saw them and carry no hints. The semantic model by itself raises both models on both question sets. Inside Auto Ontology, DeepSeek answered every development question correctly; Nemotron's development scores and every response are in the [results](examples/auto-ontology/live/RESULTS.md). In the main example, following direct calls finds three of the four functions that reach `resolve_semantic_fks`; the fourth is a scheduler that hands one of them to `asyncio.to_thread`, which the extractor records as a callback reference, and the agent's recursive SQL returned all four.
 
-Auto Ontology's agent generated recursive SQL over the extracted call relationships and returned:
+[Open the website](https://wcook04.github.io/code-ontology-bridge/) · [Read the results](examples/auto-ontology/live/RESULTS.md) · [Read the paper](docs/case-study.md) · [Build the exports locally](#build-the-exports-locally)
 
-| Caller | Depth |
-| --- | ---: |
-| _run_semantic_compilation | 1 |
-| run_semantic_compilation | 2 |
-| SemanticScheduler.<br>_run_once | 3 |
-| main | 3 |
-
-The scheduler passes `run_semantic_compilation` to `asyncio.to_thread`. Recording that callback reference lets the SQL traversal reach the scheduler as well as ordinary callers. You can inspect the [question, generated SQL and returned rows](examples/auto-ontology/live/current/responses/10i_ask_with_key/ask_q11.json).
-
-This answer came from the patched Auto Ontology agent using DeepSeek through OpenRouter, with NVIDIA embeddings and reranking. The request included a hint about reverse traversal and callbacks. These are callers in the recorded static map; the example does not establish a complete runtime impact analysis.
+**What it does not show.** The author wrote all 38 questions and their reference queries, about one repository, so this is not an independent benchmark, and each arm ran each question set once. Arm C used Auto Ontology `cdaf61e` with a twelve-file compatibility patch, NVIDIA embedding and reranking models, and three requests at a time; its requests took minutes each on a laptop. Extraction and export need neither the patch nor model credentials.
 
 ## What each part contributes
 
-**NVIDIA Auto Ontology** helps agents answer questions about relational databases. It associates tables and columns with named concepts, descriptions, calculations and joins. Its agent retrieves that context, writes SQL and executes it against the connected data. Here, the data happens to describe software.
-
-**CodeMap** is Will Cook's earlier source-navigation tool. It makes saved descriptions and static code connections available to people and coding agents. The bridge adapts that approach into a standalone Python extractor. It reads existing docstrings; it does not generate descriptions or require CodeMap's private interface.
-
-**This bridge** supplies eight tables: files, docstring headings, symbols, class bases, calls, imports, test links and a source snapshot. A function is a row in the symbols table; a call connects two symbol rows. The semantic model describes those tables and their relationships so Auto Ontology can query them.
-
-The exports have complementary jobs:
-
-| Export | What it supplies |
+| Component | Responsibility |
 | --- | --- |
-| DuckDB database | The source-code rows and views, through Auto Ontology's existing connector. |
-| Model YAML | Table descriptions, terms, attributes and joins, through model import. Example analyses are optional and excluded from the recorded run. |
-| Evaluation dataset | DDL, CSV data and reference questions in NVIDIA's evaluation format. The full upstream benchmark harness has not been run. |
+| **NVIDIA Auto Ontology** | Retrieves semantic context, generates SQL and executes it through its database connectors. |
+| **This bridge** | Extracts Python source facts and exports the rows, table descriptions and relationships that make them queryable. |
+| **Compatibility patch** | Configures public model clients and forwards the existing SQL-only route through the chat API for the recorded run. |
 
-The data and model interfaces already existed upstream. The successful public-model question run also used a [compatibility patch](examples/auto-ontology/live/upstream-fix/README.md) for model configuration and routing. Importing the YAML alone does not connect a queryable database.
+## One question, all the way through
 
-Separate [governance commands](docs/governance.md) record certification checks, annotate returned SQL and reconcile competing definitions. They are local additions; they do not make Auto Ontology enforce certified-only querying.
+Start with this operation in the pinned scheduler, at line 203:
+
+```python
+tables_processed = await asyncio.to_thread(
+    run_semantic_compilation, database_name
+)
+```
+
+The extractor records it in `code.calls` with `call_kind: callback`,
+`resolution: imported`, and `confidence: low`. The caller is
+`SemanticScheduler._run_once`; the callee is `run_semantic_compilation`.
+The row records a function passed as an argument, not an observed execution.
+
+The following is a short paraphrase, not the complete submitted request:
+
+> Which callers reach `resolve_semantic_fks`, directly or indirectly, outside tests, and at what shortest depth?
+
+The submitted request specified exact output fields and explicitly instructed the agent to follow resolved calls backwards, recursively, including callback references. With that guidance, Auto Ontology generated recursive SQL and returned four callers. The diagram uses short role names: arrows point toward the foreign-key resolver, and the query follows them in reverse. The dashed edge is a callback reference; solid edges are direct calls.
+
+![The scheduler and main are three edges from resolve_semantic_fks; run_semantic_compilation is two edges away and _run_semantic_compilation is one. The scheduler edge is a callback reference; the other edges are direct calls.](docs/figures/caller-chain.png)
+
+[Open the diagram at full size](docs/figures/caller-chain.png).
+
+| Caller role | Depth |
+| --- | ---: |
+| Compiler | 1 |
+| Wrapper | 2 |
+| Scheduler | 3 |
+| CLI entry | 3 |
+
+<details>
+<summary>Exact source symbols</summary>
+
+| Diagram label | Source symbol |
+| --- | --- |
+| Scheduler | `SemanticScheduler._run_once` |
+| CLI entry | `main` |
+| Wrapper | `run_semantic_compilation` |
+| Compiler | `_run_semantic_compilation` |
+| FK resolver | `resolve_semantic_fks` |
+
+The resolver is the query's starting point, not a returned caller.
+
+</details>
+
+The scheduler passes the wrapper to `asyncio.to_thread`. Recording that callback reference lets the query reach the scheduler as well as ordinary callers. The [saved response](examples/auto-ontology/live/current/responses/10i_ask_with_key/ask_q11.json) contains the question, generated SQL, complete symbol IDs and returned depths.
+
+This demonstrates querying recorded relationships, not independently discovering the traversal strategy. These are relationships in a static source map; the diagram does not show observed execution or establish complete runtime impact analysis.
+
+## How the exports connect
+
+![The bridge exports DuckDB rows and model YAML separately. Auto Ontology imports the model for semantic context and queries the rows through its existing DuckDB connector.](docs/figures/architecture.png)
+
+[Open the architecture diagram at full size](docs/figures/architecture.png).
+
+The two exports have different jobs: **DuckDB supplies data; model YAML explains it**. Importing YAML alone does not connect a database. A third export supplies DDL, CSV data and reference questions in NVIDIA's evaluation format; the full upstream benchmark harness has not been run.
+
+**A function is a row; Code symbol is a semantic term.** The frozen native model
+maps `cob:auto_ontology_code:term:symbols` to
+`cob:auto_ontology_code:table:code.symbols`. Call site maps to `code.calls`;
+semantic foreign keys connect its caller and callee columns to the symbol-ID
+attribute. The model has eight entity terms, not one term per function.
+A function's docstring is a data value in `summary`; the authored description of
+that column explains what the value means.
+
+[Inspect the frozen model YAML](examples/auto-ontology/live/current/inputs/model.yaml)
+or use the [model and Q11 inspection resources](docs/inspection-api.md).
+The exported YAML, remapped import payload and compiled catalog are separate
+stages; the inspector marks uncaptured stages explicitly.
+
+The source-map approach comes from **CodeMap**, Will Cook's earlier source-navigation tool. This package adapts it into a standalone extractor. It reads existing docstrings, preserves missing descriptions as empty values and requires no private CodeMap service.
+
+Separate [governance commands](docs/governance.md) record checks and annotate SQL; they do not enforce certified-only querying.
 
 ## What the experiment established
 
-The map covers **473 Python files and 5,319 symbols** at a pinned Auto Ontology revision. A fresh complete run on 4 November 2026 used DeepSeek v4.1 Flash through OpenRouter with the same SQL routing policy for all 22 questions.
+Eleven complete runs: three arms, two models (NVIDIA Nemotron 3.5 Lightning through the NVIDIA API, DeepSeek v4.1 Flash through OpenRouter), and two question sets (22 development questions, 18 with hints; 16 held-out questions without hints). Every request named its output columns. Reference SQL and answer values were kept out of every request, and the same program scored every arm.
 
-**21 of 22 result tables matched the references.** Of those, 20 also had substantive explanations. One query matched an extra package; a different answer returned the correct table with only “thought” as its prose. Every response is retained in the [detailed results](examples/auto-ontology/live/RESULTS.md).
+- **B minus A, the semantic model alone:** better on every model and set; held-out, Nemotron 6 → 13 of 16 and DeepSeek 13 → 16.
+- **C minus B, Auto Ontology on top:** DeepSeek development 18 → 22 of 22; DeepSeek held-out 16 → 14, where one of the two misses follows an ambiguous wording. Nemotron's one complete Auto Ontology run scored 12 of 22 on development questions, against 13 with the metadata in the prompt, with its reasoning left on by our runner's choice of client.
+- **How Auto Ontology got there:** in the DeepSeek development run, twelve first queries left the `code.` schema off a table name and failed; Auto Ontology's repair step fixed all twelve.
 
-This is a development-set demonstration: the questions, hints and output requirements helped shape the integration. Eighteen questions have hints, and every request specifies the required fields and types. Reference SQL and answer values were kept out of the requests; no saved example analyses were imported. There is no held-out set or schema-only comparison, so the result establishes a working integration on this snapshot rather than a general accuracy advantage.
+Each Auto Ontology response pairs the returned rows with a written explanation that the agent writes together with the SQL, before the query runs ([`SQLGenerationModel.response`](https://github.com/NVIDIA/auto-ontology/blob/cdaf61e1bd0cf3820d11d72b43bb460816aebbd3/auto_ontology/retrieval/text_to_sql/models.py)). One of the 22 development explanations is not an explanation: question 2's is the single word "Purple", beside correct rows. The [results](examples/auto-ontology/live/RESULTS.md) list every run, every miss and the discarded attempts.
 
-## Try it locally
+<a id="serve-data-for-a-website"></a>
 
-Extraction and export use no model API. Install [uv](https://docs.astral.sh/uv/) and use Python 3.12:
+## Inspect the saved evidence
+
+The backend exposes file and symbol search, package counts, call neighborhoods, source links and the retained evaluation. Build the NVIDIA example directly from the committed exports; this needs no model credentials:
+
+```sh
+uv run cob inspect-export \
+  --dataset examples/auto-ontology/auto_ontology_code \
+  --evidence examples/auto-ontology/live/current \
+  --case examples/auto-ontology/live/caller-chain-case.json \
+  --out build/inspection/bundle.json
+uv run cob inspect-publish --bundle build/inspection/bundle.json --out build/publication
+uv run cob inspect-serve --bundle build/inspection/bundle.json
+```
+
+Open `http://127.0.0.1:8767/api/v1` for the JSON route index. The new `build/publication/` directory contains a small manifest, a Q11 reading path, separate model/source resources and all 22 recorded answers of the DeepSeek development run inside Auto Ontology. The complete bundle remains available. Use a new output directory for each publication build. The service reads saved data; it does not ask a model new questions. See the [backend contract and frontend handoff](docs/inspection-api.md) for endpoints, graph limits and deployment options.
+
+<a id="try-it-locally"></a>
+
+## Build the exports locally
+
+Extraction and export need no model API. Install [uv](https://docs.astral.sh/uv/) and use Python 3.12:
 
 ```sh
 git clone https://github.com/wcook04/code-ontology-bridge.git
@@ -65,26 +146,35 @@ uv run cob export-duckdb --codemap build/codemap.json --out build/repository.duc
 uv run cob export-model --codemap build/codemap.json --out build/repository.model.yaml --database repository
 ```
 
-This maps the bridge's own package and produces a summary, a queryable DuckDB file and model YAML. Replace `code_ontology_bridge` with another Python source directory to try a different input. The extractor is a static-analysis prototype. Repeated qualified definitions receive line-qualified IDs; ambiguous call targets remain unresolved. See [known limitations](GAPS.md#source-analysis-limits).
+This maps the bridge's own package and produces a summary, a queryable DuckDB file and model YAML. Replace `code_ontology_bridge` with another Python source directory to change the input. Follow the [reproduction guide](docs/reproduction.md) to rebuild the pinned NVIDIA example. [Running the live NVIDIA integration](docs/reproduction.md#run-a-fresh-22-question-evaluation) is a separate procedure requiring credentials and the compatibility patch.
 
-For the recorded NVIDIA example, use the [pinned reproduction guide](docs/reproduction.md). It separates rebuilding data, testing compatibility and running a live model service.
+The extractor is a static-analysis prototype. Dynamic calls can be missed, callback references may never execute, and test links are associations rather than coverage. Repeated qualified definitions receive line-qualified IDs; ambiguous targets remain unresolved. See [source-analysis limits](GAPS.md#source-analysis-limits).
+
+## Integration compatibility
+
+| Activity | Requirements and evidence |
+| --- | --- |
+| Extract source and export DuckDB/model YAML | This package alone; no model credentials or NVIDIA modifications. |
+| Reproduce the recorded live integration | Patched Auto Ontology at [`cdaf61e`](https://github.com/NVIDIA/auto-ontology/tree/cdaf61e1bd0cf3820d11d72b43bb460816aebbd3), PostgreSQL and model credentials. The patch configures public model clients and forwards SQL routing through the chat API. |
+| Use a later upstream revision | Not validated by this recorded run. Check the patch and interfaces against that revision before treating it as compatible. |
+
+[Reproduce the live NVIDIA integration](docs/reproduction.md#run-a-fresh-22-question-evaluation) · [Review the twelve-file patch and scoped tests](examples/auto-ontology/live/upstream-fix/README.md)
 
 ## Find your way around
 
-| Location | Responsibility |
+| Location | What belongs there |
 | --- | --- |
-| [Python package](code_ontology_bridge/) | Installable extractor, exporters and governance commands. |
-| [eval/](eval/) | Authored evaluation questions and example SQL analyses. |
-| [Worked example](examples/auto-ontology/) | Exported dataset and snapshot summary. Its [live/](examples/auto-ontology/live/RESULTS.md) directory holds replay tools, the current run and the upstream patch. |
-| [docs/](docs/README.md) | Case study, reproduction and governance guides. |
-| [tests/](tests/) | Local behavior and optional upstream compatibility tests. |
-| [tools/](tools/) | Repository checks and paper build command. |
-| [SPEC.md](SPEC.md) / [GAPS.md](GAPS.md) | Interface specification / capability status and remaining limits. |
+| [code_ontology_bridge/](code_ontology_bridge/) | Installable extractor, exporters, read-only inspection API, static publication builder and governance commands. |
+| [docs/](docs/README.md) | Paper, PDF, explanatory figures and task-specific guides. |
+| [eval/](eval/) | Authored questions, reference SQL, output contracts and optional example analyses. |
+| [examples/auto-ontology/](examples/auto-ontology/) | Generated dataset and replay tools; [live/current/](examples/auto-ontology/live/current/) holds the run the website follows and [live/experiment/](examples/auto-ontology/live/experiment/) every comparison run; the [Q11 descriptor](examples/auto-ontology/live/caller-chain-case.json) supplies the reading path. |
+| [site/](site/README.md) | The reading website: the Q11 walkthrough and all 22 outcomes, built from the static publication. |
+| [tests/](tests/) | Local behavior and optional upstream compatibility checks. |
+| [tools/](tools/) | Repository checks, paper builder and [publication/deployment tools](docs/deployment.md). |
+| [SPEC.md](SPEC.md) / [GAPS.md](GAPS.md) | Interface contract / capability status and remaining limits. |
 
-The analysis is static. Callback references may never execute, dynamic calls can be missed, and test links describe imports or matching filenames rather than measured coverage. Missing docstrings remain empty. These limits apply to every answer derived from the map.
-
-Run `uv run pytest -q -ra` and `uv run python tools/check_repository.py` to check the checkout. See [contributing](CONTRIBUTING.md) for optional integration tests and evidence-preservation rules.
+Run `uv run pytest -q -ra` and `uv run python tools/check_repository.py` to check the checkout. See [contributing](CONTRIBUTING.md) for optional integration tests, figure maintenance and evidence-preservation rules.
 
 ## Licence
 
-[Apache License 2.0](LICENSE).
+[Apache License 2.0](LICENSE). This is an independent integration with NVIDIA's open-source project.

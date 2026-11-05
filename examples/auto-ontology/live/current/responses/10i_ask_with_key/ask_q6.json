@@ -1,11 +1,11 @@
 {
   "request": {
-    "question": "Which commit of which repository does this code map describe?\n\nRequested output columns: repo_url (string), commit_sha (string), source_fingerprint (string).\nReturn every requested field using exactly its specified column alias. Preserve complete case-sensitive repository-relative paths and symbol IDs; do not substitute display names. Include all requested counts and provenance fields. Explain the query result in ordinary prose; do not emit placeholder text. These questions concern a static map of open-source Python code. After executing SQL, describe the returned rows and query assumptions. Questions asking which files, modules or symbols mean distinct identities, not one repeated row per matching import or call occurrence; preserve occurrence counts only when requested. Caller/callee graph questions include methods as well as standalone functions unless a symbol kind is explicitly restricted. Use files.is_test for test-file classification; test_links describe associations, not the complete set of test files. Use DOUBLE or DECIMAL, rather than single-precision REAL, for percentage calculations.",
+    "question": "Which commit of which repository does this code map describe?\n\nRequested output columns: repo_url (string), commit_sha (string), source_fingerprint (string).\nReturn every requested field using exactly its specified column alias. Preserve complete case-sensitive repository-relative paths and symbol IDs; do not substitute display names. Include all requested counts and provenance fields. Explain the query result in ordinary prose; do not emit placeholder text. These questions concern a static map of open-source Python code. Describe what the query computes and the assumptions it makes; the returned rows are reported separately. Questions asking which files, modules or symbols mean distinct identities, not one repeated row per matching import or call occurrence; preserve occurrence counts only when requested. Caller/callee graph questions include methods as well as standalone functions unless a symbol kind is explicitly restricted. Use files.is_test for test-file classification; test_links describe associations, not the complete set of test files. Use DOUBLE or DECIMAL, rather than single-precision REAL, for percentage calculations.",
     "evidence": "The snapshot table has one row.",
     "calculation_only": true
   },
   "status": 200,
-  "elapsed_s": 50.2,
+  "elapsed_s": 78.4,
   "events": [
     {
       "type": "step",
@@ -60,7 +60,7 @@
       "type": "step",
       "phase": "end",
       "node": "prepare_candidates",
-      "thought": "Only `auto_ontology_code.code.snapshot` contains the requested output columns (`repo_url`, `commit_sha`, `source_fingerprint`). The question asks for snapshot/code-map metadata only, with no file-level, symbol-level, call-count, or test-link filtering implied.",
+      "thought": "The question asks only for repository/commit/fingerprint metadata of a code map, and `auto_ontology_code.code.snapshot` directly supplies `repo_url`, `commit_sha`, and `source_fingerprint`. No other candidate table supplies those answer columns or is needed to scope which snapshot row qualifies.",
       "label": "Preparing candidates"
     },
     {
@@ -74,7 +74,7 @@
       "type": "step",
       "phase": "end",
       "node": "refine_evidence",
-      "thought": "No certain repair applies: the evidence contains no mistaken scalar constant, string representation, or predicate operator.",
+      "thought": "No certain correction applies: the question does not contain a proven scalar value, string representation, or comparison operator to repair.",
       "label": "Refining evidence"
     },
     {
@@ -88,7 +88,7 @@
       "type": "step",
       "phase": "end",
       "node": "construct_sql_from_candidates",
-      "thought": "The question asks for the code-map descriptor: repository URL, commit SHA, and source fingerprint. All three are columns of the snapshot table, and the authoritative evidence states the snapshot table contains exactly one row, so no joins, filters, aggregation, or DISTINCT are required. I project the three requested columns in the order the user named them (repo_url, commit_sha, source_fingerprint). commit_sha is nullable, but the question asks for the described commit, so rows are preserved as-is rather than filtered; with a single snapshot row there is no tie to break.",
+      "thought": "The question asks which repository and commit the code map describes, plus its fingerprint. The authoritative evidence states the snapshot table has one row, and it maps the three answer columns directly to snapshot.repo_url, snapshot.commit_sha, and snapshot.source_fingerprint. No joins are needed because no other table contributes an answer column or a scoping filter; adding the listed join paths (files, test_links, untested_public_symbols) would be unnecessary and could cause fan-out. Assumptions: the single snapshot row is the map in question (stated in the evidence), so no WHERE filter is applied; commit_sha is nullable, but since the question asks for the map's described commit, NULLs are preserved rather than filtered out, because no evidence requires the value to exist and the snapshot table has only one row anyway. No DISTINCT is used since there is exactly one row and no deduplication was requested. Projection order follows the user's requested order: repo_url, commit_sha, source_fingerprint.",
       "label": "Constructing SQL"
     },
     {
@@ -102,13 +102,13 @@
       "type": "step",
       "phase": "end",
       "node": "validate_sql_query",
-      "thought": "The generated SQL directly queries the snapshot table and selects the three requested fields: repo_url, commit_sha, and source_fingerprint. The evidence states the snapshot table has one row, so no additional filtering or joins are needed. The selected columns match the requested output aliases exactly, and no aggregation or join error is present. The query does not violate any authoritative evidence instructions.",
+      "thought": "The query is a direct, single-table read from `auto_ontology_code.code.snapshot`, which the evidence states contains exactly one row describing the static code map. It projects `repo_url`, `commit_sha`, and `source_fingerprint` with their exact column names and no aliasing substitutions, matching all three requested output fields. No joins are needed or added, so there are no nonsensical or broken joins. No aggregation is required by the question (which asks for identity/provenance of the described map), and none is present, so nothing is clearly wrong there. The SQL preserves the complete case-sensitive column identifiers, uses the correct guiding column `commit_sha`, and requires no filters, formulas, percentages, or test-file classification, so there is no conflict with the Authoritative Evidence. The query can reasonably and fully answer the question.",
       "label": "Validating SQL and intent"
     },
     {
       "type": "sql",
       "node": "validate_sql_query",
-      "sql": "SELECT repo_url, commit_sha, source_fingerprint FROM auto_ontology_code.code.snapshot"
+      "sql": "SELECT s.repo_url, s.commit_sha, s.source_fingerprint FROM auto_ontology_code.code.snapshot AS s;"
     },
     {
       "type": "step",
@@ -169,26 +169,26 @@
     {
       "type": "result",
       "answer": {
-        "response": "This returns the identifying metadata of the single snapshot that the static code map describes: the repository URL, the commit SHA that was checked out, and the source fingerprint digest computed over all analysed files. Because the snapshot table holds exactly one row, no filtering, joining, or grouping is applied, and the three requested fields are returned in the order named.",
-        "sql_code": "SELECT repo_url, commit_sha, source_fingerprint FROM auto_ontology_code.code.snapshot",
+        "response": "This returns the identifying metadata of the single Python code map: its repository URL, checkout commit, and source fingerprint. It simply projects those three columns from the snapshot record, which contains exactly one row, so no filtering, grouping, or aggregation is needed. The snapshot is the one described by the map's commit and fingerprint.",
+        "sql_code": "SELECT s.repo_url, s.commit_sha, s.source_fingerprint FROM auto_ontology_code.code.snapshot AS s;",
         "sql_columns": [
-          "24b2252c-4863-47d4-896b-26b99f0d91c3",
-          "5f8bd324-c0e7-4294-8c8c-5e302dc204ee",
-          "22a77edf-8bba-498c-8dfe-bff778bcb369"
+          "2b1dc16b-95b3-4fac-a0d4-1346ecb1cb86",
+          "6a1c3087-b4fd-4ebb-bd69-40645dc16307",
+          "51d12348-1b5b-44aa-a939-f8ece3b19326"
         ],
         "custom_analyses_used": [],
         "sql_response_from_db": [
           "[{\"repo_url\":\"https:\\/\\/github.com\\/NVIDIA\\/auto-ontology\",\"commit_sha\":\"cdaf61e1bd0cf3820d11d72b43bb460816aebbd3\",\"source_fingerprint\":\"158fe223627725d6\"}]"
         ],
-        "thoughts": "- Preparing candidates: The question asks which repository commit the code map describes; commit_sha is the primary identifying attribute. repo_url and source_fingerprint are supporting snapshot identifiers.\n- Preparing candidates: Only `auto_ontology_code.code.snapshot` contains the requested output columns (`repo_url`, `commit_sha`, `source_fingerprint`). The question asks for snapshot/code-map metadata only, with no file-level, symbol-level, call-count, or test-link filtering implied.\n- Refining evidence: Ground the explicit field references in the question to the exact qualified column names from the supplied list; leave unrelated wording and evidence unchanged.\n- Refining evidence: No certain repair applies: the evidence contains no mistaken scalar constant, string representation, or predicate operator.\n- Constructing SQL: The question asks for the code-map descriptor: repository URL, commit SHA, and source fingerprint. All three are columns of the snapshot table, and the authoritative evidence states the snapshot table contains exactly one row, so no joins, filters, aggregation, or DISTINCT are required. I project the three requested columns in the order the user named them (repo_url, commit_sha, source_fingerprint). commit_sha is nullable, but the question asks for the described commit, so rows are preserved as-is rather than filtered; with a single snapshot row there is no tie to break.\n- Validating SQL and intent: The generated SQL directly queries the snapshot table and selects the three requested fields: repo_url, commit_sha, and source_fingerprint. The evidence states the snapshot table has one row, so no additional filtering or joins are needed. The selected columns match the requested output aliases exactly, and no aggregation or join error is present. The query does not violate any authoritative evidence instructions."
+        "thoughts": "- Preparing candidates: The question's primary subject is identifying the analysed commit, so code.snapshot.commit_sha is the best-matching column attribute; repo_url and source_fingerprint are also requested metadata.\n- Preparing candidates: The question asks only for repository/commit/fingerprint metadata of a code map, and `auto_ontology_code.code.snapshot` directly supplies `repo_url`, `commit_sha`, and `source_fingerprint`. No other candidate table supplies those answer columns or is needed to scope which snapshot row qualifies.\n- Refining evidence: Replace the question's natural-language field references \"commit\" and \"repository\" with the corresponding physical columns from the supplied evidence: \"code\".\"snapshot\".\"commit_sha\" and \"code\".\"snapshot\".\"repo_url\". Replace the requested output field names with the exact qualified physical references as well. Leave the evidence unchanged because it contains no field reference that the supplied tables/columns section explicitly maps to a different physical column, and do not introduce unlisted table references.\n- Refining evidence: No certain correction applies: the question does not contain a proven scalar value, string representation, or comparison operator to repair.\n- Constructing SQL: The question asks which repository and commit the code map describes, plus its fingerprint. The authoritative evidence states the snapshot table has one row, and it maps the three answer columns directly to snapshot.repo_url, snapshot.commit_sha, and snapshot.source_fingerprint. No joins are needed because no other table contributes an answer column or a scoping filter; adding the listed join paths (files, test_links, untested_public_symbols) would be unnecessary and could cause fan-out. Assumptions: the single snapshot row is the map in question (stated in the evidence), so no WHERE filter is applied; commit_sha is nullable, but since the question asks for the map's described commit, NULLs are preserved rather than filtered out, because no evidence requires the value to exist and the snapshot table has only one row anyway. No DISTINCT is used since there is exactly one row and no deduplication was requested. Projection order follows the user's requested order: repo_url, commit_sha, source_fingerprint.\n- Validating SQL and intent: The query is a direct, single-table read from `auto_ontology_code.code.snapshot`, which the evidence states contains exactly one row describing the static code map. It projects `repo_url`, `commit_sha`, and `source_fingerprint` with their exact column names and no aliasing substitutions, matching all three requested output fields. No joins are needed or added, so there are no nonsensical or broken joins. No aggregation is required by the question (which asks for identity/provenance of the described map), and none is present, so nothing is clearly wrong there. The SQL preserves the complete case-sensitive column identifiers, uses the correct guiding column `commit_sha`, and requires no filters, formulas, percentages, or test-file classification, so there is no conflict with the Authoritative Evidence. The query can reasonably and fully answer the question."
       }
     }
   ],
   "question_id": 6,
   "gold_sql": "SELECT repo_url, commit_sha, source_fingerprint\nFROM code.snapshot;",
   "gold_row_count": 1,
-  "agent_sql": "SELECT repo_url, commit_sha, source_fingerprint FROM auto_ontology_code.code.snapshot",
-  "agent_answer": "This returns the identifying metadata of the single snapshot that the static code map describes: the repository URL, the commit SHA that was checked out, and the source fingerprint digest computed over all analysed files. Because the snapshot table holds exactly one row, no filtering, joining, or grouping is applied, and the three requested fields are returned in the order named.",
+  "agent_sql": "SELECT s.repo_url, s.commit_sha, s.source_fingerprint FROM auto_ontology_code.code.snapshot AS s;",
+  "agent_answer": "This returns the identifying metadata of the single Python code map: its repository URL, checkout commit, and source fingerprint. It simply projects those three columns from the snapshot record, which contains exactly one row, so no filtering, grouping, or aggregation is needed. The snapshot is the one described by the map's commit and fingerprint.",
   "agent_row_count": 1,
   "correct_rows": true,
   "error": null

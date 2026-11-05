@@ -1,0 +1,317 @@
+{
+  "request": {
+    "question": "Which method names are defined both on SQLDatabase and on DatabricksDatabase?\n\nRequested output columns: method_name (string).\nReturn every requested field using exactly its specified column alias. Preserve complete case-sensitive repository-relative paths and symbol IDs; do not substitute display names. Include all requested counts and provenance fields. Explain the query result in ordinary prose; do not emit placeholder text. These questions concern a static map of open-source Python code. Describe what the query computes and the assumptions it makes; the returned rows are reported separately. Questions asking which files, modules or symbols mean distinct identities, not one repeated row per matching import or call occurrence; preserve occurrence counts only when requested. Caller/callee graph questions include methods as well as standalone functions unless a symbol kind is explicitly restricted. Use files.is_test for test-file classification; test_links describe associations, not the complete set of test files. Use DOUBLE or DECIMAL, rather than single-precision REAL, for percentage calculations.",
+    "calculation_only": true
+  },
+  "status": 200,
+  "elapsed_s": 295.6,
+  "events": [
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "question_intent",
+      "thought": null,
+      "label": "Classifying the question"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "question_intent",
+      "thought": null,
+      "label": "Classifying the question"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "question_extraction",
+      "thought": null,
+      "label": "Understanding the question"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "question_extraction",
+      "thought": null,
+      "label": "Understanding the question"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "retrieve_candidates",
+      "thought": null,
+      "label": "Retrieving candidates"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "retrieve_candidates",
+      "thought": null,
+      "label": "Retrieving candidates"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "prepare_candidates",
+      "thought": null,
+      "label": "Preparing candidates"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "prepare_candidates",
+      "thought": "Only the code-symbol table is needed. Method definitions on SQLDatabase and DatabricksDatabase can be identified from symbol name, qualified name, and kind fields; no call, file, import, test, or base-class filter is requested.",
+      "label": "Preparing candidates"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "refine_evidence",
+      "thought": null,
+      "label": "Refining evidence"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "refine_evidence",
+      "thought": "No certain repair applies: the sanitized question does not supply a mistaken constant or operator to correct, and the evidence contains no value anchor or line-level predicate mapping that proves a different stored string representation.",
+      "label": "Refining evidence"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "construct_sql_from_candidates",
+      "thought": null,
+      "label": "Constructing SQL"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "construct_sql_from_candidates",
+      "thought": "The question asks for method names defined on both the SQLDatabase and DatabricksDatabase classes. The only available table, untested_public_symbols, stores each symbol once with a short name, a qualified name that includes the enclosing scope (the class), and a kind. I therefore treat the first dot-separated scope segment of the qualified name as the owning class, degrade gracefully for nested scopes with a regular expression, restrict to kind = 'method' (the request is specifically about methods, not standalone functions), and keep only names that appear for both classes using a HAVING count over the two distinct classes — grouping by name returns each identity once rather than one row per occurrence.\n\nAssumptions: (1) the table only contains untested public symbols, so the answer is limited to that population — no untested/coverage filter is added because the schema offers no separate symbol table; (2) the class name is assumed to be a dot-delimited scope prefix in the qualified name (e.g. 'SQLDatabase.run'), because the schema has no dedicated class column; (3) no time window, no zero-count handling, and no division is involved; (4) ties are irrelevant since no ranking is requested — results are simply ordered alphabetically by method name for readability.",
+      "label": "Constructing SQL"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "validate_sql_query",
+      "thought": null,
+      "label": "Validating SQL and intent"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "validate_sql_query",
+      "thought": "The SQL answers the intersection question by selecting method symbols whose qualified name indicates they belong to SQLDatabase or DatabricksDatabase, grouping by method name, and requiring both class markers via COUNT(DISTINCT ...)=2. It returns exactly the requested method_name alias. There are no joins to be nonsensical, and the aggregation is appropriate for an intersection. The use of untested_public_symbols and qualname matching is an assumption about where method definitions are represented, but it is plausible and not a critical violation of the provided evidence.",
+      "label": "Validating SQL and intent"
+    },
+    {
+      "type": "sql",
+      "node": "validate_sql_query",
+      "sql": "SELECT s.name AS method_name FROM untested_public_symbols AS s WHERE s.kind = 'method' AND (regexp_matches(s.qualname, '(^|[.])(SQLDatabase)[.]') OR regexp_matches(s.qualname, '(^|[.])(DatabricksDatabase)[.]')) GROUP BY s.name HAVING COUNT(DISTINCT CASE WHEN regexp_matches(s.qualname, '(^|[.])(SQLDatabase)[.]') THEN 'SQLDatabase' ELSE 'DatabricksDatabase' END) = 2 ORDER BY method_name"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "execute_sql_query",
+      "thought": null,
+      "label": "Executing SQL"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "execute_sql_query",
+      "thought": "Query failed, rewriting it: Catalog Error: Table with name untested_public_symbols does not exist! Did you mean \"code.untested_public_symbols\"? LINE 1: SELECT s.name AS method_name FROM untested_public_symbols AS s WHERE s.kind = 'method' AND... ^",
+      "label": "Executing SQL"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "reconstruct_sql",
+      "thought": null,
+      "label": "Reconstructing SQL"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "reconstruct_sql",
+      "thought": "The question asks for method names that exist on both the SQLDatabase and DatabricksDatabase classes. The only symbol table available is the untested public symbols map, so the answer is limited to that population; no separate untested/coverage filter is added because no other symbol table is available. Assumption 1 (unchanged): the owning class is not a dedicated column, so it must be derived from the qualified name; I treat a class name appearing as a dot-delimited scope prefix (e.g. 'SQLDatabase.run') as the owner, which handles module-level and nested scopes but attributes a method to any enclosing class named SQLDatabase/DatabricksDatabase rather than strictly the immediate parent. Assumption 2 (unchanged): the request is specifically about methods, so rows are restricted to kind = 'method', excluding standalone functions and classes. Assumption 3 (changed because of the validation error): the physical table must be referenced with its schema qualifier as code.untested_public_symbols, since the unqualified name does not resolve in this catalog. Assumption 4 (unchanged): identities are deduplicated by grouping on the short symbol name and requiring that both distinct classes are present, so each qualifying method name appears once rather than once per definition or occurrence. Assumption 5 (unchanged): no time window applies, no percentage/division is involved (so no zero-denominator guard is needed), and there is no ranking, so the only ordering is alphabetical by method name for readability. The CASE labels are written explicitly for each class rather than relying on an ELSE branch.",
+      "label": "Reconstructing SQL"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "validate_sql_query",
+      "thought": null,
+      "label": "Validating SQL and intent"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "validate_sql_query",
+      "thought": null,
+      "label": "Validating SQL and intent"
+    },
+    {
+      "type": "sql",
+      "node": "validate_sql_query",
+      "sql": "SELECT s.name AS method_name FROM code.untested_public_symbols AS s WHERE s.kind = 'method' AND (regexp_matches(s.qualname, '(^|[.])SQLDatabase[.]') OR regexp_matches(s.qualname, '(^|[.])DatabricksDatabase[.]')) GROUP BY s.name HAVING COUNT(DISTINCT CASE WHEN regexp_matches(s.qualname, '(^|[.])SQLDatabase[.]') THEN 'SQLDatabase' WHEN regexp_matches(s.qualname, '(^|[.])DatabricksDatabase[.]') THEN 'DatabricksDatabase' END) = 2 ORDER BY method_name"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "execute_sql_query",
+      "thought": null,
+      "label": "Executing SQL"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "execute_sql_query",
+      "thought": null,
+      "label": "Executing SQL"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "check_empty_like_result",
+      "thought": null,
+      "label": "Checking results"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "check_empty_like_result",
+      "thought": null,
+      "label": "Checking results"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "check_value_repair",
+      "thought": null,
+      "label": "Checking values"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "check_value_repair",
+      "thought": null,
+      "label": "Checking values"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "reconstruct_sql",
+      "thought": null,
+      "label": "Reconstructing SQL"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "reconstruct_sql",
+      "thought": "The question asks for method names defined on both the SQLDatabase and DatabricksDatabase classes. Assumptions kept from before: (1) the owning class is not a dedicated column, so it must be derived from the qualified name, treating a class name appearing as a dot-delimited scope prefix (for example 'SQLDatabase.run') as the owner; (2) the request is specifically about methods, so rows are restricted to kind = 'method', excluding standalone functions and classes; (3) identities are deduplicated by grouping on the short symbol name and requiring both distinct classes to be present, so each qualifying method name appears once rather than once per definition; (4) no time window applies, no percentage or division is involved (so no zero-denominator guard is needed), and no ranking is requested, so the only ordering is alphabetical by method name; (5) the CASE labels are written explicitly for each class rather than relying on an ELSE branch. Assumptions changed: (a) the restricted untested-symbol map holds only a filtered population, which does not contain the method definitions of interest, so the full symbol map is used instead; (b) because the class scope is not guaranteed to be preserved in the qualified name for every row, the owning class is also resolved from the class-qualified symbol identifier (which carries the enclosing scope after '::'), and a row counts toward a class if either location places it there; the case-sensitive class pattern with a dot boundary avoids matching unrelated names or lowercase file paths.",
+      "label": "Reconstructing SQL"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "validate_sql_query",
+      "thought": null,
+      "label": "Validating SQL and intent"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "validate_sql_query",
+      "thought": "The query is designed to return method names that appear under both `SQLDatabase` and `DatabricksDatabase`. It filters to `kind = 'method'`, detects the owning class from `qualname` or `symbol_id`, groups by method name, and keeps only names whose distinct enclosing class count is 2. That correctly implements the requested intersection. No joins are used, so there are no broken join paths. The aggregation is appropriate: `GROUP BY name HAVING COUNT(DISTINCT ...) = 2` is the right pattern for finding shared names across two classes. The query also respects the evidence about counting distinct symbol identities rather than repeated occurrences. Any limitations in the regex assumptions about class qualification are reasonable and not critical.",
+      "label": "Validating SQL and intent"
+    },
+    {
+      "type": "sql",
+      "node": "validate_sql_query",
+      "sql": "SELECT s.name AS method_name FROM code.inbound_call_counts AS s WHERE s.kind = 'method' AND (regexp_matches(COALESCE(s.qualname, ''), '(^|[.])SQLDatabase[.]') OR regexp_matches(COALESCE(s.symbol_id, ''), '::SQLDatabase[.]') OR regexp_matches(COALESCE(s.qualname, ''), '(^|[.])DatabricksDatabase[.]') OR regexp_matches(COALESCE(s.symbol_id, ''), '::DatabricksDatabase[.]')) GROUP BY s.name HAVING COUNT(DISTINCT CASE WHEN regexp_matches(COALESCE(s.qualname, ''), '(^|[.])SQLDatabase[.]') OR regexp_matches(COALESCE(s.symbol_id, ''), '::SQLDatabase[.]') THEN 'SQLDatabase' WHEN regexp_matches(COALESCE(s.qualname, ''), '(^|[.])DatabricksDatabase[.]') OR regexp_matches(COALESCE(s.symbol_id, ''), '::DatabricksDatabase[.]') THEN 'DatabricksDatabase' END) = 2 ORDER BY method_name;"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "execute_sql_query",
+      "thought": null,
+      "label": "Executing SQL"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "execute_sql_query",
+      "thought": null,
+      "label": "Executing SQL"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "check_empty_like_result",
+      "thought": null,
+      "label": "Checking results"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "check_empty_like_result",
+      "thought": null,
+      "label": "Checking results"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "check_value_repair",
+      "thought": null,
+      "label": "Checking values"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "check_value_repair",
+      "thought": null,
+      "label": "Checking values"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "format_and_respond",
+      "thought": null,
+      "label": "Formatting response"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "format_and_respond",
+      "thought": null,
+      "label": "Formatting response"
+    },
+    {
+      "type": "result",
+      "answer": {
+        "response": "This query returns each method name that appears on both the SQLDatabase and DatabricksDatabase classes, listed once each in alphabetical order. It looks at the symbol map, keeps entries whose kind is method, and determines the owning class from the qualified name (or, when that is absent, the class-qualified symbol identifier). A method name is kept only if it is associated with both class names, counted as distinct classes.",
+        "sql_code": "SELECT s.name AS method_name FROM code.inbound_call_counts AS s WHERE s.kind = 'method' AND (regexp_matches(COALESCE(s.qualname, ''), '(^|[.])SQLDatabase[.]') OR regexp_matches(COALESCE(s.symbol_id, ''), '::SQLDatabase[.]') OR regexp_matches(COALESCE(s.qualname, ''), '(^|[.])DatabricksDatabase[.]') OR regexp_matches(COALESCE(s.symbol_id, ''), '::DatabricksDatabase[.]')) GROUP BY s.name HAVING COUNT(DISTINCT CASE WHEN regexp_matches(COALESCE(s.qualname, ''), '(^|[.])SQLDatabase[.]') OR regexp_matches(COALESCE(s.symbol_id, ''), '::SQLDatabase[.]') THEN 'SQLDatabase' WHEN regexp_matches(COALESCE(s.qualname, ''), '(^|[.])DatabricksDatabase[.]') OR regexp_matches(COALESCE(s.symbol_id, ''), '::DatabricksDatabase[.]') THEN 'DatabricksDatabase' END) = 2 ORDER BY method_name;",
+        "sql_columns": [
+          "ad809df0-3bcc-4e6c-a235-5f2e50e2f214",
+          "102486e8-8877-4ada-90f5-28945b447854",
+          "6ef085c8-d922-4d36-9403-a7d36e30a469",
+          "b695d7c8-4988-419d-9014-38f9a97ded81"
+        ],
+        "custom_analyses_used": [],
+        "sql_response_from_db": [
+          "[{\"method_name\":\"__init__\"},{\"method_name\":\"close\"},{\"method_name\":\"database_name\"},{\"method_name\":\"dialect\"},{\"method_name\":\"execute\"},{\"method_name\":\"get_columns\"},{\"method_name\":\"get_fks\"},{\"method_name\":\"get_pks\"},{\"method_name\":\"get_queries\"},{\"method_name\":\"get_tables\"},{\"method_name\":\"get_views\"},{\"method_name\":\"qualify\"}]"
+        ],
+        "thoughts": "- Preparing candidates: The question asks for method names, which map to the code symbol short identifier column code.inbound_call_counts.name.\n- Preparing candidates: Only the code-symbol table is needed. Method definitions on SQLDatabase and DatabricksDatabase can be identified from symbol name, qualified name, and kind fields; no call, file, import, test, or base-class filter is requested.\n- Refining evidence: The question asks about method names defined in specific contexts ('SQLDatabase' and 'DatabricksDatabase'). The evidence describes a static map of code symbols and provides schema definitions for `code.untested_public_symbols`. The concept of 'method names' is grounded to the column `code.untested_public_symbols.name`. However, the entities 'SQLDatabase' and 'DatabricksDatabase' are not defined or mapped within the provided evidence, so they must remain in the question as natural language concepts.\n- Refining evidence: No certain repair applies: the sanitized question does not supply a mistaken constant or operator to correct, and the evidence contains no value anchor or line-level predicate mapping that proves a different stored string representation.\n- Constructing SQL: The question asks for method names defined on both the SQLDatabase and DatabricksDatabase classes. The only available table, untested_public_symbols, stores each symbol once with a short name, a qualified name that includes the enclosing scope (the class), and a kind. I therefore treat the first dot-separated scope segment of the qualified name as the owning class, degrade gracefully for nested scopes with a regular expression, restrict to kind = 'method' (the request is specifically about methods, not standalone functions), and keep only names that appear for both classes using a HAVING count over the two distinct classes — grouping by name returns each identity once rather than one row per occurrence.\n\nAssumptions: (1) the table only contains untested public symbols, so the answer is limited to that population — no untested/coverage filter is added because the schema offers no separate symbol table; (2) the class name is assumed to be a dot-delimited scope prefix in the qualified name (e.g. 'SQLDatabase.run'), because the schema has no dedicated class column; (3) no time window, no zero-count handling, and no division is involved; (4) ties are irrelevant since no ranking is requested — results are simply ordered alphabetically by method name for readability.\n- Validating SQL and intent: The SQL answers the intersection question by selecting method symbols whose qualified name indicates they belong to SQLDatabase or DatabricksDatabase, grouping by method name, and requiring both class markers via COUNT(DISTINCT ...)=2. It returns exactly the requested method_name alias. There are no joins to be nonsensical, and the aggregation is appropriate for an intersection. The use of untested_public_symbols and qualname matching is an assumption about where method definitions are represented, but it is plausible and not a critical violation of the provided evidence.\n- Executing SQL: Query failed, rewriting it: Catalog Error: Table with name untested_public_symbols does not exist! Did you mean \"code.untested_public_symbols\"? LINE 1: SELECT s.name AS method_name FROM untested_public_symbols AS s WHERE s.kind = 'method' AND... ^\n- Reconstructing SQL: The failure is a catalog/schema-qualification error: the table exists as code.untested_public_symbols, but the query referenced it without the schema. The SQL can be corrected by qualifying the table name (or setting the search_path). No missing-data search is needed.\n- Reconstructing SQL: The question asks for method names that exist on both the SQLDatabase and DatabricksDatabase classes. The only symbol table available is the untested public symbols map, so the answer is limited to that population; no separate untested/coverage filter is added because no other symbol table is available. Assumption 1 (unchanged): the owning class is not a dedicated column, so it must be derived from the qualified name; I treat a class name appearing as a dot-delimited scope prefix (e.g. 'SQLDatabase.run') as the owner, which handles module-level and nested scopes but attributes a method to any enclosing class named SQLDatabase/DatabricksDatabase rather than strictly the immediate parent. Assumption 2 (unchanged): the request is specifically about methods, so rows are restricted to kind = 'method', excluding standalone functions and classes. Assumption 3 (changed because of the validation error): the physical table must be referenced with its schema qualifier as code.untested_public_symbols, since the unqualified name does not resolve in this catalog. Assumption 4 (unchanged): identities are deduplicated by grouping on the short symbol name and requiring that both distinct classes are present, so each qualifying method name appears once rather than once per definition or occurrence. Assumption 5 (unchanged): no time window applies, no percentage/division is involved (so no zero-denominator guard is needed), and there is no ranking, so the only ordering is alphabetical by method name for readability. The CASE labels are written explicitly for each class rather than relying on an ELSE branch.\n- Reconstructing SQL: The question asks for method names defined on both the SQLDatabase and DatabricksDatabase classes. Assumptions kept from before: (1) the owning class is not a dedicated column, so it must be derived from the qualified name, treating a class name appearing as a dot-delimited scope prefix (for example 'SQLDatabase.run') as the owner; (2) the request is specifically about methods, so rows are restricted to kind = 'method', excluding standalone functions and classes; (3) identities are deduplicated by grouping on the short symbol name and requiring both distinct classes to be present, so each qualifying method name appears once rather than once per definition; (4) no time window applies, no percentage or division is involved (so no zero-denominator guard is needed), and no ranking is requested, so the only ordering is alphabetical by method name; (5) the CASE labels are written explicitly for each class rather than relying on an ELSE branch. Assumptions changed: (a) the restricted untested-symbol map holds only a filtered population, which does not contain the method definitions of interest, so the full symbol map is used instead; (b) because the class scope is not guaranteed to be preserved in the qualified name for every row, the owning class is also resolved from the class-qualified symbol identifier (which carries the enclosing scope after '::'), and a row counts toward a class if either location places it there; the case-sensitive class pattern with a dot boundary avoids matching unrelated names or lowercase file paths.\n- Validating SQL and intent: The query is designed to return method names that appear under both `SQLDatabase` and `DatabricksDatabase`. It filters to `kind = 'method'`, detects the owning class from `qualname` or `symbol_id`, groups by method name, and keeps only names whose distinct enclosing class count is 2. That correctly implements the requested intersection. No joins are used, so there are no broken join paths. The aggregation is appropriate: `GROUP BY name HAVING COUNT(DISTINCT ...) = 2` is the right pattern for finding shared names across two classes. The query also respects the evidence about counting distinct symbol identities rather than repeated occurrences. Any limitations in the regex assumptions about class qualification are reasonable and not critical."
+      }
+    }
+  ],
+  "question_id": 108,
+  "gold_sql": "SELECT DISTINCT m.name AS method_name\nFROM code.symbols m\nJOIN code.symbols c ON c.kind = 'class' AND c.name = 'SQLDatabase' AND m.file_id = c.file_id AND m.qualname = c.qualname || '.' || m.name\nWHERE m.kind = 'method'\n  AND EXISTS (\n    SELECT 1 FROM code.symbols m2\n    JOIN code.symbols c2 ON c2.kind = 'class' AND c2.name = 'DatabricksDatabase' AND m2.file_id = c2.file_id AND m2.qualname = c2.qualname || '.' || m2.name\n    WHERE m2.kind = 'method' AND m2.name = m.name)\nORDER BY method_name;",
+  "gold_row_count": 12,
+  "agent_sql": "SELECT s.name AS method_name FROM code.inbound_call_counts AS s WHERE s.kind = 'method' AND (regexp_matches(COALESCE(s.qualname, ''), '(^|[.])SQLDatabase[.]') OR regexp_matches(COALESCE(s.symbol_id, ''), '::SQLDatabase[.]') OR regexp_matches(COALESCE(s.qualname, ''), '(^|[.])DatabricksDatabase[.]') OR regexp_matches(COALESCE(s.symbol_id, ''), '::DatabricksDatabase[.]')) GROUP BY s.name HAVING COUNT(DISTINCT CASE WHEN regexp_matches(COALESCE(s.qualname, ''), '(^|[.])SQLDatabase[.]') OR regexp_matches(COALESCE(s.symbol_id, ''), '::SQLDatabase[.]') THEN 'SQLDatabase' WHEN regexp_matches(COALESCE(s.qualname, ''), '(^|[.])DatabricksDatabase[.]') OR regexp_matches(COALESCE(s.symbol_id, ''), '::DatabricksDatabase[.]') THEN 'DatabricksDatabase' END) = 2 ORDER BY method_name;",
+  "agent_answer": "This query returns each method name that appears on both the SQLDatabase and DatabricksDatabase classes, listed once each in alphabetical order. It looks at the symbol map, keeps entries whose kind is method, and determines the owning class from the qualified name (or, when that is absent, the class-qualified symbol identifier). A method name is kept only if it is associated with both class names, counted as distinct classes.",
+  "agent_row_count": 12,
+  "correct_rows": true,
+  "error": null
+}

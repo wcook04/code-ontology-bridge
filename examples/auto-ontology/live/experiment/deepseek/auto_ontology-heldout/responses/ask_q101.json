@@ -1,0 +1,198 @@
+{
+  "request": {
+    "question": "Which functions or methods does run_ingest call directly? List the internal callees it resolves to.\n\nRequested output columns: callee_symbol_id (string).\nReturn every requested field using exactly its specified column alias. Preserve complete case-sensitive repository-relative paths and symbol IDs; do not substitute display names. Include all requested counts and provenance fields. Explain the query result in ordinary prose; do not emit placeholder text. These questions concern a static map of open-source Python code. Describe what the query computes and the assumptions it makes; the returned rows are reported separately. Questions asking which files, modules or symbols mean distinct identities, not one repeated row per matching import or call occurrence; preserve occurrence counts only when requested. Caller/callee graph questions include methods as well as standalone functions unless a symbol kind is explicitly restricted. Use files.is_test for test-file classification; test_links describe associations, not the complete set of test files. Use DOUBLE or DECIMAL, rather than single-precision REAL, for percentage calculations.",
+    "calculation_only": true
+  },
+  "status": 200,
+  "elapsed_s": 156.7,
+  "events": [
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "question_intent",
+      "thought": null,
+      "label": "Classifying the question"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "question_intent",
+      "thought": null,
+      "label": "Classifying the question"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "question_extraction",
+      "thought": null,
+      "label": "Understanding the question"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "question_extraction",
+      "thought": null,
+      "label": "Understanding the question"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "retrieve_candidates",
+      "thought": null,
+      "label": "Retrieving candidates"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "retrieve_candidates",
+      "thought": null,
+      "label": "Retrieving candidates"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "prepare_candidates",
+      "thought": null,
+      "label": "Preparing candidates"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "prepare_candidates",
+      "thought": "The core tables are `calls` for direct call edges/resolution and `symbols` to identify `run_ingest` and to ensure callees are functions/methods. No other candidate table is needed to filter or return the qualifying callee symbol IDs.",
+      "label": "Preparing candidates"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "refine_evidence",
+      "thought": null,
+      "label": "Refining evidence"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "refine_evidence",
+      "thought": "No certain repair applies: all enumerated string constants and comparison operators in the evidence and grounded question match the supplied table/column descriptions, and there are no verified value anchors or sample values proving a different stored representation.",
+      "label": "Refining evidence"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "construct_sql_from_candidates",
+      "thought": null,
+      "label": "Constructing SQL"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "construct_sql_from_candidates",
+      "thought": "Start from the calls table, which holds the caller/callee edges, and filter call_kind to 'direct' and resolution to the three internal values named in the request (same_file, imported, method_on_self); the remaining resolution values (builtin, external, dynamic_attribute, unresolved) do not represent resolved internal callees and are excluded. Join calls.caller_symbol_id to symbols.symbol_id to identify the caller and keep rows whose name is exactly 'run_ingest' (name is used rather than qualname so both standalone functions and methods named run_ingest are matched, per the instruction that caller/callee questions include methods). Join calls.callee_symbol_id to symbols.symbol_id a second time to restrict callees to kind in ('function','method'), which likewise covers both standalone functions and methods as required. callee_symbol_id is nullable in the schema but must exist for a resolved internal callee, so IS NOT NULL is applied. The question asks which symbols are called, not how often, so DISTINCT collapses repeated call occurrences into one row per distinct callee symbol id; no counts were requested and none are projected. Case-sensitive repository-relative paths and symbol ids are returned unchanged via callee_symbol_id, ordered alphabetically so the output is deterministic.",
+      "label": "Constructing SQL"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "validate_sql_query",
+      "thought": null,
+      "label": "Validating SQL and intent"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "validate_sql_query",
+      "thought": "The generated SQL correctly finds direct call edges from `run_ingest` and returns the distinct resolved internal callee symbol IDs. It joins `code.calls` to `code.symbols` on both caller and callee IDs using valid foreign-key relationships, filters `c.call_kind = 'direct'`, restricts `resolution` to the internal resolution values requested (`same_file`, `imported`, `method_on_self`), and restricts callee kind to `function` or `method`. It outputs `callee_symbol_id` with the requested alias and uses `DISTINCT` to return distinct symbol identities rather than repeated call occurrences. No critical join, aggregation, projection, or authoritative-evidence issue is present.",
+      "label": "Validating SQL and intent"
+    },
+    {
+      "type": "sql",
+      "node": "validate_sql_query",
+      "sql": "SELECT DISTINCT c.callee_symbol_id AS callee_symbol_id FROM code.calls AS c INNER JOIN code.symbols AS caller ON c.caller_symbol_id = caller.symbol_id INNER JOIN code.symbols AS callee ON c.callee_symbol_id = callee.symbol_id WHERE caller.name = 'run_ingest' AND c.call_kind = 'direct' AND c.resolution IN ('same_file', 'imported', 'method_on_self') AND callee.kind IN ('function', 'method') AND c.callee_symbol_id IS NOT NULL ORDER BY callee_symbol_id"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "execute_sql_query",
+      "thought": null,
+      "label": "Executing SQL"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "execute_sql_query",
+      "thought": null,
+      "label": "Executing SQL"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "check_empty_like_result",
+      "thought": null,
+      "label": "Checking results"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "check_empty_like_result",
+      "thought": null,
+      "label": "Checking results"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "check_value_repair",
+      "thought": null,
+      "label": "Checking values"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "check_value_repair",
+      "thought": null,
+      "label": "Checking values"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "format_and_respond",
+      "thought": null,
+      "label": "Formatting response"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "format_and_respond",
+      "thought": null,
+      "label": "Formatting response"
+    },
+    {
+      "type": "result",
+      "answer": {
+        "response": "This lists the distinct internal callees invoked directly by any function or method named `run_ingest`. It reads the call graph table for direct call sites whose resolution is same-file, imported, or method-on-self, then joins the symbol table twice so the caller is matched by name and the callee is kept only when it is a function or method. Duplicate call occurrences to the same callee are collapsed, so each distinct callee symbol id appears once.",
+        "sql_code": "SELECT DISTINCT c.callee_symbol_id AS callee_symbol_id FROM code.calls AS c INNER JOIN code.symbols AS caller ON c.caller_symbol_id = caller.symbol_id INNER JOIN code.symbols AS callee ON c.callee_symbol_id = callee.symbol_id WHERE caller.name = 'run_ingest' AND c.call_kind = 'direct' AND c.resolution IN ('same_file', 'imported', 'method_on_self') AND callee.kind IN ('function', 'method') AND c.callee_symbol_id IS NOT NULL ORDER BY callee_symbol_id",
+        "sql_columns": [
+          "68066889-2575-41cf-83b2-597a7bac3c4b",
+          "f273f933-a100-4dc4-b50e-197a5644f34c",
+          "6bde04fb-6572-4fca-acd7-4b8da1a3a141",
+          "37787b87-0e65-46ff-8e58-2f5eb86d9d00",
+          "8b0eb5ed-3e94-452e-b48c-db70c12bb8b9",
+          "dfc57b65-8353-42fb-b068-4dda36ea633d",
+          "74218517-ebb7-42d3-9007-d1a19b1f63de"
+        ],
+        "custom_analyses_used": [],
+        "sql_response_from_db": [
+          "[{\"callee_symbol_id\":\"auto_ontology\\/catalog\\/ingest.py::ingest_catalog\"},{\"callee_symbol_id\":\"auto_ontology\\/connectors\\/registry.py::create_connector\"},{\"callee_symbol_id\":\"auto_ontology\\/infra\\/feature_flags.py::is_pii_detection_enabled\"},{\"callee_symbol_id\":\"auto_ontology\\/ingestion_service\\/ingest.py::_row_count\"},{\"callee_symbol_id\":\"auto_ontology\\/ingestion_service\\/ingest.py::_run_pii_detection\"},{\"callee_symbol_id\":\"auto_ontology\\/ingestion_service\\/ingest.py::_shared_connection\"},{\"callee_symbol_id\":\"auto_ontology\\/utils\\/embedding.py::batch_embed\"},{\"callee_symbol_id\":\"auto_ontology\\/utils\\/embedding.py::batch_embed_chunks\"},{\"callee_symbol_id\":\"auto_ontology\\/utils\\/embedding.py::get_embed_params\"},{\"callee_symbol_id\":\"auto_ontology\\/vdb\\/__init__.py::get_data_vdb\"},{\"callee_symbol_id\":\"auto_ontology\\/vdb\\/records.py::to_vdb_records\"},{\"callee_symbol_id\":\"auto_ontology\\/vdb\\/records.py::write_embedded_rows\"}]"
+        ],
+        "thoughts": "- Preparing candidates: The question's primary requested attribute is the callee symbol identifier. Among the listed schema columns, the attribute representing a unique code symbol identifier (symbol_id) is code.untested_public_symbols.symbol_id, with description matching repository-relative paths and symbol names/IDs.\n- Preparing candidates: The core tables are `calls` for direct call edges/resolution and `symbols` to identify `run_ingest` and to ensure callees are functions/methods. No other candidate table is needed to filter or return the qualifying callee symbol IDs.\n- Refining evidence: The question’s concepts map to the supplied columns: internal callees → calls.resolution IN ('same_file','imported','method_on_self'); directly calls → calls.call_kind = 'direct'; functions or methods → symbols.kind IN ('function','method'); callee_symbol_id → calls.callee_symbol_id. The evidence section’s only supplied-column field reference is “symbol kind” → symbols.kind; files.is_test and test_links are not in the supplied allowed mapping list, so they remain unchanged.\n- Refining evidence: No certain repair applies: all enumerated string constants and comparison operators in the evidence and grounded question match the supplied table/column descriptions, and there are no verified value anchors or sample values proving a different stored representation.\n- Constructing SQL: Start from the calls table, which holds the caller/callee edges, and filter call_kind to 'direct' and resolution to the three internal values named in the request (same_file, imported, method_on_self); the remaining resolution values (builtin, external, dynamic_attribute, unresolved) do not represent resolved internal callees and are excluded. Join calls.caller_symbol_id to symbols.symbol_id to identify the caller and keep rows whose name is exactly 'run_ingest' (name is used rather than qualname so both standalone functions and methods named run_ingest are matched, per the instruction that caller/callee questions include methods). Join calls.callee_symbol_id to symbols.symbol_id a second time to restrict callees to kind in ('function','method'), which likewise covers both standalone functions and methods as required. callee_symbol_id is nullable in the schema but must exist for a resolved internal callee, so IS NOT NULL is applied. The question asks which symbols are called, not how often, so DISTINCT collapses repeated call occurrences into one row per distinct callee symbol id; no counts were requested and none are projected. Case-sensitive repository-relative paths and symbol ids are returned unchanged via callee_symbol_id, ordered alphabetically so the output is deterministic.\n- Validating SQL and intent: The generated SQL correctly finds direct call edges from `run_ingest` and returns the distinct resolved internal callee symbol IDs. It joins `code.calls` to `code.symbols` on both caller and callee IDs using valid foreign-key relationships, filters `c.call_kind = 'direct'`, restricts `resolution` to the internal resolution values requested (`same_file`, `imported`, `method_on_self`), and restricts callee kind to `function` or `method`. It outputs `callee_symbol_id` with the requested alias and uses `DISTINCT` to return distinct symbol identities rather than repeated call occurrences. No critical join, aggregation, projection, or authoritative-evidence issue is present."
+      }
+    }
+  ],
+  "question_id": 101,
+  "gold_sql": "SELECT DISTINCT c.callee_symbol_id\nFROM code.calls c\nJOIN code.symbols s ON s.symbol_id = c.caller_symbol_id\nWHERE s.name = 'run_ingest' AND c.call_kind = 'direct' AND c.callee_symbol_id IS NOT NULL\nORDER BY c.callee_symbol_id;",
+  "gold_row_count": 13,
+  "agent_sql": "SELECT DISTINCT c.callee_symbol_id AS callee_symbol_id FROM code.calls AS c INNER JOIN code.symbols AS caller ON c.caller_symbol_id = caller.symbol_id INNER JOIN code.symbols AS callee ON c.callee_symbol_id = callee.symbol_id WHERE caller.name = 'run_ingest' AND c.call_kind = 'direct' AND c.resolution IN ('same_file', 'imported', 'method_on_self') AND callee.kind IN ('function', 'method') AND c.callee_symbol_id IS NOT NULL ORDER BY callee_symbol_id",
+  "agent_answer": "This lists the distinct internal callees invoked directly by any function or method named `run_ingest`. It reads the call graph table for direct call sites whose resolution is same-file, imported, or method-on-self, then joins the symbol table twice so the caller is matched by name and the callee is kept only when it is a function or method. Duplicate call occurrences to the same callee are collapsed, so each distinct callee symbol id appears once.",
+  "agent_row_count": 12,
+  "correct_rows": false,
+  "error": null
+}

@@ -1,0 +1,91 @@
+{
+  "question_id": 19,
+  "status": 200,
+  "error": null,
+  "elapsed_s": 9.8,
+  "attempts": [
+    {
+      "sql": "WITH directed_pairs AS (\n  SELECT DISTINCT\n    caller_file.package AS caller_package,\n    callee_file.package AS callee_package\n  FROM code.calls AS c\n  JOIN code.symbols AS caller_symbol\n    ON caller_symbol.symbol_id = c.caller_symbol_id\n  JOIN code.files AS caller_file\n    ON caller_file.file_id = caller_symbol.file_id\n  JOIN code.symbols AS callee_symbol\n    ON callee_symbol.symbol_id = c.callee_symbol_id\n  JOIN code.files AS callee_file\n    ON callee_file.file_id = callee_symbol.file_id\n  WHERE c.callee_symbol_id IS NOT NULL\n    AND c.call_kind = 'direct'\n    AND caller_file.is_test = FALSE\n    AND callee_file.is_test = FALSE\n    AND caller_file.package <> ''\n    AND callee_file.package <> ''\n    AND caller_file.package <> callee_file.package\n)\nSELECT\n  a.caller_package AS package_a,\n  a.callee_package AS package_b\nFROM directed_pairs AS a\nJOIN directed_pairs AS b\n  ON b.caller_package = a.callee_package\n AND b.callee_package = a.caller_package\nWHERE a.caller_package < a.callee_package\nORDER BY package_a, package_b;",
+      "error": null
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 2829,
+    "completion_tokens": 1925,
+    "total_tokens": 4754,
+    "cost": 0.001340556,
+    "is_byok": 0
+  },
+  "request": {
+    "question": "Which pairs of packages call into each other in both directions?\n\nHint: Count only resolved calls between different packages, outside the tests.\n\nRequested output columns: package_a (string), package_b (string).",
+    "arm": "schema_model",
+    "model": "deepseek/deepseek-v4.1-flash-1017"
+  },
+  "events": [
+    {
+      "type": "result",
+      "answer": {
+        "response": "The query builds distinct resolved direct call edges between non-test files, excluding the empty top-level package, and maps each caller and callee to its containing package. It then reports canonical package pairs where the reverse edge also exists, so the two packages call into each other. The package_a < package_b condition avoids duplicate reversed pairs.",
+        "sql_code": "WITH directed_pairs AS (\n  SELECT DISTINCT\n    caller_file.package AS caller_package,\n    callee_file.package AS callee_package\n  FROM code.calls AS c\n  JOIN code.symbols AS caller_symbol\n    ON caller_symbol.symbol_id = c.caller_symbol_id\n  JOIN code.files AS caller_file\n    ON caller_file.file_id = caller_symbol.file_id\n  JOIN code.symbols AS callee_symbol\n    ON callee_symbol.symbol_id = c.callee_symbol_id\n  JOIN code.files AS callee_file\n    ON callee_file.file_id = callee_symbol.file_id\n  WHERE c.callee_symbol_id IS NOT NULL\n    AND c.call_kind = 'direct'\n    AND caller_file.is_test = FALSE\n    AND callee_file.is_test = FALSE\n    AND caller_file.package <> ''\n    AND callee_file.package <> ''\n    AND caller_file.package <> callee_file.package\n)\nSELECT\n  a.caller_package AS package_a,\n  a.callee_package AS package_b\nFROM directed_pairs AS a\nJOIN directed_pairs AS b\n  ON b.caller_package = a.callee_package\n AND b.callee_package = a.caller_package\nWHERE a.caller_package < a.callee_package\nORDER BY package_a, package_b;",
+        "sql_response_from_db": [
+          {
+            "package_a": "auto_ontology.catalog",
+            "package_b": "auto_ontology.catalog.services"
+          },
+          {
+            "package_a": "auto_ontology.catalog",
+            "package_b": "auto_ontology.catalog.store"
+          },
+          {
+            "package_a": "auto_ontology.catalog.store",
+            "package_b": "auto_ontology.dal"
+          },
+          {
+            "package_a": "auto_ontology.connectors",
+            "package_b": "auto_ontology.dal"
+          },
+          {
+            "package_a": "auto_ontology.dal",
+            "package_b": "auto_ontology.server"
+          },
+          {
+            "package_a": "auto_ontology.dal",
+            "package_b": "auto_ontology.server.model_interchange"
+          },
+          {
+            "package_a": "auto_ontology.dal",
+            "package_b": "auto_ontology.server.zones"
+          },
+          {
+            "package_a": "auto_ontology.retrieval.entity_coverage",
+            "package_b": "auto_ontology.retrieval.entity_coverage.agents"
+          },
+          {
+            "package_a": "auto_ontology.retrieval.entity_coverage",
+            "package_b": "auto_ontology.retrieval.text_to_sql.agents"
+          },
+          {
+            "package_a": "auto_ontology.retrieval.entity_coverage.agents",
+            "package_b": "auto_ontology.retrieval.text_to_sql"
+          },
+          {
+            "package_a": "auto_ontology.retrieval.text_to_sql",
+            "package_b": "auto_ontology.retrieval.text_to_sql.agents"
+          },
+          {
+            "package_a": "auto_ontology.retrieval.text_to_sql",
+            "package_b": "auto_ontology.retrieval.text_to_sql.db_probe"
+          },
+          {
+            "package_a": "auto_ontology.server",
+            "package_b": "auto_ontology.server.chat"
+          },
+          {
+            "package_a": "auto_ontology.server",
+            "package_b": "auto_ontology.server.users"
+          }
+        ]
+      }
+    }
+  ]
+}

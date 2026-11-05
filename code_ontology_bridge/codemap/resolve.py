@@ -68,6 +68,16 @@ class FileContext:
     definition_ids: dict[tuple[str, int], str] = field(default_factory=dict)
     bases: dict[str, list[str]] = field(default_factory=dict)  # class qualname -> base texts
     bindings: dict[str, Binding] = field(default_factory=dict)
+    # Imports made inside a function, method or class body, keyed by that scope's qualname.
+    scoped_bindings: dict[str, dict[str, Binding]] = field(default_factory=dict)
+
+    def binding(self, name: str, scope: str | None = None) -> Binding | None:
+        """The import a bare name refers to in ``scope``: the scope's own import first, then the module's."""
+        if scope is not None:
+            local = self.scoped_bindings.get(scope)
+            if local is not None and name in local:
+                return local[name]
+        return self.bindings.get(name)
 
 
 @dataclass
@@ -113,9 +123,12 @@ class RepoIndex:
                     ctx.bases[sym.qualname] = sym.bases
             for imp in ctx.facts.imports:
                 binding = self._binding(ctx, imp)
-                if binding is not None:
-                    # Later bindings win, as at runtime for straight-line module code.
-                    ctx.bindings[imp.bound_as] = binding
+                if binding is None:
+                    continue
+                # Later bindings win, as at runtime for straight-line code. An import inside a
+                # function, method or class binds only there.
+                target = ctx.bindings if imp.scope is None else ctx.scoped_bindings.setdefault(imp.scope, {})
+                target[imp.bound_as] = binding
 
     # -- modules -------------------------------------------------------
     def absolute_module(self, ctx: FileContext, imp: ImportFact) -> str | None:
@@ -190,14 +203,14 @@ class RepoIndex:
         full = [*binding.module.split("."), *([binding.attr] if binding.attr else []), *qual[1:]]
         return self._lookup_full(full, depth + 1)
 
-    def resolve_parts(self, ctx: FileContext, parts: list[str]) -> tuple[str | None, str]:
-        """Resolve a dotted name used in ``ctx`` to ``(symbol_id, resolution)``."""
+    def resolve_parts(self, ctx: FileContext, parts: list[str], scope: str | None = None) -> tuple[str | None, str]:
+        """Resolve a dotted name used in ``ctx`` (inside ``scope``) to ``(symbol_id, resolution)``."""
         head = parts[0]
         dotted = ".".join(parts)
         # Same-file: a top-level function or class, or Class.member on a top-level class.
         if head in ctx.symbols and dotted in ctx.symbols:
             return ctx.symbols[dotted], "same_file"
-        binding = ctx.bindings.get(head)
+        binding = ctx.binding(head, scope)
         if binding is not None:
             full = [*binding.module.split("."), *([binding.attr] if binding.attr else []), *parts[1:]]
             found = self._lookup_full(full, 0)
@@ -221,10 +234,10 @@ class RepoIndex:
                     return found
         return None
 
-    def _is_external_name(self, ctx: FileContext, name: str, depth: int = 0) -> bool:
+    def _is_external_name(self, ctx: FileContext, name: str, depth: int = 0, scope: str | None = None) -> bool:
         """True when ``name`` is bound to a non-internal import, or is a module-level
         name assigned from one (``logger = logging.getLogger(...)``)."""
-        binding = ctx.bindings.get(name)
+        binding = ctx.binding(name, scope if depth == 0 else None)
         if binding is not None:
             return not self.is_internal(binding.module)
         if name in ctx.symbols or depth >= 2:
@@ -257,12 +270,12 @@ class RepoIndex:
                     if inherited:
                         return Resolution(inherited, "method_on_self", "low")
                 return UNRESOLVED
-        symbol_id, how = self.resolve_parts(ctx, parts)
+        symbol_id, how = self.resolve_parts(ctx, parts, call.caller)
         if symbol_id:
             return Resolution(symbol_id, how, "high")
-        if self._is_external_name(ctx, head):
+        if self._is_external_name(ctx, head, scope=call.caller):
             return EXTERNAL
-        if head in BUILTIN_NAMES and head not in ctx.symbols and head not in ctx.bindings and head not in ctx.facts.module_assign_roots:
+        if head in BUILTIN_NAMES and head not in ctx.symbols and ctx.binding(head, call.caller) is None and head not in ctx.facts.module_assign_roots:
             return BUILTIN
         if len(parts) > 1:
             return DYNAMIC

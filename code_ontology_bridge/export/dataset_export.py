@@ -77,26 +77,8 @@ def load_json(path: str | Path | None) -> list[dict[str, Any]]:
     return json.loads(Path(path).read_text(encoding="utf-8"))
 
 
-def export_dataset(
-    code_map: CodeMap,
-    out_dir: str | Path,
-    *,
-    duckdb_path: str | Path,
-    questions: list[dict[str, Any]] = (),
-    analyses: list[dict[str, Any]] = (),
-    db_id: str | None = None,
-) -> Path:
-    out = Path(out_dir)
-    (out / "ddl").mkdir(parents=True, exist_ok=True)
-    (out / "data").mkdir(parents=True, exist_ok=True)
-    for stale in (out / "data").glob("*.csv"):
-        stale.unlink()
-    for name, text in postgres_ddl(code_map).items():
-        (out / "ddl" / name).write_text(text, encoding="utf-8")
-    for table in TABLES:
-        write_table_csv(out / "data" / csv_name(table), table, code_map.rows[table.name])
-
-    db_id = db_id or out.name.upper()
+def build_evaluation(duckdb_path: str | Path, questions: list[dict[str, Any]], db_id: str) -> list[dict[str, Any]]:
+    """Each question with its reference answer, computed by running its SQL on the exported database."""
     evaluation = []
     con = duckdb.connect(str(duckdb_path), read_only=True)
     try:
@@ -116,7 +98,36 @@ def export_dataset(
             )
     finally:
         con.close()
+    return evaluation
+
+
+def export_dataset(
+    code_map: CodeMap,
+    out_dir: str | Path,
+    *,
+    duckdb_path: str | Path,
+    questions: list[dict[str, Any]] = (),
+    analyses: list[dict[str, Any]] = (),
+    heldout: list[dict[str, Any]] = (),
+    db_id: str | None = None,
+) -> Path:
+    out = Path(out_dir)
+    (out / "ddl").mkdir(parents=True, exist_ok=True)
+    (out / "data").mkdir(parents=True, exist_ok=True)
+    for stale in (out / "data").glob("*.csv"):
+        stale.unlink()
+    for name, text in postgres_ddl(code_map).items():
+        (out / "ddl" / name).write_text(text, encoding="utf-8")
+    for table in TABLES:
+        write_table_csv(out / "data" / csv_name(table), table, code_map.rows[table.name])
+
+    db_id = db_id or out.name.upper()
+    evaluation = build_evaluation(duckdb_path, list(questions), db_id)
     (out / "evaluation.json").write_text(json.dumps(evaluation, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+    if heldout:
+        # Questions written for a later run and kept apart from the development set.
+        held = build_evaluation(duckdb_path, list(heldout), db_id)
+        (out / "heldout_evaluation.json").write_text(json.dumps(held, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
     custom = [{"name": a["name"], "description": a["description"], "sql": a["sql"]} for a in analyses]
     (out / "custom_analyses.json").write_text(json.dumps(custom, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
     snapshot = dict(code_map.snapshot)

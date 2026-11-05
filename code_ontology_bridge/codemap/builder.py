@@ -36,8 +36,8 @@ STATIC_KNOWN_LIMITS = (
     "Functions passed by reference are recorded as call_kind callback (low confidence) only when a plain dotted name appears directly as a positional or keyword argument of a call inside a function and resolves, by the same rules, to an internal function or method: asyncio.to_thread(f, x), loop.run_in_executor(None, f), executor.submit(f), Thread(target=f), functools.partial(f), Depends(f). References held in lists, dicts, assignments, return values or decorators without a call are not recorded, a name the enclosing function binds locally is skipped, properties passed as values are skipped, arguments of inspect.* and of builtins that only examine a value (getattr, isinstance, print, repr and the like) are skipped, and every other receiving call is assumed, not proven, to invoke the reference.",
     "Builtin classification does not see local variables or parameters that shadow a builtin name.",
     "Inherited methods resolve only when the base class is statically resolvable to a definition in the repository; such calls are marked low confidence.",
-    "Local variables that shadow a module-level name are not tracked, so a shadowed call may resolve to the module-level definition.",
-    "Nested functions and classes defined inside a function are not symbols; their calls are attributed to the enclosing symbol.",
+    "Imports inside a function bind only there. Other local variables that shadow a module-level name are not tracked, so such a call may resolve to the module-level definition.",
+    "Nested functions and classes are not symbols. A nested function's calls count for the enclosing symbol only when it calls that function or passes it on by name.",
     "Test links are static: a test that exercises a file without importing it, and without a matching file name, is not linked.",
     "Descriptions and summaries are verbatim docstring text; no description is generated or inferred.",
 )
@@ -130,6 +130,7 @@ def build_code_map(
     files_rows, heading_rows, symbol_rows, call_rows, import_rows, link_rows = [], [], [], [], [], []
     base_rows: list[dict[str, Any]] = []
     module_level_calls = 0
+    nested_function_calls = 0
     for ctx in contexts:
         facts = ctx.facts
         description, source = docstrings.module_description(facts.docstring)
@@ -175,6 +176,7 @@ def build_code_map(
                     }
                 )
         module_level_calls += facts.module_level_calls
+        nested_function_calls += facts.nested_function_calls
         seen: dict[tuple[int, int], int] = {}
         for call in facts.calls:
             res = index.resolve_callback(ctx, call) if call.is_callback else index.resolve_call(ctx, call)
@@ -226,6 +228,10 @@ def build_code_map(
 
     known_limits = list(STATIC_KNOWN_LIMITS)
     known_limits.append(f"Calls at module level, outside any function or class, are not recorded ({module_level_calls} in this snapshot).")
+    known_limits.append(
+        f"Calls in nested functions the enclosing function never runs (registered handlers, returned closures) "
+        f"are not recorded ({nested_function_calls} in this snapshot)."
+    )
     repeated = sum(len(c.definition_ids) - len(c.symbols) for c in contexts)
     if repeated:
         known_limits.append(f"{repeated} definitions share a qualified name. Their IDs include @L<definition-line>; ambiguous call targets are not resolved.")

@@ -1,0 +1,51 @@
+{
+  "question_id": 11,
+  "status": 200,
+  "error": null,
+  "elapsed_s": 39.9,
+  "attempts": [
+    {
+      "sql": "WITH RECURSIVE targets AS (\n    SELECT s.symbol_id\n    FROM code.symbols s\n    JOIN code.files f ON f.file_id = s.file_id\n    WHERE s.name = 'resolve_semantic_fks'\n      AND NOT f.is_test\n),\nreach(symbol_id, depth, path) AS (\n    SELECT c.caller_symbol_id,\n           1,\n           [t.symbol_id, c.caller_symbol_id]\n    FROM targets t\n    JOIN code.calls c ON c.callee_symbol_id = t.symbol_id\n    JOIN code.symbols cs ON cs.symbol_id = c.caller_symbol_id\n    JOIN code.files cf ON cf.file_id = cs.file_id\n    WHERE c.caller_symbol_id IS NOT NULL\n      AND NOT cf.is_test\n      AND c.caller_symbol_id NOT IN (SELECT symbol_id FROM targets)\n    UNION ALL\n    SELECT c.caller_symbol_id,\n           r.depth + 1,\n           list_append(r.path, c.caller_symbol_id)\n    FROM reach r\n    JOIN code.calls c ON c.callee_symbol_id = r.symbol_id\n    JOIN code.symbols cs ON cs.symbol_id = c.caller_symbol_id\n    JOIN code.files cf ON cf.file_id = cs.file_id\n    WHERE c.caller_symbol_id IS NOT NULL\n      AND NOT cf.is_test\n      AND c.caller_symbol_id NOT IN (SELECT symbol_id FROM targets)\n      AND NOT list_contains(r.path, c.caller_symbol_id)\n)\nSELECT symbol_id,\n       MIN(depth)::INTEGER AS depth\nFROM reach\nGROUP BY symbol_id\nORDER BY depth, symbol_id;",
+      "error": null
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 2921,
+    "completion_tokens": 5546,
+    "total_tokens": 8467,
+    "cost": 0.003762165,
+    "is_byok": 0
+  },
+  "request": {
+    "question": "What would be affected if resolve_semantic_fks changed? List every resolved caller symbol, including standalone functions, methods and class-scope callers, reached directly or indirectly, with the shortest call depth, outside the tests.\n\nHint: Follow resolved calls backwards from the callee to its callers, recursively. Calls include callback references (call_kind 'callback'), where a function is passed to another call such as asyncio.to_thread(f, x). Overridden methods called through a base class (self._run_once() in a base class) are not followed to the subclass.\n\nRequested output columns: symbol_id (string), depth (integer).",
+    "arm": "schema_model",
+    "model": "deepseek/deepseek-v4.1-flash-1017"
+  },
+  "events": [
+    {
+      "type": "result",
+      "answer": {
+        "response": "The query starts from non-test symbols named resolve_semantic_fks and walks code.calls backwards from callee_symbol_id to caller_symbol_id, including both direct and callback rows. It carries a path to avoid cycles, filters caller symbols to non-test files, and groups by caller symbol to retain the shortest depth; direct callers have depth 1. It returns each affected caller symbol_id with that minimum depth.",
+        "sql_code": "WITH RECURSIVE targets AS (\n    SELECT s.symbol_id\n    FROM code.symbols s\n    JOIN code.files f ON f.file_id = s.file_id\n    WHERE s.name = 'resolve_semantic_fks'\n      AND NOT f.is_test\n),\nreach(symbol_id, depth, path) AS (\n    SELECT c.caller_symbol_id,\n           1,\n           [t.symbol_id, c.caller_symbol_id]\n    FROM targets t\n    JOIN code.calls c ON c.callee_symbol_id = t.symbol_id\n    JOIN code.symbols cs ON cs.symbol_id = c.caller_symbol_id\n    JOIN code.files cf ON cf.file_id = cs.file_id\n    WHERE c.caller_symbol_id IS NOT NULL\n      AND NOT cf.is_test\n      AND c.caller_symbol_id NOT IN (SELECT symbol_id FROM targets)\n    UNION ALL\n    SELECT c.caller_symbol_id,\n           r.depth + 1,\n           list_append(r.path, c.caller_symbol_id)\n    FROM reach r\n    JOIN code.calls c ON c.callee_symbol_id = r.symbol_id\n    JOIN code.symbols cs ON cs.symbol_id = c.caller_symbol_id\n    JOIN code.files cf ON cf.file_id = cs.file_id\n    WHERE c.caller_symbol_id IS NOT NULL\n      AND NOT cf.is_test\n      AND c.caller_symbol_id NOT IN (SELECT symbol_id FROM targets)\n      AND NOT list_contains(r.path, c.caller_symbol_id)\n)\nSELECT symbol_id,\n       MIN(depth)::INTEGER AS depth\nFROM reach\nGROUP BY symbol_id\nORDER BY depth, symbol_id;",
+        "sql_response_from_db": [
+          {
+            "symbol_id": "auto_ontology/semantic/compile.py::_run_semantic_compilation",
+            "depth": 1
+          },
+          {
+            "symbol_id": "auto_ontology/semantic/compile.py::run_semantic_compilation",
+            "depth": 2
+          },
+          {
+            "symbol_id": "auto_ontology/ingestion_service/semantic_scheduler.py::SemanticScheduler._run_once",
+            "depth": 3
+          },
+          {
+            "symbol_id": "auto_ontology/semantic/__main__.py::main",
+            "depth": 3
+          }
+        ]
+      }
+    }
+  ]
+}

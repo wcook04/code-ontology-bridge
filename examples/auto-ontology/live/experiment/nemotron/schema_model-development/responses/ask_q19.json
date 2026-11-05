@@ -1,0 +1,89 @@
+{
+  "question_id": 19,
+  "status": 200,
+  "error": null,
+  "elapsed_s": 39.6,
+  "attempts": [
+    {
+      "sql": "WITH cross_calls AS (\n  SELECT\n    f_caller.package AS caller_pkg,\n    f_callee.package AS callee_pkg\n  FROM code.calls c\n  JOIN code.symbols s_caller ON c.caller_symbol_id = s_caller.symbol_id\n  JOIN code.files f_caller ON s_caller.file_id = f_caller.file_id\n  JOIN code.symbols s_callee ON c.callee_symbol_id = s_callee.symbol_id\n  JOIN code.files f_callee ON s_callee.file_id = f_callee.file_id\n  WHERE f_caller.is_test = FALSE\n    AND f_callee.is_test = FALSE\n    AND f_caller.package != f_callee.package\n    AND c.resolution NOT IN ('builtin', 'external', 'dynamic_attribute', 'unresolved')\n)\nSELECT DISTINCT\n  LEAST(caller_pkg, callee_pkg) AS package_a,\n  GREATEST(caller_pkg, callee_pkg) AS package_b\nFROM cross_calls c1\nWHERE EXISTS (\n  SELECT 1 FROM cross_calls c2\n  WHERE c2.caller_pkg = c1.callee_pkg\n    AND c2.callee_pkg = c1.caller_pkg\n)",
+      "error": null
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 2789,
+    "completion_tokens": 5392,
+    "total_tokens": 8181
+  },
+  "request": {
+    "question": "Which pairs of packages call into each other in both directions?\n\nHint: Count only resolved calls between different packages, outside the tests.\n\nRequested output columns: package_a (string), package_b (string).",
+    "arm": "schema_model",
+    "model": "nvidia/nemotron-3.5-lightning-30b-a3b"
+  },
+  "events": [
+    {
+      "type": "result",
+      "answer": {
+        "response": "The query first extracts all resolved cross-package call edges between non-test files, filtering out builtin, external, dynamic_attribute, and unresolved resolutions. It then returns each unordered pair of packages (package_a, package_b) that has at least one call in both directions—i.e., package A calls package B and package B calls package A—ensuring mutual cross-package dependencies outside the test suite.",
+        "sql_code": "WITH cross_calls AS (\n  SELECT\n    f_caller.package AS caller_pkg,\n    f_callee.package AS callee_pkg\n  FROM code.calls c\n  JOIN code.symbols s_caller ON c.caller_symbol_id = s_caller.symbol_id\n  JOIN code.files f_caller ON s_caller.file_id = f_caller.file_id\n  JOIN code.symbols s_callee ON c.callee_symbol_id = s_callee.symbol_id\n  JOIN code.files f_callee ON s_callee.file_id = f_callee.file_id\n  WHERE f_caller.is_test = FALSE\n    AND f_callee.is_test = FALSE\n    AND f_caller.package != f_callee.package\n    AND c.resolution NOT IN ('builtin', 'external', 'dynamic_attribute', 'unresolved')\n)\nSELECT DISTINCT\n  LEAST(caller_pkg, callee_pkg) AS package_a,\n  GREATEST(caller_pkg, callee_pkg) AS package_b\nFROM cross_calls c1\nWHERE EXISTS (\n  SELECT 1 FROM cross_calls c2\n  WHERE c2.caller_pkg = c1.callee_pkg\n    AND c2.callee_pkg = c1.caller_pkg\n)",
+        "sql_response_from_db": [
+          {
+            "package_a": "auto_ontology.catalog",
+            "package_b": "auto_ontology.catalog.services"
+          },
+          {
+            "package_a": "auto_ontology.retrieval.text_to_sql",
+            "package_b": "auto_ontology.retrieval.text_to_sql.db_probe"
+          },
+          {
+            "package_a": "auto_ontology.connectors",
+            "package_b": "auto_ontology.dal"
+          },
+          {
+            "package_a": "auto_ontology.dal",
+            "package_b": "auto_ontology.server.model_interchange"
+          },
+          {
+            "package_a": "auto_ontology.retrieval.entity_coverage",
+            "package_b": "auto_ontology.retrieval.entity_coverage.agents"
+          },
+          {
+            "package_a": "auto_ontology.retrieval.entity_coverage.agents",
+            "package_b": "auto_ontology.retrieval.text_to_sql"
+          },
+          {
+            "package_a": "auto_ontology.server",
+            "package_b": "auto_ontology.server.users"
+          },
+          {
+            "package_a": "auto_ontology.catalog.store",
+            "package_b": "auto_ontology.dal"
+          },
+          {
+            "package_a": "auto_ontology.dal",
+            "package_b": "auto_ontology.server"
+          },
+          {
+            "package_a": "auto_ontology.server",
+            "package_b": "auto_ontology.server.chat"
+          },
+          {
+            "package_a": "auto_ontology.retrieval.entity_coverage",
+            "package_b": "auto_ontology.retrieval.text_to_sql.agents"
+          },
+          {
+            "package_a": "auto_ontology.dal",
+            "package_b": "auto_ontology.server.zones"
+          },
+          {
+            "package_a": "auto_ontology.catalog",
+            "package_b": "auto_ontology.catalog.store"
+          },
+          {
+            "package_a": "auto_ontology.retrieval.text_to_sql",
+            "package_b": "auto_ontology.retrieval.text_to_sql.agents"
+          }
+        ]
+      }
+    }
+  ]
+}

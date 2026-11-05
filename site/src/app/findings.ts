@@ -1,0 +1,292 @@
+// The website's own reading of each recorded result. Every sentence is computed
+// from the rows Auto Ontology returned; none is Auto Ontology's output. Each
+// entry chooses how the rows are shown and states any limit a static map of
+// source code puts on the result.
+
+import type { Row } from "../data/types";
+
+export type View = "counts" | "distribution" | "ranking" | "list" | "record" | "comparison" | "graph";
+
+export interface Finding {
+  /** The question in plain words. */
+  title: string;
+  /** What kind of question this is, as a short label. */
+  kind: string;
+  view: View;
+  /** For a ranking: the label column and the number column. */
+  rank?: { label: string; value: string; unit: string };
+  /** The result in one or two sentences, from the rows. */
+  says: (rows: Row[]) => string;
+  /** What the result does not show. */
+  limit?: string;
+  /** Something about the recorded SQL a careful reader should know. */
+  sqlNote?: string;
+}
+
+const n = (v: unknown) => (typeof v === "number" ? v.toLocaleString("en-GB") : String(v));
+const name = (id: unknown) => String(id).split("::").pop() ?? String(id);
+const file = (id: unknown) => String(id).split("::")[0].split("/").pop() ?? String(id);
+const count = (rows: Row[], noun: string, plural = `${noun}s`) => `${rows.length} ${rows.length === 1 ? noun : plural}`;
+
+const STATIC_CALLS =
+  "These are calls the extractor found in the source text. Calls made through dynamic attributes or other indirection are not linked, so a function can have callers this list does not show.";
+
+export const FINDINGS: Record<number, Finding> = {
+  1: {
+    title: "Which functions call upsert_table_term?",
+    kind: "Callers",
+    view: "list",
+    says: (rows) => {
+      const tests = rows.filter((r) => String(r.caller_symbol_id).includes("/tests/")).length;
+      return `${count(rows, "function")} call upsert_table_term; ${tests} of them are tests.`;
+    },
+    limit: STATIC_CALLS,
+  },
+  2: {
+    title: "What does the semantic package’s docstring say?",
+    kind: "Documentation",
+    view: "comparison",
+    says: (rows) => {
+      const doc = rows.find((r) => r.description);
+      return `The package’s docstring reads “${doc?.description ?? ""}” Auto Ontology’s query matched every package whose name contains “semantic”, so it also returned a second package, which has no docstring.`;
+    },
+  },
+  3: {
+    title: "Which non-test files have no module docstring?",
+    kind: "Documentation",
+    view: "list",
+    says: (rows) => `${count(rows, "non-test file")} have no module docstring, ${rows.filter((r) => String(r.file_id).endsWith("__init__.py")).length} of them package __init__.py files.`,
+  },
+  4: {
+    title: "Where is resolve_semantic_fks defined, and what does its docstring say?",
+    kind: "Lookup",
+    view: "record",
+    says: (rows) => {
+      const r = rows[0] ?? {};
+      return `It is defined in ${r.file_id}, lines ${r.line_start}–${r.line_end}. Its docstring reads “${r.summary}”`;
+    },
+  },
+  5: {
+    title: "How big is the repository?",
+    kind: "Counts",
+    view: "counts",
+    says: (rows) => {
+      const r = rows[0] ?? {};
+      return `${n(r.files)} Python files, ${n(r.test_files)} of them test files, containing ${n(r.symbols)} functions, methods and classes.`;
+    },
+  },
+  6: {
+    title: "Which commit does the code map describe?",
+    kind: "Lookup",
+    view: "record",
+    says: (rows) => `NVIDIA’s auto-ontology repository at commit ${String(rows[0]?.commit_sha ?? "").slice(0, 12)}.`,
+  },
+  7: {
+    title: "Which public functions in auto_ontology/semantic have no test file linked to them?",
+    kind: "Test links",
+    view: "list",
+    says: (rows) => `${count(rows, "public function")} in auto_ontology/semantic are in files that no test file imports or is named after.`,
+    limit: "A test link means a test file imports the source file or has a matching name. A function without one may still be exercised by other tests.",
+  },
+  8: {
+    title: "Which ten functions are called from the most places outside the tests?",
+    kind: "Ranking",
+    view: "ranking",
+    rank: { label: "symbol_id", value: "call_sites", unit: "call sites" },
+    says: (rows) =>
+      rows.length > 1
+        ? `${name(rows[0].symbol_id)} in ${file(rows[0].symbol_id)} is called from ${n(rows[0].call_sites)} places; the next, ${name(rows[1].symbol_id)}, from ${n(rows[1].call_sites)}.`
+        : "",
+    limit: STATIC_CALLS,
+  },
+  9: {
+    title: "Which files import auto_ontology/dal/terms.py?",
+    kind: "Imports",
+    view: "list",
+    says: (rows) => `${count(rows, "file")} import it, ${rows.filter((r) => String(r.file_id).includes("/tests/")).length} of them tests.`,
+    limit: "Only import statements that resolve to a file in the repository are recorded; imports built at run time are not.",
+  },
+  10: {
+    title: "Which test files are linked to semantic_fk.py, and why?",
+    kind: "Test links",
+    view: "list",
+    says: (rows) => {
+      const files = new Set(rows.map((r) => r.test_file_id));
+      return `${files.size === 1 ? `One test file, ${file([...files][0])},` : `${files.size} test files`} ${files.size === 1 ? "is" : "are"} linked to it, for ${rows.length} reasons: ${rows.map((r) => (r.reason === "imports_target" ? "it imports the file" : r.reason === "name_match" ? "its name matches" : String(r.reason))).join(" and ")}.`;
+    },
+    limit: "The two rows are two reasons for one link, not two test files. A link is an association found in the source, not a record of which code the test runs.",
+  },
+  11: {
+    title: "Which functions reach resolve_semantic_fks through recorded calls?",
+    kind: "Callers, recursively",
+    view: "graph",
+    says: (rows) => `${count(rows, "function")} reach it through calls. One, the scheduler, reaches it only because the extractor recorded a function passed to asyncio.to_thread.`,
+    limit: STATIC_CALLS,
+    sqlNote: "The SQL leaves test functions out of the search itself, as the graph on the front page does, and records each path so a cycle cannot repeat. It follows every call kind, so the callback reference is included.",
+  },
+  12: {
+    title: "Which five packages have the most lines in non-test files?",
+    kind: "Ranking",
+    view: "ranking",
+    rank: { label: "package", value: "lines", unit: "lines" },
+    says: (rows) => (rows[0] ? `${rows[0].package} has the most, ${n(rows[0].lines)} lines.` : ""),
+    limit: "Lines are counted per file and include blank lines and comments.",
+  },
+  13: {
+    title: "Which five classes define the most methods?",
+    kind: "Ranking",
+    view: "ranking",
+    rank: { label: "symbol_id", value: "methods", unit: "methods" },
+    says: (rows) => (rows.length > 1 ? `${name(rows[0].symbol_id)} defines ${n(rows[0].methods)} methods; ${name(rows[1].symbol_id)} follows with ${n(rows[1].methods)}.` : ""),
+  },
+  14: {
+    title: "How many call sites could the extractor link to a function?",
+    kind: "Static analysis coverage",
+    view: "distribution",
+    says: (rows) => {
+      const total = rows.reduce((s, r) => s + Number(r.calls), 0);
+      const linked = rows.filter((r) => LINKED.has(String(r.resolution))).reduce((s, r) => s + Number(r.calls), 0);
+      return `Of ${n(total)} direct calls, ${n(linked)} (${((linked / total) * 100).toFixed(1)}%) were linked to a function or method defined in the repository. The rest were classified without a link: calls through a dynamic attribute, to external libraries or to Python built-ins, and a small remainder marked unresolved.`;
+    },
+    limit: "“Unresolved” is only the calls the extractor could not classify at all. It is not every call without a link.",
+  },
+  15: {
+    title: "Which connector modules does auto_ontology/connectors/__init__.py import?",
+    kind: "Imports",
+    view: "list",
+    says: (rows) => `It imports ${count(rows, "module")} from its own directory.`,
+  },
+  16: {
+    title: "Which non-test modules have no recorded import from another file?",
+    kind: "Imports",
+    view: "list",
+    says: (rows) => `${count(rows, "module")}, ${rows.filter((r) => String(r.file_id).startsWith("dev_tools/")).length} of them scripts under dev_tools.`,
+    limit: "No recorded import is not the same as never imported: modules loaded by name at run time, or started as scripts, do not appear as imports.",
+  },
+  17: {
+    title: "Which functions does _run_semantic_compilation call?",
+    kind: "Callees",
+    view: "list",
+    says: (rows) => `${count(rows, "function")} defined in the repository, the resolver among them.`,
+    limit: STATIC_CALLS,
+  },
+  18: {
+    title: "Which packages have the largest share of public symbols without a docstring?",
+    kind: "Ranking",
+    view: "ranking",
+    rank: { label: "package", value: "pct_undocumented", unit: "% undocumented" },
+    says: (rows) => (rows[0] ? `In ${rows[0].package}, ${n(rows[0].undocumented)} of ${n(rows[0].public_symbols)} public symbols (${rows[0].pct_undocumented}%) have no docstring, the highest share among packages with at least 20.` : ""),
+  },
+  19: {
+    title: "Which pairs of packages call into each other in both directions?",
+    kind: "Package dependencies",
+    view: "list",
+    says: (rows) => `${count(rows, "pair")} of packages have recorded calls going both ways.`,
+    limit: STATIC_CALLS,
+  },
+  20: {
+    title: "Which files depend on auto_ontology/semantic/constants.py through imports?",
+    kind: "Imports, recursively",
+    view: "ranking",
+    rank: { label: "area", value: "files", unit: "files" },
+    limit: "The question groups by the first two parts of each path, so a script directly under dev_tools appears as its own area rather than as part of a package. The agent’s SQL and the reference SQL both do this.",
+    says: (rows) => {
+      const total = rows.reduce((s, r) => s + Number(r.files), 0);
+      return rows[0] ? `${n(total)} non-test files import it directly or through other files; ${rows[0].area} has the most, ${n(rows[0].files)}.` : "";
+    },
+  },
+  21: {
+    title: "Which test file is linked to the most source files?",
+    kind: "Test links",
+    view: "record",
+    says: (rows) => (rows[0] ? `${file(rows[0].test_file_id)}, in ${String(rows[0].test_file_id).split("/").slice(0, -1).join("/")}, is linked to ${n(rows[0].targets)} source files.` : ""),
+    limit: "Links come from imports and matching names, not from running the tests.",
+  },
+  22: {
+    title: "Which connector classes have subclasses but no recorded constructor call?",
+    kind: "Class hierarchy",
+    view: "record",
+    says: (rows) => (rows[0] ? `${name(rows[0].symbol_id)} in ${file(rows[0].symbol_id)} has ${n(rows[0].subclasses)} non-test subclasses and no recorded call that constructs it.` : ""),
+    limit: "Only constructor calls the extractor could resolve are counted; a class created through a factory or by name at run time would not appear.",
+  },
+};
+
+/** Resolution kinds that carry a callee in the repository (SPEC.md, code.calls). */
+export const LINKED = new Set(["same_file", "imported", "method_on_self"]);
+
+export const RESOLUTION_WORDS: Record<string, string> = {
+  imported: "Imported function",
+  same_file: "Function in the same file",
+  method_on_self: "Method on self",
+  dynamic_attribute: "Dynamic attribute, e.g. obj.method()",
+  external: "External library",
+  builtin: "Python built-in",
+  unresolved: "Unresolved",
+};
+
+export const COLUMN_WORDS: Record<string, string> = {
+  files: "Python files",
+  test_files: "test files",
+  symbols: "functions, methods and classes",
+  repo_url: "Repository",
+  commit_sha: "Commit",
+  source_fingerprint: "Fingerprint of the analysed files",
+  file_id: "File",
+  symbol_id: "Symbol",
+  line_start: "First line",
+  line_end: "Last line",
+  summary: "Docstring",
+  test_file_id: "Test file",
+  targets: "Linked source files",
+  subclasses: "Non-test subclasses",
+};
+
+/**
+ * What the written answer is. At the pinned Auto Ontology revision the SQL agent
+ * writes its `response` field together with the SQL, before the query runs, and
+ * is asked to describe what is calculated, from which tables, with which filters
+ * and ordering (auto_ontology/retrieval/text_to_sql/models.py, SQLGenerationModel).
+ * The executed rows are returned beside it, not written into it.
+ */
+export function proseReading(answer: string): { label: string; tone: "fail" | "neutral" } {
+  if (answer.trim().split(/\s+/).length < 3) return { label: "No explanation of the query: the response is one word", tone: "fail" };
+  return { label: "A written explanation of the query", tone: "neutral" };
+}
+
+/** The author's recorded review of the written explanation (review.json), in words. */
+export const PROSE_REVIEW_WORDS: Record<string, string> = {
+  substantive: "The author’s review judged it an adequate explanation of the query.",
+  fail: "The author’s review judged it not an explanation of the query.",
+  unknown: "The author’s review did not classify it.",
+};
+
+/**
+ * How many times the SQL ran, from the execute_sql_query events in each saved response.
+ * Twelve first attempts failed because the SQL named a table without its "code." schema; the agent rewrote it.
+ */
+export const ATTEMPTS: Record<number, { runs: number; schemaError: boolean; rewrites: number }> = {
+  1: { runs: 2, schemaError: true, rewrites: 1 }, 2: { runs: 3, schemaError: false, rewrites: 3 }, 3: { runs: 1, schemaError: false, rewrites: 0 }, 4: { runs: 2, schemaError: true, rewrites: 1 }, 5: { runs: 2, schemaError: true, rewrites: 1 }, 6: { runs: 1, schemaError: false, rewrites: 0 }, 7: { runs: 2, schemaError: true, rewrites: 1 }, 8: { runs: 2, schemaError: true, rewrites: 1 }, 9: { runs: 2, schemaError: true, rewrites: 1 }, 10: { runs: 1, schemaError: false, rewrites: 0 }, 11: { runs: 1, schemaError: false, rewrites: 2 }, 12: { runs: 1, schemaError: false, rewrites: 0 }, 13: { runs: 1, schemaError: false, rewrites: 0 }, 14: { runs: 2, schemaError: true, rewrites: 1 }, 15: { runs: 1, schemaError: false, rewrites: 0 }, 16: { runs: 2, schemaError: true, rewrites: 1 }, 17: { runs: 1, schemaError: false, rewrites: 0 }, 18: { runs: 2, schemaError: true, rewrites: 1 }, 19: { runs: 1, schemaError: false, rewrites: 0 }, 20: { runs: 2, schemaError: true, rewrites: 1 }, 21: { runs: 2, schemaError: true, rewrites: 1 }, 22: { runs: 1, schemaError: false, rewrites: 0 },
+};
+
+/** Seconds each recorded request took, from the elapsed_s field of its saved response. */
+export const ELAPSED: Record<number, number> = {
+  1: 182.8, 2: 568.3, 3: 72.0, 4: 149.5, 5: 132.9, 6: 78.4, 7: 412.1, 8: 187.6, 9: 99.0, 10: 78.5, 11: 324.5, 12: 90.9, 13: 218.3, 14: 101.3, 15: 135.0, 16: 293.0, 17: 342.1, 18: 184.4, 19: 167.4, 20: 214.6, 21: 121.7, 22: 249.1,
+};
+
+/** The output columns each summary was written against. A summary is shown only when the published question still has them. */
+export const EXPECTS: Record<number, string[]> = {
+  1: ["caller_symbol_id"], 2: ["description", "description_source"], 3: ["file_id"],
+  4: ["symbol_id", "file_id", "line_start", "line_end", "summary"], 5: ["files", "test_files", "symbols"],
+  6: ["repo_url", "commit_sha", "source_fingerprint"], 7: ["symbol_id"], 8: ["symbol_id", "call_sites"], 9: ["file_id"],
+  10: ["test_file_id", "reason"], 11: ["symbol_id", "depth"], 12: ["package", "lines"], 13: ["symbol_id", "methods"],
+  14: ["resolution", "calls", "pct"], 15: ["imported_file_id"], 16: ["file_id"], 17: ["callee_symbol_id"],
+  18: ["package", "public_symbols", "undocumented", "pct_undocumented"], 19: ["package_a", "package_b"], 20: ["area", "files"],
+  21: ["test_file_id", "targets"], 22: ["symbol_id", "subclasses"],
+};
+
+/** The summary for a question, or undefined when its columns no longer match what the summary was written for. */
+export function findingFor(id: number, fields: string[]): Finding | undefined {
+  const want = EXPECTS[id];
+  if (!want || want.length !== fields.length || want.some((f, i) => f !== fields[i])) return undefined;
+  return FINDINGS[id];
+}

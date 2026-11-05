@@ -1,0 +1,64 @@
+{
+  "question_id": 16,
+  "status": 200,
+  "error": null,
+  "elapsed_s": 54.8,
+  "attempts": [
+    {
+      "sql": "",
+      "error": "the reply had no SQL"
+    },
+    {
+      "sql": "SELECT DISTINCT file_id FROM code.files WHERE is_test = FALSE AND file_id NOT IN (SELECT DISTINCT imported_file_id FROM code.imports WHERE imported_file_id IS NOT NULL) AND file_id NOT LIKE '%/__init__.py' AND file_id NOT LIKE '%/__main__.py' AND file_id NOT LIKE 'alembic/%';",
+      "error": null
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 6100,
+    "completion_tokens": 6281,
+    "total_tokens": 12381
+  },
+  "request": {
+    "question": "Which non-test modules are never imported by another file in the repository? Leave out package __init__.py files, __main__.py files and the Alembic migration directory.\n\nHint: Only imports that resolve to a file count. Python runs a package's __init__.py whenever a submodule is imported; __main__.py files are run with python -m or as a console script (the code map holds only Python files, so pyproject [project.scripts] entries are not read; at this commit the only one, in mcp/pyproject.toml, points at a __main__.py); Alembic loads alembic/ from its script_location. Scripts run directly by path, such as files under dev_tools/, are still listed.\n\nRequested output columns: file_id (string).",
+    "arm": "schema_model",
+    "model": "nvidia/nemotron-3.5-lightning-30b-a3b"
+  },
+  "events": [
+    {
+      "type": "result",
+      "answer": {
+        "response": "This query returns every non-test Python source file that is never imported by another file within the repository. It filters out package __init__.py files, __main__.py files, and any files under the alembic/ directory as requested. The subquery selects all resolved import targets from code.imports, and the outer query keeps only those files that do not appear in that set, yielding modules with no internal importers.",
+        "sql_code": "SELECT DISTINCT file_id FROM code.files WHERE is_test = FALSE AND file_id NOT IN (SELECT DISTINCT imported_file_id FROM code.imports WHERE imported_file_id IS NOT NULL) AND file_id NOT LIKE '%/__init__.py' AND file_id NOT LIKE '%/__main__.py' AND file_id NOT LIKE 'alembic/%';",
+        "sql_response_from_db": [
+          {
+            "file_id": "dev_tools/generate_backend_openapi.py"
+          },
+          {
+            "file_id": "auto_ontology/semantic/loaders.py"
+          },
+          {
+            "file_id": "dev_tools/release_helm_chart.py"
+          },
+          {
+            "file_id": "dev_tools/local_ingest.py"
+          },
+          {
+            "file_id": "dev_tools/generate_permission_resource.py"
+          },
+          {
+            "file_id": "dev_tools/fixtures/seed_fixtures.py"
+          },
+          {
+            "file_id": "dev_tools/fixtures/seed_graph_fixture.py"
+          },
+          {
+            "file_id": "auto_ontology/retrieval/data_access/candidates.py"
+          },
+          {
+            "file_id": "dev_tools/_add_spdx_headers.py"
+          }
+        ]
+      }
+    }
+  ]
+}

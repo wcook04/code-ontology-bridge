@@ -26,6 +26,7 @@ PINNED_SHA = "cdaf61e1bd0cf3820d11d72b43bb460816aebbd3"
 NAME = "auto_ontology_code"
 QUESTIONS = json.loads((REPO / "eval" / "auto_ontology_questions.json").read_text())
 ANALYSES = json.loads((REPO / "eval" / "custom_analyses.json").read_text())
+HELDOUT = json.loads((REPO / "eval" / "heldout_questions.json").read_text())
 EXAMPLE = REPO / "examples" / "auto-ontology"
 
 
@@ -56,7 +57,7 @@ def worked_example(tmp_path_factory):
             os.environ["SOURCE_DATE_EPOCH"] = old
     out = tmp_path_factory.mktemp("worked")
     db = export_duckdb(code_map, out / f"{NAME}.duckdb")
-    dataset = export_dataset(code_map, out / NAME, duckdb_path=db, questions=QUESTIONS, analyses=ANALYSES)
+    dataset = export_dataset(code_map, out / NAME, duckdb_path=db, questions=QUESTIONS, analyses=ANALYSES, heldout=HELDOUT)
     model = out / f"{NAME}.model.yaml"
     export_model_yaml(code_map, model, database=NAME, analyses=ANALYSES)
     return types.SimpleNamespace(code_map=code_map, duckdb=db, dataset=dataset, model=model, out=out)

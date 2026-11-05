@@ -39,6 +39,9 @@ class ImportFact:
     module: str | None  # ``import a.b`` -> "a.b"; ``from .x import y`` -> "x"
     name: str | None  # imported attribute for ``from`` imports, None for ``import``
     bound_as: str  # local name the statement binds
+    # Qualname of the function, method or class whose body holds the import; None at module level.
+    # Python binds the name only in that scope, so only calls made there may use it.
+    scope: str | None = None
 
 
 @dataclass
@@ -63,6 +66,10 @@ class FileFacts:
     imports: list[ImportFact]
     calls: list[CallFact]
     module_level_calls: int
+    # Calls inside a function nested in a symbol's body that the symbol never calls or passes
+    # on by name. They run only if something else calls the nested function, so they are not
+    # recorded as calls made by the enclosing symbol.
+    nested_function_calls: int = 0
     # Module-level ``name = <dotted call or attribute>``: name -> root name of the value
     # (``logger = logging.getLogger(__name__)`` -> {"logger": "logging"}).
     module_assign_roots: dict[str, str] = field(default_factory=dict)
@@ -131,6 +138,18 @@ class _Visitor(ast.NodeVisitor):
         self.imports: list[ImportFact] = []
         self.calls: list[CallFact] = []
         self.module_level_calls = 0
+        self.nested_function_calls = 0
+        # Depth of function bodies nested inside a symbol; > 0 means the code below runs only
+        # when that nested function is called, not when the enclosing symbol runs.
+        self._nested_body = 0
+        # Name of the nested function (directly in the symbol's body) being visited.
+        self._nested_owner: list[str] = []
+        # Per enclosing symbol: bare names it calls or passes as arguments, and calls held
+        # back from its nested functions as (nested function name, fact).
+        self._used_names: list[set[str]] = []
+        self._held: list[list[tuple[str, CallFact]]] = []
+        # Per enclosing symbol: for each nested function, the bare names its body calls or passes on.
+        self._nested_uses: list[dict[str, set[str]]] = []
         self.module_assign_roots: dict[str, str] = {}
         # Stack of (qualname, kind) for enclosing definitions that are symbols.
         self._scope: list[tuple[str, str]] = []
@@ -158,8 +177,22 @@ class _Visitor(ast.NodeVisitor):
     # -- definitions ---------------------------------------------------
     def _visit_def(self, node: ast.FunctionDef | ast.AsyncFunctionDef | ast.ClassDef, kind: str) -> None:
         if self._in_function():
-            # Nested definitions are not symbols; their bodies count toward the enclosing symbol.
-            self.generic_visit(node)
+            # Nested definitions are not symbols. Their decorators, defaults and annotations are
+            # evaluated by the enclosing symbol when the definition runs, and a nested class body
+            # runs then too; a nested function's body runs only when that function is called.
+            if isinstance(node, ast.ClassDef):
+                self.generic_visit(node)
+                return
+            for child in [*node.decorator_list, node.args, *([node.returns] if node.returns else [])]:
+                self.visit(child)
+            if not self._nested_body:
+                self._nested_owner.append(node.name)
+            self._nested_body += 1
+            for stmt in node.body:
+                self.visit(stmt)
+            self._nested_body -= 1
+            if not self._nested_body:
+                self._nested_owner.pop()
             return
         parent_qual = self._scope[-1][0] if self._scope else None
         qual = f"{parent_qual}.{node.name}" if parent_qual else node.name
@@ -189,8 +222,26 @@ class _Visitor(ast.NodeVisitor):
         self._definition_lines.append(node.lineno)
         self._public_stack.append(not node.name.startswith("_"))
         self._locals.append(set() if kind == "class" else bound_names(node))
+        self._used_names.append(set())
+        self._held.append([])
+        self._nested_uses.append({})
         # Decorators, defaults and annotations are evaluated with the definition: attribute them to it.
         self.generic_visit(node)
+        # A nested function's calls are this symbol's calls when the symbol calls it or passes it on.
+        used = self._used_names.pop()
+        # Follow chains: a nested function the symbol runs may run another nested function.
+        nested_uses = self._nested_uses.pop()
+        frontier = list(used)
+        while frontier:
+            for name in nested_uses.get(frontier.pop(), ()):
+                if name not in used:
+                    used.add(name)
+                    frontier.append(name)
+        for owner, fact in self._held.pop():
+            if owner in used:
+                self.calls.append(fact)
+            elif not fact.is_callback:
+                self.nested_function_calls += 1
         self._locals.pop()
         self._public_stack.pop()
         self._scope.pop()
@@ -209,12 +260,19 @@ class _Visitor(ast.NodeVisitor):
     def visit_Import(self, node: ast.Import) -> None:
         for alias in node.names:
             bound = alias.asname or alias.name.split(".")[0]
-            self.imports.append(ImportFact(node.lineno, 0, alias.name, None, bound))
+            self.imports.append(ImportFact(node.lineno, 0, alias.name, None, bound, self._import_scope()))
 
     def visit_ImportFrom(self, node: ast.ImportFrom) -> None:
         for alias in node.names:
             bound = alias.asname or alias.name
-            self.imports.append(ImportFact(node.lineno, node.level or 0, node.module, alias.name, bound))
+            self.imports.append(ImportFact(node.lineno, node.level or 0, node.module, alias.name, bound, self._import_scope()))
+
+    def _import_scope(self) -> str | None:
+        """The scope an import binds in: module level, a symbol, or a nested function's body."""
+        if not self._scope:
+            return None
+        qual = self._scope[-1][0]
+        return f"{qual}.<nested>" if self._nested_body else qual
 
     # -- module-level assignments --------------------------------------
     def _record_assign(self, targets: list[ast.AST], value: ast.AST | None) -> None:
@@ -242,7 +300,15 @@ class _Visitor(ast.NodeVisitor):
         if caller is None:
             self.module_level_calls += 1
         else:
-            self.calls.append(
+            if self._used_names:
+                target = self._used_names[-1] if not self._nested_body else self._nested_uses[-1].setdefault(self._nested_owner[-1], set())
+                parts = dotted_parts(node.func)
+                if parts and len(parts) == 1:
+                    target.add(parts[0])
+                for arg in [*node.args, *(k.value for k in node.keywords)]:
+                    if isinstance(arg, ast.Name):
+                        target.add(arg.id)
+            self._emit(
                 CallFact(
                     caller=caller,
                     caller_line=self._definition_lines[-1],
@@ -255,6 +321,13 @@ class _Visitor(ast.NodeVisitor):
             )
             self._record_callback_references(node, caller, enclosing_class)
         self.generic_visit(node)
+
+    def _emit(self, fact: CallFact) -> None:
+        """Record a call, or hold it back when it sits in a nested function's body."""
+        if self._nested_body:
+            self._held[-1].append((self._nested_owner[-1], fact))
+        else:
+            self.calls.append(fact)
 
     def _record_callback_references(self, node: ast.Call, caller: str, enclosing_class: str | None) -> None:
         """Plain dotted names passed as positional or keyword arguments.
@@ -279,7 +352,7 @@ class _Visitor(ast.NodeVisitor):
                     continue
             elif head in local:
                 continue
-            self.calls.append(
+            self._emit(
                 CallFact(
                     caller=caller,
                     caller_line=self._definition_lines[-1],
@@ -305,5 +378,6 @@ def analyse_source(source: str, filename: str = "<unknown>") -> FileFacts:
         imports=visitor.imports,
         calls=visitor.calls,
         module_level_calls=visitor.module_level_calls,
+        nested_function_calls=visitor.nested_function_calls,
         module_assign_roots=visitor.module_assign_roots,
     )

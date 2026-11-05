@@ -1,10 +1,10 @@
 {
   "request": {
-    "question": "Where is resolve_semantic_fks defined, and what does its docstring say?\n\nRequested output columns: symbol_id (string), file_id (string), line_start (integer), line_end (integer), summary (string).\nReturn every requested field using exactly its specified column alias. Preserve complete case-sensitive repository-relative paths and symbol IDs; do not substitute display names. Include all requested counts and provenance fields. Explain the query result in ordinary prose; do not emit placeholder text. These questions concern a static map of open-source Python code. After executing SQL, describe the returned rows and query assumptions. Questions asking which files, modules or symbols mean distinct identities, not one repeated row per matching import or call occurrence; preserve occurrence counts only when requested. Caller/callee graph questions include methods as well as standalone functions unless a symbol kind is explicitly restricted. Use files.is_test for test-file classification; test_links describe associations, not the complete set of test files. Use DOUBLE or DECIMAL, rather than single-precision REAL, for percentage calculations.",
+    "question": "Where is resolve_semantic_fks defined, and what does its docstring say?\n\nRequested output columns: symbol_id (string), file_id (string), line_start (integer), line_end (integer), summary (string).\nReturn every requested field using exactly its specified column alias. Preserve complete case-sensitive repository-relative paths and symbol IDs; do not substitute display names. Include all requested counts and provenance fields. Explain the query result in ordinary prose; do not emit placeholder text. These questions concern a static map of open-source Python code. Describe what the query computes and the assumptions it makes; the returned rows are reported separately. Questions asking which files, modules or symbols mean distinct identities, not one repeated row per matching import or call occurrence; preserve occurrence counts only when requested. Caller/callee graph questions include methods as well as standalone functions unless a symbol kind is explicitly restricted. Use files.is_test for test-file classification; test_links describe associations, not the complete set of test files. Use DOUBLE or DECIMAL, rather than single-precision REAL, for percentage calculations.",
     "calculation_only": true
   },
   "status": 200,
-  "elapsed_s": 198.6,
+  "elapsed_s": 149.5,
   "events": [
     {
       "type": "step",
@@ -59,7 +59,7 @@
       "type": "step",
       "phase": "end",
       "node": "prepare_candidates",
-      "thought": "The requested columns are all available directly from auto_ontology_code.code.symbols, and the symbol is identified by name/qualname there. No other candidate table supplies required definition/docstring data or an implied filter condition.",
+      "thought": "The question is a symbol-definition/docstring lookup. `auto_ontology_code.code.symbols` alone provides the required output columns: `symbol_id`, `file_id`, `line_start`, `line_end`, and `summary`. The predicate for `resolve_semantic_fks` can be applied to `symbols.name`/`symbols.qualname`. No call-graph, import, test, heading, file-metadata, or filtered-symbol-view table is needed.",
       "label": "Preparing candidates"
     },
     {
@@ -73,7 +73,7 @@
       "type": "step",
       "phase": "end",
       "node": "refine_evidence",
-      "thought": "No evidence line contains a provable string-representation, constant-value, or predicate-operator mistake requiring correction from the supplied question or the available value anchors/sample values. The symbol name resolve_semantic_fks is explicitly supplied by the question, and no anchor shows a different stored representation for the named table/column.",
+      "thought": "No certain repair applies. The evidence supplies column mappings and descriptions but no value anchor or sample value proving any different stored representation for `resolve_semantic_fks`. The quoted column references and exact case-sensitive wording do not require an operator or constant change.",
       "label": "Refining evidence"
     },
     {
@@ -87,7 +87,7 @@
       "type": "step",
       "phase": "end",
       "node": "construct_sql_from_candidates",
-      "thought": "The request is a definition lookup for a single named symbol, so I start from the symbols table which holds symbol_id, file_id, line_start, line_end and summary (the docstring first paragraph). I filter on the bare symbol name using an exact, case-sensitive equality ('resolve_semantic_fks') because the question gives the exact identifier and the schema stores the bare name in the name column; the qualified name is not used for the filter because the question supplies no enclosing scope, and no join is needed since all requested columns live in the symbols table. I return every matching row rather than LIMIT 1 because the same name can be defined in multiple files and the question asks where it is defined without asserting uniqueness; ties are broken deterministically by ordering on file path then start line. No NULL filtering is added: summary is non-nullable and empty strings already represent absent docstrings, and the question does not require a docstring to exist. The evidence rules on distinct identities and test-file classification do not change this single-table projection, and no percentage calculation is involved.",
+      "thought": "The question is a direct symbol-definition lookup, so I query only the symbols table. I match the bare symbol name exactly and case-sensitively to 'resolve_semantic_fks' rather than qualname, because name captures both standalone functions and methods regardless of any enclosing class. I do not restrict kind, because the question does not explicitly limit to functions versus methods, and a class with that name would also be a valid definition. I do not add DISTINCT: each row is already a distinct symbol identity via symbol_id. I do not add LIMIT: the question asks where it is defined and may have multiple definitions. I return summary as stored, including an empty string when no docstring exists, because the question asks what the docstring says and the schema explicitly defines empty as absent documentation. No joins, test-file classification, or call-graph tables are needed.",
       "label": "Constructing SQL"
     },
     {
@@ -101,13 +101,60 @@
       "type": "step",
       "phase": "end",
       "node": "validate_sql_query",
-      "thought": "The query answers the question directly from the `symbols` table, which is the semantic hint's starting table and contains every requested field (`symbol_id`, `file_id`, `line_start`, `line_end`, `summary`). Filtering on `symbols.name = 'resolve_semantic_fks'` correctly targets the bare symbol name (the question asks for the definition location and docstring of that single symbol), and `summary` is the documented docstring column per the catalog metadata. All requested output columns are returned with exactly the specified aliases (the underlying column names), no display names are substituted, and the repository-relative `file_id` is returned unchanged. No joins are required, so none of the authoritative join paths are violated (adding a gratuitous join to `files` would not be necessary). No aggregations are used, so there is no aggregation error; aggregations are not needed since the user wants the distinct symbol definition(s), not occurrence counts. Nothing in the authoritative evidence mandates a different column, filter, or formula for this definition-lookup question.",
+      "thought": "The SQL directly queries auto_ontology_code.code.symbols, which is sufficient for this question. Filtering by symbols.name = 'resolve_semantic_fks' correctly locates the definition(s), and selecting symbol_id, file_id, line_start, line_end, and summary returns exactly the requested fields. No joins or aggregations are required, and no critical evidence-defined mapping, filter, or formula is violated. Raw file_id and symbol_id are selected without display-name substitution, preserving case-sensitive repository-relative paths and IDs.",
       "label": "Validating SQL and intent"
     },
     {
       "type": "sql",
       "node": "validate_sql_query",
-      "sql": "SELECT symbol_id, file_id, line_start, line_end, summary FROM auto_ontology_code.code.symbols WHERE name = 'resolve_semantic_fks' ORDER BY file_id, line_start"
+      "sql": "SELECT symbol_id, file_id, line_start, line_end, summary FROM symbols WHERE name = 'resolve_semantic_fks' ORDER BY file_id, line_start;"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "execute_sql_query",
+      "thought": null,
+      "label": "Executing SQL"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "execute_sql_query",
+      "thought": "Query failed, rewriting it: Catalog Error: Table with name symbols does not exist! Did you mean \"code.symbols\"? LINE 1: ... symbol_id, file_id, line_start, line_end, summary FROM symbols WHERE name = 'resolve_semantic_fks' ORDER BY file_id... ^",
+      "label": "Executing SQL"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "reconstruct_sql",
+      "thought": null,
+      "label": "Reconstructing SQL"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "reconstruct_sql",
+      "thought": "The question is a direct symbol-definition lookup, so I query only the symbols table, now referenced with its full qualified name (code.symbols) because the unqualified name is not resolvable in this catalog. I match the bare symbol name exactly and case-sensitively to 'resolve_semantic_fks' rather than qualname, because name captures both standalone functions and methods regardless of any enclosing class. I do not restrict kind, since the question does not limit to functions versus methods and a class of that name would also be a valid definition. I do not add DISTINCT: each row is already a distinct symbol identity via symbol_id, and repeated definition sites legitimately produce separate symbol IDs. I do not add LIMIT, because the question asks where it is defined and there may be multiple definitions. I return summary as stored, including an empty string when no docstring exists, because the schema defines empty as absent documentation and the user asked what the docstring says. No joins, test-file classification, or call-graph tables are needed, since all requested columns live in symbols. Ordering by file path then start line gives a stable, readable ordering without changing the row set.",
+      "label": "Reconstructing SQL"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "validate_sql_query",
+      "thought": null,
+      "label": "Validating SQL and intent"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "validate_sql_query",
+      "thought": "The query is a simple, correct lookup on code.symbols filtered by name = 'resolve_semantic_fks', returning exactly the five requested columns with their exact source column names as aliases (symbol_id, file_id, line_start, line_end, summary). No joins are required or used, so no join can be nonsensical; the only relevant verified path (symbols.file_id -> files.file_id) is not needed because files is not contributing to the answer. No aggregation is requested, so there is nothing to be wrong. All referenced columns exist in the catalog with the expected types (file_id, symbol_id VARCHAR; line_start, line_end INTEGER; summary VARCHAR). Filtering on symbols.name is the natural way to locate a definition, and returning all matching rows (rather than collapsing duplicates) correctly preserves distinct definition identities such as repeated qualified definitions annotated with @L<line>. An ORDER BY on file_id, line_start is a harmless presentation detail. The query avoids unnecessary test-file filtering and does not substitute display names, keeping the case-sensitive file_id and symbol_id verbatim. Nothing critical is wrong.",
+      "label": "Validating SQL and intent"
+    },
+    {
+      "type": "sql",
+      "node": "validate_sql_query",
+      "sql": "SELECT symbol_id, file_id, line_start, line_end, summary FROM code.symbols WHERE name = 'resolve_semantic_fks' ORDER BY file_id, line_start"
     },
     {
       "type": "step",
@@ -168,29 +215,29 @@
     {
       "type": "result",
       "answer": {
-        "response": "This looks up every definition of the symbol named resolve_semantic_fks in the static Python code map, returning its stable symbol identifier, the repository-relative file path, the first and last line of the definition, and the first paragraph of its docstring. It reads only the symbols table, filters on the exact bare symbol name, and orders the rows by file path and start line so any repeated definitions appear in a stable, readable order. No test-file filtering or caller/callee information is applied, since the question only asks where the definition lives and what its docstring says.",
-        "sql_code": "SELECT symbol_id, file_id, line_start, line_end, summary FROM auto_ontology_code.code.symbols WHERE name = 'resolve_semantic_fks' ORDER BY file_id, line_start",
+        "response": "This looks up every definition of the symbol named resolve_semantic_fks in the static Python code map. For each definition it returns the symbol identifier, the repository-relative file path, the first and last line of the definition, and the normalized first paragraph of its docstring (empty when there is no docstring). Results are ordered by file path and then by start line, and no test-file, caller/callee, or import filtering is applied.",
+        "sql_code": "SELECT symbol_id, file_id, line_start, line_end, summary FROM code.symbols WHERE name = 'resolve_semantic_fks' ORDER BY file_id, line_start",
         "sql_columns": [
-          "a51c4ed5-1fd8-44e3-9040-01672f76bf12",
-          "7c2be309-5df0-440b-b2e4-b77d63c69e2a",
-          "687d8e24-9b21-432a-9e7a-4bdba6c3b2d3",
-          "0678ddc2-e8e2-414c-925e-29955257f48c",
-          "f547ba73-6534-4785-93a8-21d2badef6b5",
-          "924fae74-d5eb-48d3-bcaf-96cb228b871a"
+          "bd18dae1-6be3-4462-957e-fc02490309d1",
+          "9231bfdb-79f3-41ff-911c-bda62b18af9f",
+          "9b40b3e4-b074-436b-a07a-11a473a4138a",
+          "f0e53eb4-04f7-42fe-8e9e-1827c19e6114",
+          "9391dda5-3e1e-484d-82ab-07974321eb75",
+          "d99fff58-3b44-481b-9fe1-9c9c938a89b8"
         ],
         "custom_analyses_used": [],
         "sql_response_from_db": [
           "[{\"symbol_id\":\"auto_ontology\\/semantic\\/semantic_fk.py::resolve_semantic_fks\",\"file_id\":\"auto_ontology\\/semantic\\/semantic_fk.py\",\"line_start\":91,\"line_end\":100,\"summary\":\"Create SEMANTIC_FK edges for all unlinked FK columns.\"}]"
         ],
-        "thoughts": "- Preparing candidates: The question centers on the symbol's docstring, which maps to code.symbols.summary (first paragraph of the docstring).\n- Preparing candidates: The requested columns are all available directly from auto_ontology_code.code.symbols, and the symbol is identified by name/qualname there. No other candidate table supplies required definition/docstring data or an implied filter condition.\n- Refining evidence: No evidence line contains a provable string-representation, constant-value, or predicate-operator mistake requiring correction from the supplied question or the available value anchors/sample values. The symbol name resolve_semantic_fks is explicitly supplied by the question, and no anchor shows a different stored representation for the named table/column.\n- Constructing SQL: The request is a definition lookup for a single named symbol, so I start from the symbols table which holds symbol_id, file_id, line_start, line_end and summary (the docstring first paragraph). I filter on the bare symbol name using an exact, case-sensitive equality ('resolve_semantic_fks') because the question gives the exact identifier and the schema stores the bare name in the name column; the qualified name is not used for the filter because the question supplies no enclosing scope, and no join is needed since all requested columns live in the symbols table. I return every matching row rather than LIMIT 1 because the same name can be defined in multiple files and the question asks where it is defined without asserting uniqueness; ties are broken deterministically by ordering on file path then start line. No NULL filtering is added: summary is non-nullable and empty strings already represent absent docstrings, and the question does not require a docstring to exist. The evidence rules on distinct identities and test-file classification do not change this single-table projection, and no percentage calculation is involved.\n- Validating SQL and intent: The query answers the question directly from the `symbols` table, which is the semantic hint's starting table and contains every requested field (`symbol_id`, `file_id`, `line_start`, `line_end`, `summary`). Filtering on `symbols.name = 'resolve_semantic_fks'` correctly targets the bare symbol name (the question asks for the definition location and docstring of that single symbol), and `summary` is the documented docstring column per the catalog metadata. All requested output columns are returned with exactly the specified aliases (the underlying column names), no display names are substituted, and the repository-relative `file_id` is returned unchanged. No joins are required, so none of the authoritative join paths are violated (adding a gratuitous join to `files` would not be necessary). No aggregations are used, so there is no aggregation error; aggregations are not needed since the user wants the distinct symbol definition(s), not occurrence counts. Nothing in the authoritative evidence mandates a different column, filter, or formula for this definition-lookup question."
+        "thoughts": "- Preparing candidates: The question asks what the symbol's docstring says, so the primary attribute is code.symbols.summary, which holds the normalized first paragraph of a symbol docstring.\n- Preparing candidates: The question is a symbol-definition/docstring lookup. `auto_ontology_code.code.symbols` alone provides the required output columns: `symbol_id`, `file_id`, `line_start`, `line_end`, and `summary`. The predicate for `resolve_semantic_fks` can be applied to `symbols.name`/`symbols.qualname`. No call-graph, import, test, heading, file-metadata, or filtered-symbol-view table is needed.\n- Refining evidence: Need final answer. Could use final. Ensure no extra. Grounded_question and grounded_evidence. Need decide if grounded_evidence is full evidence text with column list. I can final with JSON or labels. The user wants complete grounded_question and grounded_evidence. Use final answer with two labeled fields. Keep evidence unchanged. Use grounded_question with replacements as discussed. Need ensure exact quoted refs. Use quotes as in prompt. No code block maybe. Provide concise.\n- Refining evidence: No certain repair applies. The evidence supplies column mappings and descriptions but no value anchor or sample value proving any different stored representation for `resolve_semantic_fks`. The quoted column references and exact case-sensitive wording do not require an operator or constant change.\n- Constructing SQL: The question is a direct symbol-definition lookup, so I query only the symbols table. I match the bare symbol name exactly and case-sensitively to 'resolve_semantic_fks' rather than qualname, because name captures both standalone functions and methods regardless of any enclosing class. I do not restrict kind, because the question does not explicitly limit to functions versus methods, and a class with that name would also be a valid definition. I do not add DISTINCT: each row is already a distinct symbol identity via symbol_id. I do not add LIMIT: the question asks where it is defined and may have multiple definitions. I return summary as stored, including an empty string when no docstring exists, because the question asks what the docstring says and the schema explicitly defines empty as absent documentation. No joins, test-file classification, or call-graph tables are needed.\n- Validating SQL and intent: The SQL directly queries auto_ontology_code.code.symbols, which is sufficient for this question. Filtering by symbols.name = 'resolve_semantic_fks' correctly locates the definition(s), and selecting symbol_id, file_id, line_start, line_end, and summary returns exactly the requested fields. No joins or aggregations are required, and no critical evidence-defined mapping, filter, or formula is violated. Raw file_id and symbol_id are selected without display-name substitution, preserving case-sensitive repository-relative paths and IDs.\n- Executing SQL: Query failed, rewriting it: Catalog Error: Table with name symbols does not exist! Did you mean \"code.symbols\"? LINE 1: ... symbol_id, file_id, line_start, line_end, summary FROM symbols WHERE name = 'resolve_semantic_fks' ORDER BY file_id... ^\n- Reconstructing SQL: The query failed only because it referenced `symbols` without the required schema qualifier. The error message indicates the correct table is `code.symbols`. The requested columns (`symbol_id`, `file_id`, `line_start`, `line_end`, `summary`) and filter on `name = 'resolve_semantic_fks'` can be answered using the same underlying symbols table. Rewrite the FROM clause as `FROM code.symbols` (and similarly qualify columns if needed).\n- Reconstructing SQL: The question is a direct symbol-definition lookup, so I query only the symbols table, now referenced with its full qualified name (code.symbols) because the unqualified name is not resolvable in this catalog. I match the bare symbol name exactly and case-sensitively to 'resolve_semantic_fks' rather than qualname, because name captures both standalone functions and methods regardless of any enclosing class. I do not restrict kind, since the question does not limit to functions versus methods and a class of that name would also be a valid definition. I do not add DISTINCT: each row is already a distinct symbol identity via symbol_id, and repeated definition sites legitimately produce separate symbol IDs. I do not add LIMIT, because the question asks where it is defined and there may be multiple definitions. I return summary as stored, including an empty string when no docstring exists, because the schema defines empty as absent documentation and the user asked what the docstring says. No joins, test-file classification, or call-graph tables are needed, since all requested columns live in symbols. Ordering by file path then start line gives a stable, readable ordering without changing the row set.\n- Validating SQL and intent: The query is a simple, correct lookup on code.symbols filtered by name = 'resolve_semantic_fks', returning exactly the five requested columns with their exact source column names as aliases (symbol_id, file_id, line_start, line_end, summary). No joins are required or used, so no join can be nonsensical; the only relevant verified path (symbols.file_id -> files.file_id) is not needed because files is not contributing to the answer. No aggregation is requested, so there is nothing to be wrong. All referenced columns exist in the catalog with the expected types (file_id, symbol_id VARCHAR; line_start, line_end INTEGER; summary VARCHAR). Filtering on symbols.name is the natural way to locate a definition, and returning all matching rows (rather than collapsing duplicates) correctly preserves distinct definition identities such as repeated qualified definitions annotated with @L<line>. An ORDER BY on file_id, line_start is a harmless presentation detail. The query avoids unnecessary test-file filtering and does not substitute display names, keeping the case-sensitive file_id and symbol_id verbatim. Nothing critical is wrong."
       }
     }
   ],
   "question_id": 4,
   "gold_sql": "SELECT symbol_id, file_id, line_start, line_end, summary\nFROM code.symbols\nWHERE name = 'resolve_semantic_fks'\nORDER BY symbol_id;",
   "gold_row_count": 1,
-  "agent_sql": "SELECT symbol_id, file_id, line_start, line_end, summary FROM auto_ontology_code.code.symbols WHERE name = 'resolve_semantic_fks' ORDER BY file_id, line_start",
-  "agent_answer": "This looks up every definition of the symbol named resolve_semantic_fks in the static Python code map, returning its stable symbol identifier, the repository-relative file path, the first and last line of the definition, and the first paragraph of its docstring. It reads only the symbols table, filters on the exact bare symbol name, and orders the rows by file path and start line so any repeated definitions appear in a stable, readable order. No test-file filtering or caller/callee information is applied, since the question only asks where the definition lives and what its docstring says.",
+  "agent_sql": "SELECT symbol_id, file_id, line_start, line_end, summary FROM code.symbols WHERE name = 'resolve_semantic_fks' ORDER BY file_id, line_start",
+  "agent_answer": "This looks up every definition of the symbol named resolve_semantic_fks in the static Python code map. For each definition it returns the symbol identifier, the repository-relative file path, the first and last line of the definition, and the normalized first paragraph of its docstring (empty when there is no docstring). Results are ordered by file path and then by start line, and no test-file, caller/callee, or import filtering is applied.",
   "agent_row_count": 1,
   "correct_rows": true,
   "error": null

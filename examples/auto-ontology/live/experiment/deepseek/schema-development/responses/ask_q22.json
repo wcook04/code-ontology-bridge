@@ -1,0 +1,43 @@
+{
+  "question_id": 22,
+  "status": 200,
+  "error": null,
+  "elapsed_s": 12.0,
+  "attempts": [
+    {
+      "sql": "SELECT s.symbol_id AS symbol_id, CAST(COUNT(DISTINCT sub.symbol_id) AS INTEGER) AS subclasses FROM code.symbols s JOIN code.files f ON f.file_id = s.file_id JOIN code.class_bases cb ON cb.base_symbol_id = s.symbol_id JOIN code.symbols sub ON sub.symbol_id = cb.class_symbol_id AND sub.kind = 'class' JOIN code.files sf ON sf.file_id = sub.file_id WHERE s.kind = 'class' AND s.is_public AND f.file_id LIKE 'auto_ontology/connectors/%' AND sf.is_test = false AND sub.symbol_id <> s.symbol_id AND NOT EXISTS (SELECT 1 FROM code.calls c WHERE c.callee_symbol_id = s.symbol_id AND c.resolution = 'resolved' AND c.call_kind = 'call') GROUP BY s.symbol_id HAVING COUNT(DISTINCT sub.symbol_id) > 0 ORDER BY s.symbol_id",
+      "error": null
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 723,
+    "completion_tokens": 3705,
+    "total_tokens": 4428,
+    "cost": 0.002586285,
+    "is_byok": 0
+  },
+  "request": {
+    "question": "Which public classes in auto_ontology/connectors are used only as base classes: subclassed by other non-test classes but never constructed by a resolved call? Give the number of non-test subclasses of each.\n\nHint: code.class_bases records the base classes named in each class statement; base_symbol_id is the internal class a base resolves to. Calling a class name creates an instance.\n\nRequested output columns: symbol_id (string), subclasses (integer).",
+    "arm": "schema",
+    "model": "deepseek/deepseek-v4.1-flash-1017"
+  },
+  "events": [
+    {
+      "type": "result",
+      "answer": {
+        "response": "The query finds public class symbols in files under auto_ontology/connectors, treats them as base classes via class_bases, and counts distinct non-test subclass classes. It excludes any base class that is the callee of a resolved call, which represents construction, and keeps only classes with at least one non-test subclass. The path filter assumes repository-relative file_id values beginning with auto_ontology/connectors/.",
+        "sql_code": "SELECT s.symbol_id AS symbol_id, CAST(COUNT(DISTINCT sub.symbol_id) AS INTEGER) AS subclasses FROM code.symbols s JOIN code.files f ON f.file_id = s.file_id JOIN code.class_bases cb ON cb.base_symbol_id = s.symbol_id JOIN code.symbols sub ON sub.symbol_id = cb.class_symbol_id AND sub.kind = 'class' JOIN code.files sf ON sf.file_id = sub.file_id WHERE s.kind = 'class' AND s.is_public AND f.file_id LIKE 'auto_ontology/connectors/%' AND sf.is_test = false AND sub.symbol_id <> s.symbol_id AND NOT EXISTS (SELECT 1 FROM code.calls c WHERE c.callee_symbol_id = s.symbol_id AND c.resolution = 'resolved' AND c.call_kind = 'call') GROUP BY s.symbol_id HAVING COUNT(DISTINCT sub.symbol_id) > 0 ORDER BY s.symbol_id",
+        "sql_response_from_db": [
+          {
+            "symbol_id": "auto_ontology/connectors/base.py::SQLDatabase",
+            "subclasses": 10
+          },
+          {
+            "symbol_id": "auto_ontology/connectors/base.py::StatementTimeout",
+            "subclasses": 1
+          }
+        ]
+      }
+    }
+  ]
+}

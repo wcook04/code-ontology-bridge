@@ -32,7 +32,7 @@ uv run python tools/check_repository.py
 
 The tests cover extraction, exports and governance. Some load classes or schemas from the pinned NVIDIA checkout; others need the generated DuckDB file, PostgreSQL support or an older DuckDB runtime. Inspect the skipped-test report rather than treating a green result as proof that every integration ran. No API credentials are needed for these tests.
 
-To check only the local user journey, use the [README example](../README.md#try-it-locally). It needs no NVIDIA checkout.
+To check only the local user journey, use the [README example](../README.md#build-the-exports-locally). It needs no NVIDIA checkout.
 
 ## Run a fresh 22-question evaluation
 
@@ -83,3 +83,19 @@ The closeout checks on 4 November 2026 passed:
 - Visual inspection of all three PDF pages and the published GitHub README at desktop and phone widths.
 
 [Hosted CI passed for the closeout commit](https://github.com/wcook04/code-ontology-bridge/actions/runs/41825926632). It runs the default suite, staged layout check and package build; optional integration coverage is supplied by the local run above. The clone commands use the default `main` branch.
+
+### Illustrated paper revision
+
+The subsequent paper/README revision passed **82 tests** with the same pinned upstream checkout available, plus the working-tree and staged layout/link checks. The local extraction and both export commands in the README were exercised again. The paper builder embeds four shared figures in a six-page PDF and uses public `main` links instead of the deleted development branch. Every PDF page was visually inspected, including the corrected caller/callee arrowheads. These editorial checks do not add model runs or change the retained evaluation score.
+
+### Website backend and review corrections
+
+The inspection-backend revision passed **86 local tests**, including 18 backend
+cases; **14 optional upstream tests were skipped** because this invocation did
+not supply `AUTO_ONTOLOGY_CLONE`. The saved NVIDIA CSVs and all 22 answers were
+loaded by the backend tests, including exact Q11 caller/depth agreement and
+separate Q14 prose review. A fresh wheel environment exercised extraction,
+bundle generation and a WSGI request outside the source checkout. Source and
+wheel builds, the repository layout/link check and all six rendered PDF pages
+were checked. These checks do not rerun the model experiment or validate the
+patch against newer upstream revisions.

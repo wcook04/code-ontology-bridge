@@ -1,0 +1,47 @@
+{
+  "question_id": 116,
+  "status": 200,
+  "error": null,
+  "elapsed_s": 9.6,
+  "attempts": [
+    {
+      "sql": "SELECT DISTINCT c.caller_symbol_id AS caller_symbol_id, c.callee_symbol_id AS callee_symbol_id FROM code.calls c JOIN code.symbols s ON s.symbol_id = c.callee_symbol_id JOIN code.files f ON f.file_id = s.file_id WHERE c.call_kind = 'callback' AND s.kind IN ('function','method') AND (f.file_id LIKE 'auto_ontology/semantic/%' OR f.package = 'auto_ontology.semantic' OR f.module LIKE 'auto_ontology.semantic.%')",
+      "error": null
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 683,
+    "completion_tokens": 2686,
+    "total_tokens": 3369,
+    "cost": 0.001905945,
+    "is_byok": 0
+  },
+  "request": {
+    "question": "Which functions or methods are passed by reference (as callbacks) to another call, and which caller passes them? Only count callees defined under auto_ontology/semantic.\n\nRequested output columns: caller_symbol_id (string), callee_symbol_id (string).",
+    "arm": "schema",
+    "model": "deepseek/deepseek-v4.1-flash-1017"
+  },
+  "events": [
+    {
+      "type": "result",
+      "answer": {
+        "response": "The query finds callback-reference call edges in code.calls, joins each callee to its defining symbol and file, and restricts to callees whose file is under auto_ontology/semantic. It returns distinct caller and callee symbol IDs, so repeated callback occurrences do not duplicate the same caller-callee pair.",
+        "sql_code": "SELECT DISTINCT c.caller_symbol_id AS caller_symbol_id, c.callee_symbol_id AS callee_symbol_id FROM code.calls c JOIN code.symbols s ON s.symbol_id = c.callee_symbol_id JOIN code.files f ON f.file_id = s.file_id WHERE c.call_kind = 'callback' AND s.kind IN ('function','method') AND (f.file_id LIKE 'auto_ontology/semantic/%' OR f.package = 'auto_ontology.semantic' OR f.module LIKE 'auto_ontology.semantic.%')",
+        "sql_response_from_db": [
+          {
+            "caller_symbol_id": "auto_ontology/semantic/semantic_fk.py::_match_hit_by_sample_values",
+            "callee_symbol_id": "auto_ontology/semantic/semantic_fk.py::_hit_score"
+          },
+          {
+            "caller_symbol_id": "auto_ontology/ingestion_service/semantic_scheduler.py::SemanticScheduler._run_once",
+            "callee_symbol_id": "auto_ontology/semantic/compile.py::run_semantic_compilation"
+          },
+          {
+            "caller_symbol_id": "auto_ontology/semantic/deterministic.py::_generate_column_descriptions",
+            "callee_symbol_id": "auto_ontology/semantic/deterministic.py::_describe_column_batch"
+          }
+        ]
+      }
+    }
+  ]
+}

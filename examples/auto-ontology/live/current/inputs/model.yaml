@@ -12,11 +12,12 @@
 #   - Functions passed by reference are recorded as call_kind callback (low confidence) only when a plain dotted name appears directly as a positional or keyword argument of a call inside a function and resolves, by the same rules, to an internal function or method: asyncio.to_thread(f, x), loop.run_in_executor(None, f), executor.submit(f), Thread(target=f), functools.partial(f), Depends(f). References held in lists, dicts, assignments, return values or decorators without a call are not recorded, a name the enclosing function binds locally is skipped, properties passed as values are skipped, arguments of inspect.* and of builtins that only examine a value (getattr, isinstance, print, repr and the like) are skipped, and every other receiving call is assumed, not proven, to invoke the reference.
 #   - Builtin classification does not see local variables or parameters that shadow a builtin name.
 #   - Inherited methods resolve only when the base class is statically resolvable to a definition in the repository; such calls are marked low confidence.
-#   - Local variables that shadow a module-level name are not tracked, so a shadowed call may resolve to the module-level definition.
-#   - Nested functions and classes defined inside a function are not symbols; their calls are attributed to the enclosing symbol.
+#   - Imports inside a function bind only there. Other local variables that shadow a module-level name are not tracked, so such a call may resolve to the module-level definition.
+#   - Nested functions and classes are not symbols. A nested function's calls count for the enclosing symbol only when it calls that function or passes it on by name.
 #   - Test links are static: a test that exercises a file without importing it, and without a matching file name, is not linked.
 #   - Descriptions and summaries are verbatim docstring text; no description is generated or inferred.
 #   - Calls at module level, outside any function or class, are not recorded (1046 in this snapshot).
+#   - Calls in nested functions the enclosing function never runs (registered handlers, returned closures) are not recorded (229 in this snapshot).
 #   - 3 module names are shared by several files (e.g. top-level test modules); imports of those names are not resolved.
 # Certified flags are not part of this document; they are set by PATCH from certification events.
 
@@ -224,7 +225,7 @@ data_layer:
         columns:
         - id: cob:auto_ontology_code:column:code.symbols.symbol_id
           name: symbol_id
-          description: 'Stable id: file path, ''::'', qualified name.'
+          description: 'ID: file path, ''::'', qualified name; repeated qualified definitions append @L<definition-line>.'
           type: VARCHAR
           sample_values: []
           is_nullable: false
@@ -476,7 +477,8 @@ data_layer:
           is_unique: false
       - id: cob:auto_ontology_code:table:code.test_links
         name: test_links
-        description: Static links from test files to the source files they exercise.
+        description: Static associations between a test file and a source file, inferred because the test
+          imports the file or its name matches. They are not measured test execution or coverage.
         pk:
         - cob:auto_ontology_code:column:code.test_links.test_file_id
         - cob:auto_ontology_code:column:code.test_links.target_file_id
@@ -516,7 +518,7 @@ data_layer:
         columns:
         - id: cob:auto_ontology_code:column:code.inbound_call_counts.symbol_id
           name: symbol_id
-          description: 'Stable id: file path, ''::'', qualified name.'
+          description: 'ID: file path, ''::'', qualified name; repeated qualified definitions append @L<definition-line>.'
           type: VARCHAR
           sample_values: []
           is_nullable: true
@@ -580,13 +582,14 @@ data_layer:
           is_unique: false
       - id: cob:auto_ontology_code:table:code.untested_public_symbols
         name: untested_public_symbols
-        description: Public symbols in non-test files whose file no test file links to.
+        description: Public symbols in non-test files whose file has no recorded test association (no
+          test imports it or matches its name). This does not show that the symbol is never tested.
         pk: []
         type: VIEW
         columns:
         - id: cob:auto_ontology_code:column:code.untested_public_symbols.symbol_id
           name: symbol_id
-          description: 'Stable id: file path, ''::'', qualified name.'
+          description: 'ID: file path, ''::'', qualified name; repeated qualified definitions append @L<definition-line>.'
           type: VARCHAR
           sample_values: []
           is_nullable: true
@@ -760,7 +763,7 @@ semantic_layer:
     columns_attributes:
     - id: cob:auto_ontology_code:attribute:code.symbols.symbol_id
       name: symbol id
-      description: 'Stable id: file path, ''::'', qualified name.'
+      description: 'ID: file path, ''::'', qualified name; repeated qualified definitions append @L<definition-line>.'
       column_id: cob:auto_ontology_code:column:code.symbols.symbol_id
     - id: cob:auto_ontology_code:attribute:code.symbols.name
       name: name
@@ -875,7 +878,8 @@ semantic_layer:
       column_id: cob:auto_ontology_code:column:code.imports.is_internal
   - id: cob:auto_ontology_code:term:test_links
     name: Test link
-    description: Static links from test files to the source files they exercise.
+    description: Static associations between a test file and a source file, inferred because the test
+      imports the file or its name matches. They are not measured test execution or coverage.
     represents:
     - cob:auto_ontology_code:table:code.test_links
     columns_attributes:

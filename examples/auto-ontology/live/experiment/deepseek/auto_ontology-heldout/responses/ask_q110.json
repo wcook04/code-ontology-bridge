@@ -1,0 +1,240 @@
+{
+  "request": {
+    "question": "Which classes inherit directly from SQLDatabase?\n\nRequested output columns: class_symbol_id (string).\nReturn every requested field using exactly its specified column alias. Preserve complete case-sensitive repository-relative paths and symbol IDs; do not substitute display names. Include all requested counts and provenance fields. Explain the query result in ordinary prose; do not emit placeholder text. These questions concern a static map of open-source Python code. Describe what the query computes and the assumptions it makes; the returned rows are reported separately. Questions asking which files, modules or symbols mean distinct identities, not one repeated row per matching import or call occurrence; preserve occurrence counts only when requested. Caller/callee graph questions include methods as well as standalone functions unless a symbol kind is explicitly restricted. Use files.is_test for test-file classification; test_links describe associations, not the complete set of test files. Use DOUBLE or DECIMAL, rather than single-precision REAL, for percentage calculations.",
+    "calculation_only": true
+  },
+  "status": 200,
+  "elapsed_s": 118.4,
+  "events": [
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "question_intent",
+      "thought": null,
+      "label": "Classifying the question"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "question_intent",
+      "thought": null,
+      "label": "Classifying the question"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "question_extraction",
+      "thought": null,
+      "label": "Understanding the question"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "question_extraction",
+      "thought": null,
+      "label": "Understanding the question"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "retrieve_candidates",
+      "thought": null,
+      "label": "Retrieving candidates"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "retrieve_candidates",
+      "thought": null,
+      "label": "Retrieving candidates"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "prepare_candidates",
+      "thought": null,
+      "label": "Preparing candidates"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "prepare_candidates",
+      "thought": "Keep class_bases because it directly contains class_symbol_id and the inheritance edge to SQLDatabase. Keep symbols because the base may need to be resolved by symbol name/kind (e.g., base_symbol_id = symbols.symbol_id) rather than relying only on base_name text.",
+      "label": "Preparing candidates"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "refine_evidence",
+      "thought": null,
+      "label": "Refining evidence"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "refine_evidence",
+      "thought": "No repair is warranted: the evidence description for `code.class_bases.base_name` explicitly gives `SQLDatabase` as an example stored representation, so the quoted string value and predicate operator are already valid.",
+      "label": "Refining evidence"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "construct_sql_from_candidates",
+      "thought": null,
+      "label": "Constructing SQL"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "construct_sql_from_candidates",
+      "thought": "Direct inheritance is recorded as one row per base in the class_bases table, so I filter those rows to the exact base expression 'SQLDatabase' requested by the normalized question. The query returns class_symbol_id rather than base_name, and uses DISTINCT because the question asks for the distinct class identities, not one row per matching occurrence. I do not exclude test files because the question does not request a test-file filter, and I do not resolve qualified expressions such as base.SQLDatabase because the specified filter is the exact base_name value 'SQLDatabase'.",
+      "label": "Constructing SQL"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "validate_sql_query",
+      "thought": null,
+      "label": "Validating SQL and intent"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "validate_sql_query",
+      "thought": "The query selects distinct class_symbol_id values from class_bases where base_name = 'SQLDatabase', which directly answers the requested question. It follows the authoritative evidence by using code.class_bases.base_name and code.class_bases.class_symbol_id exactly. No joins are required, and using DISTINCT is appropriate because the question asks for distinct classes/symbol identities rather than occurrence counts. There are no clearly wrong aggregations or evidence violations.",
+      "label": "Validating SQL and intent"
+    },
+    {
+      "type": "sql",
+      "node": "validate_sql_query",
+      "sql": "SELECT DISTINCT cb.class_symbol_id AS class_symbol_id FROM class_bases AS cb WHERE cb.base_name = 'SQLDatabase' ORDER BY cb.class_symbol_id;"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "execute_sql_query",
+      "thought": null,
+      "label": "Executing SQL"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "execute_sql_query",
+      "thought": "Query failed, rewriting it: Catalog Error: Table with name class_bases does not exist! Did you mean \"code.class_bases\"? LINE 1: SELECT DISTINCT cb.class_symbol_id AS class_symbol_id FROM class_bases AS cb WHERE cb.base_name = 'SQLDatabase' ORDER... ^",
+      "label": "Executing SQL"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "reconstruct_sql",
+      "thought": null,
+      "label": "Reconstructing SQL"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "reconstruct_sql",
+      "thought": "The prior query's only problem was the unqualified table reference: the catalog requires the schema-qualified name, so the table is referenced as `code.class_bases`. The still-valid assumptions are restated: direct inheritance is recorded as one row per base expression in the class bases table; the question asks for distinct class identities, so `DISTINCT` is applied to `class_symbol_id` rather than returning one row per matching occurrence; the filter is the exact base expression `SQLDatabase` per the normalized request, so qualified expressions such as `base.SQLDatabase` are not included; no test-file exclusion is applied because the question does not request one and the `files.is_test` classification is only used when a test filter is asked for; NULL handling is irrelevant here because `base_name` and `class_symbol_id` are non-nullable, and no aggregation or division is involved. Ordering by the projected column gives deterministic output without changing the returned row set.",
+      "label": "Reconstructing SQL"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "validate_sql_query",
+      "thought": null,
+      "label": "Validating SQL and intent"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "validate_sql_query",
+      "thought": "The query directly answers the question using the authoritative semantic hint: it filters `code.class_bases.base_name = 'SQLDatabase'` and returns `class_symbol_id` with the exact requested alias. No joins are required to answer the question, so the absence of joins is not a problem. `DISTINCT` is appropriate because the question asks for distinct class identities rather than repeated inheritance occurrences. There are no aggregations or percentage calculations involved, and the SQL follows the stated evidence and normalized retrieval question.",
+      "label": "Validating SQL and intent"
+    },
+    {
+      "type": "sql",
+      "node": "validate_sql_query",
+      "sql": "SELECT DISTINCT cb.class_symbol_id AS class_symbol_id FROM code.class_bases AS cb WHERE cb.base_name = 'SQLDatabase' ORDER BY cb.class_symbol_id;"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "execute_sql_query",
+      "thought": null,
+      "label": "Executing SQL"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "execute_sql_query",
+      "thought": null,
+      "label": "Executing SQL"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "check_empty_like_result",
+      "thought": null,
+      "label": "Checking results"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "check_empty_like_result",
+      "thought": null,
+      "label": "Checking results"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "check_value_repair",
+      "thought": null,
+      "label": "Checking values"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "check_value_repair",
+      "thought": null,
+      "label": "Checking values"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "format_and_respond",
+      "thought": null,
+      "label": "Formatting response"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "format_and_respond",
+      "thought": null,
+      "label": "Formatting response"
+    },
+    {
+      "type": "result",
+      "answer": {
+        "response": "The query returns the distinct class symbol identifiers of classes whose class statement lists `SQLDatabase` as a direct base expression. It reads the class bases table, filters rows whose base name is exactly `SQLDatabase`, and projects the owning class's symbol id. Assumptions: each row in the class bases table represents one base expression for one class, so a class appears once per direct base; `DISTINCT` collapses any duplicate class entries to distinct class identities as requested. The filter is on the exact base expression `SQLDatabase` (not qualified forms like `base.SQLDatabase`), because the requested base name filter is exact. No test-file filter is applied because the question does not ask for one, and no occurrence counts are requested. Results are ordered by class symbol id for deterministic presentation.",
+        "sql_code": "SELECT DISTINCT cb.class_symbol_id AS class_symbol_id FROM code.class_bases AS cb WHERE cb.base_name = 'SQLDatabase' ORDER BY cb.class_symbol_id;",
+        "sql_columns": [
+          "93ab2b4f-0b0d-4186-8f21-0937d75737b8",
+          "93b0ce52-dcee-4a83-b686-603cda819bee"
+        ],
+        "custom_analyses_used": [],
+        "sql_response_from_db": [
+          "[{\"class_symbol_id\":\"auto_ontology\\/connectors\\/clickhouse.py::ClickHouseDatabase\"},{\"class_symbol_id\":\"auto_ontology\\/connectors\\/databricks.py::DatabricksDatabase\"},{\"class_symbol_id\":\"auto_ontology\\/connectors\\/duckdb.py::DuckDBDatabase\"},{\"class_symbol_id\":\"auto_ontology\\/connectors\\/heavydb.py::HeavyDBDatabase\"},{\"class_symbol_id\":\"auto_ontology\\/connectors\\/kyuubi.py::KyuubiDatabase\"},{\"class_symbol_id\":\"auto_ontology\\/connectors\\/mysql.py::MySQLDatabase\"},{\"class_symbol_id\":\"auto_ontology\\/connectors\\/postgres.py::PostgresDatabase\"},{\"class_symbol_id\":\"auto_ontology\\/connectors\\/snowflake.py::SnowflakeDatabase\"},{\"class_symbol_id\":\"auto_ontology\\/connectors\\/sqlite.py::SQLiteDatabase\"},{\"class_symbol_id\":\"auto_ontology\\/connectors\\/tests\\/test_base.py::_Fake\"},{\"class_symbol_id\":\"auto_ontology\\/connectors\\/trino.py::TrinoDatabase\"}]"
+        ],
+        "thoughts": "- Preparing candidates: The question filters classes by their base being SQLDatabase, so the primary column is the base name expression used to identify inheritance from SQLDatabase.\n- Preparing candidates: Keep class_bases because it directly contains class_symbol_id and the inheritance edge to SQLDatabase. Keep symbols because the base may need to be resolved by symbol name/kind (e.g., base_symbol_id = symbols.symbol_id) rather than relying only on base_name text.\n- Refining evidence: Ground the question's SQLDatabase base filter to the documented base_name column with equality on 'SQLDatabase', and ground the requested class_symbol_id to its exact physical reference. In the evidence, replace the explicit files.is_test field reference with the exact dialect-quoted column; leave non-column/table wording and all other text unchanged.\n- Refining evidence: No repair is warranted: the evidence description for `code.class_bases.base_name` explicitly gives `SQLDatabase` as an example stored representation, so the quoted string value and predicate operator are already valid.\n- Constructing SQL: Direct inheritance is recorded as one row per base in the class_bases table, so I filter those rows to the exact base expression 'SQLDatabase' requested by the normalized question. The query returns class_symbol_id rather than base_name, and uses DISTINCT because the question asks for the distinct class identities, not one row per matching occurrence. I do not exclude test files because the question does not request a test-file filter, and I do not resolve qualified expressions such as base.SQLDatabase because the specified filter is the exact base_name value 'SQLDatabase'.\n- Validating SQL and intent: The query selects distinct class_symbol_id values from class_bases where base_name = 'SQLDatabase', which directly answers the requested question. It follows the authoritative evidence by using code.class_bases.base_name and code.class_bases.class_symbol_id exactly. No joins are required, and using DISTINCT is appropriate because the question asks for distinct classes/symbol identities rather than occurrence counts. There are no clearly wrong aggregations or evidence violations.\n- Executing SQL: Query failed, rewriting it: Catalog Error: Table with name class_bases does not exist! Did you mean \"code.class_bases\"? LINE 1: SELECT DISTINCT cb.class_symbol_id AS class_symbol_id FROM class_bases AS cb WHERE cb.base_name = 'SQLDatabase' ORDER... ^\n- Reconstructing SQL: The query is semantically correct — class_bases holds class_symbol_id and base_name, exactly what the question needs. The failure is purely a name-resolution issue: the table lives in the `code` schema and must be referenced as `code.class_bases` (similarly `code.symbols`, etc.). No new tables or columns are required; qualifying the table name (and keeping the DISTINCT/ORDER BY on class_symbol_id) will fix it.\n- Reconstructing SQL: The prior query's only problem was the unqualified table reference: the catalog requires the schema-qualified name, so the table is referenced as `code.class_bases`. The still-valid assumptions are restated: direct inheritance is recorded as one row per base expression in the class bases table; the question asks for distinct class identities, so `DISTINCT` is applied to `class_symbol_id` rather than returning one row per matching occurrence; the filter is the exact base expression `SQLDatabase` per the normalized request, so qualified expressions such as `base.SQLDatabase` are not included; no test-file exclusion is applied because the question does not request one and the `files.is_test` classification is only used when a test filter is asked for; NULL handling is irrelevant here because `base_name` and `class_symbol_id` are non-nullable, and no aggregation or division is involved. Ordering by the projected column gives deterministic output without changing the returned row set.\n- Validating SQL and intent: The query directly answers the question using the authoritative semantic hint: it filters `code.class_bases.base_name = 'SQLDatabase'` and returns `class_symbol_id` with the exact requested alias. No joins are required to answer the question, so the absence of joins is not a problem. `DISTINCT` is appropriate because the question asks for distinct class identities rather than repeated inheritance occurrences. There are no aggregations or percentage calculations involved, and the SQL follows the stated evidence and normalized retrieval question."
+      }
+    }
+  ],
+  "question_id": 110,
+  "gold_sql": "SELECT cb.class_symbol_id\nFROM code.class_bases cb\nJOIN code.symbols b ON b.symbol_id = cb.base_symbol_id\nWHERE b.name = 'SQLDatabase'\nORDER BY cb.class_symbol_id;",
+  "gold_row_count": 11,
+  "agent_sql": "SELECT DISTINCT cb.class_symbol_id AS class_symbol_id FROM code.class_bases AS cb WHERE cb.base_name = 'SQLDatabase' ORDER BY cb.class_symbol_id;",
+  "agent_answer": "The query returns the distinct class symbol identifiers of classes whose class statement lists `SQLDatabase` as a direct base expression. It reads the class bases table, filters rows whose base name is exactly `SQLDatabase`, and projects the owning class's symbol id. Assumptions: each row in the class bases table represents one base expression for one class, so a class appears once per direct base; `DISTINCT` collapses any duplicate class entries to distinct class identities as requested. The filter is on the exact base expression `SQLDatabase` (not qualified forms like `base.SQLDatabase`), because the requested base name filter is exact. No test-file filter is applied because the question does not ask for one, and no occurrence counts are requested. Results are ordered by class symbol id for deterministic presentation.",
+  "agent_row_count": 11,
+  "correct_rows": true,
+  "error": null
+}

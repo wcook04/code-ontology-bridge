@@ -1,0 +1,194 @@
+{
+  "request": {
+    "question": "What share of direct call sites could the static analysis resolve, by resolution kind?\n\nRequested output columns: resolution (string), calls (integer), pct (number).\nReturn every requested field using exactly its specified column alias. Preserve complete case-sensitive repository-relative paths and symbol IDs; do not substitute display names. Include all requested counts and provenance fields. Explain the query result in ordinary prose; do not emit placeholder text. These questions concern a static map of open-source Python code. Describe what the query computes and the assumptions it makes; the returned rows are reported separately. Questions asking which files, modules or symbols mean distinct identities, not one repeated row per matching import or call occurrence; preserve occurrence counts only when requested. Caller/callee graph questions include methods as well as standalone functions unless a symbol kind is explicitly restricted. Use files.is_test for test-file classification; test_links describe associations, not the complete set of test files. Use DOUBLE or DECIMAL, rather than single-precision REAL, for percentage calculations.\nReturn counts as well as percentages, rounded to one decimal place. Order by calls descending, then resolution ascending.",
+    "evidence": "Direct call sites have call_kind 'direct'; callback rows are references passed as arguments and are not call sites.",
+    "calculation_only": true
+  },
+  "status": 200,
+  "elapsed_s": 469.1,
+  "events": [
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "question_intent",
+      "thought": null,
+      "label": "Classifying the question"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "question_intent",
+      "thought": null,
+      "label": "Classifying the question"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "question_extraction",
+      "thought": null,
+      "label": "Understanding the question"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "question_extraction",
+      "thought": null,
+      "label": "Understanding the question"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "retrieve_candidates",
+      "thought": null,
+      "label": "Retrieving candidates"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "retrieve_candidates",
+      "thought": null,
+      "label": "Retrieving candidates"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "prepare_candidates",
+      "thought": null,
+      "label": "Preparing candidates"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "prepare_candidates",
+      "thought": "The question asks for the 'share of direct call sites resolved by resolution kind.' The core analytical focus is on how call sites are categorized by their resolution method (e.g., same_file, imported, builtin, etc.). Among the provided column attributes, `code.calls.resolution` directly encodes this classification. Its assigned ID in the schema is `f162ad8a-5587-4b21-9f5d-4fe7cdaf1ee7`. This column is the primary subject, as the query concerns the distribution of resolution kinds across direct call sites, not the identification of direct call sites themselves (which would involve `call_kind`).",
+      "label": "Preparing candidates"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "refine_evidence",
+      "thought": null,
+      "label": "Refining evidence"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "refine_evidence",
+      "thought": "I examined the sanitized question and the provided evidence lines for any certain mistakes that qualify under the allowed repair categories (string_representation, constant_value, predicate_operator). \n\n- Evidence line 1 accurately describes `call_kind 'direct'` vs callback rows, matching the column definition.\n- Evidence line 2 correctly lists output column aliases (`resolution` string, `calls` integer, `pct` number), precision notes, rounding, and ordering. All values align with the table column types and descriptions (`resolution` VARCHAR with values like `same_file`, `imported`, `builtin`, etc.; `call_kind` with `direct`/`callback`).\n- The sanitized question 'What is the share of direct call sites resolved by resolution kind?' does not contain a mistaken scalar constant, operator, or string representation that can be anchored to a proven database value or column sample. 'direct' is already the exact stored representation for `call_kind`. No operator, comparison, or constant in the evidence is unquestionably wrong relative to the question.\n\nSince no repair is certain per the given rules, the correct action is an empty repair list. The evidence is already valid, and the question requires no corrections.",
+      "label": "Refining evidence"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "construct_sql_from_candidates",
+      "thought": null,
+      "label": "Constructing SQL"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "construct_sql_from_candidates",
+      "thought": "I need to compute the share of direct call sites resolved by resolution kind. The key insight from evidence is that callback rows (call_kind = 'callback') are not call sites and must be excluded; only call_kind = 'direct' rows qualify. The resolution column categorizes how each direct call site was resolved (same_file, imported, builtin, external, dynamic_attribute, unresolved). I group direct call sites by resolution kind, count them, and divide by the total number of direct call sites to get percentages. The denominator is all direct call sites (call_kind = 'direct'). I use CAST(... AS DOUBLE) for percentage precision per evidence rules, and ROUND to 1 decimal place. Ordering is by calls DESC then resolution ASC. No joins are needed since all required columns (resolution, call_kind) reside in auto_ontology_code.code.calls.",
+      "label": "Constructing SQL"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "validate_sql_query",
+      "thought": null,
+      "label": "Validating SQL and intent"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "validate_sql_query",
+      "thought": "The generated SQL query appears to correctly answer the user's question about 'What share of direct call sites could the static analysis resolve, by resolution kind?'. Let me verify the critical aspects:\n\n1. **Filter for direct call sites**: The SQL correctly filters `WHERE call_kind = 'direct'`, excluding callback rows as specified in the evidence.\n\n2. **Requested output columns**: The SQL provides `resolution` (string), `COUNT(*) AS calls` (integer), and the percentage calculation `ROUND(CAST(COUNT(*) AS DOUBLE) / (SELECT COUNT(*) FROM auto_ontology_code.code.calls WHERE call_kind = 'direct') * 100, 1) AS pct` (number). These match exactly.\n\n3. **Percentage calculation**: Uses DOUBLE precision (not REAL) and rounds to one decimal place, matching the evidence requirements.\n\n4. **Ordering**: `ORDER BY calls DESC, resolution ASC` matches the specified ordering.\n\n5. **Grouping**: `GROUP BY resolution` correctly groups by resolution kind.\n\n6. **Authoritative join paths**: The query doesn't use joins, which is appropriate since no joins are needed to answer this question from the `auto_ontology_code.code.calls` table alone.\n\n7. **Evidence compliance**: The SQL follows all evidence instructions - filters for `call_kind = 'direct'`, uses correct column aliases, proper percentage formula, and correct ordering.\n\nNo critical issues are present. The query is well-constructed and reasonably answers the question.",
+      "label": "Validating SQL and intent"
+    },
+    {
+      "type": "sql",
+      "node": "validate_sql_query",
+      "sql": "SELECT resolution, COUNT(*) AS calls, ROUND(CAST(COUNT(*) AS DOUBLE) / (SELECT COUNT(*) FROM auto_ontology_code.code.calls WHERE call_kind = 'direct') * 100, 1) AS pct FROM auto_ontology_code.code.calls WHERE call_kind = 'direct' GROUP BY resolution ORDER BY calls DESC, resolution ASC"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "execute_sql_query",
+      "thought": null,
+      "label": "Executing SQL"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "execute_sql_query",
+      "thought": null,
+      "label": "Executing SQL"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "check_empty_like_result",
+      "thought": null,
+      "label": "Checking results"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "check_empty_like_result",
+      "thought": null,
+      "label": "Checking results"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "check_value_repair",
+      "thought": null,
+      "label": "Checking values"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "check_value_repair",
+      "thought": null,
+      "label": "Checking values"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "format_and_respond",
+      "thought": null,
+      "label": "Formatting response"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "format_and_respond",
+      "thought": null,
+      "label": "Formatting response"
+    },
+    {
+      "type": "result",
+      "answer": {
+        "response": "This query calculates, for each resolution kind, how many direct call sites fall into that category and what percentage that represents of all direct call sites. It filters the calls table to call_kind = 'direct' (excluding callback rows), groups remaining rows by resolution, counts calls per group, and divides by the total direct call site count to produce percentages. Results are rounded to one decimal place and ordered by call count descending, then resolution name ascending.",
+        "sql_code": "SELECT resolution, COUNT(*) AS calls, ROUND(CAST(COUNT(*) AS DOUBLE) / (SELECT COUNT(*) FROM auto_ontology_code.code.calls WHERE call_kind = 'direct') * 100, 1) AS pct FROM auto_ontology_code.code.calls WHERE call_kind = 'direct' GROUP BY resolution ORDER BY calls DESC, resolution ASC",
+        "sql_columns": [
+          "a9c5c15c-edc8-44b7-8206-e858a25251c0",
+          "a9b2df95-9ff4-47be-8bb5-ceebdb65edaf"
+        ],
+        "custom_analyses_used": [],
+        "sql_response_from_db": [
+          "[{\"resolution\":\"dynamic_attribute\",\"calls\":11691,\"pct\":37.8},{\"resolution\":\"external\",\"calls\":5371,\"pct\":17.4},{\"resolution\":\"imported\",\"calls\":4850,\"pct\":15.7},{\"resolution\":\"same_file\",\"calls\":4336,\"pct\":14.0},{\"resolution\":\"builtin\",\"calls\":4119,\"pct\":13.3},{\"resolution\":\"unresolved\",\"calls\":340,\"pct\":1.1},{\"resolution\":\"method_on_self\",\"calls\":242,\"pct\":0.8}]"
+        ],
+        "thoughts": "- Preparing candidates: The question asks for the 'share of direct call sites resolved by resolution kind.' The core analytical focus is on how call sites are categorized by their resolution method (e.g., same_file, imported, builtin, etc.). Among the provided column attributes, `code.calls.resolution` directly encodes this classification. Its assigned ID in the schema is `f162ad8a-5587-4b21-9f5d-4fe7cdaf1ee7`. This column is the primary subject, as the query concerns the distribution of resolution kinds across direct call sites, not the identification of direct call sites themselves (which would involve `call_kind`).\n- Refining evidence: I examined the sanitized question and the provided evidence lines for any certain mistakes that qualify under the allowed repair categories (string_representation, constant_value, predicate_operator). \n\n- Evidence line 1 accurately describes `call_kind 'direct'` vs callback rows, matching the column definition.\n- Evidence line 2 correctly lists output column aliases (`resolution` string, `calls` integer, `pct` number), precision notes, rounding, and ordering. All values align with the table column types and descriptions (`resolution` VARCHAR with values like `same_file`, `imported`, `builtin`, etc.; `call_kind` with `direct`/`callback`).\n- The sanitized question 'What is the share of direct call sites resolved by resolution kind?' does not contain a mistaken scalar constant, operator, or string representation that can be anchored to a proven database value or column sample. 'direct' is already the exact stored representation for `call_kind`. No operator, comparison, or constant in the evidence is unquestionably wrong relative to the question.\n\nSince no repair is certain per the given rules, the correct action is an empty repair list. The evidence is already valid, and the question requires no corrections.\n- Constructing SQL: I need to compute the share of direct call sites resolved by resolution kind. The key insight from evidence is that callback rows (call_kind = 'callback') are not call sites and must be excluded; only call_kind = 'direct' rows qualify. The resolution column categorizes how each direct call site was resolved (same_file, imported, builtin, external, dynamic_attribute, unresolved). I group direct call sites by resolution kind, count them, and divide by the total number of direct call sites to get percentages. The denominator is all direct call sites (call_kind = 'direct'). I use CAST(... AS DOUBLE) for percentage precision per evidence rules, and ROUND to 1 decimal place. Ordering is by calls DESC then resolution ASC. No joins are needed since all required columns (resolution, call_kind) reside in auto_ontology_code.code.calls.\n- Validating SQL and intent: The generated SQL query appears to correctly answer the user's question about 'What share of direct call sites could the static analysis resolve, by resolution kind?'. Let me verify the critical aspects:\n\n1. **Filter for direct call sites**: The SQL correctly filters `WHERE call_kind = 'direct'`, excluding callback rows as specified in the evidence.\n\n2. **Requested output columns**: The SQL provides `resolution` (string), `COUNT(*) AS calls` (integer), and the percentage calculation `ROUND(CAST(COUNT(*) AS DOUBLE) / (SELECT COUNT(*) FROM auto_ontology_code.code.calls WHERE call_kind = 'direct') * 100, 1) AS pct` (number). These match exactly.\n\n3. **Percentage calculation**: Uses DOUBLE precision (not REAL) and rounds to one decimal place, matching the evidence requirements.\n\n4. **Ordering**: `ORDER BY calls DESC, resolution ASC` matches the specified ordering.\n\n5. **Grouping**: `GROUP BY resolution` correctly groups by resolution kind.\n\n6. **Authoritative join paths**: The query doesn't use joins, which is appropriate since no joins are needed to answer this question from the `auto_ontology_code.code.calls` table alone.\n\n7. **Evidence compliance**: The SQL follows all evidence instructions - filters for `call_kind = 'direct'`, uses correct column aliases, proper percentage formula, and correct ordering.\n\nNo critical issues are present. The query is well-constructed and reasonably answers the question."
+      }
+    }
+  ],
+  "question_id": 14,
+  "gold_sql": "SELECT resolution, COUNT(*) AS calls,\n       ROUND(100.0 * COUNT(*) / (SELECT COUNT(*) FROM code.calls WHERE call_kind = 'direct'), 1) AS pct\nFROM code.calls\nWHERE call_kind = 'direct'\nGROUP BY resolution\nORDER BY calls DESC, resolution;",
+  "gold_row_count": 7,
+  "agent_sql": "SELECT resolution, COUNT(*) AS calls, ROUND(CAST(COUNT(*) AS DOUBLE) / (SELECT COUNT(*) FROM auto_ontology_code.code.calls WHERE call_kind = 'direct') * 100, 1) AS pct FROM auto_ontology_code.code.calls WHERE call_kind = 'direct' GROUP BY resolution ORDER BY calls DESC, resolution ASC",
+  "agent_answer": "This query calculates, for each resolution kind, how many direct call sites fall into that category and what percentage that represents of all direct call sites. It filters the calls table to call_kind = 'direct' (excluding callback rows), groups remaining rows by resolution, counts calls per group, and divides by the total direct call site count to produce percentages. Results are rounded to one decimal place and ordered by call count descending, then resolution name ascending.",
+  "agent_row_count": 7,
+  "correct_rows": true,
+  "error": null
+}

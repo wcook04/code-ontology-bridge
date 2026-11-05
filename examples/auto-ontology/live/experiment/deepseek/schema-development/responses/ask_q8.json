@@ -1,0 +1,34 @@
+{
+  "question_id": 8,
+  "status": 200,
+  "error": null,
+  "elapsed_s": 3.8,
+  "attempts": [
+    {
+      "sql": "SELECT c.callee_symbol_id AS symbol_id, COUNT(*)::INTEGER AS call_sites\nFROM code.calls c\nJOIN code.symbols caller_sym ON caller_sym.symbol_id = c.caller_symbol_id\nJOIN code.files caller_file ON caller_file.file_id = caller_sym.file_id\nJOIN code.symbols callee_sym ON callee_sym.symbol_id = c.callee_symbol_id\nJOIN code.files callee_file ON callee_file.file_id = callee_sym.file_id\nWHERE c.resolution = 'resolved'\n  AND c.call_kind = 'direct'\n  AND caller_file.is_test = FALSE\n  AND callee_file.is_test = FALSE\n  AND callee_sym.kind IN ('function', 'method')\nGROUP BY c.callee_symbol_id\nORDER BY call_sites DESC, symbol_id ASC\nLIMIT 10;",
+      "error": null
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 705,
+    "completion_tokens": 1127,
+    "total_tokens": 1832,
+    "cost": 0.000575954,
+    "is_byok": 0
+  },
+  "request": {
+    "question": "Which ten non-test functions or methods are called from the most call sites in non-test code?\n\nHint: Count resolved direct call sites (call_kind 'direct') whose caller and callee are both outside test files. Ties are broken by symbol id.\n\nRequested output columns: symbol_id (string), call_sites (integer). Order the rows as the question asks.",
+    "arm": "schema",
+    "model": "deepseek/deepseek-v4.1-flash-1017"
+  },
+  "events": [
+    {
+      "type": "result",
+      "answer": {
+        "response": "The query counts resolved direct call sites for each callee symbol, keeping only calls where both the caller and callee are in non-test files and the callee is a function or method. It groups by callee symbol id, orders by descending call-site count with symbol id as the tie-breaker, and returns the top ten.",
+        "sql_code": "SELECT c.callee_symbol_id AS symbol_id, COUNT(*)::INTEGER AS call_sites\nFROM code.calls c\nJOIN code.symbols caller_sym ON caller_sym.symbol_id = c.caller_symbol_id\nJOIN code.files caller_file ON caller_file.file_id = caller_sym.file_id\nJOIN code.symbols callee_sym ON callee_sym.symbol_id = c.callee_symbol_id\nJOIN code.files callee_file ON callee_file.file_id = callee_sym.file_id\nWHERE c.resolution = 'resolved'\n  AND c.call_kind = 'direct'\n  AND caller_file.is_test = FALSE\n  AND callee_file.is_test = FALSE\n  AND callee_sym.kind IN ('function', 'method')\nGROUP BY c.callee_symbol_id\nORDER BY call_sites DESC, symbol_id ASC\nLIMIT 10;",
+        "sql_response_from_db": []
+      }
+    }
+  ]
+}

@@ -1,0 +1,63 @@
+{
+  "question_id": 18,
+  "status": 200,
+  "error": null,
+  "elapsed_s": 23.4,
+  "attempts": [
+    {
+      "sql": "SELECT\n  f.package AS package,\n  COUNT(DISTINCT s.symbol_id) AS public_symbols,\n  SUM(CASE WHEN s.summary_source = 'none' THEN 1 ELSE 0 END) AS undocumented,\n  (SUM(CASE WHEN s.summary_source = 'none' THEN 1 ELSE 0 END) * 100.0 / NULLIF(COUNT(DISTINCT s.symbol_id), 0)) AS pct_undocumented\nFROM code.symbols s\nJOIN code.files f ON s.file_id = f.file_id\nWHERE s.is_public = true\n  AND f.is_test = false\nGROUP BY f.package\nHAVING COUNT(DISTINCT s.symbol_id) >= 20\nORDER BY pct_undocumented DESC\nLIMIT 5;",
+      "error": null
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 689,
+    "completion_tokens": 2982,
+    "total_tokens": 3671
+  },
+  "request": {
+    "question": "Which packages have the highest share of public symbols without a docstring? Consider packages with at least 20 public symbols outside the tests and give the top five.\n\nHint: summary_source is 'none' when a symbol has no docstring.\n\nRequested output columns: package (string), public_symbols (integer), undocumented (integer), pct_undocumented (number). Order the rows as the question asks.",
+    "arm": "schema",
+    "model": "nvidia/nemotron-3.5-lightning-30b-a3b"
+  },
+  "events": [
+    {
+      "type": "result",
+      "answer": {
+        "response": "The query joins public symbols with their containing files, excludes test files, groups by package, counts total public symbols and those lacking a docstring (summary_source = 'none'), computes the undocumented percentage, and returns the top 5 packages with at least 20 public symbols ordered by highest documentation gap.",
+        "sql_code": "SELECT\n  f.package AS package,\n  COUNT(DISTINCT s.symbol_id) AS public_symbols,\n  SUM(CASE WHEN s.summary_source = 'none' THEN 1 ELSE 0 END) AS undocumented,\n  (SUM(CASE WHEN s.summary_source = 'none' THEN 1 ELSE 0 END) * 100.0 / NULLIF(COUNT(DISTINCT s.symbol_id), 0)) AS pct_undocumented\nFROM code.symbols s\nJOIN code.files f ON s.file_id = f.file_id\nWHERE s.is_public = true\n  AND f.is_test = false\nGROUP BY f.package\nHAVING COUNT(DISTINCT s.symbol_id) >= 20\nORDER BY pct_undocumented DESC\nLIMIT 5;",
+        "sql_response_from_db": [
+          {
+            "package": "auto_ontology.catalog.model",
+            "public_symbols": 47,
+            "undocumented": 43,
+            "pct_undocumented": 91.48936170212765
+          },
+          {
+            "package": "dev_tools.fixtures",
+            "public_symbols": 25,
+            "undocumented": 14,
+            "pct_undocumented": 56.0
+          },
+          {
+            "package": "auto_ontology.server.model_interchange",
+            "public_symbols": 34,
+            "undocumented": 14,
+            "pct_undocumented": 41.1764705882353
+          },
+          {
+            "package": "auto_ontology.connectors",
+            "public_symbols": 162,
+            "undocumented": 58,
+            "pct_undocumented": 35.80246913580247
+          },
+          {
+            "package": "auto_ontology.retrieval.text_to_sql.agents",
+            "public_symbols": 104,
+            "undocumented": 35,
+            "pct_undocumented": 33.65384615384615
+          }
+        ]
+      }
+    }
+  ]
+}
