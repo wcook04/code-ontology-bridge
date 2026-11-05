@@ -1,0 +1,214 @@
+[
+  {
+    "id": "rich-01",
+    "question": "Which classes directly subclass ProgressColumn (defined in rich/progress.py), i.e. name it as a base class in their own class statement? Do not include classes that only inherit from it through another class. Give each class's symbol ID.",
+    "fields": [
+      {
+        "name": "class_symbol_id",
+        "type": "string"
+      }
+    ],
+    "ordered": false,
+    "reference_sql": "SELECT class_symbol_id FROM code.class_bases WHERE base_symbol_id = 'rich/progress.py::ProgressColumn' ORDER BY class_symbol_id",
+    "row_count": 11,
+    "topic": "inheritance: direct subclasses",
+    "difficulty": "easy",
+    "source_check": "Grepped all class statements in the checkout: exactly 11 classes in rich/progress.py write `(ProgressColumn)` as a base (RenderableColumn, SpinnerColumn, TextColumn, BarColumn, TimeElapsedColumn, TimeRemainingColumn, FileSizeColumn, TotalFileSizeColumn, MofNCompleteColumn, DownloadColumn, TransferSpeedColumn); TaskProgressColumn subclasses TextColumn and is correctly excluded. No subclasses in tests/examples. Extractor matches source."
+  },
+  {
+    "id": "rich-02",
+    "question": "In the Markdown renderer, which classes inherit from MarkdownElement (rich/markdown.py) either directly or indirectly through any number of intermediate classes? Exclude MarkdownElement itself. Give each class's symbol ID.",
+    "fields": [
+      {
+        "name": "class_symbol_id",
+        "type": "string"
+      }
+    ],
+    "ordered": false,
+    "reference_sql": "WITH RECURSIVE sub(cls) AS (SELECT class_symbol_id FROM code.class_bases WHERE base_symbol_id = 'rich/markdown.py::MarkdownElement' UNION SELECT b.class_symbol_id FROM code.class_bases b JOIN sub ON b.base_symbol_id = sub.cls) SELECT cls AS class_symbol_id FROM sub ORDER BY cls",
+    "row_count": 16,
+    "topic": "inheritance: transitive subclasses",
+    "difficulty": "hard",
+    "source_check": "Read the class statements in rich/markdown.py: 9 classes subclass MarkdownElement directly (UnknownElement, TextElement, HorizontalRule, TableElement, TableHeaderElement, TableBodyElement, TableRowElement, TableDataElement, ListElement) and 7 subclass TextElement (Paragraph, Heading, CodeBlock, BlockQuote, ListItem, Link, ImageItem) = 16. No deeper levels and no subclasses outside markdown.py. Extractor matches source."
+  },
+  {
+    "id": "rich-03",
+    "question": "Outside the test suite, which functions and methods directly call the cell_len function from rich/cells.py, and how many call sites to it does each contain? Count direct call sites only (occurrences, not distinct lines); passing the function as a callback does not count. Give the caller's symbol ID and the number of call sites.",
+    "fields": [
+      {
+        "name": "caller_symbol_id",
+        "type": "string"
+      },
+      {
+        "name": "call_sites",
+        "type": "integer"
+      }
+    ],
+    "ordered": false,
+    "reference_sql": "SELECT c.caller_symbol_id, COUNT(*) AS call_sites FROM code.calls c JOIN code.symbols s ON s.symbol_id = c.caller_symbol_id JOIN code.files f ON f.file_id = s.file_id WHERE c.callee_symbol_id = 'rich/cells.py::cell_len' AND c.call_kind = 'direct' AND NOT f.is_test GROUP BY c.caller_symbol_id ORDER BY c.caller_symbol_id",
+    "row_count": 16,
+    "topic": "calls: direct callers with counts",
+    "difficulty": "medium",
+    "source_check": "grep of `cell_len(` in rich/ gives 23 lines, two of which (rule.py:85, pretty.py:514) hold two calls each = 25 call sites, equal to the DB total across the 16 callers; spot-checked Rule.__rich_console__ (4: lines 60, 82, 85x2), Lines.justify (4: containers.py 136,137,142,148), Text.__rich_measure__ (2: text.py 712, 715). DISCREPANCY: rich/_wrap.py::divide_line (5 calls, lines 45-76) and rich/segment.py::Segment.get_line_length (line 409) call cell_len through a local alias `_cell_len = cell_len`; the extractor records these as unresolved `_cell_len` with no callee, so they are missing from the answer although they really call cell_len."
+  },
+  {
+    "id": "rich-04",
+    "question": "The markup parser's entry point is the render function in rich/markup.py. Which functions and methods defined under the rich/ folder reach it through exactly one intermediate step (they directly call some function or method that itself directly calls rich/markup.py's render) but do not call render directly themselves? Direct calls only; callback references do not count. Give their symbol IDs.",
+    "fields": [
+      {
+        "name": "symbol_id",
+        "type": "string"
+      }
+    ],
+    "ordered": false,
+    "reference_sql": "WITH hop1 AS (SELECT DISTINCT caller_symbol_id AS s FROM code.calls WHERE callee_symbol_id = 'rich/markup.py::render' AND call_kind = 'direct'), hop2 AS (SELECT DISTINCT c.caller_symbol_id AS s FROM code.calls c JOIN hop1 ON c.callee_symbol_id = hop1.s WHERE c.call_kind = 'direct') SELECT h.s AS symbol_id FROM hop2 h JOIN code.symbols sy ON sy.symbol_id = h.s WHERE sy.file_id LIKE 'rich/%' AND h.s NOT IN (SELECT s FROM hop1) ORDER BY h.s",
+    "row_count": 15,
+    "topic": "calls: two-hop reachability",
+    "difficulty": "hard",
+    "source_check": "Direct callers of markup.render outside tests are Console.render_str (console.py:1442, via alias `render as render_markup`) and Text.from_markup (text.py:285 local import). Confirmed second-hop edges in source: Console.render -> self.render_str (console.py:1321), RichHandler.render_message -> Text.from_markup (logging.py:201), PromptBase.__init__ -> Text.from_markup (prompt.py:67), Spinner.update -> Text.from_markup (spinner.py:110). DISCREPANCY (missed edges): calls on a console object rather than self, e.g. Measurement.get (measure.py:99 `console.render_str`), Rule.__rich_console__ (rule.py:68), Live.process_renderables (live.py:238 `self.console.render_str`) and Table (table.py:501), are classified dynamic_attribute with no callee, so these real two-hop callers are absent from the answer."
+  },
+  {
+    "id": "rich-05",
+    "question": "Which of Rich's own Python files does rich/table.py import? Count every import statement anywhere in the file, including type-checking-only imports and the imports in its `if __name__ == \"__main__\"` demo block, and list each imported file once by its repository-relative path.",
+    "fields": [
+      {
+        "name": "imported_file",
+        "type": "string"
+      }
+    ],
+    "ordered": false,
+    "reference_sql": "SELECT DISTINCT imported_file_id AS imported_file FROM code.imports WHERE file_id = 'rich/table.py' AND imported_file_id IS NOT NULL ORDER BY imported_file",
+    "row_count": 16,
+    "topic": "imports: module dependencies",
+    "difficulty": "easy",
+    "source_check": "Read rich/table.py imports: lines 14-25 (`from . import box, errors`, _loop, _pick, _ratio, align, jupyter, measure, padding, protocol, segment, style, text), line 28 TYPE_CHECKING `from .console import ...`, and demo block 939-942 (rich.console, rich.highlighter, ._timer) = 16 distinct files; `from . import box, errors` correctly resolved to box.py and errors.py. Extractor matches source."
+  },
+  {
+    "id": "rich-06",
+    "question": "Which Python files under the rich/ folder import rich/console.py but never import rich/text.py? Count import statements anywhere in a file (top level, type-checking-only blocks, inside functions, and `__main__` demo blocks). Give the repository-relative file paths.",
+    "fields": [
+      {
+        "name": "file_id",
+        "type": "string"
+      }
+    ],
+    "ordered": false,
+    "reference_sql": "SELECT DISTINCT i.file_id FROM code.imports i WHERE i.imported_file_id = 'rich/console.py' AND i.file_id LIKE 'rich/%' AND i.file_id NOT IN (SELECT file_id FROM code.imports WHERE imported_file_id = 'rich/text.py') ORDER BY i.file_id",
+    "row_count": 22,
+    "topic": "imports: set difference",
+    "difficulty": "hard",
+    "source_check": "Independent grep over rich/*.py for console imports minus files with text imports gives the same set; spot-checked bar.py (line 4 imports console, no text import), control.py (TYPE_CHECKING line 7 and demo line 212), pager.py (line 30), _win32_console.py (demo line 578), _wrap.py (function-level import at line 82). rich/text.py is included because it imports console (line 33, 1339) and only mentions rich.text in a docstring example (line 527), which is correctly not treated as an import. Extractor matches source."
+  },
+  {
+    "id": "rich-07",
+    "question": "Which five classes outside the test suite define the most methods in their own class body? Count every method definition separately, so a property getter and its setter, or each @overload stub, count as separate methods. Give the class's symbol ID and the method count, ordered by count descending, ties broken by symbol ID ascending.",
+    "fields": [
+      {
+        "name": "class_symbol_id",
+        "type": "string"
+      },
+      {
+        "name": "method_count",
+        "type": "integer"
+      }
+    ],
+    "ordered": true,
+    "reference_sql": "SELECT s.file_id || '::' || split_part(s.qualname, '.', 1) AS class_symbol_id, COUNT(*) AS method_count FROM code.symbols s JOIN code.files f ON f.file_id = s.file_id WHERE s.kind = 'method' AND NOT f.is_test GROUP BY 1 ORDER BY method_count DESC, class_symbol_id LIMIT 5",
+    "row_count": 5,
+    "topic": "ranking: methods per class",
+    "difficulty": "medium",
+    "source_check": "Counted FunctionDef/AsyncFunctionDef nodes in each class body with Python's ast module on the checkout: Console 71, Text 55, Style 33, Progress 27, Segment 24 (next is progress._Reader with 22). Matches the database exactly, including duplicated getter/setter and overload definitions (e.g. Console.file@L757/@L766)."
+  },
+  {
+    "id": "rich-08",
+    "question": "Which classes name JupyterMixin (from rich/jupyter.py) directly as a base class but do not define their own __rich_measure__ method in their class body? Give each class's symbol ID.",
+    "fields": [
+      {
+        "name": "class_symbol_id",
+        "type": "string"
+      }
+    ],
+    "ordered": false,
+    "reference_sql": "SELECT b.class_symbol_id FROM code.class_bases b JOIN code.symbols c ON c.symbol_id = b.class_symbol_id WHERE b.base_symbol_id = 'rich/jupyter.py::JupyterMixin' AND NOT EXISTS (SELECT 1 FROM code.symbols m WHERE m.file_id = c.file_id AND m.kind = 'method' AND m.qualname = c.qualname || '.__rich_measure__') ORDER BY b.class_symbol_id",
+    "row_count": 7,
+    "topic": "inheritance + definitions: exclusion",
+    "difficulty": "hard",
+    "source_check": "Parsed every rich/*.py with ast: 20 classes list JupyterMixin as a base (DB also has 20); 13 define __rich_measure__ (Tree, Align, VerticalCenter, Constrain, Pretty, Rule, Text, Bar, Syntax, Table, ProgressBar, Panel, Padding) and 7 do not (Emoji, Columns, Inspect, Markdown, Live, Progress, Status). Extractor matches source."
+  },
+  {
+    "id": "rich-09",
+    "question": "Progress.get_renderable in rich/progress.py builds what a progress display shows. Which functions or methods use it, either by calling it directly or by passing the method itself as an argument to another call (a callback reference)? Give the user's symbol ID and how it is used, as 'direct' or 'callback'.",
+    "fields": [
+      {
+        "name": "caller_symbol_id",
+        "type": "string"
+      },
+      {
+        "name": "usage",
+        "type": "string"
+      }
+    ],
+    "ordered": false,
+    "reference_sql": "SELECT DISTINCT caller_symbol_id, call_kind AS usage FROM code.calls WHERE callee_symbol_id = 'rich/progress.py::Progress.get_renderable' ORDER BY caller_symbol_id, usage",
+    "row_count": 2,
+    "topic": "calls: direct and callback",
+    "difficulty": "medium",
+    "source_check": "grep `get_renderable` in rich/ and tests/: progress.py:1107 passes `get_renderable=self.get_renderable` to the Live constructor inside Progress.__init__ (callback), and progress.py:1598 `return self.get_renderable()` in Progress.__rich__ (direct). Other hits are Live.get_renderable (a different method) and a local itemgetter in columns.py. Extractor matches source."
+  },
+  {
+    "id": "rich-10",
+    "question": "Which Python files sitting directly in the rich/ folder (not in its subfolders), including the package's __init__.py, start with a module docstring? Give the repository-relative file paths.",
+    "fields": [
+      {
+        "name": "file_id",
+        "type": "string"
+      }
+    ],
+    "ordered": false,
+    "reference_sql": "SELECT file_id FROM code.files WHERE file_id LIKE 'rich/%' AND file_id NOT LIKE 'rich/%/%' AND description <> '' ORDER BY file_id",
+    "row_count": 5,
+    "topic": "docstrings: module descriptions",
+    "difficulty": "easy",
+    "source_check": "Ran ast.get_docstring on every rich/*.py: exactly __init__.py, _spinners.py, _timer.py, _win32_console.py and filesize.py have module docstrings; e.g. _null_file.py starts with imports. Extractor matches source."
+  },
+  {
+    "id": "rich-11",
+    "question": "Under the rich/ folder, which five files contain the most public functions and methods that have no docstring? A function or method is public when neither its own name nor the name of its enclosing class starts with an underscore (so dunder methods are not public); classes themselves are not counted. Give the file path and the count, ordered by count descending, ties broken by file path ascending.",
+    "fields": [
+      {
+        "name": "file_id",
+        "type": "string"
+      },
+      {
+        "name": "undocumented_count",
+        "type": "integer"
+      }
+    ],
+    "ordered": true,
+    "reference_sql": "SELECT s.file_id, COUNT(*) AS undocumented_count FROM code.symbols s WHERE s.file_id LIKE 'rich/%' AND s.kind IN ('function','method') AND s.is_public AND s.summary = '' GROUP BY s.file_id ORDER BY undocumented_count DESC, s.file_id LIMIT 5",
+    "row_count": 5,
+    "topic": "docstrings: ranking undocumented API",
+    "difficulty": "hard",
+    "source_check": "Independent ast count (module-level functions plus methods of non-underscore classes, names not starting with '_', no docstring): markdown.py 21, _null_file.py 15, progress.py 9, repr.py 5, then containers.py/file_proxy.py/layout.py tied at 4 (tie-break keeps containers.py). Matches the database exactly."
+  },
+  {
+    "id": "rich-12",
+    "question": "Which Python files sitting directly in the rich/ folder (not in its subfolders) are at least 100 lines long yet have no test file associated with them, where a test is associated when it imports the file or its name is test_<filename>.py? Give the file path and its line count.",
+    "fields": [
+      {
+        "name": "file_id",
+        "type": "string"
+      },
+      {
+        "name": "line_count",
+        "type": "integer"
+      }
+    ],
+    "ordered": false,
+    "reference_sql": "SELECT f.file_id, f.line_count FROM code.files f WHERE f.file_id LIKE 'rich/%' AND f.file_id NOT LIKE 'rich/%/%' AND NOT f.is_test AND f.line_count >= 100 AND NOT EXISTS (SELECT 1 FROM code.test_links t WHERE t.target_file_id = f.file_id) ORDER BY f.file_id",
+    "row_count": 4,
+    "topic": "test links + file size",
+    "difficulty": "medium",
+    "source_check": "grep of tests/ finds no import or mention of _emoji_codes, _spinners, default_styles or terminal_theme, and no test_<name>.py exists for them (test_emoji.py/test_spinner.py/test_style.py/test_theme.py match other modules); `wc -l` style line counts 3610/482/196/153 agree. These modules are exercised only transitively (e.g. via rich/spinner.py), which static links do not capture by design. Extractor matches source."
+  }
+]

@@ -1,0 +1,86 @@
+[
+  {
+    "id": "httpx-01",
+    "sql": "SELECT file_id AS file_path FROM code.files WHERE NOT is_test AND description_source='module_docstring' ORDER BY 1",
+    "row_count": 5,
+    "ambiguities": []
+  },
+  {
+    "id": "httpx-02",
+    "sql": "SELECT DISTINCT caller_symbol_id AS symbol_id FROM code.calls WHERE callee_symbol_id='httpx/_exceptions.py::request_context' AND call_kind='direct' ORDER BY 1",
+    "row_count": 12,
+    "ambiguities": []
+  },
+  {
+    "id": "httpx-03",
+    "sql": "SELECT f.file_id AS file_path FROM code.files f WHERE NOT f.is_test AND NOT EXISTS (SELECT 1 FROM code.test_links t WHERE t.target_file_id=f.file_id) ORDER BY 1",
+    "row_count": 18,
+    "ambiguities": [
+      {
+        "issue": "'non-test Python files' could be read to include helper modules under tests/ that are not themselves tests (tests/common.py, tests/concurrency.py, tests/__init__.py packages); schema marks every tests/ file is_test=true",
+        "chosen": "files.is_test = false (only httpx/ package files)",
+        "alternative_row_count": 20
+      }
+    ]
+  },
+  {
+    "id": "httpx-04",
+    "sql": "SELECT symbol_id FROM code.symbols WHERE file_id='httpx/_client.py' AND kind='method' AND qualname LIKE 'Client.%' AND qualname NOT LIKE 'Client.%.%' AND summary_source='none' ORDER BY 1",
+    "row_count": 7,
+    "ambiguities": []
+  },
+  {
+    "id": "httpx-05",
+    "sql": "SELECT s.symbol_id, s.line_end-s.line_start+1 AS line_count FROM code.symbols s JOIN code.files f USING(file_id) WHERE NOT f.is_test AND s.kind IN ('function','method') ORDER BY line_count DESC, s.symbol_id LIMIT 5",
+    "row_count": 5,
+    "ambiguities": []
+  },
+  {
+    "id": "httpx-06",
+    "sql": "SELECT c.symbol_id, count(*) AS method_count FROM code.symbols c JOIN code.files f USING(file_id) JOIN code.symbols m ON m.file_id=c.file_id AND m.kind='method' AND m.qualname LIKE c.qualname||'.%' AND m.qualname NOT LIKE c.qualname||'.%.%' WHERE c.kind='class' AND NOT f.is_test GROUP BY c.symbol_id HAVING count(*)>=20 ORDER BY method_count DESC, c.symbol_id",
+    "row_count": 7,
+    "ambiguities": []
+  },
+  {
+    "id": "httpx-07",
+    "sql": "WITH RECURSIVE d(s) AS (SELECT class_symbol_id FROM code.class_bases WHERE base_symbol_id='httpx/_exceptions.py::RequestError' UNION SELECT b.class_symbol_id FROM code.class_bases b JOIN d ON b.base_symbol_id=d.s) SELECT s AS symbol_id FROM d ORDER BY 1",
+    "row_count": 18,
+    "ambiguities": []
+  },
+  {
+    "id": "httpx-08",
+    "sql": "SELECT s.symbol_id FROM code.symbols s WHERE s.file_id='httpx/_exceptions.py' AND s.kind='class' AND NOT EXISTS (SELECT 1 FROM code.class_bases b WHERE b.base_symbol_id=s.symbol_id) ORDER BY 1",
+    "row_count": 21,
+    "ambiguities": []
+  },
+  {
+    "id": "httpx-09",
+    "sql": "WITH RECURSIVE e AS (SELECT DISTINCT caller_symbol_id a, callee_symbol_id b FROM code.calls WHERE call_kind='direct' AND caller_symbol_id LIKE 'httpx/_client.py::%' AND callee_symbol_id LIKE 'httpx/_client.py::%'), r(s) AS (SELECT a FROM e WHERE b='httpx/_client.py::Client._send_single_request' UNION SELECT e.a FROM e JOIN r ON e.b=r.s) SELECT s AS symbol_id FROM r WHERE s<>'httpx/_client.py::Client._send_single_request' ORDER BY 1",
+    "row_count": 12,
+    "ambiguities": []
+  },
+  {
+    "id": "httpx-10",
+    "sql": "SELECT imported_file_id AS file_path FROM code.imports WHERE file_id='httpx/_client.py' AND imported_file_id IS NOT NULL INTERSECT SELECT imported_file_id FROM code.imports WHERE file_id='httpx/_models.py' AND imported_file_id IS NOT NULL ORDER BY 1",
+    "row_count": 6,
+    "ambiguities": []
+  },
+  {
+    "id": "httpx-11",
+    "sql": "SELECT caller_symbol_id AS symbol_id FROM code.calls WHERE caller_symbol_id LIKE 'tests/client/test_redirects.py::%' AND callee_symbol_id='tests/client/test_redirects.py::redirects' AND call_kind='callback' INTERSECT SELECT caller_symbol_id FROM code.calls WHERE caller_symbol_id LIKE 'tests/client/test_redirects.py::%' AND call_kind='direct' AND callee_name='httpx.AsyncClient' ORDER BY 1",
+    "row_count": 3,
+    "ambiguities": []
+  },
+  {
+    "id": "httpx-12",
+    "sql": "SELECT DISTINCT callee_symbol_id AS symbol_id FROM code.calls WHERE caller_symbol_id='httpx/_main.py::main' AND call_kind='callback' AND callee_symbol_id LIKE 'httpx/_main.py::%' ORDER BY 1",
+    "row_count": 4,
+    "ambiguities": [
+      {
+        "issue": "trace is passed to functools.partial(trace, verbose=verbose) whose result goes into the extensions dict; one could argue it is wrapped rather than 'handed over as a callback argument'",
+        "chosen": "count it (it is a by-name argument of functools.partial, recorded as a callback row)",
+        "alternative_row_count": 3
+      }
+    ]
+  }
+]

@@ -1,0 +1,181 @@
+[
+  {
+    "id": "click-01",
+    "sql": "SELECT file_id AS file_path, line_count FROM code.files WHERE NOT is_test ORDER BY line_count DESC, file_id LIMIT 5",
+    "row_count": 5,
+    "ambiguities": [
+      {
+        "issue": "Whether src/click/testing.py (a library module, is_test=false) counts as a test file",
+        "chosen": "Non-test per is_test (library module)",
+        "alternative_row_count": 5
+      },
+      {
+        "issue": "Whether examples/docs should be included",
+        "chosen": "Included as the question says",
+        "alternative_row_count": 5
+      }
+    ]
+  },
+  {
+    "id": "click-02",
+    "sql": "SELECT file_id AS file_path FROM code.files WHERE file_id LIKE 'src/click/%' AND description_source='module_docstring'",
+    "row_count": 3,
+    "ambiguities": [
+      {
+        "issue": "src/click/_winconsole.py starts with a leading # comment block, not a docstring",
+        "chosen": "Comment is not a docstring (excluded)",
+        "alternative_row_count": 4
+      }
+    ]
+  },
+  {
+    "id": "click-03",
+    "sql": "SELECT DISTINCT imported_file_id AS file_path FROM code.imports WHERE file_id='src/click/termui.py' AND imported_file_id IS NOT NULL AND imported_file_id<>'src/click/termui.py'",
+    "row_count": 6,
+    "ambiguities": [
+      {
+        "issue": "Whether the TYPE_CHECKING-guarded import of _termui_impl and function-level imports count",
+        "chosen": "All import statements counted, as stated; _termui_impl is reached only under TYPE_CHECKING and inside functions, so a top-level-runtime-only reading drops it",
+        "alternative_row_count": 5
+      },
+      {
+        "issue": "Whether 'from . import _compat' (module object import) counts as importing _compat",
+        "chosen": "Counted",
+        "alternative_row_count": 6
+      }
+    ]
+  },
+  {
+    "id": "click-04",
+    "sql": "SELECT symbol_id FROM code.symbols WHERE file_id='src/click/_compat.py' AND kind='function' AND is_public AND summary_source='none'",
+    "row_count": 11,
+    "ambiguities": [
+      {
+        "issue": "Conditionally defined module-level functions under if/else (_get_argv_encoding, _get_windows_console_stream) and nested func in _make_cached_stream_func",
+        "chosen": "Conditional defs are module-level but all private; nested func is not module-level; no effect",
+        "alternative_row_count": 11
+      }
+    ]
+  },
+  {
+    "id": "click-05",
+    "sql": "SELECT c.caller_symbol_id, COUNT(*) AS call_sites FROM code.calls c JOIN code.symbols s ON s.symbol_id=c.caller_symbol_id WHERE c.callee_symbol_id='src/click/utils.py::echo' AND c.call_kind='direct' AND s.file_id LIKE 'src/click/%' AND s.kind IN ('function','method') GROUP BY 1",
+    "row_count": 16,
+    "ambiguities": [
+      {
+        "issue": "Nested helpers: echo inside version_option.callback and custom_version_option.show_version (assigned to kwargs['callback'], not called/passed)",
+        "chosen": "Excluded per the stated rule (DB attributes them to no symbol)",
+        "alternative_row_count": 18
+      },
+      {
+        "issue": "Nested helpers that ARE called/passed: prompt_func (called by prompt, line 244) and help_option.show_help (passed to kwargs.setdefault, line 615)",
+        "chosen": "Included per the stated rule; excluding them drops help_option (prompt keeps its two body call sites, 3->2)",
+        "alternative_row_count": 15
+      },
+      {
+        "issue": "Overloaded prompt identified as prompt@L168 (implementation), not the @overload stubs",
+        "chosen": "Implementation symbol id",
+        "alternative_row_count": 16
+      }
+    ]
+  },
+  {
+    "id": "click-06",
+    "sql": "SELECT DISTINCT i.file_id AS test_file_path FROM code.imports i JOIN code.files f ON f.file_id=i.file_id WHERE f.is_test AND (i.imported_file_id='src/click/testing.py' OR i.module_name='click.testing')",
+    "row_count": 4,
+    "ambiguities": [
+      {
+        "issue": "tests/test_context.py uses click.testing.CliRunner via attribute without importing click.testing",
+        "chosen": "Excluded as the question says",
+        "alternative_row_count": 5
+      },
+      {
+        "issue": "Whether tests/conftest.py counts as a test file",
+        "chosen": "Included (is_test=true, conftest.py is test infrastructure)",
+        "alternative_row_count": 3
+      }
+    ]
+  },
+  {
+    "id": "click-07",
+    "sql": "SELECT DISTINCT c.caller_symbol_id AS passing_symbol_id, c.callee_symbol_id AS passed_symbol_id FROM code.calls c JOIN code.symbols s ON s.symbol_id=c.caller_symbol_id JOIN code.symbols t ON t.symbol_id=c.callee_symbol_id WHERE c.call_kind='callback' AND s.file_id LIKE 'src/click/%' AND s.kind IN ('function','method') AND t.kind IN ('function','method')",
+    "row_count": 5,
+    "ambiguities": [
+      {
+        "issue": "Nested helpers passed by reference (help_option passes show_help, confirmation_option, pass_* decorators' new_func via update_wrapper) and module-level _make_cached_stream_func(..., get_text_stdin)",
+        "chosen": "Excluded as stated",
+        "alternative_row_count": 5
+      },
+      {
+        "issue": "Classes passed as arguments (e.g. isinstance(x, Command), cls=Command) are not functions and are not invoked",
+        "chosen": "Excluded",
+        "alternative_row_count": 5
+      }
+    ]
+  },
+  {
+    "id": "click-08",
+    "sql": "WITH RECURSIVE sub(symbol_id, depth) AS (SELECT class_symbol_id, 1 FROM code.class_bases WHERE base_symbol_id='src/click/exceptions.py::ClickException' UNION ALL SELECT b.class_symbol_id, sub.depth+1 FROM code.class_bases b JOIN sub ON b.base_symbol_id=sub.symbol_id) SELECT symbol_id, MIN(depth) AS inheritance_depth FROM sub WHERE symbol_id LIKE 'src/click/%' GROUP BY 1",
+    "row_count": 9,
+    "ambiguities": [
+      {
+        "issue": "Depth under multiple inheritance paths (min vs max)",
+        "chosen": "Minimum; all chains here are single inheritance so no difference",
+        "alternative_row_count": 9
+      }
+    ]
+  },
+  {
+    "id": "click-09",
+    "sql": "SELECT g.symbol_id FROM code.symbols g WHERE g.file_id='src/click/core.py' AND g.kind='method' AND g.qualname LIKE 'Group.%' AND EXISTS (SELECT 1 FROM code.symbols c WHERE c.file_id='src/click/core.py' AND c.kind='method' AND c.qualname='Command.'||g.name)",
+    "row_count": 7,
+    "ambiguities": [
+      {
+        "issue": "Whether Group.__init__ counts as overriding Command.__init__",
+        "chosen": "Counted (dunder methods are overrides too)",
+        "alternative_row_count": 6
+      }
+    ]
+  },
+  {
+    "id": "click-10",
+    "sql": "SELECT file_id AS file_path FROM code.imports WHERE file_id LIKE 'src/click/%' GROUP BY file_id HAVING bool_or(imported_file_id='src/click/_compat.py') AND bool_or(imported_file_id='src/click/utils.py') AND NOT bool_or(coalesce(imported_file_id='src/click/core.py',false))",
+    "row_count": 2,
+    "ambiguities": [
+      {
+        "issue": "'from . import _compat' counted as importing from _compat",
+        "chosen": "Counted; termui also imports names from _compat so no difference",
+        "alternative_row_count": 2
+      }
+    ]
+  },
+  {
+    "id": "click-11",
+    "sql": "WITH e AS (SELECT DISTINCT c.caller_symbol_id AS src, c.callee_symbol_id AS dst FROM code.calls c JOIN code.symbols s ON s.symbol_id=c.caller_symbol_id WHERE c.call_kind='direct' AND c.resolution IN ('same_file','imported','method_on_self') AND s.file_id LIKE 'src/click/%' AND s.kind IN ('function','method')), h1 AS (SELECT DISTINCT src FROM e WHERE dst='src/click/_compat.py::term_len'), h2 AS (SELECT DISTINCT e.src FROM e JOIN h1 ON e.dst=h1.src WHERE e.src NOT IN (SELECT src FROM h1)) SELECT src AS symbol_id, 1 AS hops FROM h1 UNION ALL SELECT src, 2 FROM h2",
+    "row_count": 12,
+    "ambiguities": [
+      {
+        "issue": "Whether the intermediate function must also be in src/click (vs any repository function, e.g. tests/examples)",
+        "chosen": "Callers restricted to src/click; intermediates are hop-1 callers which are all in src/click anyway",
+        "alternative_row_count": 12
+      },
+      {
+        "issue": "Callback use map(term_len, ...) in TextWrapper._wrap_chunks",
+        "chosen": "Not counted as a call; _wrap_chunks still a direct caller so no difference",
+        "alternative_row_count": 12
+      }
+    ]
+  },
+  {
+    "id": "click-12",
+    "sql": "SELECT c.caller_symbol_id AS symbol_id FROM code.calls c JOIN code.symbols s ON s.symbol_id=c.caller_symbol_id WHERE c.call_kind='direct' AND s.file_id LIKE 'src/click/%' AND s.kind IN ('function','method') AND c.callee_symbol_id IN ('src/click/termui.py::style','src/click/utils.py::echo') GROUP BY 1 HAVING COUNT(DISTINCT c.callee_symbol_id)=2",
+    "row_count": 3,
+    "ambiguities": [
+      {
+        "issue": "style(...) appearing as an argument expression of echo(...) is still a direct call of style",
+        "chosen": "Counted as direct call",
+        "alternative_row_count": 3
+      }
+    ]
+  }
+]

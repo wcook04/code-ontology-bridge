@@ -1,0 +1,214 @@
+[
+  {
+    "id": "click-01",
+    "question": "What are the five largest non-test Python files in the repository by line count? Non-test files include the library, examples and docs. Give the repository-relative file path and its line count, largest first, ties broken by file path.",
+    "fields": [
+      {
+        "name": "file_path",
+        "type": "string"
+      },
+      {
+        "name": "line_count",
+        "type": "integer"
+      }
+    ],
+    "ordered": true,
+    "reference_sql": "SELECT file_id AS file_path, line_count FROM code.files WHERE NOT is_test ORDER BY line_count DESC, file_id LIMIT 5",
+    "row_count": 5,
+    "topic": "files and sizes",
+    "difficulty": "easy",
+    "source_check": "Checked `wc -l`-equivalent line counts in the DB against the checkout listing; src/click/core.py (4038) is by far the largest and the next four are types.py, termui.py, _termui_impl.py, shell_completion.py; examples/ and docs/conf.py files are all under 300 lines so they cannot enter the top 5. No ties. Matches source."
+  },
+  {
+    "id": "click-02",
+    "question": "Which modules of the click library package (files under src/click/) start with a module docstring? Give the repository-relative file path.",
+    "fields": [
+      {
+        "name": "file_path",
+        "type": "string"
+      }
+    ],
+    "ordered": false,
+    "reference_sql": "SELECT file_id AS file_path FROM code.files WHERE file_id LIKE 'src/click/%' AND description_source = 'module_docstring' AND description <> '' ORDER BY file_id",
+    "row_count": 3,
+    "topic": "module docstrings",
+    "difficulty": "easy",
+    "source_check": "Printed the first non-comment, non-blank line of every src/click/*.py: only __init__.py, _termui_impl.py and parser.py begin with a triple-quoted string; all others begin with `from __future__ import annotations`. Matches source."
+  },
+  {
+    "id": "click-03",
+    "question": "Which other modules of the click library does src/click/termui.py import from? Count every import statement in the file, including imports placed inside functions. Give the repository-relative file path of each imported module, once each.",
+    "fields": [
+      {
+        "name": "file_path",
+        "type": "string"
+      }
+    ],
+    "ordered": false,
+    "reference_sql": "SELECT DISTINCT imported_file_id AS file_path FROM code.imports WHERE file_id = 'src/click/termui.py' AND imported_file_id IS NOT NULL AND imported_file_id <> 'src/click/termui.py' ORDER BY 1",
+    "row_count": 6,
+    "topic": "module dependencies",
+    "difficulty": "easy",
+    "source_check": "Read termui.py import lines 15-28 and the function-local imports at 360, 579, 909, 947, 980, 988: modules _compat (incl. `from . import _compat`), exceptions, globals, types, utils and _termui_impl (TYPE_CHECKING import at 28 plus local imports). No import of core. Matches source."
+  },
+  {
+    "id": "click-04",
+    "question": "Which public module-level functions in src/click/_compat.py have no docstring? Public means the name does not start with an underscore; methods and classes are excluded. Give the symbol ID.",
+    "fields": [
+      {
+        "name": "symbol_id",
+        "type": "string"
+      }
+    ],
+    "ordered": false,
+    "reference_sql": "SELECT symbol_id FROM code.symbols WHERE file_id = 'src/click/_compat.py' AND kind = 'function' AND is_public AND summary_source = 'none' ORDER BY symbol_id",
+    "row_count": 11,
+    "topic": "docstrings",
+    "difficulty": "medium",
+    "source_check": "Listed every top-level `def` in _compat.py (13 public: is_ascii_encoding, get_best_encoding, get_binary_*/get_text_* x6, open_stream, strip_ansi, should_strip_ansi, term_len, isatty). Opened them: only is_ascii_encoding and get_best_encoding have docstrings; the other 11 do not. No public functions are defined conditionally. Matches source."
+  },
+  {
+    "id": "click-05",
+    "question": "Which module-level functions or methods in the click library (src/click/, excluding tests and examples) call the echo function from src/click/utils.py directly, and how many call sites does each have? Only direct calls count, not passing echo as an argument. A call written inside a nested helper function counts for the enclosing function or method only when the enclosing one calls that helper or passes it as an argument to another call (a helper merely assigned to a variable or dictionary key does not count). Give the caller's symbol ID and the number of call sites.",
+    "fields": [
+      {
+        "name": "caller_symbol_id",
+        "type": "string"
+      },
+      {
+        "name": "call_sites",
+        "type": "integer"
+      }
+    ],
+    "ordered": false,
+    "reference_sql": "SELECT c.caller_symbol_id, COUNT(*) AS call_sites FROM code.calls c JOIN code.symbols s ON s.symbol_id = c.caller_symbol_id WHERE c.callee_symbol_id = 'src/click/utils.py::echo' AND c.call_kind = 'direct' AND s.file_id LIKE 'src/click/%' GROUP BY c.caller_symbol_id ORDER BY 1",
+    "row_count": 16,
+    "topic": "direct callers",
+    "difficulty": "medium",
+    "source_check": "grep of `echo(` in src/click finds 25 real call sites; 23 are recorded and the per-caller counts match (e.g. prompt@L168 lines 244 [inside nested prompt_func, which prompt calls], 275, 286; confirm line 340; Command.main@L1515 is the implementing definition after two @overload stubs at 1496/1506; help_option line 615 is inside nested show_help passed via kwargs.setdefault('callback', show_help)). The 2 unrecorded sites are decorators.py:544 (nested callback in version_option) and 589 (nested show_version in custom_version_option); both helpers are only assigned via kwargs['callback'] = ..., which the question's nested-helper rule excludes, consistent with the extractor's documented limit. Matches source under the stated rule."
+  },
+  {
+    "id": "click-06",
+    "question": "Which test files contain an import statement that imports the click.testing module or any name from it? A test that only reaches click.testing through an attribute of the click package without importing it does not count. Give the repository-relative path of each test file.",
+    "fields": [
+      {
+        "name": "test_file_path",
+        "type": "string"
+      }
+    ],
+    "ordered": false,
+    "reference_sql": "SELECT DISTINCT i.file_id AS test_file_path FROM code.imports i JOIN code.files f ON f.file_id = i.file_id WHERE f.is_test AND i.imported_file_id = 'src/click/testing.py' ORDER BY 1",
+    "row_count": 4,
+    "topic": "test imports",
+    "difficulty": "medium",
+    "source_check": "grep for click.testing in tests/: conftest.py, test_options.py, test_stream_lifecycle.py and test_testing.py contain `from click.testing import ...`. tests/test_context.py:253 uses `click.testing.CliRunner()` without importing click.testing, which the question explicitly excludes; the DB correctly has no import row for it. Matches source."
+  },
+  {
+    "id": "click-07",
+    "question": "Inside the bodies of functions and methods in the click library (src/click/), where is a module-level function or a method defined in the repository passed by reference as an argument to another call (so the receiving call is expected to invoke it) rather than being called at that point? Module-level code outside any function, and nested helper functions, do not count. Give the symbol ID of the function or method containing the call and the symbol ID of the function passed, one row per distinct pair.",
+    "fields": [
+      {
+        "name": "passing_symbol_id",
+        "type": "string"
+      },
+      {
+        "name": "passed_symbol_id",
+        "type": "string"
+      }
+    ],
+    "ordered": false,
+    "reference_sql": "SELECT DISTINCT caller_symbol_id AS passing_symbol_id, callee_symbol_id AS passed_symbol_id FROM code.calls WHERE call_kind = 'callback' AND caller_symbol_id LIKE 'src/click/%' ORDER BY 1, 2",
+    "row_count": 5,
+    "topic": "callback references",
+    "difficulty": "medium",
+    "source_check": "_compat.py lines 297-298 and 313-314 pass _is_binary_reader/_find_binary_reader and _is_binary_writer/_find_binary_writer to _force_correct_text_stream; _textwrap.py:120 `sum(map(term_len, cur_line))` passes term_len to map. Other function references in src/click are excluded by the question: _compat.py 575-577 pass get_text_stdin/stdout/stderr to _make_cached_stream_func at module level (the extractor does not record module-level calls), and core.py:196 sorted(key=sort_key) / decorators.py:625 setdefault('callback', show_help) pass nested helpers. Matches source under the stated scope."
+  },
+  {
+    "id": "click-08",
+    "question": "Which classes in the click library (src/click/) inherit from ClickException (src/click/exceptions.py), directly or through other classes? For each, give its symbol ID and the number of inheritance steps between it and ClickException (1 for a direct subclass).",
+    "fields": [
+      {
+        "name": "symbol_id",
+        "type": "string"
+      },
+      {
+        "name": "inheritance_depth",
+        "type": "integer"
+      }
+    ],
+    "ordered": false,
+    "reference_sql": "WITH RECURSIVE d(sym, depth) AS (SELECT class_symbol_id, 1 FROM code.class_bases WHERE base_symbol_id = 'src/click/exceptions.py::ClickException' UNION ALL SELECT b.class_symbol_id, d.depth + 1 FROM code.class_bases b JOIN d ON b.base_symbol_id = d.sym) SELECT sym AS symbol_id, MIN(depth) AS inheritance_depth FROM d WHERE sym LIKE 'src/click/%' GROUP BY sym ORDER BY 1",
+    "row_count": 9,
+    "topic": "inheritance closure",
+    "difficulty": "hard",
+    "source_check": "exceptions.py class statements: UsageError(ClickException), FileError(ClickException), BadParameter/NoSuchOption/NoSuchCommand/BadOptionUsage/BadArgumentUsage/NoArgsIsHelpError(UsageError), MissingParameter(BadParameter). Abort and Exit derive from RuntimeError and are correctly absent. Test-local subclasses (tests/test_abort_interrupt.py:120 InterruptedReport, tests/test_testing.py:230 CLIError) are nested in test functions, so they are neither symbols nor in scope (question limits to src/click). Matches source."
+  },
+  {
+    "id": "click-09",
+    "question": "Which methods of the Group class in src/click/core.py override a method that its base class Command (same file) defines itself under the same name? Count only methods written in the body of Command, not ones Command inherits. Give the symbol ID of the Group method.",
+    "fields": [
+      {
+        "name": "symbol_id",
+        "type": "string"
+      }
+    ],
+    "ordered": false,
+    "reference_sql": "SELECT DISTINCT g.symbol_id FROM code.symbols g JOIN code.symbols c ON c.file_id = 'src/click/core.py' AND c.kind = 'method' AND c.qualname = 'Command.' || g.name WHERE g.file_id = 'src/click/core.py' AND g.kind = 'method' AND g.qualname LIKE 'Group.%' ORDER BY 1",
+    "row_count": 7,
+    "topic": "method overrides",
+    "difficulty": "hard",
+    "source_check": "Listed `def` lines in class Command (989-1695) and class Group (1703-2165). Names defined in both: __init__, to_info_dict, collect_usage_pieces, format_options, parse_args, invoke, shell_complete (7). Group-only: add_command, command/group overloads, result_callback, get_command, list_commands, format_commands, resolve_command. Group's statement is `class Group(Command)`. Matches source."
+  },
+  {
+    "id": "click-10",
+    "question": "Which modules of the click library (src/click/) import from both src/click/_compat.py and src/click/utils.py but do not import from src/click/core.py at all? Count every import statement, including imports inside functions and under type-checking guards. Give the repository-relative file path.",
+    "fields": [
+      {
+        "name": "file_path",
+        "type": "string"
+      }
+    ],
+    "ordered": false,
+    "reference_sql": "SELECT file_id AS file_path FROM code.imports WHERE file_id LIKE 'src/click/%' AND imported_file_id = 'src/click/_compat.py' INTERSECT SELECT file_id FROM code.imports WHERE imported_file_id = 'src/click/utils.py' EXCEPT SELECT file_id FROM code.imports WHERE imported_file_id = 'src/click/core.py' ORDER BY 1",
+    "row_count": 2,
+    "topic": "import set logic",
+    "difficulty": "hard",
+    "source_check": "Read import lines of every candidate: _termui_impl.py imports _compat, exceptions, utils (no core); termui.py imports _compat, exceptions, globals, types, utils, _termui_impl (no core). Excluded correctly: types.py, exceptions.py and testing.py import _compat and utils but also import core under TYPE_CHECKING; utils.py imports _compat but not utils; formatting.py/_textwrap.py import _compat but not utils. Matches source."
+  },
+  {
+    "id": "click-11",
+    "question": "Which functions or methods in the click library (src/click/) reach term_len (src/click/_compat.py) within at most two direct calls: either calling it directly, or directly calling a repository function or method that itself calls term_len directly? Count only calls written as a plain function name or as a method call on self; calls through other objects (e.g. formatter.write_dl(...)) and passing a function as an argument do not count. Give the symbol ID and the minimum number of calls in the chain (1 for a direct caller, 2 otherwise).",
+    "fields": [
+      {
+        "name": "symbol_id",
+        "type": "string"
+      },
+      {
+        "name": "hops",
+        "type": "integer"
+      }
+    ],
+    "ordered": false,
+    "reference_sql": "WITH e AS (SELECT DISTINCT caller_symbol_id, callee_symbol_id FROM code.calls WHERE call_kind = 'direct' AND callee_symbol_id IS NOT NULL), d1 AS (SELECT caller_symbol_id AS s FROM e WHERE callee_symbol_id = 'src/click/_compat.py::term_len'), d2 AS (SELECT e.caller_symbol_id AS s FROM e JOIN d1 ON e.callee_symbol_id = d1.s) SELECT s AS symbol_id, MIN(h) AS hops FROM (SELECT s, 1 AS h FROM d1 UNION ALL SELECT s, 2 FROM d2) x WHERE s LIKE 'src/click/%' AND s <> 'src/click/_compat.py::term_len' GROUP BY s ORDER BY 1",
+    "row_count": 12,
+    "topic": "multi-hop calls",
+    "difficulty": "hard",
+    "source_check": "Direct term_len callers confirmed by grep: ProgressBar.render_progress (_termui_impl 268, 282), TextWrapper._wrap_chunks (_textwrap 89-154), measure_table (formatting 19), wrap_text (93, 95, in its own body not the nested _flush_par), HelpFormatter.write_usage (180-195) and write_dl (255-256). Second-hop callers: ProgressBar.__enter__/__iter__/generator/update/render_finish call self.render_progress() (lines 117-380); HelpFormatter.write_text calls wrap_text (219). Source has further callers through non-self objects (core.py 1194 formatter.write_usage, 1335/1348/2036 formatter.write_dl in Command.format_usage, format_options, format_arguments and Group.format_commands); the extractor leaves these as dynamic_attribute, and the question's counting rule excludes them. Matches source under the stated rule."
+  },
+  {
+    "id": "click-12",
+    "question": "Which functions or methods in the click library (src/click/) directly call both the style function from src/click/termui.py and the echo function from src/click/utils.py? Give the symbol ID.",
+    "fields": [
+      {
+        "name": "symbol_id",
+        "type": "string"
+      }
+    ],
+    "ordered": false,
+    "reference_sql": "SELECT caller_symbol_id AS symbol_id FROM code.calls WHERE callee_symbol_id = 'src/click/termui.py::style' AND call_kind = 'direct' AND caller_symbol_id LIKE 'src/click/%' INTERSECT SELECT caller_symbol_id FROM code.calls WHERE callee_symbol_id = 'src/click/utils.py::echo' AND call_kind = 'direct' ORDER BY 1",
+    "row_count": 3,
+    "topic": "call set logic",
+    "difficulty": "hard",
+    "source_check": "style( call sites in src/click: core.py 1443 (in Command.invoke, wrapped in echo(...)), core.py 2973 (in Parameter.handle_parse_result, wrapped in echo(...)), termui.py 809 (secho, which also calls echo at 811). No other library function calls style. Matches source."
+  }
+]

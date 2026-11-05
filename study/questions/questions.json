@@ -1,0 +1,886 @@
+[
+  {
+    "id": "ao-01",
+    "repo": "auto_ontology",
+    "question": "The production database connectors are the classes that directly subclass SQLDatabase (defined in auto_ontology/connectors/base.py), excluding any class defined in test code (every file under a tests/ folder counts as test code). For each such connector class, which public methods does the class define in its own body that SQLDatabase itself does not define? A method is public when its name does not start with an underscore (so __init__ and other dunder methods are excluded); anything written with def directly in the class body counts as a method, including properties and context-manager methods. Methods inherited without being redefined do not count. Return one row per (connector class symbol ID, method name).",
+    "fields": [
+      {
+        "name": "class_symbol_id",
+        "type": "string"
+      },
+      {
+        "name": "method_name",
+        "type": "string"
+      }
+    ],
+    "ordered": false,
+    "reference_sql": "SELECT b.class_symbol_id, m.name AS method_name FROM code.class_bases b JOIN code.symbols c ON c.symbol_id = b.class_symbol_id JOIN code.files f ON f.file_id = c.file_id JOIN code.symbols m ON m.file_id = c.file_id AND m.kind = 'method' AND m.qualname = c.qualname || '.' || m.name WHERE b.base_symbol_id = 'auto_ontology/connectors/base.py::SQLDatabase' AND NOT f.is_test AND m.is_public AND m.name NOT IN (SELECT bm.name FROM code.symbols bm WHERE bm.file_id = 'auto_ontology/connectors/base.py' AND bm.kind = 'method' AND bm.qualname LIKE 'SQLDatabase.%') ORDER BY 1, 2",
+    "difficulty": "hard",
+    "topic": "inheritance + method definitions (set difference)",
+    "reworded": false,
+    "source_check": "Checked connectors/base.py: SQLDatabase defines __init__, execute, get_tables, get_columns, get_queries, get_views, get_pks, get_fks, dialect, database_name, qualify, close, __enter__, __exit__ (no ping, no get_schemas). grep 'def ping' finds exactly one in each of clickhouse, databricks, heavydb, kyuubi, mysql, postgres, snowflake, trino (not duckdb/sqlite). databricks.py has @property auth_mode (l.237), @contextmanager reuse_connection (l.246), get_schemas (l.473), ping (l.985). The 10 production subclasses each name SQLDatabase as their first base. The test subclass connectors/tests/test_base.py::_Fake is excluded. Extractor matched source."
+  },
+  {
+    "id": "ao-02",
+    "repo": "auto_ontology",
+    "question": "When the text-to-SQL LangGraph is assembled by create_graph in auto_ontology/retrieval/text_to_sql/text_to_sql_graph.py, which functions or methods of this repository does create_graph hand over by reference, i.e. pass the function object itself as an argument to another call (as with graph.add_conditional_edges(node, router_fn, ...)) rather than calling it? Count only plain names passed directly as call arguments; functions that create_graph calls itself, values that are the result of a call (such as _make_soft_check_router(...)), lambdas, and local variables holding nodes do not count. Functions passed only inside an if/else branch of create_graph count. Return each distinct function's symbol ID.",
+    "fields": [
+      {
+        "name": "symbol_id",
+        "type": "string"
+      }
+    ],
+    "ordered": false,
+    "reference_sql": "SELECT DISTINCT callee_symbol_id AS symbol_id FROM code.calls WHERE caller_symbol_id = 'auto_ontology/retrieval/text_to_sql/text_to_sql_graph.py::create_graph' AND call_kind = 'callback' ORDER BY 1",
+    "difficulty": "medium",
+    "topic": "callbacks (functions passed by reference)",
+    "reworded": true,
+    "source_check": "Read create_graph (text_to_sql_graph.py l.329-610): add_conditional_edges receives _entry_router_fn, route_after_candidate_retrieval, route_question_type_or_evidence, route_decision, route_evidence_refinement, route_generated_sql, route_sql_validation, route_sql_execution, route_reconstructed_sql by name (9, all module-level functions in the same file). Other arguments are _make_soft_check_router(...) call results, a lambda (add_node('_entry_router', lambda state: state)) and local *_node variables built by _make_node(...), which the extractor correctly does not record as callbacks. Extractor matched source."
+  },
+  {
+    "id": "ao-03",
+    "repo": "auto_ontology",
+    "question": "invoke_with_structured_output in auto_ontology/utils/llm_invoke.py is the main structured-LLM-call wrapper. Which functions or methods in non-test code (every file under a tests/ folder is test code) reach it at exactly two hops: they do not call invoke_with_structured_output directly themselves, but they directly call at least one function or method that does call it directly? Consider direct calls only on both hops, and follow only calls to a named function or to a method on self (a call through another object's attribute, such as self._backend.classify(), is not followed); a function passed as an argument (e.g. pool.submit(f)) does not count as calling it. The intermediate function may live anywhere, including test code, but the functions you list must be in non-test code. Return their symbol IDs.",
+    "fields": [
+      {
+        "name": "symbol_id",
+        "type": "string"
+      }
+    ],
+    "ordered": false,
+    "reference_sql": "WITH d AS (SELECT DISTINCT caller_symbol_id AS s FROM code.calls WHERE call_kind = 'direct' AND callee_symbol_id = 'auto_ontology/utils/llm_invoke.py::invoke_with_structured_output') SELECT DISTINCT c.caller_symbol_id AS symbol_id FROM code.calls c JOIN code.symbols x ON x.symbol_id = c.caller_symbol_id JOIN code.files f ON f.file_id = x.file_id WHERE c.call_kind = 'direct' AND c.callee_symbol_id IN (SELECT s FROM d) AND c.caller_symbol_id NOT IN (SELECT s FROM d) AND NOT f.is_test ORDER BY 1",
+    "difficulty": "hard",
+    "topic": "two-hop call chain",
+    "reworded": true,
+    "source_check": "Spot-checked chains in source: EvidenceRefinementAgent.execute -> safe_invoke_structured_nr (l.653, 713), which calls invoke_with_structured_output; server/chat/worker.py::_worker_loop -> resolve_follow_up (l.174, function-level import l.82); semantic_fk._resolve_via_vdb -> _llm_pick_hit (l.525); deterministic._generate_column_descriptions calls _describe_column_batch directly at l.205 (and also via pool.submit at l.210, a callback); server/chat/router.py::_build_charts_event -> analyze_and_visualize (imported via the visualization package re-export, l.89/351); visit_enter.process_table -> suggest_potential_foreign_keys / extract_term. No intermediate from test code ends up contributing a production caller. Extractor matched source for all checked edges."
+  },
+  {
+    "id": "ao-04",
+    "repo": "auto_ontology",
+    "question": "Consider the agent classes defined in non-test code that directly subclass BaseAgent from auto_ontology/retrieval/text_to_sql/base.py (every file under a tests/ folder, conftest.py and helpers included, is test code). Which of these agent classes are constructed (the class is called by name, e.g. ResponseAgent()) somewhere in non-test code but are never constructed anywhere in test code? Count only direct constructor calls written in a function or method body; patching or referencing a class without calling it does not count, and a test that calls a function which constructs the class does not count as constructing it. Return their class symbol IDs.",
+    "fields": [
+      {
+        "name": "class_symbol_id",
+        "type": "string"
+      }
+    ],
+    "ordered": false,
+    "reference_sql": "SELECT b.class_symbol_id FROM code.class_bases b JOIN code.symbols s ON s.symbol_id = b.class_symbol_id JOIN code.files f ON f.file_id = s.file_id WHERE b.base_symbol_id = 'auto_ontology/retrieval/text_to_sql/base.py::BaseAgent' AND NOT f.is_test AND EXISTS (SELECT 1 FROM code.calls c JOIN code.symbols cs ON cs.symbol_id = c.caller_symbol_id JOIN code.files cf ON cf.file_id = cs.file_id WHERE c.callee_symbol_id = b.class_symbol_id AND c.call_kind = 'direct' AND NOT cf.is_test) AND NOT EXISTS (SELECT 1 FROM code.calls c JOIN code.symbols cs ON cs.symbol_id = c.caller_symbol_id JOIN code.files cf ON cf.file_id = cs.file_id WHERE c.callee_symbol_id = b.class_symbol_id AND c.call_kind = 'direct' AND cf.is_test) ORDER BY 1",
+    "difficulty": "hard",
+    "topic": "inheritance + instantiation, set logic",
+    "reworded": true,
+    "source_check": "Grepped '<Class>(' across the whole checkout for each answer: CoverageGradeAgent only in entity_coverage/graph.py:40; EmptyLikeResultCheckAgent and ResponseAgent only in text_to_sql_graph.py (l.350-351); KumoPredictionAgent / PredictionGraphAgent only in text_to_sql_graph.py (l.488-493); JoinPathCheckAgent, JsonbPathCheckAgent, ProactiveValueCheckAgent only in CombinedPrecheckAgent.__init__ (combined_precheck.py l.67-69). None appears in any test file. Of the 23 production BaseAgent subclasses, SQLFromTablesAgent is the opposite case (constructed only in tests/test_evidence_agents.py), and the other 14 are constructed in both. Extractor matched source."
+  },
+  {
+    "id": "ao-05",
+    "repo": "auto_ontology",
+    "question": "Which non-test Python files anywhere in the repository (including folders outside the auto_ontology package, such as dev_tools/) but outside the auto_ontology/connectors/ folder import anything from the connectors package (auto_ontology.connectors itself or any of its modules)? Count every import statement, including imports placed inside functions and imports under an `if TYPE_CHECKING:` guard; mentions in comments or docstrings are not imports. Every file under a tests/ folder is test code and is excluded. Return repository-relative file paths.",
+    "fields": [
+      {
+        "name": "file_path",
+        "type": "string"
+      }
+    ],
+    "ordered": false,
+    "reference_sql": "SELECT DISTINCT i.file_id AS file_path FROM code.imports i JOIN code.files f ON f.file_id = i.file_id WHERE i.imported_file_id LIKE 'auto_ontology/connectors/%' AND i.file_id NOT LIKE 'auto_ontology/connectors/%' AND NOT f.is_test ORDER BY 1",
+    "difficulty": "medium",
+    "topic": "module dependencies (imports)",
+    "reworded": true,
+    "source_check": "Grepped the checkout for 'auto_ontology.connectors' outside connectors/ and tests: 27 files match, of which 4 (catalog/normalize.py, dal/schema.py, retrieval/text_to_sql/formatters_util.py, server/sql_attributes/router.py) only mention it in comments/docstrings; the other 23 are exactly the database rows. semantic/visit_enter.py's l.48 import of connectors.base, which sits under `if TYPE_CHECKING:` (l.47), is recorded alongside its top-level imports. No relative-import forms were missed. Extractor matched source."
+  },
+  {
+    "id": "ao-06",
+    "repo": "auto_ontology",
+    "question": "Among the production database connector classes that directly subclass SQLDatabase (auto_ontology/connectors/base.py), excluding classes in test code (any file under a tests/ folder), which ones override get_columns with their own get_columns method that has no docstring of its own (a leading # comment is not a docstring)? Return the symbol ID of each such get_columns method.",
+    "fields": [
+      {
+        "name": "symbol_id",
+        "type": "string"
+      }
+    ],
+    "ordered": false,
+    "reference_sql": "SELECT m.symbol_id FROM code.class_bases b JOIN code.symbols c ON c.symbol_id = b.class_symbol_id JOIN code.files f ON f.file_id = c.file_id JOIN code.symbols m ON m.file_id = c.file_id AND m.qualname = c.qualname || '.get_columns' AND m.kind = 'method' WHERE b.base_symbol_id = 'auto_ontology/connectors/base.py::SQLDatabase' AND NOT f.is_test AND m.summary_source = 'none' ORDER BY 1",
+    "difficulty": "medium",
+    "topic": "docstrings on overriding methods",
+    "reworded": true,
+    "source_check": "All 10 production connectors define get_columns. Opened databricks.py l.841, sqlite.py l.157 (start with code, no docstring) and clickhouse.py l.607 (has a docstring 'Return the bound database's columns.'); duckdb and postgres are the other two with docstrings. The test class connectors/tests/test_base.py::_Fake also lacks one but is excluded. Extractor matched source."
+  },
+  {
+    "id": "ao-07",
+    "repo": "auto_ontology",
+    "question": "auto_ontology/dal/session.py provides store() (the active connection handle) and write_transaction() (a context manager that groups store() queries into one transaction). Outside the auto_ontology/dal/ folder, and excluding test code (every file under a tests/ folder), which functions or methods open a transaction themselves by calling write_transaction directly (e.g. `with write_transaction():`) but never call store() directly anywhere in their own body? Only direct calls count; calls made by helpers they invoke do not. Return their symbol IDs.",
+    "fields": [
+      {
+        "name": "symbol_id",
+        "type": "string"
+      }
+    ],
+    "ordered": false,
+    "reference_sql": "SELECT DISTINCT c.caller_symbol_id AS symbol_id FROM code.calls c JOIN code.symbols s ON s.symbol_id = c.caller_symbol_id JOIN code.files f ON f.file_id = s.file_id WHERE c.callee_symbol_id = 'auto_ontology/dal/session.py::write_transaction' AND c.call_kind = 'direct' AND NOT f.is_test AND s.file_id NOT LIKE 'auto_ontology/dal/%' AND c.caller_symbol_id NOT IN (SELECT caller_symbol_id FROM code.calls WHERE callee_symbol_id = 'auto_ontology/dal/session.py::store' AND call_kind = 'direct') ORDER BY 1",
+    "difficulty": "hard",
+    "topic": "call set logic (X but not Y)",
+    "reworded": false,
+    "source_check": "Nine non-test functions outside dal/ use write_transaction. Read catalog/write.py populate_fks/populate_pks (l.146-170): bodies are `with write_transaction(): add_fks/delete_old_fks` and `reset_pks/add_pks`, no store(). catalog/store/schemas.py add_schemas_edge (l.209-231) only calls upsert_row inside the transaction. server/tags/router.py detach_tag (l.341) and server/rules/router.py create_rule (l.306) contain no store(). Conversely catalog/store/db.py delete_schema (l.121-125) calls store().query_write inside the block, so it is excluded, as are delete_table, delete_columns_batch and queries.py::_write_link. Extractor matched source."
+  },
+  {
+    "id": "ao-08",
+    "repo": "auto_ontology",
+    "question": "Which five functions in the data-access layer are used most widely by the rest of the codebase? Consider module-level functions (not methods or classes) defined in non-test files under auto_ontology/dal/, excluding auto_ontology/dal/session.py. Rank them by the number of distinct functions or methods that call them directly, counting only callers that are in non-test files (every file under a tests/ folder is test code) located outside auto_ontology/dal/. Calls through a module alias (e.g. `dal.fetch_databases()` after `from auto_ontology.dal import datasources as dal`) or an import alias count; a function passed by reference without being called does not. Highest count first; break ties by symbol ID ascending and return exactly five rows. Return the symbol ID and the caller count.",
+    "fields": [
+      {
+        "name": "symbol_id",
+        "type": "string"
+      },
+      {
+        "name": "caller_count",
+        "type": "integer"
+      }
+    ],
+    "ordered": true,
+    "reference_sql": "SELECT c.callee_symbol_id AS symbol_id, COUNT(DISTINCT c.caller_symbol_id) AS caller_count FROM code.calls c JOIN code.symbols cs ON cs.symbol_id = c.caller_symbol_id JOIN code.files cf ON cf.file_id = cs.file_id JOIN code.symbols t ON t.symbol_id = c.callee_symbol_id JOIN code.files tf ON tf.file_id = t.file_id WHERE c.call_kind = 'direct' AND NOT cf.is_test AND cs.kind IN ('function', 'method') AND cs.file_id NOT LIKE 'auto_ontology/dal/%' AND t.kind = 'function' AND t.file_id LIKE 'auto_ontology/dal/%' AND NOT tf.is_test AND t.file_id <> 'auto_ontology/dal/session.py' GROUP BY 1 ORDER BY 2 DESC, 1 LIMIT 5",
+    "difficulty": "hard",
+    "topic": "ranking by distinct callers",
+    "reworded": true,
+    "source_check": "Grepped 'fetch_databases(' and 'list_connections(' outside dal/ and tests: fetch_databases has 8 calling functions (information_tools.get_dataset/list_databases, chat/router._resolve_chat_target_db, datasources/router.list_databases via `dal.`, capture_dal_golden x2, seed_graph_fixture x2); list_connections has 8 (registry x2, databricks_oauth, ingestion_service/connections, connections/router via alias _list_connections, connections/service x2, model_interchange/service). Both match the database. Positions 5-7 tie at 6 (fetch_schemas_by_ids, terms.fetch_all_terms, terms.fetch_column_attributes_by_term_id); the symbol-ID tie-break selects datasources.py::fetch_schemas_by_ids. Extractor matched source for the checked callees."
+  },
+  {
+    "id": "ao-09",
+    "repo": "auto_ontology",
+    "question": "Which test files are statically associated with auto_ontology/semantic/visit_enter.py, meaning the test file imports that module (anywhere in the file, including inside a test function) or is named test_visit_enter.py? Mentions in comments or patch target strings do not count. Return each test file's repository-relative path once.",
+    "fields": [
+      {
+        "name": "test_file_path",
+        "type": "string"
+      }
+    ],
+    "ordered": false,
+    "reference_sql": "SELECT DISTINCT test_file_id AS test_file_path FROM code.test_links WHERE target_file_id = 'auto_ontology/semantic/visit_enter.py' ORDER BY 1",
+    "difficulty": "easy",
+    "topic": "test associations",
+    "reworded": true,
+    "source_check": "grep 'visit_enter' over the checkout: semantic/tests/test_visit_enter.py (top-level import + name match), semantic/tests/test_visit_enter_step_logs.py (`from auto_ontology.semantic import visit_enter`), connectors/tests/test_statement_timeouts.py (function-level import at l.679). dal/tests/test_column_properties.py only mentions it in its docstring and is correctly not linked. Extractor matched source."
+  },
+  {
+    "id": "ao-10",
+    "repo": "auto_ontology",
+    "question": "Within auto_ontology/server/, which immediate subfolders contain more than 1,000 lines of Python in total? Count every .py file anywhere inside the subfolder, including its test files and __init__.py; files directly in auto_ontology/server/ itself belong to no subfolder. Return the subfolder's repository-relative path (e.g. auto_ontology/server/chat) and its total line count.",
+    "fields": [
+      {
+        "name": "folder_path",
+        "type": "string"
+      },
+      {
+        "name": "total_lines",
+        "type": "integer"
+      }
+    ],
+    "ordered": false,
+    "reference_sql": "SELECT 'auto_ontology/server/' || split_part(file_id, '/', 3) AS folder_path, SUM(line_count) AS total_lines FROM code.files WHERE file_id LIKE 'auto_ontology/server/%/%' GROUP BY 1 HAVING SUM(line_count) > 1000 ORDER BY 1",
+    "difficulty": "medium",
+    "topic": "folder sizes",
+    "reworded": false,
+    "source_check": "Counted with `find server/<sub> -name '*.py' -exec cat {} + | wc -l` in the checkout: chat 2060, model_interchange 1665, rules 1306, search 1297; next largest is connections at 946. Database line counts equal wc -l for all of these; extractor matched source."
+  },
+  {
+    "id": "ao-11",
+    "repo": "auto_ontology",
+    "question": "How many public classes, public module-level functions and public methods are defined in the non-test code of the auto_ontology/retrieval/kumo/ package (files under its tests/ folder excluded)? A name is public when it does not start with an underscore, so dunder methods such as __init__ are not public, and methods of a class whose name starts with an underscore are not public either. Nested functions and nested classes are not counted. Return one row per kind, with kind being 'class', 'function' or 'method'.",
+    "fields": [
+      {
+        "name": "kind",
+        "type": "string"
+      },
+      {
+        "name": "public_count",
+        "type": "integer"
+      }
+    ],
+    "ordered": false,
+    "reference_sql": "SELECT s.kind, COUNT(*) AS public_count FROM code.symbols s JOIN code.files f ON f.file_id = s.file_id WHERE s.file_id LIKE 'auto_ontology/retrieval/kumo/%' AND NOT f.is_test AND s.is_public GROUP BY 1 ORDER BY 1",
+    "difficulty": "easy",
+    "topic": "definition counts by kind and visibility",
+    "reworded": false,
+    "source_check": "Independently counted with Python's ast over auto_ontology/retrieval/kumo/*.py (top-level defs, top-level classes, defs directly in public classes, underscore names skipped): class 17, function 32, method 13, identical to the database."
+  },
+  {
+    "id": "ao-12",
+    "repo": "auto_ontology",
+    "question": "Which classes inherit from ApiModel (auto_ontology/server/models.py) only indirectly, i.e. through at least one intermediate class of this repository, and do not name ApiModel directly in their class statement? An import alias of ApiModel (auto_ontology/server/responses.py imports it as _Payload) counts as naming ApiModel directly, and a subscripted base such as ListResponse[T] counts as its class. For each, give the class symbol ID and the length of the shortest inheritance chain to ApiModel (2 when the parent class directly subclasses ApiModel).",
+    "fields": [
+      {
+        "name": "class_symbol_id",
+        "type": "string"
+      },
+      {
+        "name": "depth",
+        "type": "integer"
+      }
+    ],
+    "ordered": false,
+    "reference_sql": "WITH RECURSIVE anc(cls, base, depth) AS (SELECT class_symbol_id, base_symbol_id, 1 FROM code.class_bases WHERE base_symbol_id IS NOT NULL UNION ALL SELECT a.cls, b.base_symbol_id, a.depth + 1 FROM anc a JOIN code.class_bases b ON b.class_symbol_id = a.base WHERE b.base_symbol_id IS NOT NULL) SELECT cls AS class_symbol_id, MIN(depth) AS depth FROM anc WHERE base = 'auto_ontology/server/models.py::ApiModel' GROUP BY cls HAVING MIN(depth) >= 2 ORDER BY 1",
+    "difficulty": "hard",
+    "topic": "transitive inheritance",
+    "reworded": false,
+    "source_check": "models.py: TermSummary(ApiModel) l.539; Term(TermSummary) l.547; TermDetail(Term) l.567; TermListItem(Term) l.586; TableExplorationTerm(TermSummary) l.819. responses.py: `ApiModel as _Payload` import (l.24), ListResponse(_Payload, Generic[T]) l.148, PagedListResponse(ListResponse[T], Generic[T]) l.155. The extractor resolved the _Payload alias to ApiModel and ListResponse[T] to ListResponse, matching source. Depths: Term 2, TableExplorationTerm 2, PagedListResponse 2, TermDetail 3, TermListItem 3."
+  },
+  {
+    "id": "click-01",
+    "repo": "click",
+    "question": "What are the five largest non-test Python files in the repository by line count? Non-test files include the library, examples and docs. Give the repository-relative file path and its line count, largest first, ties broken by file path.",
+    "fields": [
+      {
+        "name": "file_path",
+        "type": "string"
+      },
+      {
+        "name": "line_count",
+        "type": "integer"
+      }
+    ],
+    "ordered": true,
+    "reference_sql": "SELECT file_id AS file_path, line_count FROM code.files WHERE NOT is_test ORDER BY line_count DESC, file_id LIMIT 5",
+    "difficulty": "easy",
+    "topic": "files and sizes",
+    "reworded": false,
+    "source_check": "Checked `wc -l`-equivalent line counts in the DB against the checkout listing; src/click/core.py (4038) is by far the largest and the next four are types.py, termui.py, _termui_impl.py, shell_completion.py; examples/ and docs/conf.py files are all under 300 lines so they cannot enter the top 5. No ties. Matches source."
+  },
+  {
+    "id": "click-02",
+    "repo": "click",
+    "question": "Which modules of the click library package (files under src/click/) start with a module docstring (a leading # comment block is not a docstring)? Give the repository-relative file path.",
+    "fields": [
+      {
+        "name": "file_path",
+        "type": "string"
+      }
+    ],
+    "ordered": false,
+    "reference_sql": "SELECT file_id AS file_path FROM code.files WHERE file_id LIKE 'src/click/%' AND description_source = 'module_docstring' AND description <> '' ORDER BY file_id",
+    "difficulty": "easy",
+    "topic": "module docstrings",
+    "reworded": true,
+    "source_check": "Printed the first non-comment, non-blank line of every src/click/*.py: only __init__.py, _termui_impl.py and parser.py begin with a triple-quoted string; all others begin with `from __future__ import annotations`. Matches source."
+  },
+  {
+    "id": "click-03",
+    "repo": "click",
+    "question": "Which other modules of the click library does src/click/termui.py import from? Count every import statement in the file, including imports placed inside functions and under TYPE_CHECKING. Give the repository-relative file path of each imported module, once each.",
+    "fields": [
+      {
+        "name": "file_path",
+        "type": "string"
+      }
+    ],
+    "ordered": false,
+    "reference_sql": "SELECT DISTINCT imported_file_id AS file_path FROM code.imports WHERE file_id = 'src/click/termui.py' AND imported_file_id IS NOT NULL AND imported_file_id <> 'src/click/termui.py' ORDER BY 1",
+    "difficulty": "easy",
+    "topic": "module dependencies",
+    "reworded": true,
+    "source_check": "Read termui.py import lines 15-28 and the function-local imports at 360, 579, 909, 947, 980, 988: modules _compat (incl. `from . import _compat`), exceptions, globals, types, utils and _termui_impl (TYPE_CHECKING import at 28 plus local imports). No import of core. Matches source."
+  },
+  {
+    "id": "click-04",
+    "repo": "click",
+    "question": "Which public module-level functions in src/click/_compat.py have no docstring? Public means the name does not start with an underscore; methods and classes are excluded. Give the symbol ID.",
+    "fields": [
+      {
+        "name": "symbol_id",
+        "type": "string"
+      }
+    ],
+    "ordered": false,
+    "reference_sql": "SELECT symbol_id FROM code.symbols WHERE file_id = 'src/click/_compat.py' AND kind = 'function' AND is_public AND summary_source = 'none' ORDER BY symbol_id",
+    "difficulty": "medium",
+    "topic": "docstrings",
+    "reworded": false,
+    "source_check": "Listed every top-level `def` in _compat.py (13 public: is_ascii_encoding, get_best_encoding, get_binary_*/get_text_* x6, open_stream, strip_ansi, should_strip_ansi, term_len, isatty). Opened them: only is_ascii_encoding and get_best_encoding have docstrings; the other 11 do not. No public functions are defined conditionally. Matches source."
+  },
+  {
+    "id": "click-05",
+    "repo": "click",
+    "question": "Which module-level functions or methods in the click library (src/click/, excluding tests and examples) call the echo function from src/click/utils.py directly, and how many call sites does each have? Only direct calls count, not passing echo as an argument. A call written inside a nested helper function counts for the enclosing function or method only when the enclosing one calls that helper or passes it as an argument to another call (a helper merely assigned to a variable or dictionary key does not count). Give the caller's symbol ID and the number of call sites.",
+    "fields": [
+      {
+        "name": "caller_symbol_id",
+        "type": "string"
+      },
+      {
+        "name": "call_sites",
+        "type": "integer"
+      }
+    ],
+    "ordered": false,
+    "reference_sql": "SELECT c.caller_symbol_id, COUNT(*) AS call_sites FROM code.calls c JOIN code.symbols s ON s.symbol_id = c.caller_symbol_id WHERE c.callee_symbol_id = 'src/click/utils.py::echo' AND c.call_kind = 'direct' AND s.file_id LIKE 'src/click/%' GROUP BY c.caller_symbol_id ORDER BY 1",
+    "difficulty": "medium",
+    "topic": "direct callers",
+    "reworded": false,
+    "source_check": "grep of `echo(` in src/click finds 25 real call sites; 23 are recorded and the per-caller counts match (e.g. prompt@L168 lines 244 [inside nested prompt_func, which prompt calls], 275, 286; confirm line 340; Command.main@L1515 is the implementing definition after two @overload stubs at 1496/1506; help_option line 615 is inside nested show_help passed via kwargs.setdefault('callback', show_help)). The 2 unrecorded sites are decorators.py:544 (nested callback in version_option) and 589 (nested show_version in custom_version_option); both helpers are only assigned via kwargs['callback'] = ..., which the question's nested-helper rule excludes, consistent with the extractor's documented limit. Matches source under the stated rule."
+  },
+  {
+    "id": "click-06",
+    "repo": "click",
+    "question": "Which test files contain an import statement that imports the click.testing module or any name from it? A test that only reaches click.testing through an attribute of the click package without importing it does not count. tests/conftest.py counts as a test file. Give the repository-relative path of each test file.",
+    "fields": [
+      {
+        "name": "test_file_path",
+        "type": "string"
+      }
+    ],
+    "ordered": false,
+    "reference_sql": "SELECT DISTINCT i.file_id AS test_file_path FROM code.imports i JOIN code.files f ON f.file_id = i.file_id WHERE f.is_test AND i.imported_file_id = 'src/click/testing.py' ORDER BY 1",
+    "difficulty": "medium",
+    "topic": "test imports",
+    "reworded": true,
+    "source_check": "grep for click.testing in tests/: conftest.py, test_options.py, test_stream_lifecycle.py and test_testing.py contain `from click.testing import ...`. tests/test_context.py:253 uses `click.testing.CliRunner()` without importing click.testing, which the question explicitly excludes; the DB correctly has no import row for it. Matches source."
+  },
+  {
+    "id": "click-07",
+    "repo": "click",
+    "question": "Inside the bodies of functions and methods in the click library (src/click/), where is a module-level function or a method defined in the repository passed by reference as an argument to another call (so the receiving call is expected to invoke it) rather than being called at that point? Module-level code outside any function, and nested helper functions, do not count. Give the symbol ID of the function or method containing the call and the symbol ID of the function passed, one row per distinct pair.",
+    "fields": [
+      {
+        "name": "passing_symbol_id",
+        "type": "string"
+      },
+      {
+        "name": "passed_symbol_id",
+        "type": "string"
+      }
+    ],
+    "ordered": false,
+    "reference_sql": "SELECT DISTINCT caller_symbol_id AS passing_symbol_id, callee_symbol_id AS passed_symbol_id FROM code.calls WHERE call_kind = 'callback' AND caller_symbol_id LIKE 'src/click/%' ORDER BY 1, 2",
+    "difficulty": "medium",
+    "topic": "callback references",
+    "reworded": false,
+    "source_check": "_compat.py lines 297-298 and 313-314 pass _is_binary_reader/_find_binary_reader and _is_binary_writer/_find_binary_writer to _force_correct_text_stream; _textwrap.py:120 `sum(map(term_len, cur_line))` passes term_len to map. Other function references in src/click are excluded by the question: _compat.py 575-577 pass get_text_stdin/stdout/stderr to _make_cached_stream_func at module level (the extractor does not record module-level calls), and core.py:196 sorted(key=sort_key) / decorators.py:625 setdefault('callback', show_help) pass nested helpers. Matches source under the stated scope."
+  },
+  {
+    "id": "click-08",
+    "repo": "click",
+    "question": "Which classes in the click library (src/click/) inherit from ClickException (src/click/exceptions.py), directly or through other classes? For each, give its symbol ID and the number of inheritance steps between it and ClickException (1 for a direct subclass).",
+    "fields": [
+      {
+        "name": "symbol_id",
+        "type": "string"
+      },
+      {
+        "name": "inheritance_depth",
+        "type": "integer"
+      }
+    ],
+    "ordered": false,
+    "reference_sql": "WITH RECURSIVE d(sym, depth) AS (SELECT class_symbol_id, 1 FROM code.class_bases WHERE base_symbol_id = 'src/click/exceptions.py::ClickException' UNION ALL SELECT b.class_symbol_id, d.depth + 1 FROM code.class_bases b JOIN d ON b.base_symbol_id = d.sym) SELECT sym AS symbol_id, MIN(depth) AS inheritance_depth FROM d WHERE sym LIKE 'src/click/%' GROUP BY sym ORDER BY 1",
+    "difficulty": "hard",
+    "topic": "inheritance closure",
+    "reworded": false,
+    "source_check": "exceptions.py class statements: UsageError(ClickException), FileError(ClickException), BadParameter/NoSuchOption/NoSuchCommand/BadOptionUsage/BadArgumentUsage/NoArgsIsHelpError(UsageError), MissingParameter(BadParameter). Abort and Exit derive from RuntimeError and are correctly absent. Test-local subclasses (tests/test_abort_interrupt.py:120 InterruptedReport, tests/test_testing.py:230 CLIError) are nested in test functions, so they are neither symbols nor in scope (question limits to src/click). Matches source."
+  },
+  {
+    "id": "click-09",
+    "repo": "click",
+    "question": "Which methods of the Group class in src/click/core.py override a method that its base class Command (same file) defines itself under the same name? Count only methods written in the body of Command, not ones Command inherits; __init__ counts as an override. Give the symbol ID of the Group method.",
+    "fields": [
+      {
+        "name": "symbol_id",
+        "type": "string"
+      }
+    ],
+    "ordered": false,
+    "reference_sql": "SELECT DISTINCT g.symbol_id FROM code.symbols g JOIN code.symbols c ON c.file_id = 'src/click/core.py' AND c.kind = 'method' AND c.qualname = 'Command.' || g.name WHERE g.file_id = 'src/click/core.py' AND g.kind = 'method' AND g.qualname LIKE 'Group.%' ORDER BY 1",
+    "difficulty": "hard",
+    "topic": "method overrides",
+    "reworded": true,
+    "source_check": "Listed `def` lines in class Command (989-1695) and class Group (1703-2165). Names defined in both: __init__, to_info_dict, collect_usage_pieces, format_options, parse_args, invoke, shell_complete (7). Group-only: add_command, command/group overloads, result_callback, get_command, list_commands, format_commands, resolve_command. Group's statement is `class Group(Command)`. Matches source."
+  },
+  {
+    "id": "click-10",
+    "repo": "click",
+    "question": "Which modules of the click library (src/click/) import from both src/click/_compat.py and src/click/utils.py but do not import from src/click/core.py at all? Count every import statement, including imports inside functions and under type-checking guards. Give the repository-relative file path.",
+    "fields": [
+      {
+        "name": "file_path",
+        "type": "string"
+      }
+    ],
+    "ordered": false,
+    "reference_sql": "SELECT file_id AS file_path FROM code.imports WHERE file_id LIKE 'src/click/%' AND imported_file_id = 'src/click/_compat.py' INTERSECT SELECT file_id FROM code.imports WHERE imported_file_id = 'src/click/utils.py' EXCEPT SELECT file_id FROM code.imports WHERE imported_file_id = 'src/click/core.py' ORDER BY 1",
+    "difficulty": "hard",
+    "topic": "import set logic",
+    "reworded": false,
+    "source_check": "Read import lines of every candidate: _termui_impl.py imports _compat, exceptions, utils (no core); termui.py imports _compat, exceptions, globals, types, utils, _termui_impl (no core). Excluded correctly: types.py, exceptions.py and testing.py import _compat and utils but also import core under TYPE_CHECKING; utils.py imports _compat but not utils; formatting.py/_textwrap.py import _compat but not utils. Matches source."
+  },
+  {
+    "id": "click-11",
+    "repo": "click",
+    "question": "Which functions or methods in the click library (src/click/) reach term_len (src/click/_compat.py) within at most two direct calls: either calling it directly, or directly calling a repository function or method that itself calls term_len directly? Count only calls written as a plain function name or as a method call on self; calls through other objects (e.g. formatter.write_dl(...)) and passing a function as an argument do not count. Give the symbol ID and the minimum number of calls in the chain (1 for a direct caller, 2 otherwise).",
+    "fields": [
+      {
+        "name": "symbol_id",
+        "type": "string"
+      },
+      {
+        "name": "hops",
+        "type": "integer"
+      }
+    ],
+    "ordered": false,
+    "reference_sql": "WITH e AS (SELECT DISTINCT caller_symbol_id, callee_symbol_id FROM code.calls WHERE call_kind = 'direct' AND callee_symbol_id IS NOT NULL), d1 AS (SELECT caller_symbol_id AS s FROM e WHERE callee_symbol_id = 'src/click/_compat.py::term_len'), d2 AS (SELECT e.caller_symbol_id AS s FROM e JOIN d1 ON e.callee_symbol_id = d1.s) SELECT s AS symbol_id, MIN(h) AS hops FROM (SELECT s, 1 AS h FROM d1 UNION ALL SELECT s, 2 FROM d2) x WHERE s LIKE 'src/click/%' AND s <> 'src/click/_compat.py::term_len' GROUP BY s ORDER BY 1",
+    "difficulty": "hard",
+    "topic": "multi-hop calls",
+    "reworded": false,
+    "source_check": "Direct term_len callers confirmed by grep: ProgressBar.render_progress (_termui_impl 268, 282), TextWrapper._wrap_chunks (_textwrap 89-154), measure_table (formatting 19), wrap_text (93, 95, in its own body not the nested _flush_par), HelpFormatter.write_usage (180-195) and write_dl (255-256). Second-hop callers: ProgressBar.__enter__/__iter__/generator/update/render_finish call self.render_progress() (lines 117-380); HelpFormatter.write_text calls wrap_text (219). Source has further callers through non-self objects (core.py 1194 formatter.write_usage, 1335/1348/2036 formatter.write_dl in Command.format_usage, format_options, format_arguments and Group.format_commands); the extractor leaves these as dynamic_attribute, and the question's counting rule excludes them. Matches source under the stated rule."
+  },
+  {
+    "id": "click-12",
+    "repo": "click",
+    "question": "Which functions or methods in the click library (src/click/) directly call both the style function from src/click/termui.py and the echo function from src/click/utils.py? Give the symbol ID.",
+    "fields": [
+      {
+        "name": "symbol_id",
+        "type": "string"
+      }
+    ],
+    "ordered": false,
+    "reference_sql": "SELECT caller_symbol_id AS symbol_id FROM code.calls WHERE callee_symbol_id = 'src/click/termui.py::style' AND call_kind = 'direct' AND caller_symbol_id LIKE 'src/click/%' INTERSECT SELECT caller_symbol_id FROM code.calls WHERE callee_symbol_id = 'src/click/utils.py::echo' AND call_kind = 'direct' ORDER BY 1",
+    "difficulty": "hard",
+    "topic": "call set logic",
+    "reworded": false,
+    "source_check": "style( call sites in src/click: core.py 1443 (in Command.invoke, wrapped in echo(...)), core.py 2973 (in Parameter.handle_parse_result, wrapped in echo(...)), termui.py 809 (secho, which also calls echo at 811). No other library function calls style. Matches source."
+  },
+  {
+    "id": "httpx-01",
+    "repo": "httpx",
+    "question": "Which source files of the httpx library itself (test code excluded) start with a module-level docstring? Give the repository-relative file paths.",
+    "fields": [
+      {
+        "name": "file_path",
+        "type": "string"
+      }
+    ],
+    "ordered": false,
+    "reference_sql": "SELECT file_id AS file_path FROM code.files WHERE NOT is_test AND description_source <> 'none' ORDER BY file_id",
+    "difficulty": "easy",
+    "topic": "module docstrings",
+    "reworded": false,
+    "source_check": "Parsed every httpx/**/*.py with ast.get_docstring: exactly _decoders.py, _exceptions.py, _transports/default.py, _types.py and _urlparse.py have module docstrings (e.g. _decoders.py opens with 'Handlers for Content-Encoding.'; _client.py, _models.py, _utils.py open with 'from __future__ import annotations'). Matches the database."
+  },
+  {
+    "id": "httpx-02",
+    "repo": "httpx",
+    "question": "Which functions or methods anywhere in the repository (test code included) directly call the `request_context` context manager defined in httpx/_exceptions.py? Count only direct call sites, not places where it is passed as an argument. Give each caller's symbol ID.",
+    "fields": [
+      {
+        "name": "symbol_id",
+        "type": "string"
+      }
+    ],
+    "ordered": false,
+    "reference_sql": "SELECT DISTINCT caller_symbol_id AS symbol_id FROM code.calls WHERE callee_symbol_id = 'httpx/_exceptions.py::request_context' AND call_kind = 'direct' ORDER BY symbol_id",
+    "difficulty": "medium",
+    "topic": "direct callers",
+    "reworded": false,
+    "source_check": "Opened httpx/_client.py line 1013 (Client._send_single_request: 'with request_context(request=request):') and httpx/_models.py line 896 (Response.iter_bytes: 'with request_context(request=self._request):'); both real direct calls. grep for 'request_context(' in httpx/ and tests/ shows only the 12 reported sites (2 in _client.py, 10 Response methods in _models.py) besides the definition. Matches."
+  },
+  {
+    "id": "httpx-03",
+    "repo": "httpx",
+    "question": "Which Python files that are not test files (every file under tests/, including helpers such as tests/common.py and conftest.py, is a test file) have no associated test file at all, meaning no test file imports that module directly (importing only the top-level httpx package counts as importing httpx/__init__.py, not its submodules) and no test file's name is exactly test_ followed by the source file's name (e.g. test_asgi.py for asgi.py; test_decoders.py does not match _decoders.py)? Give the repository-relative file paths.",
+    "fields": [
+      {
+        "name": "file_path",
+        "type": "string"
+      }
+    ],
+    "ordered": false,
+    "reference_sql": "SELECT f.file_id AS file_path FROM code.files f WHERE NOT f.is_test AND f.file_id NOT IN (SELECT target_file_id FROM code.test_links) ORDER BY f.file_id",
+    "difficulty": "medium",
+    "topic": "test associations",
+    "reworded": true,
+    "source_check": "Checked tests/: almost every test does 'import httpx' (links only httpx/__init__.py); tests/test_utils.py imports httpx._utils and tests/models/test_whatwg.py imports httpx._urlparse; tests/test_asgi.py and tests/test_wsgi.py match asgi.py/wsgi.py by name. tests/test_decoders.py, test_content.py, test_multipart.py, test_config.py etc. do not name-match _decoders.py/_content.py/... because the source modules carry a leading underscore, so those files are (correctly by the stated rule, though misleadingly for a human) reported as untested. The 18 listed files agree with that rule."
+  },
+  {
+    "id": "httpx-04",
+    "repo": "httpx",
+    "question": "Which methods defined directly in the body of the synchronous `Client` class in httpx/_client.py have no docstring? Include private and dunder methods; exclude methods inherited from BaseClient. Give their symbol IDs.",
+    "fields": [
+      {
+        "name": "symbol_id",
+        "type": "string"
+      }
+    ],
+    "ordered": false,
+    "reference_sql": "SELECT symbol_id FROM code.symbols WHERE file_id = 'httpx/_client.py' AND kind = 'method' AND qualname LIKE 'Client.%' AND qualname NOT LIKE 'Client.%.%' AND summary_source = 'none' ORDER BY symbol_id",
+    "difficulty": "medium",
+    "topic": "method docstrings",
+    "reworded": false,
+    "source_check": "ast over httpx/_client.py: Client has 20 methods; those with ast.get_docstring None are exactly __init__, _init_transport, _init_proxy_transport, _send_handling_auth, _send_handling_redirects, __enter__, __exit__ (e.g. _send_handling_auth at line 930 begins directly with 'auth_flow = auth.sync_auth_flow(request)'). Matches."
+  },
+  {
+    "id": "httpx-05",
+    "repo": "httpx",
+    "question": "What are the five longest functions or methods (classes excluded) in the non-test code, measured as the number of lines from the def line (decorators not counted) through the last line of the body? Return each symbol ID with its line count, longest first, ties broken by symbol ID alphabetically.",
+    "fields": [
+      {
+        "name": "symbol_id",
+        "type": "string"
+      },
+      {
+        "name": "line_count",
+        "type": "integer"
+      }
+    ],
+    "ordered": true,
+    "reference_sql": "SELECT s.symbol_id, s.line_end - s.line_start + 1 AS line_count FROM code.symbols s JOIN code.files f ON f.file_id = s.file_id WHERE NOT f.is_test AND s.kind IN ('function','method') ORDER BY line_count DESC, s.symbol_id LIMIT 5",
+    "difficulty": "medium",
+    "topic": "largest functions",
+    "reworded": false,
+    "source_check": "httpx/_urlparse.py: 'def urlparse' is at line 213 and its final 'return ParseResult(...)' closes at line 345 (133 lines), confirmed by sed. Next value after the fifth row is 78 (Client.__init__ / AsyncClient.__init__, Client.__init__ spans 639-716), so there is no tie at the cutoff. Matches."
+  },
+  {
+    "id": "httpx-06",
+    "repo": "httpx",
+    "question": "Which classes in the non-test code define at least 20 methods directly in their own body? Count every method definition separately (a property getter and its setter count as two; inherited methods and methods of nested classes do not count). Return each class's symbol ID and its method count, largest count first, ties broken by symbol ID alphabetically.",
+    "fields": [
+      {
+        "name": "symbol_id",
+        "type": "string"
+      },
+      {
+        "name": "method_count",
+        "type": "integer"
+      }
+    ],
+    "ordered": true,
+    "reference_sql": "SELECT c.symbol_id, COUNT(m.symbol_id) AS method_count FROM code.symbols c JOIN code.files f ON f.file_id = c.file_id JOIN code.symbols m ON m.file_id = c.file_id AND m.kind = 'method' AND m.qualname LIKE c.qualname || '.%' AND m.qualname NOT LIKE c.qualname || '.%.%' WHERE c.kind = 'class' AND NOT f.is_test GROUP BY c.symbol_id HAVING COUNT(m.symbol_id) >= 20 ORDER BY method_count DESC, c.symbol_id",
+    "difficulty": "medium",
+    "topic": "class size",
+    "reworded": false,
+    "source_check": "Counted def/async def statements directly in each ClassDef body with ast over httpx/: Response 42, BaseClient 32, URL 28, QueryParams 22, Client 20, AsyncClient 20, Headers 20; no other class reaches 20. Property getter/setter pairs (e.g. BaseClient.timeout@L254/@L258) are stored as separate symbols, consistent with the question's counting rule. Matches."
+  },
+  {
+    "id": "httpx-07",
+    "repo": "httpx",
+    "question": "Which classes inherit from httpx's `RequestError` exception (httpx/_exceptions.py), either directly or through any number of intermediate classes? Exclude RequestError itself. Give their symbol IDs.",
+    "fields": [
+      {
+        "name": "symbol_id",
+        "type": "string"
+      }
+    ],
+    "ordered": false,
+    "reference_sql": "WITH RECURSIVE sub(symbol_id) AS (SELECT class_symbol_id FROM code.class_bases WHERE base_symbol_id = 'httpx/_exceptions.py::RequestError' UNION SELECT b.class_symbol_id FROM code.class_bases b JOIN sub ON b.base_symbol_id = sub.symbol_id) SELECT symbol_id FROM sub ORDER BY symbol_id",
+    "difficulty": "hard",
+    "topic": "transitive inheritance",
+    "reworded": false,
+    "source_check": "Read the class statements in httpx/_exceptions.py (and its docstring hierarchy): RequestError -> TransportError, DecodingError, TooManyRedirects; TransportError -> TimeoutException (ConnectTimeout, ReadTimeout, WriteTimeout, PoolTimeout), NetworkError (ConnectError, ReadError, WriteError, CloseError), ProtocolError (LocalProtocolError, RemoteProtocolError), ProxyError, UnsupportedProtocol = 18. No test class subclasses any of these (test classes subclass httpx.Auth / httpx.MockTransport only). Matches."
+  },
+  {
+    "id": "httpx-08",
+    "repo": "httpx",
+    "question": "Which classes defined in httpx/_exceptions.py are not subclassed by any other class anywhere in the repository (tests included)? Give their symbol IDs.",
+    "fields": [
+      {
+        "name": "symbol_id",
+        "type": "string"
+      }
+    ],
+    "ordered": false,
+    "reference_sql": "SELECT s.symbol_id FROM code.symbols s WHERE s.file_id = 'httpx/_exceptions.py' AND s.kind = 'class' AND NOT EXISTS (SELECT 1 FROM code.class_bases b WHERE b.base_symbol_id = s.symbol_id) ORDER BY s.symbol_id",
+    "difficulty": "hard",
+    "topic": "exception leaves",
+    "reworded": false,
+    "source_check": "ast over httpx/_exceptions.py: 28 classes; the 21 whose names never appear as a base of another class there are exactly the reported ones. Checked tests/ class statements: only RepeatAuth/ResponseBodyAuth/SyncOrAsyncAuth (httpx.Auth), two ConsumeBodyTransport (httpx.MockTransport) and TestServer (uvicorn Server), so no test subclasses an exception. Matches. (Side note: those test bases written as httpx.Auth / httpx.MockTransport are left unresolved by the extractor although they do resolve to internal classes through the package re-export; irrelevant to this answer.)"
+  },
+  {
+    "id": "httpx-09",
+    "repo": "httpx",
+    "question": "Within httpx/_client.py, which functions or methods eventually lead to a call of `Client._send_single_request`, through a chain of one or more direct calls whose every step is inside httpx/_client.py? Count direct calls only (no callbacks) and exclude `_send_single_request` itself. Give their symbol IDs.",
+    "fields": [
+      {
+        "name": "symbol_id",
+        "type": "string"
+      }
+    ],
+    "ordered": false,
+    "reference_sql": "WITH RECURSIVE up(symbol_id) AS (SELECT caller_symbol_id FROM code.calls WHERE callee_symbol_id = 'httpx/_client.py::Client._send_single_request' AND call_kind = 'direct' AND caller_symbol_id LIKE 'httpx/_client.py::%' UNION SELECT c.caller_symbol_id FROM code.calls c JOIN up ON c.callee_symbol_id = up.symbol_id WHERE c.call_kind = 'direct' AND c.caller_symbol_id LIKE 'httpx/_client.py::%') SELECT symbol_id FROM up WHERE symbol_id <> 'httpx/_client.py::Client._send_single_request' ORDER BY symbol_id",
+    "difficulty": "hard",
+    "topic": "multi-hop call chain",
+    "reworded": false,
+    "source_check": "Followed the chain in httpx/_client.py: _send_handling_redirects calls self._send_single_request; _send_handling_auth calls self._send_handling_redirects (line ~944); send calls self._send_handling_auth; request and stream call self.send; get/options/head/post/put/patch/delete call self.request. AsyncClient's methods call only async counterparts, BaseClient never calls these. 12 symbols, matches the database. Outside the file the chain does continue in source (httpx/_api.py::request does 'client.request(...)' on a Client instance) but the extractor classifies that as a dynamic_attribute call, which is why the question is scoped to httpx/_client.py."
+  },
+  {
+    "id": "httpx-10",
+    "repo": "httpx",
+    "question": "Which internal httpx modules are imported directly by both httpx/_client.py and httpx/_models.py? Give the repository-relative file paths of the imported modules.",
+    "fields": [
+      {
+        "name": "file_path",
+        "type": "string"
+      }
+    ],
+    "ordered": false,
+    "reference_sql": "SELECT imported_file_id AS file_path FROM code.imports WHERE file_id = 'httpx/_client.py' AND imported_file_id IS NOT NULL INTERSECT SELECT imported_file_id FROM code.imports WHERE file_id = 'httpx/_models.py' AND imported_file_id IS NOT NULL ORDER BY file_path",
+    "difficulty": "hard",
+    "topic": "shared module dependencies",
+    "reworded": false,
+    "source_check": "grep of top-level imports: _client.py imports .__version__, ._auth, ._config, ._decoders, ._exceptions, ._models, ._status_codes, ._transports.base, ._transports.default, ._types, ._urls, ._utils; _models.py imports ._content, ._decoders, ._exceptions, ._multipart, ._status_codes, ._types, ._urls, ._utils. Intersection = _decoders, _exceptions, _status_codes, _types, _urls, _utils. Matches."
+  },
+  {
+    "id": "httpx-11",
+    "repo": "httpx",
+    "question": "In tests/client/test_redirects.py, which test functions both pass that module's `redirects` handler function as an argument (for example to a mock transport) and create an `httpx.AsyncClient`? Give their symbol IDs.",
+    "fields": [
+      {
+        "name": "symbol_id",
+        "type": "string"
+      }
+    ],
+    "ordered": false,
+    "reference_sql": "SELECT caller_symbol_id AS symbol_id FROM code.calls WHERE callee_symbol_id = 'tests/client/test_redirects.py::redirects' AND call_kind = 'callback' AND caller_symbol_id LIKE 'tests/client/test_redirects.py::%' INTERSECT SELECT caller_symbol_id FROM code.calls WHERE callee_name = 'httpx.AsyncClient' AND caller_symbol_id LIKE 'tests/client/test_redirects.py::%' ORDER BY symbol_id",
+    "difficulty": "hard",
+    "topic": "test set logic",
+    "reworded": false,
+    "source_check": "grep 'AsyncClient' in tests/client/test_redirects.py finds exactly lines 156, 245, 443: test_async_next_request, test_async_too_many_redirects, test_async_invalid_redirect, each 'httpx.AsyncClient(transport=httpx.MockTransport(redirects))'. 27 test functions pass redirects in total; the other 24 use httpx.Client. Matches. Note: the extractor records httpx.AsyncClient / httpx.Client / httpx.MockTransport in tests as dynamic_attribute with no internal callee, although via 'import httpx' and the package re-export they are the internal classes in httpx/_client.py and httpx/_transports/mock.py."
+  },
+  {
+    "id": "httpx-12",
+    "repo": "httpx",
+    "question": "Which functions in httpx/_main.py are handed over by name as a callback argument to another call (not called directly; a function given to functools.partial counts as handed over) in the CLI command function `main` in httpx/_main.py, counting the arguments of the click decorators applied to `main` as part of `main`? Give their symbol IDs.",
+    "fields": [
+      {
+        "name": "symbol_id",
+        "type": "string"
+      }
+    ],
+    "ordered": false,
+    "reference_sql": "SELECT DISTINCT callee_symbol_id AS symbol_id FROM code.calls WHERE caller_symbol_id = 'httpx/_main.py::main' AND call_kind = 'callback' AND callee_symbol_id LIKE 'httpx/_main.py::%' ORDER BY symbol_id",
+    "difficulty": "medium",
+    "topic": "callback references",
+    "reworded": true,
+    "source_check": "httpx/_main.py: decorator options pass callback=validate_json (line 361), callback=validate_auth (line 384), callback=handle_help (line 449); inside the body line 492 passes functools.partial(trace, verbose=verbose). download_response and print_response are called directly (lines 495, 499) and are not callbacks. 4 rows, matches. Discrepancy-ish: the three decorator references are recorded with main as caller although they lie on lines 361-449, before main's recorded range 452-506 (decorators excluded); the question states this attribution explicitly."
+  },
+  {
+    "id": "rich-01",
+    "repo": "rich",
+    "question": "Which classes directly subclass ProgressColumn (defined in rich/progress.py), i.e. name it as a base class in their own class statement? Do not include classes that only inherit from it through another class. Give each class's symbol ID.",
+    "fields": [
+      {
+        "name": "class_symbol_id",
+        "type": "string"
+      }
+    ],
+    "ordered": false,
+    "reference_sql": "SELECT class_symbol_id FROM code.class_bases WHERE base_symbol_id = 'rich/progress.py::ProgressColumn' ORDER BY class_symbol_id",
+    "difficulty": "easy",
+    "topic": "inheritance: direct subclasses",
+    "reworded": false,
+    "source_check": "Grepped all class statements in the checkout: exactly 11 classes in rich/progress.py write `(ProgressColumn)` as a base (RenderableColumn, SpinnerColumn, TextColumn, BarColumn, TimeElapsedColumn, TimeRemainingColumn, FileSizeColumn, TotalFileSizeColumn, MofNCompleteColumn, DownloadColumn, TransferSpeedColumn); TaskProgressColumn subclasses TextColumn and is correctly excluded. No subclasses in tests/examples. Extractor matches source."
+  },
+  {
+    "id": "rich-02",
+    "repo": "rich",
+    "question": "In the Markdown renderer, which classes inherit from MarkdownElement (rich/markdown.py) either directly or indirectly through any number of intermediate classes? Exclude MarkdownElement itself. Give each class's symbol ID.",
+    "fields": [
+      {
+        "name": "class_symbol_id",
+        "type": "string"
+      }
+    ],
+    "ordered": false,
+    "reference_sql": "WITH RECURSIVE sub(cls) AS (SELECT class_symbol_id FROM code.class_bases WHERE base_symbol_id = 'rich/markdown.py::MarkdownElement' UNION SELECT b.class_symbol_id FROM code.class_bases b JOIN sub ON b.base_symbol_id = sub.cls) SELECT cls AS class_symbol_id FROM sub ORDER BY cls",
+    "difficulty": "hard",
+    "topic": "inheritance: transitive subclasses",
+    "reworded": false,
+    "source_check": "Read the class statements in rich/markdown.py: 9 classes subclass MarkdownElement directly (UnknownElement, TextElement, HorizontalRule, TableElement, TableHeaderElement, TableBodyElement, TableRowElement, TableDataElement, ListElement) and 7 subclass TextElement (Paragraph, Heading, CodeBlock, BlockQuote, ListItem, Link, ImageItem) = 16. No deeper levels and no subclasses outside markdown.py. Extractor matches source."
+  },
+  {
+    "id": "rich-03",
+    "repo": "rich",
+    "question": "Outside the test suite, which functions and methods directly call the cell_len function from rich/cells.py, and how many call sites to it does each contain? Count direct call sites only (occurrences, not distinct lines); passing the function as a callback does not count, and only calls that name cell_len itself count (a call through a local alias such as _cell_len = cell_len does not). Give the caller's symbol ID and the number of call sites.",
+    "fields": [
+      {
+        "name": "caller_symbol_id",
+        "type": "string"
+      },
+      {
+        "name": "call_sites",
+        "type": "integer"
+      }
+    ],
+    "ordered": false,
+    "reference_sql": "SELECT c.caller_symbol_id, COUNT(*) AS call_sites FROM code.calls c JOIN code.symbols s ON s.symbol_id = c.caller_symbol_id JOIN code.files f ON f.file_id = s.file_id WHERE c.callee_symbol_id = 'rich/cells.py::cell_len' AND c.call_kind = 'direct' AND NOT f.is_test GROUP BY c.caller_symbol_id ORDER BY c.caller_symbol_id",
+    "difficulty": "medium",
+    "topic": "calls: direct callers with counts",
+    "reworded": true,
+    "source_check": "grep of `cell_len(` in rich/ gives 23 lines, two of which (rule.py:85, pretty.py:514) hold two calls each = 25 call sites, equal to the DB total across the 16 callers; spot-checked Rule.__rich_console__ (4: lines 60, 82, 85x2), Lines.justify (4: containers.py 136,137,142,148), Text.__rich_measure__ (2: text.py 712, 715). DISCREPANCY: rich/_wrap.py::divide_line (5 calls, lines 45-76) and rich/segment.py::Segment.get_line_length (line 409) call cell_len through a local alias `_cell_len = cell_len`; the extractor records these as unresolved `_cell_len` with no callee, so they are missing from the answer although they really call cell_len."
+  },
+  {
+    "id": "rich-04",
+    "repo": "rich",
+    "question": "The markup parser's entry point is the render function in rich/markup.py. Which functions and methods defined under the rich/ folder reach it through exactly one intermediate step (they directly call some function or method that itself directly calls rich/markup.py's render) but do not call render directly themselves? Direct calls only; callback references do not count. Give their symbol IDs.",
+    "fields": [
+      {
+        "name": "symbol_id",
+        "type": "string"
+      }
+    ],
+    "ordered": false,
+    "reference_sql": "WITH hop1 AS (SELECT DISTINCT caller_symbol_id AS s FROM code.calls WHERE callee_symbol_id = 'rich/markup.py::render' AND call_kind = 'direct'), hop2 AS (SELECT DISTINCT c.caller_symbol_id AS s FROM code.calls c JOIN hop1 ON c.callee_symbol_id = hop1.s WHERE c.call_kind = 'direct') SELECT h.s AS symbol_id FROM hop2 h JOIN code.symbols sy ON sy.symbol_id = h.s WHERE sy.file_id LIKE 'rich/%' AND h.s NOT IN (SELECT s FROM hop1) ORDER BY h.s",
+    "difficulty": "hard",
+    "topic": "calls: two-hop reachability",
+    "reworded": false,
+    "source_check": "Direct callers of markup.render outside tests are Console.render_str (console.py:1442, via alias `render as render_markup`) and Text.from_markup (text.py:285 local import). Confirmed second-hop edges in source: Console.render -> self.render_str (console.py:1321), RichHandler.render_message -> Text.from_markup (logging.py:201), PromptBase.__init__ -> Text.from_markup (prompt.py:67), Spinner.update -> Text.from_markup (spinner.py:110). DISCREPANCY (missed edges): calls on a console object rather than self, e.g. Measurement.get (measure.py:99 `console.render_str`), Rule.__rich_console__ (rule.py:68), Live.process_renderables (live.py:238 `self.console.render_str`) and Table (table.py:501), are classified dynamic_attribute with no callee, so these real two-hop callers are absent from the answer."
+  },
+  {
+    "id": "rich-05",
+    "repo": "rich",
+    "question": "Which of Rich's own Python files does rich/table.py import? Count every import statement anywhere in the file, including type-checking-only imports and the imports in its `if __name__ == \"__main__\"` demo block, and list each imported file once by its repository-relative path. A statement such as `from . import box` imports rich/box.py, not rich/__init__.py.",
+    "fields": [
+      {
+        "name": "imported_file",
+        "type": "string"
+      }
+    ],
+    "ordered": false,
+    "reference_sql": "SELECT DISTINCT imported_file_id AS imported_file FROM code.imports WHERE file_id = 'rich/table.py' AND imported_file_id IS NOT NULL ORDER BY imported_file",
+    "difficulty": "easy",
+    "topic": "imports: module dependencies",
+    "reworded": true,
+    "source_check": "Read rich/table.py imports: lines 14-25 (`from . import box, errors`, _loop, _pick, _ratio, align, jupyter, measure, padding, protocol, segment, style, text), line 28 TYPE_CHECKING `from .console import ...`, and demo block 939-942 (rich.console, rich.highlighter, ._timer) = 16 distinct files; `from . import box, errors` correctly resolved to box.py and errors.py. Extractor matches source."
+  },
+  {
+    "id": "rich-06",
+    "repo": "rich",
+    "question": "Which Python files under the rich/ folder import rich/console.py but never import rich/text.py? Count import statements anywhere in a file (top level, type-checking-only blocks, inside functions, and `__main__` demo blocks). Only imports that name the console or text module itself count, not imports of the rich package; rich/text.py qualifies if it imports rich/console.py. Give the repository-relative file paths.",
+    "fields": [
+      {
+        "name": "file_id",
+        "type": "string"
+      }
+    ],
+    "ordered": false,
+    "reference_sql": "SELECT DISTINCT i.file_id FROM code.imports i WHERE i.imported_file_id = 'rich/console.py' AND i.file_id LIKE 'rich/%' AND i.file_id NOT IN (SELECT file_id FROM code.imports WHERE imported_file_id = 'rich/text.py') ORDER BY i.file_id",
+    "difficulty": "hard",
+    "topic": "imports: set difference",
+    "reworded": true,
+    "source_check": "Independent grep over rich/*.py for console imports minus files with text imports gives the same set; spot-checked bar.py (line 4 imports console, no text import), control.py (TYPE_CHECKING line 7 and demo line 212), pager.py (line 30), _win32_console.py (demo line 578), _wrap.py (function-level import at line 82). rich/text.py is included because it imports console (line 33, 1339) and only mentions rich.text in a docstring example (line 527), which is correctly not treated as an import. Extractor matches source."
+  },
+  {
+    "id": "rich-07",
+    "repo": "rich",
+    "question": "Which five classes outside the test suite define the most methods in their own class body? Count every method definition separately, so a property getter and its setter, or each @overload stub, count as separate methods. Give the class's symbol ID and the method count, ordered by count descending, ties broken by symbol ID ascending.",
+    "fields": [
+      {
+        "name": "class_symbol_id",
+        "type": "string"
+      },
+      {
+        "name": "method_count",
+        "type": "integer"
+      }
+    ],
+    "ordered": true,
+    "reference_sql": "SELECT s.file_id || '::' || split_part(s.qualname, '.', 1) AS class_symbol_id, COUNT(*) AS method_count FROM code.symbols s JOIN code.files f ON f.file_id = s.file_id WHERE s.kind = 'method' AND NOT f.is_test GROUP BY 1 ORDER BY method_count DESC, class_symbol_id LIMIT 5",
+    "difficulty": "medium",
+    "topic": "ranking: methods per class",
+    "reworded": false,
+    "source_check": "Counted FunctionDef/AsyncFunctionDef nodes in each class body with Python's ast module on the checkout: Console 71, Text 55, Style 33, Progress 27, Segment 24 (next is progress._Reader with 22). Matches the database exactly, including duplicated getter/setter and overload definitions (e.g. Console.file@L757/@L766)."
+  },
+  {
+    "id": "rich-08",
+    "repo": "rich",
+    "question": "Which classes name JupyterMixin (from rich/jupyter.py) directly as a base class but do not define their own __rich_measure__ method in their class body? Give each class's symbol ID.",
+    "fields": [
+      {
+        "name": "class_symbol_id",
+        "type": "string"
+      }
+    ],
+    "ordered": false,
+    "reference_sql": "SELECT b.class_symbol_id FROM code.class_bases b JOIN code.symbols c ON c.symbol_id = b.class_symbol_id WHERE b.base_symbol_id = 'rich/jupyter.py::JupyterMixin' AND NOT EXISTS (SELECT 1 FROM code.symbols m WHERE m.file_id = c.file_id AND m.kind = 'method' AND m.qualname = c.qualname || '.__rich_measure__') ORDER BY b.class_symbol_id",
+    "difficulty": "hard",
+    "topic": "inheritance + definitions: exclusion",
+    "reworded": false,
+    "source_check": "Parsed every rich/*.py with ast: 20 classes list JupyterMixin as a base (DB also has 20); 13 define __rich_measure__ (Tree, Align, VerticalCenter, Constrain, Pretty, Rule, Text, Bar, Syntax, Table, ProgressBar, Panel, Padding) and 7 do not (Emoji, Columns, Inspect, Markdown, Live, Progress, Status). Extractor matches source."
+  },
+  {
+    "id": "rich-09",
+    "repo": "rich",
+    "question": "Progress.get_renderable in rich/progress.py builds what a progress display shows. Which functions or methods use it, either by calling it directly or by passing the method itself as an argument to another call (a callback reference)? Give the user's symbol ID and how it is used, as 'direct' or 'callback'.",
+    "fields": [
+      {
+        "name": "caller_symbol_id",
+        "type": "string"
+      },
+      {
+        "name": "usage",
+        "type": "string"
+      }
+    ],
+    "ordered": false,
+    "reference_sql": "SELECT DISTINCT caller_symbol_id, call_kind AS usage FROM code.calls WHERE callee_symbol_id = 'rich/progress.py::Progress.get_renderable' ORDER BY caller_symbol_id, usage",
+    "difficulty": "medium",
+    "topic": "calls: direct and callback",
+    "reworded": false,
+    "source_check": "grep `get_renderable` in rich/ and tests/: progress.py:1107 passes `get_renderable=self.get_renderable` to the Live constructor inside Progress.__init__ (callback), and progress.py:1598 `return self.get_renderable()` in Progress.__rich__ (direct). Other hits are Live.get_renderable (a different method) and a local itemgetter in columns.py. Extractor matches source."
+  },
+  {
+    "id": "rich-10",
+    "repo": "rich",
+    "question": "Which Python files sitting directly in the rich/ folder (not in its subfolders), including the package's __init__.py, start with a module docstring? Give the repository-relative file paths.",
+    "fields": [
+      {
+        "name": "file_id",
+        "type": "string"
+      }
+    ],
+    "ordered": false,
+    "reference_sql": "SELECT file_id FROM code.files WHERE file_id LIKE 'rich/%' AND file_id NOT LIKE 'rich/%/%' AND description <> '' ORDER BY file_id",
+    "difficulty": "easy",
+    "topic": "docstrings: module descriptions",
+    "reworded": false,
+    "source_check": "Ran ast.get_docstring on every rich/*.py: exactly __init__.py, _spinners.py, _timer.py, _win32_console.py and filesize.py have module docstrings; e.g. _null_file.py starts with imports. Extractor matches source."
+  },
+  {
+    "id": "rich-11",
+    "repo": "rich",
+    "question": "Under the rich/ folder, which five files contain the most public functions and methods that have no docstring? A function or method is public when neither its own name nor the name of its enclosing class starts with an underscore (so dunder methods are not public); classes themselves are not counted, and every definition counts separately (each @overload stub and each property getter or setter). Give the file path and the count, ordered by count descending, ties broken by file path ascending.",
+    "fields": [
+      {
+        "name": "file_id",
+        "type": "string"
+      },
+      {
+        "name": "undocumented_count",
+        "type": "integer"
+      }
+    ],
+    "ordered": true,
+    "reference_sql": "SELECT s.file_id, COUNT(*) AS undocumented_count FROM code.symbols s WHERE s.file_id LIKE 'rich/%' AND s.kind IN ('function','method') AND s.is_public AND s.summary = '' GROUP BY s.file_id ORDER BY undocumented_count DESC, s.file_id LIMIT 5",
+    "difficulty": "hard",
+    "topic": "docstrings: ranking undocumented API",
+    "reworded": true,
+    "source_check": "Independent ast count (module-level functions plus methods of non-underscore classes, names not starting with '_', no docstring): markdown.py 21, _null_file.py 15, progress.py 9, repr.py 5, then containers.py/file_proxy.py/layout.py tied at 4 (tie-break keeps containers.py). Matches the database exactly."
+  },
+  {
+    "id": "rich-12",
+    "repo": "rich",
+    "question": "Which Python files sitting directly in the rich/ folder (not in its subfolders) are at least 100 lines long yet have no test file associated with them, where a test is associated when it imports the file or its name is test_<filename>.py? Give the file path and its line count.",
+    "fields": [
+      {
+        "name": "file_id",
+        "type": "string"
+      },
+      {
+        "name": "line_count",
+        "type": "integer"
+      }
+    ],
+    "ordered": false,
+    "reference_sql": "SELECT f.file_id, f.line_count FROM code.files f WHERE f.file_id LIKE 'rich/%' AND f.file_id NOT LIKE 'rich/%/%' AND NOT f.is_test AND f.line_count >= 100 AND NOT EXISTS (SELECT 1 FROM code.test_links t WHERE t.target_file_id = f.file_id) ORDER BY f.file_id",
+    "difficulty": "medium",
+    "topic": "test links + file size",
+    "reworded": false,
+    "source_check": "grep of tests/ finds no import or mention of _emoji_codes, _spinners, default_styles or terminal_theme, and no test_<name>.py exists for them (test_emoji.py/test_spinner.py/test_style.py/test_theme.py match other modules); `wc -l` style line counts 3610/482/196/153 agree. These modules are exercised only transitively (e.g. via rich/spinner.py), which static links do not capture by design. Extractor matches source."
+  }
+]

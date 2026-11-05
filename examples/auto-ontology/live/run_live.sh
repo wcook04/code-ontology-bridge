@@ -121,14 +121,14 @@ stop_started() { for p in $PIDS; do kill "$p" 2>/dev/null || true; done; sleep 3
 say "0. setup: their venv, our DuckDB, Postgres 17 with pg_trgm + pgvector"
 [ -d "$CLONE/auto_ontology" ] || { echo "no Auto Ontology clone at $CLONE"; exit 2; }
 if [ "${AO_SKIP_SYNC:-0}" != 1 ]; then ( cd "$CLONE" && uv sync --frozen >/dev/null ); fi
-[ -f "$EX/auto_ontology_code.duckdb" ] || AUTO_ONTOLOGY_CLONE="$CLONE" sh "$EX/reproduce.sh" "$CLONE"
+[ -n "${AO_DUCKDB_FILE:-}" ] || [ -f "$EX/auto_ontology_code.duckdb" ] || AUTO_ONTOLOGY_CLONE="$CLONE" sh "$EX/reproduce.sh" "$CLONE"
 mkdir -p "$RESP" "$LOGS" "$CERT" "$WORK"
 git -C "$CLONE" rev-parse HEAD > "$RESP/00_auto_ontology_commit.txt"
 git -C "$REPO" rev-parse HEAD > "$RESP/00_code_ontology_bridge_commit.txt"
 "$PG_BIN/postgres" --version > "$RESP/00_postgres_version.txt"
 # Our DuckDB is written by duckdb>=2.0.0; their pinned duckdb 1.5.5 cannot read
 # that storage version. Make a v1.5.0-storage copy for their connector.
-"$PY" "$HERE/make_compat_duckdb.py" "$EX/auto_ontology_code.duckdb" "$WORK" > "$RESP/05a_compat_duckdb_copy.json"
+"$PY" "$HERE/make_compat_duckdb.py" "${AO_DUCKDB_FILE:-$EX/auto_ontology_code.duckdb}" "$WORK" > "$RESP/05a_compat_duckdb_copy.json"
 if [ ! -f "$PGDATA/PG_VERSION" ]; then
   "$PG_BIN/initdb" -D "$PGDATA" -U postgres --auth=trust -E UTF8 --locale=en_US.UTF-8 > "$LOGS/pg_initdb.log" 2>&1
 fi

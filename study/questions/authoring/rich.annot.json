@@ -1,0 +1,120 @@
+[
+  {
+    "id": "rich-01",
+    "sql": "SELECT class_symbol_id FROM code.class_bases WHERE base_symbol_id = 'rich/progress.py::ProgressColumn' ORDER BY 1",
+    "row_count": 11,
+    "ambiguities": []
+  },
+  {
+    "id": "rich-02",
+    "sql": "WITH RECURSIVE d(class_symbol_id) AS (SELECT class_symbol_id FROM code.class_bases WHERE base_symbol_id = 'rich/markdown.py::MarkdownElement' UNION SELECT cb.class_symbol_id FROM code.class_bases cb JOIN d ON cb.base_symbol_id = d.class_symbol_id) SELECT class_symbol_id FROM d WHERE class_symbol_id <> 'rich/markdown.py::MarkdownElement' ORDER BY 1",
+    "row_count": 16,
+    "ambiguities": []
+  },
+  {
+    "id": "rich-03",
+    "sql": "SELECT c.caller_symbol_id, COUNT(*) AS call_sites FROM code.calls c JOIN code.symbols s ON s.symbol_id = c.caller_symbol_id JOIN code.files f ON f.file_id = s.file_id WHERE c.callee_symbol_id = 'rich/cells.py::cell_len' AND c.call_kind = 'direct' AND NOT f.is_test AND s.kind IN ('function','method') GROUP BY 1 ORDER BY 1",
+    "row_count": 16,
+    "ambiguities": [
+      {
+        "issue": "Calls through a local alias of cell_len (rich/_wrap.py divide_line: `_cell_len = cell_len` then 5 calls; rich/segment.py Segment.get_line_length: `_cell_len = cell_len` then 1 call) are recorded as unresolved calls to `_cell_len`. Are these 'direct calls to cell_len'?",
+        "chosen": "Exclude (only call sites resolved to rich/cells.py::cell_len); 16 callers",
+        "alternative_row_count": 18
+      }
+    ]
+  },
+  {
+    "id": "rich-04",
+    "sql": "WITH d1 AS (SELECT DISTINCT caller_symbol_id AS id FROM code.calls WHERE callee_symbol_id = 'rich/markup.py::render' AND call_kind = 'direct'), d2 AS (SELECT DISTINCT c.caller_symbol_id AS id FROM code.calls c JOIN d1 ON c.callee_symbol_id = d1.id WHERE c.call_kind = 'direct') SELECT d2.id AS symbol_id FROM d2 JOIN code.symbols s ON s.symbol_id = d2.id WHERE s.file_id LIKE 'rich/%' AND s.kind IN ('function','method') AND d2.id NOT IN (SELECT id FROM d1) ORDER BY 1",
+    "row_count": 15,
+    "ambiguities": [
+      {
+        "issue": "Whether the intermediate (the function that directly calls render) must itself be under rich/ or may be a test function",
+        "chosen": "Any intermediate; in practice all two-hop callers come through rich/ intermediates (Console.render_str, Text.from_markup), so no difference",
+        "alternative_row_count": 15
+      }
+    ]
+  },
+  {
+    "id": "rich-05",
+    "sql": "SELECT DISTINCT imported_file_id AS imported_file FROM code.imports WHERE file_id = 'rich/table.py' AND is_internal AND imported_file_id IS NOT NULL ORDER BY 1",
+    "row_count": 16,
+    "ambiguities": [
+      {
+        "issue": "`from . import box, errors` imports submodules of the rich package; it also implicitly executes rich/__init__.py. Does that count as importing rich/__init__.py?",
+        "chosen": "No: count the submodule files the names resolve to (box.py, errors.py)",
+        "alternative_row_count": 17
+      }
+    ]
+  },
+  {
+    "id": "rich-06",
+    "sql": "SELECT f.file_id FROM code.files f WHERE f.file_id LIKE 'rich/%' AND EXISTS (SELECT 1 FROM code.imports i WHERE i.file_id = f.file_id AND i.imported_file_id = 'rich/console.py') AND NOT EXISTS (SELECT 1 FROM code.imports i WHERE i.file_id = f.file_id AND i.imported_file_id = 'rich/text.py') ORDER BY 1",
+    "row_count": 22,
+    "ambiguities": [
+      {
+        "issue": "rich/text.py itself imports console.py and trivially never imports itself; include it?",
+        "chosen": "Include (literal reading)",
+        "alternative_row_count": 21
+      },
+      {
+        "issue": "Indirect imports via the package (e.g. `from . import get_console` resolves to rich/__init__.py, which imports console.py)",
+        "chosen": "Only imports that resolve to rich/console.py itself",
+        "alternative_row_count": null
+      }
+    ]
+  },
+  {
+    "id": "rich-07",
+    "sql": "SELECT c.symbol_id AS class_symbol_id, COUNT(*) AS method_count FROM code.symbols c JOIN code.files f ON f.file_id = c.file_id JOIN code.symbols m ON m.file_id = c.file_id AND m.kind = 'method' AND m.qualname = c.qualname || '.' || m.name WHERE c.kind = 'class' AND NOT f.is_test GROUP BY 1 ORDER BY method_count DESC, class_symbol_id ASC LIMIT 5",
+    "row_count": 5,
+    "ambiguities": [
+      {
+        "issue": "'Outside the test suite' and whether benchmarks/ count; distinct names vs every definition",
+        "chosen": "is_test = false (benchmarks included); every definition counted as the question says. Distinct-name counting gives the same five classes with lower counts for Console (66), Text (53), Progress (25)",
+        "alternative_row_count": 5
+      }
+    ]
+  },
+  {
+    "id": "rich-08",
+    "sql": "SELECT cb.class_symbol_id FROM code.class_bases cb JOIN code.symbols c ON c.symbol_id = cb.class_symbol_id WHERE cb.base_symbol_id = 'rich/jupyter.py::JupyterMixin' AND NOT EXISTS (SELECT 1 FROM code.symbols m WHERE m.file_id = c.file_id AND m.kind = 'method' AND m.qualname = c.qualname || '.__rich_measure__') ORDER BY 1",
+    "row_count": 7,
+    "ambiguities": []
+  },
+  {
+    "id": "rich-09",
+    "sql": "SELECT caller_symbol_id, call_kind AS usage FROM code.calls WHERE callee_symbol_id = 'rich/progress.py::Progress.get_renderable' GROUP BY 1, 2 ORDER BY 1, 2",
+    "row_count": 2,
+    "ambiguities": []
+  },
+  {
+    "id": "rich-10",
+    "sql": "SELECT file_id FROM code.files WHERE file_id LIKE 'rich/%' AND file_id NOT LIKE 'rich/%/%' AND description_source = 'module_docstring' ORDER BY 1",
+    "row_count": 5,
+    "ambiguities": []
+  },
+  {
+    "id": "rich-11",
+    "sql": "SELECT file_id, COUNT(*) AS undocumented_count FROM code.symbols WHERE file_id LIKE 'rich/%' AND kind IN ('function','method') AND is_public AND summary_source = 'none' GROUP BY 1 ORDER BY undocumented_count DESC, file_id ASC LIMIT 5",
+    "row_count": 5,
+    "ambiguities": [
+      {
+        "issue": "@overload stubs and repeated definitions (property setters, overloads) counted as separate functions or once per name? Question does not say (unlike rich-07)",
+        "chosen": "Every definition row separately: markdown 21, _null_file 15, progress 9, repr 5, containers 4. Counting distinct qualnames gives markdown 21, _null_file 15, progress 7, then containers/file_proxy/layout tied at 4 (repr drops to 2), so the fifth file changes from containers to file_proxy and repr is replaced",
+        "alternative_row_count": 5
+      },
+      {
+        "issue": "Rank 5 is a three-way tie at 4 (containers, file_proxy, layout) decided only by the path tie-break",
+        "chosen": "Tie-break by path ascending as stated -> rich/containers.py",
+        "alternative_row_count": null
+      }
+    ]
+  },
+  {
+    "id": "rich-12",
+    "sql": "SELECT f.file_id, f.line_count FROM code.files f WHERE f.file_id LIKE 'rich/%' AND f.file_id NOT LIKE 'rich/%/%' AND NOT f.is_test AND f.line_count >= 100 AND NOT EXISTS (SELECT 1 FROM code.test_links t WHERE t.target_file_id = f.file_id) ORDER BY 1",
+    "row_count": 4,
+    "ambiguities": []
+  }
+]
