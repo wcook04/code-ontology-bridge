@@ -6,11 +6,17 @@ suite:    the response's final SQL, run on the real database and on each counter
           returns the reference SQL's rows on every one of them. A response that fails snapshot
           fails suite.
 
-usage: python study/score.py RUN_DIR [RUN_DIR ...] [--fuzz-dir build/study/fuzz] [--out scores.json]
+Evaluator versions. "frozen" is the reference SQL committed before any model run
+(study/questions/questions.json). "corrected" applies study/questions/corrections.json on top: reference
+queries found, after the runs, not to express their own question's wording. The questions themselves and
+every saved response are unchanged; only the reference rows a response is compared with differ.
+
+usage: python study/score.py RUN_DIR [RUN_DIR ...] [--evaluator corrected] [--fuzz-dir build/study/fuzz] [--out scores.json]
 """
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 from decimal import Decimal
 from functools import lru_cache
@@ -98,9 +104,44 @@ def as_dicts(names, rows):
     return [dict(zip(names, r)) for r in rows]
 
 
+EXPECTED_VARIANTS = 8
+EVALUATORS = ("frozen", "corrected")
+
+
+def load_questions(evaluator: str = "corrected") -> dict:
+    """The 48 questions with the reference SQL of the chosen evaluator version."""
+    if evaluator not in EVALUATORS:
+        raise ValueError(f"evaluator must be one of {EVALUATORS}")
+    questions = {q["id"]: dict(q) for q in json.loads((ROOT / "study/questions/questions.json").read_text())}
+    for q in questions.values():
+        q["accepted_sql"] = [q["reference_sql"]]
+    if evaluator == "corrected":
+        doc = json.loads((ROOT / "study/questions/corrections.json").read_text())
+        for c in doc["corrections"]:
+            questions[c["id"]]["reference_sql"] = c["reference_sql"]
+            questions[c["id"]]["accepted_sql"] = [c["reference_sql"]]
+        for r in doc["accepted_readings"]:
+            questions[r["id"]]["accepted_sql"] += r["accepted_sql"]
+    return questions
+
+
+FUZZ_DIRS = {"frozen": ROOT / "build/study/fuzz", "corrected": ROOT / "build/study/fuzz-corrected"}
+
+
+@lru_cache(maxsize=None)
+def sha256(path: str) -> str:
+    return hashlib.sha256(Path(path).read_bytes()).hexdigest()
+
+
 def databases(repo: str, fuzz_dir: Path) -> list[str]:
+    """The real database and its eight counterfactual variants. Refuses to return a shorter list:
+    without the variants a suite score would silently equal the snapshot score."""
     real = str(ROOT / "study/data" / repo / f"{repo}_code.duckdb")
-    return [real] + sorted(str(p) for p in fuzz_dir.glob(f"{repo}_v*.duckdb"))
+    variants = sorted(str(p) for p in fuzz_dir.glob(f"{repo}_v*.duckdb"))
+    if len(variants) != EXPECTED_VARIANTS:
+        raise SystemExit(f"{repo}: found {len(variants)} counterfactual databases in {fuzz_dir}, expected "
+                         f"{EXPECTED_VARIANTS}. Build them with: python study/fuzz.py {repo} {fuzz_dir} --variants 8 --seed 0")
+    return [real] + variants
 
 
 def score_run(run: Path, questions: dict, fuzz_dir: Path) -> dict:
@@ -111,25 +152,37 @@ def score_run(run: Path, questions: dict, fuzz_dir: Path) -> dict:
         q = questions[qid]
         path = run / "responses" / f"{qid}.json"
         r = json.loads(path.read_text()) if path.exists() else None
-        snapshot = bool(r and not r["error"] and rows_match(r["rows"], reference(dbs[0], q["reference_sql"]), q["fields"], q["ordered"]))
-        suite, failed_on = snapshot, None
-        if snapshot:
-            for db in dbs[1:]:
-                try:
-                    names, rows = execute(db, r["sql"])
-                    ok = rows_match(as_dicts(names, rows), reference(db, q["reference_sql"]), q["fields"], q["ordered"])
-                except duckdb.Error:
-                    ok = False
-                if not ok:
-                    suite, failed_on = False, Path(db).name
+        # A response passes suite when one accepted reading of the question gives its rows on every
+        # database; snapshot needs one reading on the real database only.
+        snapshot = suite = False
+        failed_on = None
+        if r and not r["error"]:
+            for ref_sql in q["accepted_sql"]:
+                if not rows_match(r["rows"], reference(dbs[0], ref_sql), q["fields"], q["ordered"]):
+                    continue
+                snapshot = True
+                first_fail = None
+                for db in dbs[1:]:
+                    try:
+                        names, rows = execute(db, r["sql"])
+                        ok = rows_match(as_dicts(names, rows), reference(db, ref_sql), q["fields"], q["ordered"])
+                    except duckdb.Error:
+                        ok = False
+                    if not ok:
+                        first_fail = Path(db).name
+                        break
+                if first_fail is None:
+                    suite, failed_on = True, None
                     break
+                failed_on = failed_on or first_fail
         out.append({"id": qid, "answered": bool(r and not r["error"]), "snapshot": snapshot, "suite": suite,
                     "suite_failed_on": failed_on, "attempts": len(r["attempts"]) if r else 0,
                     "elapsed_s": r["elapsed_s"] if r else None,
                     "cost": (r or {}).get("usage", {}).get("cost"),
                     "prompt_tokens": (r or {}).get("usage", {}).get("prompt_tokens"),
                     "completion_tokens": (r or {}).get("usage", {}).get("completion_tokens")})
-    return {"run": str(run), "arm": manifest["arm"], "model": manifest["model"], "repo": manifest["repo"],
+    return {"run": str(run), "arm": manifest["arm"],
+            "databases": {Path(d).name: sha256(d) for d in dbs}, "model": manifest["model"], "repo": manifest["repo"],
             "n": len(out), "snapshot": sum(x["snapshot"] for x in out), "suite": sum(x["suite"] for x in out),
             "questions": out}
 
@@ -137,11 +190,12 @@ def score_run(run: Path, questions: dict, fuzz_dir: Path) -> dict:
 def main() -> int:
     p = argparse.ArgumentParser()
     p.add_argument("runs", nargs="+", type=Path)
-    p.add_argument("--questions", type=Path, default=ROOT / "study/questions/questions.json")
-    p.add_argument("--fuzz-dir", type=Path, default=ROOT / "build/study/fuzz")
+    p.add_argument("--evaluator", choices=EVALUATORS, default="corrected")
+    p.add_argument("--fuzz-dir", type=Path)
     p.add_argument("--out", type=Path)
     args = p.parse_args()
-    questions = {q["id"]: q for q in json.loads(args.questions.read_text())}
+    args.fuzz_dir = args.fuzz_dir or FUZZ_DIRS[args.evaluator]
+    questions = load_questions(args.evaluator)
     results = [score_run(r, questions, args.fuzz_dir) for r in args.runs if (r / "manifest.json").exists()]
     for s in results:
         print(f"{s['arm']} {s['model']:<40} {s['repo']:<14} snapshot {s['snapshot']}/{s['n']}  suite {s['suite']}/{s['n']}")

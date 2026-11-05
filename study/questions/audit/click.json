@@ -1,0 +1,125 @@
+[
+  {
+    "id": "click-01",
+    "verdict": "ok",
+    "explanation": "NOT is_test matches the question's non-test scope (library, examples, docs); order line_count DESC, file_id matches 'largest first, ties broken by file path'; LIMIT 5 matches 'five largest'.",
+    "corrected_sql": null,
+    "differs_on": [],
+    "example": null
+  },
+  {
+    "id": "click-02",
+    "verdict": "mismatch",
+    "explanation": "Minor, schema-level only. The question asks which src/click modules start with a module docstring. files.description_source has three documented values: heading_purpose, module_docstring, none; 'heading_purpose' also means the description came from the module docstring (one using the fixed [PURPOSE] headings). The reference keeps only 'module_docstring', so a src/click file whose docstring uses fixed headings would be wrongly left out. No such file exists in click or in the fuzz variants, which only write module_docstring/none.",
+    "corrected_sql": "SELECT file_id AS file_path FROM code.files WHERE file_id LIKE 'src/click/%' AND description_source IN ('module_docstring', 'heading_purpose') AND description <> '' ORDER BY file_id",
+    "differs_on": [],
+    "example": "Never differs on the 9 DBs. In-memory copy of the real files table, set src/click/globals.py to description_source='heading_purpose', description='Context-local state...', has_fixed_headings=true: the original returns {__init__.py, _termui_impl.py, parser.py}, the corrected one also returns src/click/globals.py."
+  },
+  {
+    "id": "click-03",
+    "verdict": "mismatch",
+    "explanation": "The question asks which *other modules of the click library* termui.py imports from. The reference keeps any internal imported_file_id, including repository files outside the library package (tests/, examples/). termui.py imports nothing outside src/click in the real data, but the fuzz variants add internal imports from termui.py to test and example files, and the reference returns those.",
+    "corrected_sql": "SELECT DISTINCT imported_file_id AS file_path FROM code.imports WHERE file_id = 'src/click/termui.py' AND imported_file_id LIKE 'src/click/%' AND imported_file_id <> 'src/click/termui.py' ORDER BY 1",
+    "differs_on": [
+      "click_v1.duckdb",
+      "click_v2.duckdb",
+      "click_v3.duckdb",
+      "click_v4.duckdb",
+      "click_v6.duckdb",
+      "click_v7.duckdb"
+    ],
+    "example": "click_v1: the original also returns examples/completion/completion.py and tests/typing/typing_group_kw_options.py (8 rows vs 6)."
+  },
+  {
+    "id": "click-04",
+    "verdict": "ok",
+    "explanation": "kind='function' is the module-level-function kind (methods are 'method', nested functions are not symbols); for a function, is_public equals 'name does not start with underscore'; summary_source='none' is 'no docstring'. File filter correct.",
+    "corrected_sql": null,
+    "differs_on": [],
+    "example": null
+  },
+  {
+    "id": "click-05",
+    "verdict": "mismatch",
+    "explanation": "The question asks for *module-level functions or methods* calling echo. calls.caller_symbol_id can be a class (calls in class bodies are recorded, and the fuzz adds class callers). The reference joins symbols only for the file filter and never checks s.kind, so a class whose body calls echo is returned.",
+    "corrected_sql": "SELECT c.caller_symbol_id, COUNT(*) AS call_sites FROM code.calls c JOIN code.symbols s ON s.symbol_id = c.caller_symbol_id WHERE c.callee_symbol_id = 'src/click/utils.py::echo' AND c.call_kind = 'direct' AND s.file_id LIKE 'src/click/%' AND s.kind IN ('function', 'method') GROUP BY c.caller_symbol_id ORDER BY 1",
+    "differs_on": [
+      "click_v0.duckdb",
+      "click_v1.duckdb",
+      "click_v2.duckdb",
+      "click_v5.duckdb"
+    ],
+    "example": "click_v0: the original also returns (src/click/exceptions.py::NoSuchCommand, 1), a class; v5: (src/click/core.py::Group, 1)."
+  },
+  {
+    "id": "click-06",
+    "verdict": "ok",
+    "explanation": "files.is_test (tests/ dir, test_*.py, *_test.py, conftest.py) covers the question's test-file notion, including the stated conftest.py case. imported_file_id = 'src/click/testing.py' captures both 'import click.testing' and 'from click.testing import X' (and 'from click import testing'), and leaves out attribute access with no import, as the question requires. DISTINCT is right for one row per file.",
+    "corrected_sql": null,
+    "differs_on": [],
+    "example": null
+  },
+  {
+    "id": "click-07",
+    "verdict": "mismatch",
+    "explanation": "Two missing kind restrictions. (1) The containing symbol must be a function or method ('inside the bodies of functions and methods'), but callback rows can have a class as caller. (2) The passed symbol must be 'a module-level function or a method', but callback rows can have a class as callee (passing a class by reference). The reference filters only call_kind and the caller's path. Both cases occur in every fuzz variant.",
+    "corrected_sql": "SELECT DISTINCT c.caller_symbol_id AS passing_symbol_id, c.callee_symbol_id AS passed_symbol_id FROM code.calls c JOIN code.symbols a ON a.symbol_id = c.caller_symbol_id JOIN code.symbols b ON b.symbol_id = c.callee_symbol_id WHERE c.call_kind = 'callback' AND c.caller_symbol_id LIKE 'src/click/%' AND a.kind IN ('function', 'method') AND b.kind IN ('function', 'method') ORDER BY 1, 2",
+    "differs_on": [
+      "click_v0.duckdb",
+      "click_v1.duckdb",
+      "click_v2.duckdb",
+      "click_v3.duckdb",
+      "click_v4.duckdb",
+      "click_v5.duckdb",
+      "click_v6.duckdb",
+      "click_v7.duckdb"
+    ],
+    "example": "click_v0: the original also returns (src/click/_compat.py::_force_correct_text_reader, src/click/exceptions.py::NoArgsIsHelpError), where the passed symbol is a class, and (src/click/core.py::Group.parse_args, src/click/core.py::Group); in v7, (src/click/core.py::Group, tests/...::test_get_pager_...) has a class as the passing symbol. 44 vs 33 rows."
+  },
+  {
+    "id": "click-08",
+    "verdict": "ambiguous",
+    "explanation": "The closure, the src/click scope and the depth on single-inheritance hierarchies are correct (class_bases rows are always classes; cycles are impossible in Python and fuzz.py avoids them). The English assumes one 'number of inheritance steps', but with multiple inheritance a class can reach ClickException along paths of different lengths. The reference picks the shortest (MIN), which is defensible but is not stated. This happens on click_v7 (types.py::Tuple at depths 3 and 4; exceptions.py::BadArgumentUsage at 2 and 3), so MIN and MAX answers differ there. Real data: unique paths, no issue.",
+    "corrected_sql": null,
+    "differs_on": [],
+    "example": "click_v7: src/click/types.py::Tuple reaches ClickException in 3 and in 4 steps; the reference reports 3."
+  },
+  {
+    "id": "click-09",
+    "verdict": "mismatch",
+    "explanation": "Minor, schema-level only. 'Methods of the Group class' means qualname exactly 'Group.<name>'. The reference uses g.qualname LIKE 'Group.%', which would also match a method of a class nested in Group (qualname 'Group.Inner.name') whose bare name matches a Command method. The builder's known limits say nested classes are not symbols, so this cannot happen on click or the fuzz variants; it is possible under the schema.",
+    "corrected_sql": "SELECT DISTINCT g.symbol_id FROM code.symbols g JOIN code.symbols c ON c.file_id = 'src/click/core.py' AND c.kind = 'method' AND c.qualname = 'Command.' || g.name WHERE g.file_id = 'src/click/core.py' AND g.kind = 'method' AND g.qualname = 'Group.' || g.name ORDER BY 1",
+    "differs_on": [],
+    "example": "Never differs on the 9 DBs. In-memory copy of the real symbols table plus class 'src/click/core.py::Group.Meta' and method 'src/click/core.py::Group.Meta.invoke' (name 'invoke', qualname 'Group.Meta.invoke'): the original also returns Group.Meta.invoke, the corrected one does not."
+  },
+  {
+    "id": "click-10",
+    "verdict": "ok",
+    "explanation": "A INTERSECT B EXCEPT C gives the same rows under either grouping. imports counts every statement (function-local and TYPE_CHECKING included); the src/click scope on the first branch is enough. Self-imports (possible only in fuzz) are not something the wording excludes.",
+    "corrected_sql": null,
+    "differs_on": [],
+    "example": null
+  },
+  {
+    "id": "click-11",
+    "verdict": "mismatch",
+    "explanation": "Same defect class as the reviewer's finding. The question asks for 'functions or methods' and requires the intermediate to be 'a repository function or method'. The reference's edge set e accepts any caller, so (a) a class whose body calls term_len is returned at hop 1, and (b) a function that 'calls' (instantiates) such a class is returned at hop 2 through a class intermediate. Restricting edge callers to kind function/method fixes both, because every returned symbol and every intermediate is an edge caller. Secondary note, not changed: resolution 'imported' also covers module-attribute calls such as _compat.term_len(...), which the 'plain function name or self' rule may exclude. No such call exists in src/click (all term_len, wrap_text, measure_table and render_progress edges are written as plain names or self.*), and fuzz callee_names are bare, so this does not change any row here. Similarly method_on_self includes cls.* calls.",
+    "corrected_sql": "WITH e AS (SELECT DISTINCT c.caller_symbol_id, c.callee_symbol_id FROM code.calls c JOIN code.symbols s ON s.symbol_id = c.caller_symbol_id WHERE c.call_kind = 'direct' AND c.callee_symbol_id IS NOT NULL AND s.kind IN ('function', 'method')), d1 AS (SELECT caller_symbol_id AS s FROM e WHERE callee_symbol_id = 'src/click/_compat.py::term_len'), d2 AS (SELECT e.caller_symbol_id AS s FROM e JOIN d1 ON e.callee_symbol_id = d1.s) SELECT s AS symbol_id, MIN(h) AS hops FROM (SELECT s, 1 AS h FROM d1 UNION ALL SELECT s, 2 FROM d2) x WHERE s LIKE 'src/click/%' AND s <> 'src/click/_compat.py::term_len' GROUP BY s ORDER BY 1",
+    "differs_on": [
+      "click_v0.duckdb",
+      "click_v1.duckdb",
+      "click_v2.duckdb",
+      "click_v6.duckdb",
+      "click_v7.duckdb"
+    ],
+    "example": "click_v6: the original also returns (src/click/exceptions.py::NoSuchOption, 1), a class, and (src/click/parser.py::_OptionParser._match_long_opt, 2) and _match_short_opt, which reach term_len only through the class NoSuchOption. 17 vs 14 rows."
+  },
+  {
+    "id": "click-12",
+    "verdict": "mismatch",
+    "explanation": "The question asks for 'functions or methods' that call both style and echo. The reference has no kind filter on caller_symbol_id, so a class whose body directly calls both would be returned. No class does so on the 9 DBs, so the results agree there.",
+    "corrected_sql": "SELECT caller_symbol_id AS symbol_id FROM code.calls WHERE callee_symbol_id = 'src/click/termui.py::style' AND call_kind = 'direct' AND caller_symbol_id LIKE 'src/click/%' AND caller_symbol_id IN (SELECT symbol_id FROM code.symbols WHERE kind IN ('function','method')) INTERSECT SELECT caller_symbol_id FROM code.calls WHERE callee_symbol_id = 'src/click/utils.py::echo' AND call_kind = 'direct' ORDER BY 1",
+    "differs_on": [],
+    "example": "Never differs on the 9 DBs. In-memory copy of the real symbols and calls tables plus class src/click/termui.py::Banner with direct calls to termui.py::style and utils.py::echo: the original also returns src/click/termui.py::Banner, the corrected one does not."
+  }
+]
