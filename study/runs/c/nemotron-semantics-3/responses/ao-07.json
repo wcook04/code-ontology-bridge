@@ -1,0 +1,34 @@
+{
+  "question_id": "ao-07",
+  "arm": "C-semantics",
+  "model": "nvidia/nemotron-3.5-lightning",
+  "error": null,
+  "elapsed_s": 128.2,
+  "attempts": [
+    {
+      "sql": "WITH write_transaction_direct_calls AS (\n    SELECT DISTINCT caller_symbol_id\n    FROM auto_ontology_code.code.calls\n    WHERE callee_name = 'write_transaction'\n    AND call_kind = 'direct'\n    AND confidence = 'high'\n),\nstore_direct_calls AS (\n    SELECT DISTINCT caller_symbol_id\n    FROM auto_ontology_code.code.calls\n    WHERE callee_name = 'store'\n    AND call_kind = 'direct'\n),\nrelevant_symbols AS (\n    SELECT DISTINCT s.symbol_id\n    FROM auto_ontology_code.code.symbols s\n    JOIN auto_ontology_code.code.files f ON s.file_id = f.file_id\n    WHERE f.is_test = FALSE\n    AND f.file_id NOT LIKE 'auto_ontology/dal/%'\n    AND s.kind IN ('function', 'method')\n),\ncandidates AS (\n    SELECT DISTINCT r.symbol_id\n    FROM relevant_symbols r\n    JOIN write_transaction_direct_calls w ON r.symbol_id = w.caller_symbol_id\n    WHERE r.symbol_id NOT IN (SELECT caller_symbol_id FROM store_direct_calls)\n)\nSELECT DISTINCT symbol_id\nFROM candidates\nORDER BY symbol_id"
+    }
+  ],
+  "usage": {},
+  "request": "auto_ontology/dal/session.py provides store() (the active connection handle) and write_transaction() (a context manager that groups store() queries into one transaction). Outside the auto_ontology/dal/ folder, and excluding test code (every file under a tests/ folder), which functions or methods open a transaction themselves by calling write_transaction directly (e.g. `with write_transaction():`) but never call store() directly anywhere in their own body? Only direct calls count; calls made by helpers they invoke do not. Return their symbol IDs.\n\nRequested output columns: symbol_id (string).\nReturn exactly the requested output columns, using each requested name as the column alias, in the requested order. Return complete repository-relative file paths and complete symbol IDs exactly as stored. When the question asks which files, symbols or modules, return each distinct one once unless it asks for occurrences.",
+  "explanation": "This query finds all functions and methods outside the auto_ontology/dal/ directory and test files that call write_transaction directly (with high confidence, direct call kind) but do not call store() directly anywhere in their body. It excludes test files by filtering files.is_test = FALSE and excludes the dal folder by checking file_id NOT LIKE 'auto_ontology/dal/%'. The result returns each distinct symbol_id (which includes the repository-relative file path) ordered alphabetically.",
+  "sql": "WITH write_transaction_direct_calls AS (\n    SELECT DISTINCT caller_symbol_id\n    FROM auto_ontology_code.code.calls\n    WHERE callee_name = 'write_transaction'\n    AND call_kind = 'direct'\n    AND confidence = 'high'\n),\nstore_direct_calls AS (\n    SELECT DISTINCT caller_symbol_id\n    FROM auto_ontology_code.code.calls\n    WHERE callee_name = 'store'\n    AND call_kind = 'direct'\n),\nrelevant_symbols AS (\n    SELECT DISTINCT s.symbol_id\n    FROM auto_ontology_code.code.symbols s\n    JOIN auto_ontology_code.code.files f ON s.file_id = f.file_id\n    WHERE f.is_test = FALSE\n    AND f.file_id NOT LIKE 'auto_ontology/dal/%'\n    AND s.kind IN ('function', 'method')\n),\ncandidates AS (\n    SELECT DISTINCT r.symbol_id\n    FROM relevant_symbols r\n    JOIN write_transaction_direct_calls w ON r.symbol_id = w.caller_symbol_id\n    WHERE r.symbol_id NOT IN (SELECT caller_symbol_id FROM store_direct_calls)\n)\nSELECT DISTINCT symbol_id\nFROM candidates\nORDER BY symbol_id",
+  "rows": [
+    {
+      "symbol_id": "auto_ontology/catalog/store/schemas.py::add_schemas_edge"
+    },
+    {
+      "symbol_id": "auto_ontology/catalog/write.py::populate_fks"
+    },
+    {
+      "symbol_id": "auto_ontology/catalog/write.py::populate_pks"
+    },
+    {
+      "symbol_id": "auto_ontology/server/rules/router.py::create_rule"
+    },
+    {
+      "symbol_id": "auto_ontology/server/tags/router.py::detach_tag"
+    }
+  ],
+  "source_record": "run/responses/10i_ask_with_key/ask_q7.json"
+}

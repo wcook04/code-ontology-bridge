@@ -1,0 +1,109 @@
+{
+  "question_id": "ao-03",
+  "arm": "C-base",
+  "model": "nvidia/nemotron-3.5-lightning",
+  "error": null,
+  "elapsed_s": 185.0,
+  "attempts": [
+    {
+      "sql": "WITH invoke_symbol AS (\n    SELECT symbol_id\n    FROM auto_ontology_code.code.symbols\n    WHERE name = 'invoke_with_structured_output'\n),\ndirect_callers AS (\n    SELECT DISTINCT caller_symbol_id\n    FROM auto_ontology_code.code.calls\n    WHERE callee_symbol_id = (SELECT symbol_id FROM invoke_symbol)\n    AND call_kind = 'direct'\n),\nhop2_candidates AS (\n    SELECT DISTINCT c.caller_symbol_id\n    FROM auto_ontology_code.code.calls c\n    WHERE c.call_kind = 'direct'\n    AND c.callee_symbol_id IN (SELECT caller_symbol_id FROM direct_callers)\n),\nqualified AS (\n    SELECT hc.caller_symbol_id\n    FROM hop2_candidates hc\n    WHERE hc.caller_symbol_id NOT IN (SELECT caller_symbol_id FROM direct_callers)\n)\nSELECT s.symbol_id\nFROM auto_ontology_code.code.symbols s\nWHERE s.symbol_id IN (SELECT caller_symbol_id FROM qualified)\nAND s.file_id NOT LIKE 'tests/%'"
+    }
+  ],
+  "usage": {},
+  "request": "invoke_with_structured_output in auto_ontology/utils/llm_invoke.py is the main structured-LLM-call wrapper. Which functions or methods in non-test code (every file under a tests/ folder is test code) reach it at exactly two hops: they do not call invoke_with_structured_output directly themselves, but they directly call at least one function or method that does call it directly? Consider direct calls only on both hops, and follow only calls to a named function or to a method on self (a call through another object's attribute, such as self._backend.classify(), is not followed); a function passed as an argument (e.g. pool.submit(f)) does not count as calling it. The intermediate function may live anywhere, including test code, but the functions you list must be in non-test code. Return their symbol IDs.\n\nRequested output columns: symbol_id (string).\nReturn exactly the requested output columns, using each requested name as the column alias, in the requested order. Return complete repository-relative file paths and complete symbol IDs exactly as stored. When the question asks which files, symbols or modules, return each distinct one once unless it asks for occurrences.",
+  "explanation": "This query identifies functions in non-test code that reach invoke_with_structured_output at exactly two call hops. It first locates the target function's symbol_id, then finds all functions that directly call it. Next, it identifies functions that call those direct callers (the second hop), and finally excludes any that also directly invoke invoke_with_structured_output themselves. The results are filtered to only include symbols from non-test code by checking that file_id does not start with 'tests/'. The output returns the complete symbol_id for each qualifying function, which encodes both the repository-relative file path and the qualified symbol name.",
+  "sql": "WITH invoke_symbol AS (\n    SELECT symbol_id\n    FROM auto_ontology_code.code.symbols\n    WHERE name = 'invoke_with_structured_output'\n),\ndirect_callers AS (\n    SELECT DISTINCT caller_symbol_id\n    FROM auto_ontology_code.code.calls\n    WHERE callee_symbol_id = (SELECT symbol_id FROM invoke_symbol)\n    AND call_kind = 'direct'\n),\nhop2_candidates AS (\n    SELECT DISTINCT c.caller_symbol_id\n    FROM auto_ontology_code.code.calls c\n    WHERE c.call_kind = 'direct'\n    AND c.callee_symbol_id IN (SELECT caller_symbol_id FROM direct_callers)\n),\nqualified AS (\n    SELECT hc.caller_symbol_id\n    FROM hop2_candidates hc\n    WHERE hc.caller_symbol_id NOT IN (SELECT caller_symbol_id FROM direct_callers)\n)\nSELECT s.symbol_id\nFROM auto_ontology_code.code.symbols s\nWHERE s.symbol_id IN (SELECT caller_symbol_id FROM qualified)\nAND s.file_id NOT LIKE 'tests/%'",
+  "rows": [
+    {
+      "symbol_id": "auto_ontology/retrieval/text_to_sql/agents/candidates_preparation.py::CandidatePreparationAgent.execute"
+    },
+    {
+      "symbol_id": "auto_ontology/retrieval/text_to_sql/agents/candidates_retrieval.py::CandidateRetrievalAgent.execute"
+    },
+    {
+      "symbol_id": "auto_ontology/retrieval/text_to_sql/agents/evidence_refinement.py::EvidenceRefinementAgent.execute"
+    },
+    {
+      "symbol_id": "auto_ontology/retrieval/text_to_sql/agents/sql_parse_validation.py::SQLValidationAgent.execute"
+    },
+    {
+      "symbol_id": "auto_ontology/retrieval/text_to_sql/tests/test_follow_up.py::test_follow_up_uses_standalone_question"
+    },
+    {
+      "symbol_id": "auto_ontology/retrieval/text_to_sql/tests/test_follow_up.py::test_independent_question_is_never_rewritten"
+    },
+    {
+      "symbol_id": "auto_ontology/retrieval/text_to_sql/tests/test_follow_up.py::test_no_history_skips_the_llm"
+    },
+    {
+      "symbol_id": "auto_ontology/retrieval/text_to_sql/tests/test_follow_up.py::test_resolver_failure_falls_back_to_original"
+    },
+    {
+      "symbol_id": "auto_ontology/retrieval/text_to_sql/tests/test_visualization_analyze.py::test_comparison_continues_to_chart_generation"
+    },
+    {
+      "symbol_id": "auto_ontology/retrieval/text_to_sql/tests/test_visualization_analyze.py::test_detail_listing_uses_complete_table"
+    },
+    {
+      "symbol_id": "auto_ontology/retrieval/text_to_sql/tests/test_visualization_analyze.py::test_missing_render_decision_skips_chart_generation"
+    },
+    {
+      "symbol_id": "auto_ontology/semantic/bridge_tables.py::build_bridge_tables_sql_attributes"
+    },
+    {
+      "symbol_id": "auto_ontology/semantic/deterministic.py::_generate_column_descriptions"
+    },
+    {
+      "symbol_id": "auto_ontology/semantic/semantic_fk.py::_resolve_via_vdb"
+    },
+    {
+      "symbol_id": "auto_ontology/semantic/semantic_fk.py::select_semantic_fk_join_defaults"
+    },
+    {
+      "symbol_id": "auto_ontology/semantic/sql_attribute_suggester.py::suggest_sql_attributes"
+    },
+    {
+      "symbol_id": "auto_ontology/semantic/tests/test_fk_suggester.py::test_candidate_column_samples_included_regardless_of_stored_shape"
+    },
+    {
+      "symbol_id": "auto_ontology/semantic/tests/test_fk_suggester.py::test_declared_fk_target_is_not_suggested"
+    },
+    {
+      "symbol_id": "auto_ontology/semantic/tests/test_fk_suggester.py::test_non_unique_uuid_cannot_be_inferred_as_primary_key"
+    },
+    {
+      "symbol_id": "auto_ontology/semantic/tests/test_fk_suggester.py::test_non_unique_uuid_columns_suggested"
+    },
+    {
+      "symbol_id": "auto_ontology/semantic/tests/test_fk_suggester.py::test_satellite_classification_stays_false_and_prompt_is_conservative"
+    },
+    {
+      "symbol_id": "auto_ontology/semantic/tests/test_fk_suggester.py::test_uuid_without_profiling_not_suggested"
+    },
+    {
+      "symbol_id": "auto_ontology/semantic/tests/test_fk_suggester.py::test_wide_declared_fk_table_is_classified_without_suggestion_candidates"
+    },
+    {
+      "symbol_id": "auto_ontology/semantic/visit_enter.py::process_table"
+    },
+    {
+      "symbol_id": "auto_ontology/server/chat/router.py::_build_charts_event"
+    },
+    {
+      "symbol_id": "auto_ontology/server/chat/worker.py::_worker_loop"
+    },
+    {
+      "symbol_id": "auto_ontology/server/sql_attributes/router.py::get_sql_attribute_description_suggestion"
+    },
+    {
+      "symbol_id": "auto_ontology/utils/tests/test_llm_invoke.py::test_structured_fallback_returns_none_when_reasoning_also_fails"
+    },
+    {
+      "symbol_id": "auto_ontology/utils/tests/test_llm_invoke.py::test_structured_nr_returns_none_when_neither_client_is_available"
+    },
+    {
+      "symbol_id": "auto_ontology/utils/tests/test_llm_invoke.py::test_structured_nr_uses_reasoning_when_non_reasoning_client_is_unavailable"
+    }
+  ],
+  "source_record": "run/responses/10i_ask_with_key/ask_q3.json"
+}

@@ -1,0 +1,58 @@
+{
+  "question_id": "ao-03",
+  "arm": "C-semantics",
+  "model": "deepseek/deepseek-v4.1-flash-1017",
+  "error": null,
+  "elapsed_s": 206.7,
+  "attempts": [
+    {
+      "sql": "WITH target_symbol AS (SELECT s.symbol_id FROM auto_ontology_code.code.symbols AS s WHERE s.file_id = 'auto_ontology/utils/llm_invoke.py' AND s.name = 'invoke_with_structured_output'), one_hop AS (SELECT DISTINCT c.caller_symbol_id AS symbol_id FROM auto_ontology_code.code.calls AS c JOIN target_symbol AS t ON c.callee_symbol_id = t.symbol_id JOIN auto_ontology_code.code.symbol_profile AS y ON c.caller_symbol_id = y.symbol_id WHERE c.call_kind = 'direct' AND c.resolution IN ('same_file', 'imported', 'method_on_self') AND c.callee_symbol_id IS NOT NULL AND y.kind IN ('function', 'method')) SELECT DISTINCT x.symbol_id AS symbol_id FROM auto_ontology_code.code.calls AS c2 JOIN one_hop AS o ON c2.callee_symbol_id = o.symbol_id JOIN auto_ontology_code.code.symbol_profile AS x ON c2.caller_symbol_id = x.symbol_id WHERE c2.call_kind = 'direct' AND c2.resolution IN ('same_file', 'imported', 'method_on_self') AND c2.caller_symbol_id IS NOT NULL AND x.in_test_file = FALSE AND x.kind IN ('function', 'method') AND NOT EXISTS (SELECT 1 FROM auto_ontology_code.code.calls AS c3 JOIN target_symbol AS t3 ON c3.callee_symbol_id = t3.symbol_id WHERE c3.caller_symbol_id = c2.caller_symbol_id AND c3.call_kind = 'direct') ORDER BY symbol_id"
+    }
+  ],
+  "usage": {},
+  "request": "invoke_with_structured_output in auto_ontology/utils/llm_invoke.py is the main structured-LLM-call wrapper. Which functions or methods in non-test code (every file under a tests/ folder is test code) reach it at exactly two hops: they do not call invoke_with_structured_output directly themselves, but they directly call at least one function or method that does call it directly? Consider direct calls only on both hops, and follow only calls to a named function or to a method on self (a call through another object's attribute, such as self._backend.classify(), is not followed); a function passed as an argument (e.g. pool.submit(f)) does not count as calling it. The intermediate function may live anywhere, including test code, but the functions you list must be in non-test code. Return their symbol IDs.\n\nRequested output columns: symbol_id (string).\nReturn exactly the requested output columns, using each requested name as the column alias, in the requested order. Return complete repository-relative file paths and complete symbol IDs exactly as stored. When the question asks which files, symbols or modules, return each distinct one once unless it asks for occurrences.",
+  "explanation": "The query finds code symbols in non-test files that are exactly two call hops away from the structured LLM wrapper. It first identifies the wrapper symbol, then finds functions or methods that directly call it using only followable direct calls, and finally returns the distinct non-test callers of those intermediate functions. Callback references, calls through another object's attributes, and symbols that already call the wrapper directly are excluded.",
+  "sql": "WITH target_symbol AS (SELECT s.symbol_id FROM auto_ontology_code.code.symbols AS s WHERE s.file_id = 'auto_ontology/utils/llm_invoke.py' AND s.name = 'invoke_with_structured_output'), one_hop AS (SELECT DISTINCT c.caller_symbol_id AS symbol_id FROM auto_ontology_code.code.calls AS c JOIN target_symbol AS t ON c.callee_symbol_id = t.symbol_id JOIN auto_ontology_code.code.symbol_profile AS y ON c.caller_symbol_id = y.symbol_id WHERE c.call_kind = 'direct' AND c.resolution IN ('same_file', 'imported', 'method_on_self') AND c.callee_symbol_id IS NOT NULL AND y.kind IN ('function', 'method')) SELECT DISTINCT x.symbol_id AS symbol_id FROM auto_ontology_code.code.calls AS c2 JOIN one_hop AS o ON c2.callee_symbol_id = o.symbol_id JOIN auto_ontology_code.code.symbol_profile AS x ON c2.caller_symbol_id = x.symbol_id WHERE c2.call_kind = 'direct' AND c2.resolution IN ('same_file', 'imported', 'method_on_self') AND c2.caller_symbol_id IS NOT NULL AND x.in_test_file = FALSE AND x.kind IN ('function', 'method') AND NOT EXISTS (SELECT 1 FROM auto_ontology_code.code.calls AS c3 JOIN target_symbol AS t3 ON c3.callee_symbol_id = t3.symbol_id WHERE c3.caller_symbol_id = c2.caller_symbol_id AND c3.call_kind = 'direct') ORDER BY symbol_id",
+  "rows": [
+    {
+      "symbol_id": "auto_ontology/retrieval/text_to_sql/agents/candidates_preparation.py::CandidatePreparationAgent.execute"
+    },
+    {
+      "symbol_id": "auto_ontology/retrieval/text_to_sql/agents/candidates_retrieval.py::CandidateRetrievalAgent.execute"
+    },
+    {
+      "symbol_id": "auto_ontology/retrieval/text_to_sql/agents/evidence_refinement.py::EvidenceRefinementAgent.execute"
+    },
+    {
+      "symbol_id": "auto_ontology/retrieval/text_to_sql/agents/sql_parse_validation.py::SQLValidationAgent.execute"
+    },
+    {
+      "symbol_id": "auto_ontology/semantic/bridge_tables.py::build_bridge_tables_sql_attributes"
+    },
+    {
+      "symbol_id": "auto_ontology/semantic/deterministic.py::_generate_column_descriptions"
+    },
+    {
+      "symbol_id": "auto_ontology/semantic/semantic_fk.py::_resolve_via_vdb"
+    },
+    {
+      "symbol_id": "auto_ontology/semantic/semantic_fk.py::select_semantic_fk_join_defaults"
+    },
+    {
+      "symbol_id": "auto_ontology/semantic/sql_attribute_suggester.py::suggest_sql_attributes"
+    },
+    {
+      "symbol_id": "auto_ontology/semantic/visit_enter.py::process_table"
+    },
+    {
+      "symbol_id": "auto_ontology/server/chat/router.py::_build_charts_event"
+    },
+    {
+      "symbol_id": "auto_ontology/server/chat/worker.py::_worker_loop"
+    },
+    {
+      "symbol_id": "auto_ontology/server/sql_attributes/router.py::get_sql_attribute_description_suggestion"
+    }
+  ],
+  "source_record": "run/responses/10i_ask_with_key/ask_q3.json"
+}

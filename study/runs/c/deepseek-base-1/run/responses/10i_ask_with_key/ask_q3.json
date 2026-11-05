@@ -1,0 +1,229 @@
+{
+  "request": {
+    "question": "invoke_with_structured_output in auto_ontology/utils/llm_invoke.py is the main structured-LLM-call wrapper. Which functions or methods in non-test code (every file under a tests/ folder is test code) reach it at exactly two hops: they do not call invoke_with_structured_output directly themselves, but they directly call at least one function or method that does call it directly? Consider direct calls only on both hops, and follow only calls to a named function or to a method on self (a call through another object's attribute, such as self._backend.classify(), is not followed); a function passed as an argument (e.g. pool.submit(f)) does not count as calling it. The intermediate function may live anywhere, including test code, but the functions you list must be in non-test code. Return their symbol IDs.\n\nRequested output columns: symbol_id (string).\nReturn exactly the requested output columns, using each requested name as the column alias, in the requested order. Return complete repository-relative file paths and complete symbol IDs exactly as stored. When the question asks which files, symbols or modules, return each distinct one once unless it asks for occurrences.",
+    "calculation_only": true
+  },
+  "status": 200,
+  "elapsed_s": 195.0,
+  "events": [
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "question_intent",
+      "thought": null,
+      "label": "Classifying the question"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "question_intent",
+      "thought": null,
+      "label": "Classifying the question"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "question_extraction",
+      "thought": null,
+      "label": "Understanding the question"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "question_extraction",
+      "thought": null,
+      "label": "Understanding the question"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "retrieve_candidates",
+      "thought": null,
+      "label": "Retrieving candidates"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "retrieve_candidates",
+      "thought": null,
+      "label": "Retrieving candidates"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "prepare_candidates",
+      "thought": null,
+      "label": "Preparing candidates"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "prepare_candidates",
+      "thought": "Keep `calls` for the two-hop caller→direct-caller→target edges, `symbols` for function/method kind and returned symbol_id/path, and `files` to filter non-test code via `is_test = false`. The other candidate tables are not part of the call-reachability or non-test predicates.",
+      "label": "Preparing candidates"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "refine_evidence",
+      "thought": null,
+      "label": "Refining evidence"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "refine_evidence",
+      "thought": "No repair applies: the evidence contains no scalar value anchor or sample-value proof requiring a string, constant, or predicate-operator correction, and the sanitized question uses no mistaken scalar or comparison operator that can be definitively corrected from the supplied evidence.",
+      "label": "Refining evidence"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "construct_sql_from_candidates",
+      "thought": null,
+      "label": "Constructing SQL"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "construct_sql_from_candidates",
+      "thought": "The target symbol is identified by its bare name plus the repository-relative file path auto_ontology/utils/llm_invoke.py, because the question names both explicitly. Hop one uses the call records joined from callee symbol id back to that target, restricted to call_kind = 'direct' (callbacks passed as arguments are excluded per the evidence) and to resolutions same_file, imported and method_on_self, since calls through another object's attribute and unresolved/external calls are not followed. Hop two repeats the identical direct-call and resolution rules from those intermediates' symbol ids to their callers. The final symbols are restricted to kind function or method, because only functions and methods can call anything, and to files with is_test = false, since every file under a tests folder is test code; the intermediate hop is deliberately left unrestricted so test-code intermediates still link through. Symbols that are themselves direct callers of the target are excluded to satisfy the 'exactly two hops' requirement, and the target itself is excluded for the same reason. DISTINCT ensures each qualifying symbol id appears once. No time window, aggregation or NULL filter applies.",
+      "label": "Constructing SQL"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "validate_sql_query",
+      "thought": null,
+      "label": "Validating SQL and intent"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "validate_sql_query",
+      "thought": "The query structure correctly implements a two-hop reachability analysis and uses verified join paths, but it fails to enforce the evidence-defined restriction that each followed call must target a named function or method on self for the intermediate hop, potentially including classes as intermediate nodes.",
+      "label": "Validating SQL and intent"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "reconstruct_sql",
+      "thought": null,
+      "label": "Reconstructing SQL"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "reconstruct_sql",
+      "thought": "The target is identified by its bare name plus the repository-relative file path auto_ontology/utils/llm_invoke.py, because the question names both explicitly. Hop one follows call records from the target's symbol id back to its direct callers, restricted to call_kind = 'direct' (callbacks passed as arguments are excluded per the evidence) and to resolutions same_file, imported and method_on_self, since calls through another object's attribute, builtins, external and unresolved calls are not followed. One assumption had to change: hop one is now additionally restricted, via a join to symbols, to intermediates of kind function or method, because the instruction to follow only calls to a named function or a method on self means the intermediate hop must itself be a function or method, not a class. Hop two repeats the identical direct-call and resolution rules from those intermediates' ids to their callers; the intermediate hop remains unrestricted by is_test, since the intermediate may live anywhere including test code. The returned symbols are restricted to kind function or method and to files with is_test = false, since every file under a tests folder is test code. Symbols that are themselves direct callers of the target are excluded to enforce exactly two hops, and the target itself is excluded as well. DISTINCT returns each qualifying symbol id once. No time window, aggregation, or NULL filter applies.</br>",
+      "label": "Reconstructing SQL"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "validate_sql_query",
+      "thought": null,
+      "label": "Validating SQL and intent"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "validate_sql_query",
+      "thought": "The query implements the two-hop call-graph reachability question correctly:\n\n1. **target CTE**: resolves `invoke_with_structured_output` in `auto_ontology/utils/llm_invoke.py` by name + exact file_id — matches the stated definition location.\n\n2. **hop1 CTE**: finds direct callers via `calls.callee_symbol_id = target.symbol_id` with `call_kind = 'direct'` (excludes callback rows — correct, since a function passed as an argument is not a call) and `resolution IN ('same_file','imported','method_on_self')` (excludes `dynamic_attribute`/`external`/`builtin`/`unresolved` — correct, since calls through another object's attribute are not followed, while named functions and methods on self are). Caller is constrained to `kind IN ('function','method')`, matching 'a function or method that does call it directly'. The intermediate is *not* restricted to non-test code, exactly as the question allows.\n\n3. **Final SELECT**: joins `calls` back to hop1 as the callee (`c2.callee_symbol_id = h.symbol_id`) with the same `direct` / resolution restrictions on the second hop (direct calls only, named function or method-on-self only), keeps callers that are non-test (`files.is_test = false`) and `kind IN ('function','method')`, and enforces *exactly* two hops by excluding hop1 symbols (`NOT IN (SELECT ... FROM hop1)`) and the target itself. `SELECT DISTINCT` yields each symbol once.\n\nAll joins follow the verified semantic path (`calls.callee_symbol_id = symbols.symbol_id`, `symbols.file_id = files.file_id`), no nonsensical joins, no aggregations are involved, and the projection is a single `symbol_id` column in the requested order. The SQL faithfully implements every constraint stated in the authoritative evidence.",
+      "label": "Validating SQL and intent"
+    },
+    {
+      "type": "sql",
+      "node": "validate_sql_query",
+      "sql": "WITH target AS (SELECT s.symbol_id FROM auto_ontology_code.code.symbols AS s WHERE s.name = 'invoke_with_structured_output' AND s.file_id = 'auto_ontology/utils/llm_invoke.py'), hop1 AS (SELECT DISTINCT c.caller_symbol_id AS symbol_id FROM auto_ontology_code.code.calls AS c INNER JOIN target AS t ON c.callee_symbol_id = t.symbol_id INNER JOIN auto_ontology_code.code.symbols AS si ON c.caller_symbol_id = si.symbol_id WHERE c.call_kind = 'direct' AND c.resolution IN ('same_file', 'imported', 'method_on_self') AND si.kind IN ('function', 'method')) SELECT DISTINCT s.symbol_id AS symbol_id FROM auto_ontology_code.code.calls AS c2 INNER JOIN hop1 AS h ON c2.callee_symbol_id = h.symbol_id INNER JOIN auto_ontology_code.code.symbols AS s ON c2.caller_symbol_id = s.symbol_id INNER JOIN auto_ontology_code.code.files AS f ON s.file_id = f.file_id WHERE c2.call_kind = 'direct' AND c2.resolution IN ('same_file', 'imported', 'method_on_self') AND f.is_test = false AND s.kind IN ('function', 'method') AND s.symbol_id NOT IN (SELECT h2.symbol_id FROM hop1 AS h2) AND s.symbol_id NOT IN (SELECT t2.symbol_id FROM target AS t2)"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "execute_sql_query",
+      "thought": null,
+      "label": "Executing SQL"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "execute_sql_query",
+      "thought": null,
+      "label": "Executing SQL"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "check_empty_like_result",
+      "thought": null,
+      "label": "Checking results"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "check_empty_like_result",
+      "thought": null,
+      "label": "Checking results"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "check_value_repair",
+      "thought": null,
+      "label": "Checking values"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "check_value_repair",
+      "thought": null,
+      "label": "Checking values"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "format_and_respond",
+      "thought": null,
+      "label": "Formatting response"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "format_and_respond",
+      "thought": null,
+      "label": "Formatting response"
+    },
+    {
+      "type": "result",
+      "answer": {
+        "response": "This lists the functions and methods in non-test code that reach the structured-LLM-call wrapper in exactly two call hops. It uses the call graph records to find the wrapper's direct callers, keeps only those that are themselves functions or methods, then follows their direct calls one hop further, while excluding callbacks, calls through arbitrary object attributes, and the wrapper's own direct callers. The final results are limited to function and method symbols outside test files, and each symbol ID is returned once.",
+        "sql_code": "WITH target AS (SELECT s.symbol_id FROM auto_ontology_code.code.symbols AS s WHERE s.name = 'invoke_with_structured_output' AND s.file_id = 'auto_ontology/utils/llm_invoke.py'), hop1 AS (SELECT DISTINCT c.caller_symbol_id AS symbol_id FROM auto_ontology_code.code.calls AS c INNER JOIN target AS t ON c.callee_symbol_id = t.symbol_id INNER JOIN auto_ontology_code.code.symbols AS si ON c.caller_symbol_id = si.symbol_id WHERE c.call_kind = 'direct' AND c.resolution IN ('same_file', 'imported', 'method_on_self') AND si.kind IN ('function', 'method')) SELECT DISTINCT s.symbol_id AS symbol_id FROM auto_ontology_code.code.calls AS c2 INNER JOIN hop1 AS h ON c2.callee_symbol_id = h.symbol_id INNER JOIN auto_ontology_code.code.symbols AS s ON c2.caller_symbol_id = s.symbol_id INNER JOIN auto_ontology_code.code.files AS f ON s.file_id = f.file_id WHERE c2.call_kind = 'direct' AND c2.resolution IN ('same_file', 'imported', 'method_on_self') AND f.is_test = false AND s.kind IN ('function', 'method') AND s.symbol_id NOT IN (SELECT h2.symbol_id FROM hop1 AS h2) AND s.symbol_id NOT IN (SELECT t2.symbol_id FROM target AS t2)",
+        "sql_columns": [
+          "4dd77c37-ca82-4f4f-87f0-03adcef616e6",
+          "4ea0d5ff-450b-45a1-9019-04f93024da7f",
+          "f7d4a4fe-4b67-4731-9bb1-30d8e4bcd99d",
+          "f613e3b7-9a8d-4627-a6a4-2e6922ce7cc0",
+          "0968cf9f-5fbb-43da-8a7d-f2865588cfb1",
+          "ac812c22-74f2-41c9-93f6-c86dec124352",
+          "aea9da7d-ec36-4351-aaed-b8a7fb87d7f6",
+          "3b581a6e-895a-4fe5-a502-6491d4909502",
+          "0a252d0a-39ad-4b70-b966-1e7e1a7bce1b",
+          "2fd87376-ab50-4f07-b531-d04c22f3ce39"
+        ],
+        "custom_analyses_used": [],
+        "sql_response_from_db": [
+          "[{\"symbol_id\":\"auto_ontology\\/retrieval\\/text_to_sql\\/agents\\/candidates_retrieval.py::CandidateRetrievalAgent.execute\"},{\"symbol_id\":\"auto_ontology\\/server\\/chat\\/worker.py::_worker_loop\"},{\"symbol_id\":\"auto_ontology\\/semantic\\/bridge_tables.py::build_bridge_tables_sql_attributes\"},{\"symbol_id\":\"auto_ontology\\/server\\/chat\\/router.py::_build_charts_event\"},{\"symbol_id\":\"auto_ontology\\/retrieval\\/text_to_sql\\/agents\\/sql_parse_validation.py::SQLValidationAgent.execute\"},{\"symbol_id\":\"auto_ontology\\/semantic\\/semantic_fk.py::_resolve_via_vdb\"},{\"symbol_id\":\"auto_ontology\\/server\\/sql_attributes\\/router.py::get_sql_attribute_description_suggestion\"},{\"symbol_id\":\"auto_ontology\\/retrieval\\/text_to_sql\\/agents\\/evidence_refinement.py::EvidenceRefinementAgent.execute\"},{\"symbol_id\":\"auto_ontology\\/retrieval\\/text_to_sql\\/agents\\/candidates_preparation.py::CandidatePreparationAgent.execute\"},{\"symbol_id\":\"auto_ontology\\/semantic\\/sql_attribute_suggester.py::suggest_sql_attributes\"},{\"symbol_id\":\"auto_ontology\\/semantic\\/visit_enter.py::process_table\"},{\"symbol_id\":\"auto_ontology\\/semantic\\/deterministic.py::_generate_column_descriptions\"},{\"symbol_id\":\"auto_ontology\\/semantic\\/semantic_fk.py::select_semantic_fk_join_defaults\"}]"
+        ],
+        "thoughts": "- Preparing candidates: The question centers on identifying code symbols (functions/methods) via their symbol_id within a call-graph/reachability analysis. Among the available attributes, the symbol_id column tied to call-count/reachability data best matches this primary subject.\n- Preparing candidates: Keep `calls` for the two-hop caller→direct-caller→target edges, `symbols` for function/method kind and returned symbol_id/path, and `files` to filter non-test code via `is_test = false`. The other candidate tables are not part of the call-reachability or non-test predicates.\n- Refining evidence: No repair applies: the evidence contains no scalar value anchor or sample-value proof requiring a string, constant, or predicate-operator correction, and the sanitized question uses no mistaken scalar or comparison operator that can be definitively corrected from the supplied evidence.\n- Constructing SQL: The target symbol is identified by its bare name plus the repository-relative file path auto_ontology/utils/llm_invoke.py, because the question names both explicitly. Hop one uses the call records joined from callee symbol id back to that target, restricted to call_kind = 'direct' (callbacks passed as arguments are excluded per the evidence) and to resolutions same_file, imported and method_on_self, since calls through another object's attribute and unresolved/external calls are not followed. Hop two repeats the identical direct-call and resolution rules from those intermediates' symbol ids to their callers. The final symbols are restricted to kind function or method, because only functions and methods can call anything, and to files with is_test = false, since every file under a tests folder is test code; the intermediate hop is deliberately left unrestricted so test-code intermediates still link through. Symbols that are themselves direct callers of the target are excluded to satisfy the 'exactly two hops' requirement, and the target itself is excluded for the same reason. DISTINCT ensures each qualifying symbol id appears once. No time window, aggregation or NULL filter applies.\n- Validating SQL and intent: The query structure correctly implements a two-hop reachability analysis and uses verified join paths, but it fails to enforce the evidence-defined restriction that each followed call must target a named function or method on self for the intermediate hop, potentially including classes as intermediate nodes.\n- Reconstructing SQL: The SQL logic can be corrected with the existing tables by joining the intermediate direct callers to symbols and filtering their kind to 'function' or 'method'. No missing schema/data concept is required.\n- Reconstructing SQL: The target is identified by its bare name plus the repository-relative file path auto_ontology/utils/llm_invoke.py, because the question names both explicitly. Hop one follows call records from the target's symbol id back to its direct callers, restricted to call_kind = 'direct' (callbacks passed as arguments are excluded per the evidence) and to resolutions same_file, imported and method_on_self, since calls through another object's attribute, builtins, external and unresolved calls are not followed. One assumption had to change: hop one is now additionally restricted, via a join to symbols, to intermediates of kind function or method, because the instruction to follow only calls to a named function or a method on self means the intermediate hop must itself be a function or method, not a class. Hop two repeats the identical direct-call and resolution rules from those intermediates' ids to their callers; the intermediate hop remains unrestricted by is_test, since the intermediate may live anywhere including test code. The returned symbols are restricted to kind function or method and to files with is_test = false, since every file under a tests folder is test code. Symbols that are themselves direct callers of the target are excluded to enforce exactly two hops, and the target itself is excluded as well. DISTINCT returns each qualifying symbol id once. No time window, aggregation, or NULL filter applies.</br>\n- Validating SQL and intent: The query implements the two-hop call-graph reachability question correctly:\n\n1. **target CTE**: resolves `invoke_with_structured_output` in `auto_ontology/utils/llm_invoke.py` by name + exact file_id — matches the stated definition location.\n\n2. **hop1 CTE**: finds direct callers via `calls.callee_symbol_id = target.symbol_id` with `call_kind = 'direct'` (excludes callback rows — correct, since a function passed as an argument is not a call) and `resolution IN ('same_file','imported','method_on_self')` (excludes `dynamic_attribute`/`external`/`builtin`/`unresolved` — correct, since calls through another object's attribute are not followed, while named functions and methods on self are). Caller is constrained to `kind IN ('function','method')`, matching 'a function or method that does call it directly'. The intermediate is *not* restricted to non-test code, exactly as the question allows.\n\n3. **Final SELECT**: joins `calls` back to hop1 as the callee (`c2.callee_symbol_id = h.symbol_id`) with the same `direct` / resolution restrictions on the second hop (direct calls only, named function or method-on-self only), keeps callers that are non-test (`files.is_test = false`) and `kind IN ('function','method')`, and enforces *exactly* two hops by excluding hop1 symbols (`NOT IN (SELECT ... FROM hop1)`) and the target itself. `SELECT DISTINCT` yields each symbol once.\n\nAll joins follow the verified semantic path (`calls.callee_symbol_id = symbols.symbol_id`, `symbols.file_id = files.file_id`), no nonsensical joins, no aggregations are involved, and the projection is a single `symbol_id` column in the requested order. The SQL faithfully implements every constraint stated in the authoritative evidence."
+      }
+    }
+  ],
+  "question_id": 3,
+  "gold_sql": "WITH d AS (SELECT DISTINCT caller_symbol_id AS s FROM code.calls WHERE call_kind = 'direct' AND callee_symbol_id = 'auto_ontology/utils/llm_invoke.py::invoke_with_structured_output') SELECT DISTINCT c.caller_symbol_id AS symbol_id FROM code.calls c JOIN code.symbols x ON x.symbol_id = c.caller_symbol_id JOIN code.files f ON f.file_id = x.file_id WHERE c.call_kind = 'direct' AND c.callee_symbol_id IN (SELECT s FROM d) AND c.caller_symbol_id NOT IN (SELECT s FROM d) AND NOT f.is_test ORDER BY 1",
+  "gold_row_count": 1,
+  "agent_sql": "WITH target AS (SELECT s.symbol_id FROM auto_ontology_code.code.symbols AS s WHERE s.name = 'invoke_with_structured_output' AND s.file_id = 'auto_ontology/utils/llm_invoke.py'), hop1 AS (SELECT DISTINCT c.caller_symbol_id AS symbol_id FROM auto_ontology_code.code.calls AS c INNER JOIN target AS t ON c.callee_symbol_id = t.symbol_id INNER JOIN auto_ontology_code.code.symbols AS si ON c.caller_symbol_id = si.symbol_id WHERE c.call_kind = 'direct' AND c.resolution IN ('same_file', 'imported', 'method_on_self') AND si.kind IN ('function', 'method')) SELECT DISTINCT s.symbol_id AS symbol_id FROM auto_ontology_code.code.calls AS c2 INNER JOIN hop1 AS h ON c2.callee_symbol_id = h.symbol_id INNER JOIN auto_ontology_code.code.symbols AS s ON c2.caller_symbol_id = s.symbol_id INNER JOIN auto_ontology_code.code.files AS f ON s.file_id = f.file_id WHERE c2.call_kind = 'direct' AND c2.resolution IN ('same_file', 'imported', 'method_on_self') AND f.is_test = false AND s.kind IN ('function', 'method') AND s.symbol_id NOT IN (SELECT h2.symbol_id FROM hop1 AS h2) AND s.symbol_id NOT IN (SELECT t2.symbol_id FROM target AS t2)",
+  "agent_answer": "This lists the functions and methods in non-test code that reach the structured-LLM-call wrapper in exactly two call hops. It uses the call graph records to find the wrapper's direct callers, keeps only those that are themselves functions or methods, then follows their direct calls one hop further, while excluding callbacks, calls through arbitrary object attributes, and the wrapper's own direct callers. The final results are limited to function and method symbols outside test files, and each symbol ID is returned once.",
+  "agent_row_count": 13,
+  "correct_rows": false,
+  "error": null
+}

@@ -1,0 +1,185 @@
+{
+  "request": {
+    "question": "The production database connectors are the classes that directly subclass SQLDatabase (defined in auto_ontology/connectors/base.py), excluding any class defined in test code (every file under a tests/ folder counts as test code). For each such connector class, which public methods does the class define in its own body that SQLDatabase itself does not define? A method is public when its name does not start with an underscore (so __init__ and other dunder methods are excluded); anything written with def directly in the class body counts as a method, including properties and context-manager methods. Methods inherited without being redefined do not count. Return one row per (connector class symbol ID, method name).\n\nRequested output columns: class_symbol_id (string), method_name (string).\nReturn exactly the requested output columns, using each requested name as the column alias, in the requested order. Return complete repository-relative file paths and complete symbol IDs exactly as stored. When the question asks which files, symbols or modules, return each distinct one once unless it asks for occurrences.",
+    "calculation_only": true
+  },
+  "status": 200,
+  "elapsed_s": 144.5,
+  "events": [
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "question_intent",
+      "thought": null,
+      "label": "Classifying the question"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "question_intent",
+      "thought": null,
+      "label": "Classifying the question"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "question_extraction",
+      "thought": null,
+      "label": "Understanding the question"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "question_extraction",
+      "thought": null,
+      "label": "Understanding the question"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "retrieve_candidates",
+      "thought": null,
+      "label": "Retrieving candidates"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "retrieve_candidates",
+      "thought": null,
+      "label": "Retrieving candidates"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "prepare_candidates",
+      "thought": null,
+      "label": "Preparing candidates"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "prepare_candidates",
+      "thought": "The question's primary subject revolves around filtering and identifying public methods (those not starting with an underscore) among connector classes. The provided column attribute `code.symbols.is_public` is explicitly defined as `True` when neither the name nor any enclosing class name starts with an underscore, which directly and exactly matches the question's public-methods filter. The other attribute `code.symbols.kind` categorizes symbols as function/method/class but does not capture the visibility/public-filtering core of the query. Therefore, the column attribute ID that best represents the primary subject is `06b65df8-7d65-4b8a-af91-9aa77026426f`.",
+      "label": "Preparing candidates"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "construct_sql_from_candidates",
+      "thought": null,
+      "label": "Constructing SQL"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "construct_sql_from_candidates",
+      "thought": "Identify connector classes by filtering symbols where kind='class' and file_id starts with 'auto_ontology/connectors/' and does not contain '/tests/'. For each such class, find public methods (kind='method', is_public=true) whose qualname matches the class name followed by a dot and whose line numbers fall within the class's line_start/line_end, indicating they are defined directly in the class body. Exclude methods inherited from SQLDatabase by filtering out qualname values that start with 'SQLDatabase.'. This yields one row per (class_symbol_id, method_name) pair representing the public methods each connector class authors itself.",
+      "label": "Constructing SQL"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "validate_sql_query",
+      "thought": null,
+      "label": "Validating SQL and intent"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "validate_sql_query",
+      "thought": "The SQL correctly identifies connector classes in the auto_ontology/connectors directory (excluding tests) and finds their public methods defined directly in the class body, excluding SQLDatabase methods.",
+      "label": "Validating SQL and intent"
+    },
+    {
+      "type": "sql",
+      "node": "validate_sql_query",
+      "sql": "WITH connector_classes AS (\n    SELECT symbol_id AS class_symbol_id,\n           name AS class_name,\n           line_start,\n           line_end\n    FROM auto_ontology_code.code.symbols\n    WHERE kind = 'class'\n      AND file_id LIKE 'auto_ontology/connectors/%'\n      AND file_id NOT LIKE '%/tests/%'\n),\nconnector_methods AS (\n    SELECT s.name AS method_name,\n           c.class_symbol_id\n    FROM auto_ontology_code.code.symbols s\n    JOIN connector_classes c\n      ON s.qualname LIKE c.class_name || '.%'\n     AND s.kind = 'method'\n     AND s.is_public = true\n     AND s.line_start >= c.line_start\n     AND s.line_end <= c.line_end\n     AND s.qualname NOT LIKE 'SQLDatabase.%'\n)\nSELECT c.class_symbol_id,\n       s.method_name\nFROM connector_methods s\nJOIN connector_classes c\n  ON c.class_symbol_id = s.class_symbol_id\nORDER BY c.class_symbol_id,\n         s.method_name;"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "execute_sql_query",
+      "thought": null,
+      "label": "Executing SQL"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "execute_sql_query",
+      "thought": null,
+      "label": "Executing SQL"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "check_empty_like_result",
+      "thought": null,
+      "label": "Checking results"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "check_empty_like_result",
+      "thought": null,
+      "label": "Checking results"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "check_value_repair",
+      "thought": null,
+      "label": "Checking values"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "check_value_repair",
+      "thought": null,
+      "label": "Checking values"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "format_and_respond",
+      "thought": null,
+      "label": "Formatting response"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "format_and_respond",
+      "thought": null,
+      "label": "Formatting response"
+    },
+    {
+      "type": "result",
+      "answer": {
+        "response": "This query lists, for every production database connector class defined outside of test files, the public methods that are authored directly in that class and are not inherited from SQLDatabase. It returns one row per (class symbol ID, method name) pair, showing the API surface each connector contributes on its own.",
+        "sql_code": "WITH connector_classes AS (\n    SELECT symbol_id AS class_symbol_id,\n           name AS class_name,\n           line_start,\n           line_end\n    FROM auto_ontology_code.code.symbols\n    WHERE kind = 'class'\n      AND file_id LIKE 'auto_ontology/connectors/%'\n      AND file_id NOT LIKE '%/tests/%'\n),\nconnector_methods AS (\n    SELECT s.name AS method_name,\n           c.class_symbol_id\n    FROM auto_ontology_code.code.symbols s\n    JOIN connector_classes c\n      ON s.qualname LIKE c.class_name || '.%'\n     AND s.kind = 'method'\n     AND s.is_public = true\n     AND s.line_start >= c.line_start\n     AND s.line_end <= c.line_end\n     AND s.qualname NOT LIKE 'SQLDatabase.%'\n)\nSELECT c.class_symbol_id,\n       s.method_name\nFROM connector_methods s\nJOIN connector_classes c\n  ON c.class_symbol_id = s.class_symbol_id\nORDER BY c.class_symbol_id,\n         s.method_name;",
+        "sql_columns": [
+          "02cb14e0-c576-4f26-8357-ebe8f47f1093",
+          "6f277971-63ab-4fc3-acee-1b4df80e8612",
+          "bbb6f2c7-bbe6-440f-bab0-ebb53ebf6f08",
+          "9f65e8c1-95e7-4c95-b28d-6d0cac275468",
+          "faa35a5e-7bfe-416b-8667-28dd87b92e48",
+          "ebd375ee-6e16-4eaa-84d9-239daa73dafa",
+          "4291c0f8-3093-4eb4-a386-3ee1f1a265f0",
+          "00cf6ae2-33b1-4e17-a485-e9d1447045af"
+        ],
+        "custom_analyses_used": [],
+        "sql_response_from_db": [
+          "[{\"class_symbol_id\":\"auto_ontology\\/connectors\\/base.py::StatementTimeout\",\"method_name\":\"since\"},{\"class_symbol_id\":\"auto_ontology\\/connectors\\/clickhouse.py::ClickHouseDatabase\",\"method_name\":\"close\"},{\"class_symbol_id\":\"auto_ontology\\/connectors\\/clickhouse.py::ClickHouseDatabase\",\"method_name\":\"database_name\"},{\"class_symbol_id\":\"auto_ontology\\/connectors\\/clickhouse.py::ClickHouseDatabase\",\"method_name\":\"dialect\"},{\"class_symbol_id\":\"auto_ontology\\/connectors\\/clickhouse.py::ClickHouseDatabase\",\"method_name\":\"execute\"},{\"class_symbol_id\":\"auto_ontology\\/connectors\\/clickhouse.py::ClickHouseDatabase\",\"method_name\":\"get_columns\"},{\"class_symbol_id\":\"auto_ontology\\/connectors\\/clickhouse.py::ClickHouseDatabase\",\"method_name\":\"get_fks\"},{\"class_symbol_id\":\"auto_ontology\\/connectors\\/clickhouse.py::ClickHouseDatabase\",\"method_name\":\"get_pks\"},{\"class_symbol_id\":\"auto_ontology\\/connectors\\/clickhouse.py::ClickHouseDatabase\",\"method_name\":\"get_queries\"},{\"class_symbol_id\":\"auto_ontology\\/connectors\\/clickhouse.py::ClickHouseDatabase\",\"method_name\":\"get_tables\"},{\"class_symbol_id\":\"auto_ontology\\/connectors\\/clickhouse.py::ClickHouseDatabase\",\"method_name\":\"get_views\"},{\"class_symbol_id\":\"auto_ontology\\/connectors\\/clickhouse.py::ClickHouseDatabase\",\"method_name\":\"ping\"},{\"class_symbol_id\":\"auto_ontology\\/connectors\\/databricks.py::DatabricksDatabase\",\"method_name\":\"auth_mode\"},{\"class_symbol_id\":\"auto_ontology\\/connectors\\/databricks.py::DatabricksDatabase\",\"method_name\":\"close\"},{\"class_symbol_id\":\"auto_ontology\\/connectors\\/databricks.py::DatabricksDatabase\",\"method_name\":\"database_name\"},{\"class_symbol_id\":\"auto_ontology\\/connectors\\/databricks.py::DatabricksDatabase\",\"method_name\":\"dialect\"},{\"class_symbol_id\":\"auto_ontology\\/connectors\\/databricks.py::DatabricksDatabase\",\"method_name\":\"execute\"},{\"class_symbol_id\":\"auto_ontology\\/connectors\\/databricks.py::DatabricksDatabase\",\"method_name\":\"get_columns\"},{\"class_symbol_id\":\"auto_ontology\\/connectors\\/databricks.py::DatabricksDatabase\",\"method_name\":\"get_fks\"},{\"class_symbol_id\":\"auto_ontology\\/connectors\\/databricks.py::DatabricksDatabase\",\"method_name\":\"get_pks\"},{\"class_symbol_id\":\"auto_ontology\\/connectors\\/databricks.py::DatabricksDatabase\",\"method_name\":\"get_queries\"},{\"class_symbol_id\":\"auto_ontology\\/connectors\\/databricks.py::DatabricksDatabase\",\"method_name\":\"get_schemas\"},{\"class_symbol_id\":\"auto_ontology\\/connectors\\/databricks.py::DatabricksDatabase\",\"method_name\":\"get_tables\"},{\"class_symbol_id\":\"auto_ontology\\/connectors\\/databricks.py::DatabricksDatabase\",\"method_name\":\"get_views\"},{\"class_symbol_id\":\"auto_ontology\\/connectors\\/databricks.py::DatabricksDatabase\",\"method_name\":\"ping\"},{\"class_symbol_id\":\"auto_ontology\\/connectors\\/databricks.py::DatabricksDatabase\",\"method_name\":\"qualify\"},{\"class_symbol_id\":\"auto_ontology\\/connectors\\/databricks.py::DatabricksDatabase\",\"method_name\":\"reuse_connection\"},{\"class_symbol_id\":\"auto_ontology\\/connectors\\/duckdb.py::DuckDBDatabase\",\"method_name\":\"close\"},{\"class_symbol_id\":\"auto_ontology\\/connectors\\/duckdb.py::DuckDBDatabase\",\"method_name\":\"database_name\"},{\"class_symbol_id\":\"auto_ontology\\/connectors\\/duckdb.py::DuckDBDatabase\",\"method_name\":\"dialect\"},{\"class_symbol_id\":\"auto_ontology\\/connectors\\/duckdb.py::DuckDBDatabase\",\"method_name\":\"execute\"},{\"class_symbol_id\":\"auto_ontology\\/connectors\\/duckdb.py::DuckDBDatabase\",\"method_name\":\"get_columns\"},{\"class_symbol_id\":\"auto_ontology\\/connectors\\/duckdb.py::DuckDBDatabase\",\"method_name\":\"get_fks\"},{\"class_symbol_id\":\"auto_ontology\\/connectors\\/duckdb.py::DuckDBDatabase\",\"method_name\":\"get_pks\"},{\"class_symbol_id\":\"auto_ontology\\/connectors\\/duckdb.py::DuckDBDatabase\",\"method_name\":\"get_queries\"},{\"class_symbol_id\":\"auto_ontology\\/connectors\\/duckdb.py::DuckDBDatabase\",\"method_name\":\"get_tables\"},{\"class_symbol_id\":\"auto_ontology\\/connectors\\/duckdb.py::DuckDBDatabase\",\"method_name\":\"get_views\"},{\"class_symbol_id\":\"auto_ontology\\/connectors\\/heavydb.py::HeavyDBDatabase\",\"method_name\":\"close\"},{\"class_symbol_id\":\"auto_ontology\\/connectors\\/heavydb.py::HeavyDBDatabase\",\"method_name\":\"database_name\"},{\"class_symbol_id\":\"auto_ontology\\/connectors\\/heavydb.py::HeavyDBDatabase\",\"method_name\":\"dialect\"},{\"class_symbol_id\":\"auto_ontology\\/connectors\\/heavydb.py::HeavyDBDatabase\",\"method_name\":\"execute\"},{\"class_symbol_id\":\"auto_ontology\\/connectors\\/heavydb.py::HeavyDBDatabase\",\"method_name\":\"get_columns\"},{\"class_symbol_id\":\"auto_ontology\\/connectors\\/heavydb.py::HeavyDBDatabase\",\"method_name\":\"get_fks\"},{\"class_symbol_id\":\"auto_ontology\\/connectors\\/heavydb.py::HeavyDBDatabase\",\"method_name\":\"get_pks\"},{\"class_symbol_id\":\"auto_ontology\\/connectors\\/heavydb.py::HeavyDBDatabase\",\"method_name\":\"get_queries\"},{\"class_symbol_id\":\"auto_ontology\\/connectors\\/heavydb.py::HeavyDBDatabase\",\"method_name\":\"get_tables\"},{\"class_symbol_id\":\"auto_ontology\\/connectors\\/heavydb.py::HeavyDBDatabase\",\"method_name\":\"get_views\"},{\"class_symbol_id\":\"auto_ontology\\/connectors\\/heavydb.py::HeavyDBDatabase\",\"method_name\":\"ping\"},{\"class_symbol_id\":\"auto_ontology\\/connectors\\/kyuubi.py::KyuubiDatabase\",\"method_name\":\"close\"},{\"class_symbol_id\":\"auto_ontology\\/connectors\\/kyuubi.py::KyuubiDatabase\",\"method_name\":\"database_name\"},{\"class_symbol_id\":\"auto_ontology\\/connectors\\/kyuubi.py::KyuubiDatabase\",\"method_name\":\"dialect\"},{\"class_symbol_id\":\"auto_ontology\\/connectors\\/kyuubi.py::KyuubiDatabase\",\"method_name\":\"execute\"},{\"class_symbol_id\":\"auto_ontology\\/connectors\\/kyuubi.py::KyuubiDatabase\",\"method_name\":\"get_columns\"},{\"class_symbol_id\":\"auto_ontology\\/connectors\\/kyuubi.py::KyuubiDatabase\",\"method_name\":\"get_fks\"},{\"class_symbol_id\":\"auto_ontology\\/connectors\\/kyuubi.py::KyuubiDatabase\",\"method_name\":\"get_pks\"},{\"class_symbol_id\":\"auto_ontology\\/connectors\\/kyuubi.py::KyuubiDatabase\",\"method_name\":\"get_queries\"},{\"class_symbol_id\":\"auto_ontology\\/connectors\\/kyuubi.py::KyuubiDatabase\",\"method_name\":\"get_schemas\"},{\"class_symbol_id\":\"auto_ontology\\/connectors\\/kyuubi.py::KyuubiDatabase\",\"method_name\":\"get_tables\"},{\"class_symbol_id\":\"auto_ontology\\/connectors\\/kyuubi.py::KyuubiDatabase\",\"method_name\":\"get_views\"},{\"class_symbol_id\":\"auto_ontology\\/connectors\\/kyuubi.py::KyuubiDatabase\",\"method_name\":\"ping\"},{\"class_symbol_id\":\"auto_ontology\\/connectors\\/kyuubi.py::KyuubiDatabase\",\"method_name\":\"qualify\"},{\"class_symbol_id\":\"auto_ontology\\/connectors\\/mysql.py::MySQLDatabase\",\"method_name\":\"close\"},{\"class_symbol_id\":\"auto_ontology\\/connectors\\/mysql.py::MySQLDatabase\",\"method_name\":\"database_name\"},{\"class_symbol_id\":\"auto_ontology\\/connectors\\/mysql.py::MySQLDatabase\",\"method_name\":\"dialect\"},{\"class_symbol_id\":\"auto_ontology\\/connectors\\/mysql.py::MySQLDatabase\",\"method_name\":\"execute\"},{\"class_symbol_id\":\"auto_ontology\\/connectors\\/mysql.py::MySQLDatabase\",\"method_name\":\"get_columns\"},{\"class_symbol_id\":\"auto_ontology\\/connectors\\/mysql.py::MySQLDatabase\",\"method_name\":\"get_fks\"},{\"class_symbol_id\":\"auto_ontology\\/connectors\\/mysql.py::MySQLDatabase\",\"method_name\":\"get_pks\"},{\"class_symbol_id\":\"auto_ontology\\/connectors\\/mysql.py::MySQLDatabase\",\"method_name\":\"get_queries\"},{\"class_symbol_id\":\"auto_ontology\\/connectors\\/mysql.py::MySQLDatabase\",\"method_name\":\"get_tables\"},{\"class_symbol_id\":\"auto_ontology\\/connectors\\/mysql.py::MySQLDatabase\",\"method_name\":\"get_views\"},{\"class_symbol_id\":\"auto_ontology\\/connectors\\/mysql.py::MySQLDatabase\",\"method_name\":\"ping\"},{\"class_symbol_id\":\"auto_ontology\\/connectors\\/postgres.py::PostgresDatabase\",\"method_name\":\"close\"},{\"class_symbol_id\":\"auto_ontology\\/connectors\\/postgres.py::PostgresDatabase\",\"method_name\":\"database_name\"},{\"class_symbol_id\":\"auto_ontology\\/connectors\\/postgres.py::PostgresDatabase\",\"method_name\":\"dialect\"},{\"class_symbol_id\":\"auto_ontology\\/connectors\\/postgres.py::PostgresDatabase\",\"method_name\":\"execute\"},{\"class_symbol_id\":\"auto_ontology\\/connectors\\/postgres.py::PostgresDatabase\",\"method_name\":\"get_columns\"},{\"class_symbol_id\":\"auto_ontology\\/connectors\\/postgres.py::PostgresDatabase\",\"method_name\":\"get_fks\"},{\"class_symbol_id\":\"auto_ontology\\/connectors\\/postgres.py::PostgresDatabase\",\"method_name\":\"get_pks\"},{\"class_symbol_id\":\"auto_ontology\\/connectors\\/postgres.py::PostgresDatabase\",\"method_name\":\"get_queries\"},{\"class_symbol_id\":\"auto_ontology\\/connectors\\/postgres.py::PostgresDatabase\",\"method_name\":\"get_tables\"},{\"class_symbol_id\":\"auto_ontology\\/connectors\\/postgres.py::PostgresDatabase\",\"method_name\":\"get_views\"},{\"class_symbol_id\":\"auto_ontology\\/connectors\\/postgres.py::PostgresDatabase\",\"method_name\":\"ping\"},{\"class_symbol_id\":\"auto_ontology\\/connectors\\/snowflake.py::SnowflakeDatabase\",\"method_name\":\"close\"},{\"class_symbol_id\":\"auto_ontology\\/connectors\\/snowflake.py::SnowflakeDatabase\",\"method_name\":\"database_name\"},{\"class_symbol_id\":\"auto_ontology\\/connectors\\/snowflake.py::SnowflakeDatabase\",\"method_name\":\"dialect\"},{\"class_symbol_id\":\"auto_ontology\\/connectors\\/snowflake.py::SnowflakeDatabase\",\"method_name\":\"execute\"},{\"class_symbol_id\":\"auto_ontology\\/connectors\\/snowflake.py::SnowflakeDatabase\",\"method_name\":\"get_columns\"},{\"class_symbol_id\":\"auto_ontology\\/connectors\\/snowflake.py::SnowflakeDatabase\",\"method_name\":\"get_fks\"},{\"class_symbol_id\":\"auto_ontology\\/connectors\\/snowflake.py::SnowflakeDatabase\",\"method_name\":\"get_pks\"},{\"class_symbol_id\":\"auto_ontology\\/connectors\\/snowflake.py::SnowflakeDatabase\",\"method_name\":\"get_queries\"},{\"class_symbol_id\":\"auto_ontology\\/connectors\\/snowflake.py::SnowflakeDatabase\",\"method_name\":\"get_schemas\"},{\"class_symbol_id\":\"auto_ontology\\/connectors\\/snowflake.py::SnowflakeDatabase\",\"method_name\":\"get_tables\"},{\"class_symbol_id\":\"auto_ontology\\/connectors\\/snowflake.py::SnowflakeDatabase\",\"method_name\":\"get_views\"},{\"class_symbol_id\":\"auto_ontology\\/connectors\\/snowflake.py::SnowflakeDatabase\",\"method_name\":\"ping\"},{\"class_symbol_id\":\"auto_ontology\\/connectors\\/sqlite.py::SQLiteDatabase\",\"method_name\":\"close\"},{\"class_symbol_id\":\"auto_ontology\\/connectors\\/sqlite.py::SQLiteDatabase\",\"method_name\":\"database_name\"},{\"class_symbol_id\":\"auto_ontology\\/connectors\\/sqlite.py::SQLiteDatabase\",\"method_name\":\"dialect\"},{\"class_symbol_id\":\"auto_ontology\\/connectors\\/sqlite.py::SQLiteDatabase\",\"method_name\":\"execute\"},{\"class_symbol_id\":\"auto_ontology\\/connectors\\/sqlite.py::SQLiteDatabase\",\"method_name\":\"get_columns\"},{\"class_symbol_id\":\"auto_ontology\\/connectors\\/sqlite.py::SQLiteDatabase\",\"method_name\":\"get_fks\"},{\"class_symbol_id\":\"auto_ontology\\/connectors\\/sqlite.py::SQLiteDatabase\",\"method_name\":\"get_pks\"},{\"class_symbol_id\":\"auto_ontology\\/connectors\\/sqlite.py::SQLiteDatabase\",\"method_name\":\"get_queries\"},{\"class_symbol_id\":\"auto_ontology\\/connectors\\/sqlite.py::SQLiteDatabase\",\"method_name\":\"get_tables\"},{\"class_symbol_id\":\"auto_ontology\\/connectors\\/sqlite.py::SQLiteDatabase\",\"method_name\":\"get_views\"},{\"class_symbol_id\":\"auto_ontology\\/connectors\\/trino.py::TrinoDatabase\",\"method_name\":\"close\"},{\"class_symbol_id\":\"auto_ontology\\/connectors\\/trino.py::TrinoDatabase\",\"method_name\":\"database_name\"},{\"class_symbol_id\":\"auto_ontology\\/connectors\\/trino.py::TrinoDatabase\",\"method_name\":\"dialect\"},{\"class_symbol_id\":\"auto_ontology\\/connectors\\/trino.py::TrinoDatabase\",\"method_name\":\"execute\"},{\"class_symbol_id\":\"auto_ontology\\/connectors\\/trino.py::TrinoDatabase\",\"method_name\":\"get_columns\"},{\"class_symbol_id\":\"auto_ontology\\/connectors\\/trino.py::TrinoDatabase\",\"method_name\":\"get_fks\"},{\"class_symbol_id\":\"auto_ontology\\/connectors\\/trino.py::TrinoDatabase\",\"method_name\":\"get_pks\"},{\"class_symbol_id\":\"auto_ontology\\/connectors\\/trino.py::TrinoDatabase\",\"method_name\":\"get_queries\"},{\"class_symbol_id\":\"auto_ontology\\/connectors\\/trino.py::TrinoDatabase\",\"method_name\":\"get_schemas\"},{\"class_symbol_id\":\"auto_ontology\\/connectors\\/trino.py::TrinoDatabase\",\"method_name\":\"get_tables\"},{\"class_symbol_id\":\"auto_ontology\\/connectors\\/trino.py::TrinoDatabase\",\"method_name\":\"get_views\"},{\"class_symbol_id\":\"auto_ontology\\/connectors\\/trino.py::TrinoDatabase\",\"method_name\":\"ping\"},{\"class_symbol_id\":\"auto_ontology\\/connectors\\/trino.py::TrinoDatabase\",\"method_name\":\"qualify\"}]"
+        ],
+        "thoughts": "- Preparing candidates: The question's primary subject revolves around filtering and identifying public methods (those not starting with an underscore) among connector classes. The provided column attribute `code.symbols.is_public` is explicitly defined as `True` when neither the name nor any enclosing class name starts with an underscore, which directly and exactly matches the question's public-methods filter. The other attribute `code.symbols.kind` categorizes symbols as function/method/class but does not capture the visibility/public-filtering core of the query. Therefore, the column attribute ID that best represents the primary subject is `06b65df8-7d65-4b8a-af91-9aa77026426f`.\n- Constructing SQL: Identify connector classes by filtering symbols where kind='class' and file_id starts with 'auto_ontology/connectors/' and does not contain '/tests/'. For each such class, find public methods (kind='method', is_public=true) whose qualname matches the class name followed by a dot and whose line numbers fall within the class's line_start/line_end, indicating they are defined directly in the class body. Exclude methods inherited from SQLDatabase by filtering out qualname values that start with 'SQLDatabase.'. This yields one row per (class_symbol_id, method_name) pair representing the public methods each connector class authors itself.\n- Validating SQL and intent: The SQL correctly identifies connector classes in the auto_ontology/connectors directory (excluding tests) and finds their public methods defined directly in the class body, excluding SQLDatabase methods."
+      }
+    }
+  ],
+  "question_id": 1,
+  "gold_sql": "SELECT b.class_symbol_id, m.name AS method_name FROM code.class_bases b JOIN code.symbols c ON c.symbol_id = b.class_symbol_id JOIN code.files f ON f.file_id = c.file_id JOIN code.symbols m ON m.file_id = c.file_id AND m.kind = 'method' AND m.qualname = c.qualname || '.' || m.name WHERE b.base_symbol_id = 'auto_ontology/connectors/base.py::SQLDatabase' AND NOT f.is_test AND m.is_public AND m.name NOT IN (SELECT bm.name FROM code.symbols bm WHERE bm.file_id = 'auto_ontology/connectors/base.py' AND bm.kind = 'method' AND bm.qualname LIKE 'SQLDatabase.%') ORDER BY 1, 2",
+  "gold_row_count": 1,
+  "agent_sql": "WITH connector_classes AS (\n    SELECT symbol_id AS class_symbol_id,\n           name AS class_name,\n           line_start,\n           line_end\n    FROM auto_ontology_code.code.symbols\n    WHERE kind = 'class'\n      AND file_id LIKE 'auto_ontology/connectors/%'\n      AND file_id NOT LIKE '%/tests/%'\n),\nconnector_methods AS (\n    SELECT s.name AS method_name,\n           c.class_symbol_id\n    FROM auto_ontology_code.code.symbols s\n    JOIN connector_classes c\n      ON s.qualname LIKE c.class_name || '.%'\n     AND s.kind = 'method'\n     AND s.is_public = true\n     AND s.line_start >= c.line_start\n     AND s.line_end <= c.line_end\n     AND s.qualname NOT LIKE 'SQLDatabase.%'\n)\nSELECT c.class_symbol_id,\n       s.method_name\nFROM connector_methods s\nJOIN connector_classes c\n  ON c.class_symbol_id = s.class_symbol_id\nORDER BY c.class_symbol_id,\n         s.method_name;",
+  "agent_answer": "This query lists, for every production database connector class defined outside of test files, the public methods that are authored directly in that class and are not inherited from SQLDatabase. It returns one row per (class symbol ID, method name) pair, showing the API surface each connector contributes on its own.",
+  "agent_row_count": 118,
+  "correct_rows": false,
+  "error": null
+}

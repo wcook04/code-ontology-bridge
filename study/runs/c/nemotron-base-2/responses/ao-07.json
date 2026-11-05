@@ -1,0 +1,34 @@
+{
+  "question_id": "ao-07",
+  "arm": "C-base",
+  "model": "nvidia/nemotron-3.5-lightning",
+  "error": null,
+  "elapsed_s": 92.7,
+  "attempts": [
+    {
+      "sql": "SELECT DISTINCT caller_symbol_id\nFROM auto_ontology_code.code.calls\nWHERE callee_name = 'write_transaction'\n  AND call_kind = 'direct'\n  AND split_part(caller_symbol_id, '::', 1) NOT LIKE 'auto_ontology/dal/%'\n  AND split_part(caller_symbol_id, '::', 1) NOT LIKE '%/tests/%'\n  AND split_part(caller_symbol_id, '::', 1) NOT LIKE 'tests/%'\n  AND caller_symbol_id NOT IN (\n      SELECT DISTINCT caller_symbol_id\n      FROM auto_ontology_code.code.calls\n      WHERE callee_name = 'store'\n        AND call_kind = 'direct'\n  )"
+    }
+  ],
+  "usage": {},
+  "request": "auto_ontology/dal/session.py provides store() (the active connection handle) and write_transaction() (a context manager that groups store() queries into one transaction). Outside the auto_ontology/dal/ folder, and excluding test code (every file under a tests/ folder), which functions or methods open a transaction themselves by calling write_transaction directly (e.g. `with write_transaction():`) but never call store() directly anywhere in their own body? Only direct calls count; calls made by helpers they invoke do not. Return their symbol IDs.\n\nRequested output columns: symbol_id (string).\nReturn exactly the requested output columns, using each requested name as the column alias, in the requested order. Return complete repository-relative file paths and complete symbol IDs exactly as stored. When the question asks which files, symbols or modules, return each distinct one once unless it asks for occurrences.",
+  "explanation": "This query identifies functions that directly call write_transaction to open a transaction but never call store directly, excluding files in the auto_ontology/dal/ folder and test files under any tests/ directory. It examines the code.calls table for direct call relationships, filters callee_name to write_transaction with call_kind=direct, then removes any callers that also have direct store calls. The file path component of each caller_symbol_id is parsed to exclude dal-folder and test-folder files before returning the distinct symbol IDs.",
+  "sql": "SELECT DISTINCT caller_symbol_id\nFROM auto_ontology_code.code.calls\nWHERE callee_name = 'write_transaction'\n  AND call_kind = 'direct'\n  AND split_part(caller_symbol_id, '::', 1) NOT LIKE 'auto_ontology/dal/%'\n  AND split_part(caller_symbol_id, '::', 1) NOT LIKE '%/tests/%'\n  AND split_part(caller_symbol_id, '::', 1) NOT LIKE 'tests/%'\n  AND caller_symbol_id NOT IN (\n      SELECT DISTINCT caller_symbol_id\n      FROM auto_ontology_code.code.calls\n      WHERE callee_name = 'store'\n        AND call_kind = 'direct'\n  )",
+  "rows": [
+    {
+      "caller_symbol_id": "auto_ontology/catalog/write.py::populate_pks"
+    },
+    {
+      "caller_symbol_id": "auto_ontology/server/tags/router.py::detach_tag"
+    },
+    {
+      "caller_symbol_id": "auto_ontology/catalog/store/schemas.py::add_schemas_edge"
+    },
+    {
+      "caller_symbol_id": "auto_ontology/catalog/write.py::populate_fks"
+    },
+    {
+      "caller_symbol_id": "auto_ontology/server/rules/router.py::create_rule"
+    }
+  ],
+  "source_record": "run/responses/10i_ask_with_key/ask_q7.json"
+}

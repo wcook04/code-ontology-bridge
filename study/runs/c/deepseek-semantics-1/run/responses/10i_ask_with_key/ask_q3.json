@@ -1,0 +1,199 @@
+{
+  "request": {
+    "question": "invoke_with_structured_output in auto_ontology/utils/llm_invoke.py is the main structured-LLM-call wrapper. Which functions or methods in non-test code (every file under a tests/ folder is test code) reach it at exactly two hops: they do not call invoke_with_structured_output directly themselves, but they directly call at least one function or method that does call it directly? Consider direct calls only on both hops, and follow only calls to a named function or to a method on self (a call through another object's attribute, such as self._backend.classify(), is not followed); a function passed as an argument (e.g. pool.submit(f)) does not count as calling it. The intermediate function may live anywhere, including test code, but the functions you list must be in non-test code. Return their symbol IDs.\n\nRequested output columns: symbol_id (string).\nReturn exactly the requested output columns, using each requested name as the column alias, in the requested order. Return complete repository-relative file paths and complete symbol IDs exactly as stored. When the question asks which files, symbols or modules, return each distinct one once unless it asks for occurrences.",
+    "calculation_only": true
+  },
+  "status": 200,
+  "elapsed_s": 272.6,
+  "events": [
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "question_intent",
+      "thought": null,
+      "label": "Classifying the question"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "question_intent",
+      "thought": null,
+      "label": "Classifying the question"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "question_extraction",
+      "thought": null,
+      "label": "Understanding the question"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "question_extraction",
+      "thought": null,
+      "label": "Understanding the question"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "retrieve_candidates",
+      "thought": null,
+      "label": "Retrieving candidates"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "retrieve_candidates",
+      "thought": null,
+      "label": "Retrieving candidates"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "prepare_candidates",
+      "thought": null,
+      "label": "Preparing candidates"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "prepare_candidates",
+      "thought": "The query can be answered with `symbols` to identify `invoke_with_structured_output` in `auto_ontology/utils/llm_invoke.py` and `call_edges` to find direct call paths `S -> X -> T`, filter `S` to non-test function/method kinds, and exclude `S -> T` direct calls.",
+      "label": "Preparing candidates"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "refine_evidence",
+      "thought": null,
+      "label": "Refining evidence"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "refine_evidence",
+      "thought": "No certain repair applies: the named symbol and file path are supplied by the sanitized question, and the evidence provides no contradicting value anchor, sample value, or operator that would justify changing a line or the question.",
+      "label": "Refining evidence"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "construct_sql_from_candidates",
+      "thought": null,
+      "label": "Constructing SQL"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "construct_sql_from_candidates",
+      "thought": "The target symbol is located in the symbols table by file path 'auto_ontology/utils/llm_invoke.py' plus bare name 'invoke_with_structured_output' (rather than by qualname, because a qualified name could differ if the wrapper is declared with a different enclosing scope). Hop 1 (X -> target) and hop 2 (S -> X) both use the call edges table, joined on caller/callee symbol IDs and to symbols for S. Assumptions: (1) a direct call is represented by calls_directly = TRUE together with passes_as_callback = FALSE, because the question states a function merely passed as an argument does not count as calling it; (2) the edges table's direct-call rows already represent only followable calls (named functions and methods on self), since the schema exposes no further column distinguishing an attribute call on another object from a self-method call, so is_self_call is not used as an additional filter; (3) test code is identified by file path containing a tests/ directory segment (both leading and nested patterns), matching the rule that every file under a tests/ folder is test code; this is applied only to S, since the intermediate X may live in test code; (4) S is restricted to kind function or method, because classes are not functions or methods; (5) S is excluded when it directly calls the target as well, via a NOT EXISTS subquery on the same direct-call criteria; (6) no ties or ranking apply, and DISTINCT plus ORDER BY symbol_id is used so each qualifying symbol appears once in a deterministic order.",
+      "label": "Constructing SQL"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "validate_sql_query",
+      "thought": null,
+      "label": "Validating SQL and intent"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "validate_sql_query",
+      "thought": "The SQL correctly implements a two-hop call-graph traversal: it identifies direct callers of invoke_with_structured_output, then finds their callers. It applies direct-call and non-callback filters on both hops, excludes symbols that call the target directly, restricts final results to non-test function/method symbols, and returns distinct symbol_id values. No nonsensical joins or clearly wrong aggregations are present.",
+      "label": "Validating SQL and intent"
+    },
+    {
+      "type": "sql",
+      "node": "validate_sql_query",
+      "sql": "WITH target AS (\n    SELECT symbol_id\n    FROM auto_ontology_code.code.symbols\n    WHERE file_id = 'auto_ontology/utils/llm_invoke.py'\n      AND name = 'invoke_with_structured_output'\n),\ndirect_callers AS (\n    SELECT DISTINCT ce.caller_symbol_id AS inter_id\n    FROM auto_ontology_code.code.call_edges AS ce\n    INNER JOIN target AS t ON ce.callee_symbol_id = t.symbol_id\n    WHERE ce.calls_directly = TRUE\n      AND ce.passes_as_callback = FALSE\n)\nSELECT DISTINCT s.symbol_id AS symbol_id\nFROM auto_ontology_code.code.call_edges AS e\nINNER JOIN direct_callers AS dc ON e.callee_symbol_id = dc.inter_id\nINNER JOIN auto_ontology_code.code.symbols AS s ON e.caller_symbol_id = s.symbol_id\nWHERE e.calls_directly = TRUE\n  AND e.passes_as_callback = FALSE\n  AND s.kind IN ('function', 'method')\n  AND s.file_id NOT LIKE 'tests/%'\n  AND s.file_id NOT LIKE '%/tests/%'\n  AND NOT EXISTS (\n      SELECT 1\n      FROM auto_ontology_code.code.call_edges AS d\n      INNER JOIN target AS t2 ON d.callee_symbol_id = t2.symbol_id\n      WHERE d.caller_symbol_id = s.symbol_id\n        AND d.calls_directly = TRUE\n        AND d.passes_as_callback = FALSE\n  )\nORDER BY s.symbol_id;"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "execute_sql_query",
+      "thought": null,
+      "label": "Executing SQL"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "execute_sql_query",
+      "thought": null,
+      "label": "Executing SQL"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "check_empty_like_result",
+      "thought": null,
+      "label": "Checking results"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "check_empty_like_result",
+      "thought": null,
+      "label": "Checking results"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "check_value_repair",
+      "thought": null,
+      "label": "Checking values"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "check_value_repair",
+      "thought": null,
+      "label": "Checking values"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "format_and_respond",
+      "thought": null,
+      "label": "Formatting response"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "format_and_respond",
+      "thought": null,
+      "label": "Formatting response"
+    },
+    {
+      "type": "result",
+      "answer": {
+        "response": "This query finds every non-test function or method that reaches the structured LLM wrapper only indirectly: it first collects the symbols that directly call the wrapper defined in the llm invocation utility file, then looks for symbols that directly call one of those intermediates. Edges are restricted to true direct calls that are not callback pass-throughs, the result symbols are limited to functions and methods whose file path is not inside a tests folder, and any symbol that also calls the wrapper directly is excluded. Each qualifying symbol ID is returned once, ordered alphabetically.",
+        "sql_code": "WITH target AS (\n    SELECT symbol_id\n    FROM auto_ontology_code.code.symbols\n    WHERE file_id = 'auto_ontology/utils/llm_invoke.py'\n      AND name = 'invoke_with_structured_output'\n),\ndirect_callers AS (\n    SELECT DISTINCT ce.caller_symbol_id AS inter_id\n    FROM auto_ontology_code.code.call_edges AS ce\n    INNER JOIN target AS t ON ce.callee_symbol_id = t.symbol_id\n    WHERE ce.calls_directly = TRUE\n      AND ce.passes_as_callback = FALSE\n)\nSELECT DISTINCT s.symbol_id AS symbol_id\nFROM auto_ontology_code.code.call_edges AS e\nINNER JOIN direct_callers AS dc ON e.callee_symbol_id = dc.inter_id\nINNER JOIN auto_ontology_code.code.symbols AS s ON e.caller_symbol_id = s.symbol_id\nWHERE e.calls_directly = TRUE\n  AND e.passes_as_callback = FALSE\n  AND s.kind IN ('function', 'method')\n  AND s.file_id NOT LIKE 'tests/%'\n  AND s.file_id NOT LIKE '%/tests/%'\n  AND NOT EXISTS (\n      SELECT 1\n      FROM auto_ontology_code.code.call_edges AS d\n      INNER JOIN target AS t2 ON d.callee_symbol_id = t2.symbol_id\n      WHERE d.caller_symbol_id = s.symbol_id\n        AND d.calls_directly = TRUE\n        AND d.passes_as_callback = FALSE\n  )\nORDER BY s.symbol_id;",
+        "sql_columns": [
+          "0fd59059-a2b1-4586-af08-1302cfe429bf",
+          "d1c20a8c-4372-4c17-b42e-5d49f9cec3e1",
+          "f76cf519-0e5e-4d46-a22a-648ebe912791",
+          "e1b6dfb5-6fa5-4861-a249-bb5c479f6272",
+          "74ed55d6-881a-4032-9e36-78d67138132e",
+          "2f15c3f8-fb2e-42ac-a9d9-9308d28243df",
+          "ba04f1b1-43a2-49a1-8126-b20eca522861",
+          "81de0d93-fd78-400a-a84f-e216c71761be"
+        ],
+        "custom_analyses_used": [],
+        "sql_response_from_db": [
+          "[{\"symbol_id\":\"auto_ontology\\/retrieval\\/text_to_sql\\/agents\\/candidates_preparation.py::CandidatePreparationAgent.execute\"},{\"symbol_id\":\"auto_ontology\\/retrieval\\/text_to_sql\\/agents\\/candidates_retrieval.py::CandidateRetrievalAgent.execute\"},{\"symbol_id\":\"auto_ontology\\/retrieval\\/text_to_sql\\/agents\\/evidence_refinement.py::EvidenceRefinementAgent.execute\"},{\"symbol_id\":\"auto_ontology\\/retrieval\\/text_to_sql\\/agents\\/sql_parse_validation.py::SQLValidationAgent.execute\"},{\"symbol_id\":\"auto_ontology\\/semantic\\/bridge_tables.py::build_bridge_tables_sql_attributes\"},{\"symbol_id\":\"auto_ontology\\/semantic\\/semantic_fk.py::_resolve_via_vdb\"},{\"symbol_id\":\"auto_ontology\\/semantic\\/semantic_fk.py::select_semantic_fk_join_defaults\"},{\"symbol_id\":\"auto_ontology\\/semantic\\/sql_attribute_suggester.py::suggest_sql_attributes\"},{\"symbol_id\":\"auto_ontology\\/semantic\\/visit_enter.py::process_table\"},{\"symbol_id\":\"auto_ontology\\/server\\/chat\\/router.py::_build_charts_event\"},{\"symbol_id\":\"auto_ontology\\/server\\/chat\\/worker.py::_worker_loop\"},{\"symbol_id\":\"auto_ontology\\/server\\/sql_attributes\\/router.py::get_sql_attribute_description_suggestion\"}]"
+        ],
+        "thoughts": "- Preparing candidates: The question’s requested output is distinct function/method symbol_id values for non-test code, so the primary attribute is the code symbol identifier in code.symbol_profile.\n- Preparing candidates: The query can be answered with `symbols` to identify `invoke_with_structured_output` in `auto_ontology/utils/llm_invoke.py` and `call_edges` to find direct call paths `S -> X -> T`, filter `S` to non-test function/method kinds, and exclude `S -> T` direct calls.\n- Refining evidence: No certain repair applies: the named symbol and file path are supplied by the sanitized question, and the evidence provides no contradicting value anchor, sample value, or operator that would justify changing a line or the question.\n- Constructing SQL: The target symbol is located in the symbols table by file path 'auto_ontology/utils/llm_invoke.py' plus bare name 'invoke_with_structured_output' (rather than by qualname, because a qualified name could differ if the wrapper is declared with a different enclosing scope). Hop 1 (X -> target) and hop 2 (S -> X) both use the call edges table, joined on caller/callee symbol IDs and to symbols for S. Assumptions: (1) a direct call is represented by calls_directly = TRUE together with passes_as_callback = FALSE, because the question states a function merely passed as an argument does not count as calling it; (2) the edges table's direct-call rows already represent only followable calls (named functions and methods on self), since the schema exposes no further column distinguishing an attribute call on another object from a self-method call, so is_self_call is not used as an additional filter; (3) test code is identified by file path containing a tests/ directory segment (both leading and nested patterns), matching the rule that every file under a tests/ folder is test code; this is applied only to S, since the intermediate X may live in test code; (4) S is restricted to kind function or method, because classes are not functions or methods; (5) S is excluded when it directly calls the target as well, via a NOT EXISTS subquery on the same direct-call criteria; (6) no ties or ranking apply, and DISTINCT plus ORDER BY symbol_id is used so each qualifying symbol appears once in a deterministic order.\n- Validating SQL and intent: The SQL correctly implements a two-hop call-graph traversal: it identifies direct callers of invoke_with_structured_output, then finds their callers. It applies direct-call and non-callback filters on both hops, excludes symbols that call the target directly, restricts final results to non-test function/method symbols, and returns distinct symbol_id values. No nonsensical joins or clearly wrong aggregations are present."
+      }
+    }
+  ],
+  "question_id": 3,
+  "gold_sql": "WITH d AS (SELECT DISTINCT caller_symbol_id AS s FROM code.calls WHERE call_kind = 'direct' AND callee_symbol_id = 'auto_ontology/utils/llm_invoke.py::invoke_with_structured_output') SELECT DISTINCT c.caller_symbol_id AS symbol_id FROM code.calls c JOIN code.symbols x ON x.symbol_id = c.caller_symbol_id JOIN code.files f ON f.file_id = x.file_id WHERE c.call_kind = 'direct' AND c.callee_symbol_id IN (SELECT s FROM d) AND c.caller_symbol_id NOT IN (SELECT s FROM d) AND NOT f.is_test ORDER BY 1",
+  "gold_row_count": 1,
+  "agent_sql": "WITH target AS (\n    SELECT symbol_id\n    FROM auto_ontology_code.code.symbols\n    WHERE file_id = 'auto_ontology/utils/llm_invoke.py'\n      AND name = 'invoke_with_structured_output'\n),\ndirect_callers AS (\n    SELECT DISTINCT ce.caller_symbol_id AS inter_id\n    FROM auto_ontology_code.code.call_edges AS ce\n    INNER JOIN target AS t ON ce.callee_symbol_id = t.symbol_id\n    WHERE ce.calls_directly = TRUE\n      AND ce.passes_as_callback = FALSE\n)\nSELECT DISTINCT s.symbol_id AS symbol_id\nFROM auto_ontology_code.code.call_edges AS e\nINNER JOIN direct_callers AS dc ON e.callee_symbol_id = dc.inter_id\nINNER JOIN auto_ontology_code.code.symbols AS s ON e.caller_symbol_id = s.symbol_id\nWHERE e.calls_directly = TRUE\n  AND e.passes_as_callback = FALSE\n  AND s.kind IN ('function', 'method')\n  AND s.file_id NOT LIKE 'tests/%'\n  AND s.file_id NOT LIKE '%/tests/%'\n  AND NOT EXISTS (\n      SELECT 1\n      FROM auto_ontology_code.code.call_edges AS d\n      INNER JOIN target AS t2 ON d.callee_symbol_id = t2.symbol_id\n      WHERE d.caller_symbol_id = s.symbol_id\n        AND d.calls_directly = TRUE\n        AND d.passes_as_callback = FALSE\n  )\nORDER BY s.symbol_id;",
+  "agent_answer": "This query finds every non-test function or method that reaches the structured LLM wrapper only indirectly: it first collects the symbols that directly call the wrapper defined in the llm invocation utility file, then looks for symbols that directly call one of those intermediates. Edges are restricted to true direct calls that are not callback pass-throughs, the result symbols are limited to functions and methods whose file path is not inside a tests folder, and any symbol that also calls the wrapper directly is excluded. Each qualifying symbol ID is returned once, ordered alphabetically.",
+  "agent_row_count": 12,
+  "correct_rows": false,
+  "error": null
+}

@@ -1,0 +1,39 @@
+{
+  "question_id": "ao-08",
+  "arm": "C-semantics",
+  "model": "nvidia/nemotron-3.5-lightning",
+  "error": null,
+  "elapsed_s": 139.6,
+  "attempts": [
+    {
+      "sql": "SELECT code.symbol_profile.symbol_id, COUNT(DISTINCT code.call_edges.caller_symbol_id) AS caller_count FROM code.call_edges JOIN code.symbol_profile ON code.call_edges.callee_symbol_id = code.symbol_profile.symbol_id WHERE code.call_edges.caller_kind='function' AND code.call_edges.caller_in_test_file=False AND code.call_edges.callee_in_test_file=False AND (code.call_edges.callee_file_id LIKE 'auto_ontology/dal/%' OR code.call_edges.callee_file_id LIKE 'auto_ontology/dal/%') AND code.call_edges.callee_file_id != 'auto_ontology/dal/session.py' GROUP BY code.symbol_profile.symbol_id ORDER BY caller_count DESC, code.symbol_profile.symbol_id ASC LIMIT 5"
+    }
+  ],
+  "usage": {},
+  "request": "Which five functions in the data-access layer are used most widely by the rest of the codebase? Consider module-level functions (not methods or classes) defined in non-test files under auto_ontology/dal/, excluding auto_ontology/dal/session.py. Rank them by the number of distinct functions or methods that call them directly, counting only callers that are in non-test files (every file under a tests/ folder is test code) located outside auto_ontology/dal/. Calls through a module alias (e.g. `dal.fetch_databases()` after `from auto_ontology.dal import datasources as dal`) or an import alias count; a function passed by reference without being called does not. Highest count first; break ties by symbol ID ascending and return exactly five rows. Return the symbol ID and the caller count.\n\nRequested output columns: symbol_id (string), caller_count (integer).\nReturn exactly the requested output columns, using each requested name as the column alias, in the requested order. Return complete repository-relative file paths and complete symbol IDs exactly as stored. When the question asks which files, symbols or modules, return each distinct one once unless it asks for occurrences.\nOrder the rows as the question asks.",
+  "explanation": "This query identifies the top 5 most widely called functions in the data-access layer by counting distinct non-test callers from call_edges. It filters caller_kind to 'function' and excludes callers/in-test files per the evidence, then restricts callee functions to those in auto_ontology/dal/ excluding session.py using the callee_file_id column. Results are grouped by symbol_id, ordered by caller count descending with symbol_id ascending tie-breaking, and limited to exactly five rows.",
+  "sql": "SELECT code.symbol_profile.symbol_id, COUNT(DISTINCT code.call_edges.caller_symbol_id) AS caller_count FROM code.call_edges JOIN code.symbol_profile ON code.call_edges.callee_symbol_id = code.symbol_profile.symbol_id WHERE code.call_edges.caller_kind='function' AND code.call_edges.caller_in_test_file=False AND code.call_edges.callee_in_test_file=False AND (code.call_edges.callee_file_id LIKE 'auto_ontology/dal/%' OR code.call_edges.callee_file_id LIKE 'auto_ontology/dal/%') AND code.call_edges.callee_file_id != 'auto_ontology/dal/session.py' GROUP BY code.symbol_profile.symbol_id ORDER BY caller_count DESC, code.symbol_profile.symbol_id ASC LIMIT 5",
+  "rows": [
+    {
+      "symbol_id": "auto_ontology/dal/users.py::resolve_accessible_catalog_ids",
+      "caller_count": 24
+    },
+    {
+      "symbol_id": "auto_ontology/dal/tags.py::fetch_tags_map",
+      "caller_count": 10
+    },
+    {
+      "symbol_id": "auto_ontology/dal/owners.py::edit_subject",
+      "caller_count": 9
+    },
+    {
+      "symbol_id": "auto_ontology/dal/connections.py::list_connections",
+      "caller_count": 8
+    },
+    {
+      "symbol_id": "auto_ontology/dal/datasources.py::fetch_databases",
+      "caller_count": 8
+    }
+  ],
+  "source_record": "run/responses/10i_ask_with_key/ask_q8.json"
+}

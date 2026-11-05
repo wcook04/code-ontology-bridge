@@ -1,0 +1,250 @@
+{
+  "request": {
+    "question": "The production database connectors are the classes that directly subclass SQLDatabase (defined in auto_ontology/connectors/base.py), excluding any class defined in test code (every file under a tests/ folder counts as test code). For each such connector class, which public methods does the class define in its own body that SQLDatabase itself does not define? A method is public when its name does not start with an underscore (so __init__ and other dunder methods are excluded); anything written with def directly in the class body counts as a method, including properties and context-manager methods. Methods inherited without being redefined do not count. Return one row per (connector class symbol ID, method name).\n\nRequested output columns: class_symbol_id (string), method_name (string).\nReturn exactly the requested output columns, using each requested name as the column alias, in the requested order. Return complete repository-relative file paths and complete symbol IDs exactly as stored. When the question asks which files, symbols or modules, return each distinct one once unless it asks for occurrences.",
+    "calculation_only": true
+  },
+  "status": 200,
+  "elapsed_s": 323.2,
+  "events": [
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "question_intent",
+      "thought": null,
+      "label": "Classifying the question"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "question_intent",
+      "thought": null,
+      "label": "Classifying the question"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "question_extraction",
+      "thought": null,
+      "label": "Understanding the question"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "question_extraction",
+      "thought": null,
+      "label": "Understanding the question"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "retrieve_candidates",
+      "thought": null,
+      "label": "Retrieving candidates"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "retrieve_candidates",
+      "thought": null,
+      "label": "Retrieving candidates"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "prepare_candidates",
+      "thought": null,
+      "label": "Preparing candidates"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "prepare_candidates",
+      "thought": "The query needs code symbols for connector classes and their methods, a way to exclude test files, and likely inheritance/base information to identify the connector classes relative to SQLDatabase. So I would keep `symbols`, `files`, and `class_bases`; the other candidate tables are not needed for required columns or row qualification.",
+      "label": "Preparing candidates"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "refine_evidence",
+      "thought": null,
+      "label": "Refining evidence"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "refine_evidence",
+      "thought": "No repair is certain: the evidence contains no value anchors or sample values proving a different stored string representation, constant, or comparison operator, and the supplied question's grounded rules are consistent with the evidence.",
+      "label": "Refining evidence"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "construct_sql_from_candidates",
+      "thought": null,
+      "label": "Constructing SQL"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "construct_sql_from_candidates",
+      "thought": "Connector classes are identified by joining class_bases to the SQLDatabase class symbol (name SQLDatabase, in the file auto_ontology/connectors/base.py), so only direct subclasses qualify; a fallback on the unqualified base name is also allowed when the base symbol could not be resolved (assumption: an unresolved base written as SQLDatabase or base.SQLDatabase refers to that same class, because the evidence states SQLDatabase is defined there). Test code is excluded via the file's is_test flag (assumption: the flag fully encodes the tests/ directory and test_*.py rules stated in the evidence). Methods are matched to their class by requiring the method's qualified name to be exactly the class's qualified name plus the method's own name, plus line containment inside the class definition, so only defs written directly in the class body count and nested-class methods are dropped; public means the name does not start with an underscore, which also removes __init__ and other dunders. Methods SQLDatabase itself defines are removed with a NOT EXISTS subquery that resolves SQLDatabase's own body methods the same way, so redefinitions of inherited public methods are excluded. DISTINCT is used because the request asks for one row per (class symbol, method name) pair. No time window applies; no zero/missing-value or tie-breaking logic is needed since there is no aggregation or ranking. Rows are ordered by class symbol ID then method name for determinism.",
+      "label": "Constructing SQL"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "validate_sql_query",
+      "thought": null,
+      "label": "Validating SQL and intent"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "validate_sql_query",
+      "thought": "The SQL plausibly answers the question. It identifies classes whose direct base is SQLDatabase in auto_ontology/connectors/base.py using class_bases and the SQLDatabase symbol, excludes test files via files.is_test = FALSE, finds methods directly defined in each connector class using kind = 'method', qualname/line-range checks, and public-name filtering, and excludes method names that SQLDatabase defines in its own body via NOT EXISTS. Output columns are correctly aliased and DISTINCT is used. No clearly wrong aggregation or nonsensical join is present. The fallback on base_name is a minor possible looseness but not a critical issue given the constraints on SQLDatabase’s file and name.",
+      "label": "Validating SQL and intent"
+    },
+    {
+      "type": "sql",
+      "node": "validate_sql_query",
+      "sql": "SELECT DISTINCT cls.symbol_id AS class_symbol_id, m.name AS method_name\nFROM symbols AS cls\nJOIN class_bases AS cb\n  ON cb.class_symbol_id = cls.symbol_id\nJOIN symbols AS sqldb\n  ON (cb.base_symbol_id = sqldb.symbol_id\n      OR (cb.base_symbol_id IS NULL AND cb.base_name IN ('SQLDatabase', 'base.SQLDatabase')))\n AND sqldb.kind = 'class'\n AND sqldb.name = 'SQLDatabase'\n AND sqldb.file_id = 'auto_ontology/connectors/base.py'\nJOIN files AS f\n  ON f.file_id = cls.file_id\nJOIN symbols AS m\n  ON m.file_id = cls.file_id\n AND m.kind = 'method'\n AND m.qualname = cls.qualname || '.' || m.name\n AND m.line_start > cls.line_start\n AND m.line_end <= cls.line_end\n AND LEFT(m.name, 1) <> '_'\nWHERE cls.kind = 'class'\n  AND f.is_test = FALSE\n  AND NOT EXISTS (\n      SELECT 1\n      FROM symbols AS sm\n      WHERE sm.file_id = sqldb.file_id\n        AND sm.kind = 'method'\n        AND sm.qualname = sqldb.qualname || '.' || sm.name\n        AND sm.name = m.name\n        AND sm.line_start > sqldb.line_start\n        AND sm.line_end <= sqldb.line_end\n        AND LEFT(sm.name, 1) <> '_'\n  )\nORDER BY class_symbol_id, method_name"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "execute_sql_query",
+      "thought": null,
+      "label": "Executing SQL"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "execute_sql_query",
+      "thought": "Query failed, rewriting it: Catalog Error: Table with name symbols does not exist! Did you mean \"code.symbols\"? LINE 2: FROM symbols AS cls ^",
+      "label": "Executing SQL"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "reconstruct_sql",
+      "thought": null,
+      "label": "Reconstructing SQL"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "reconstruct_sql",
+      "thought": "The validation error is a catalog resolution issue: the schema must be qualified as auto_ontology_code.code.*, so every reference to the symbols, class_bases and files tables now uses the fully qualified name. All previously valid assumptions remain unchanged: (1) connector classes are identified as direct subclasses of the SQLDatabase class symbol located in auto_ontology/connectors/base.py by joining class_bases to that symbol; (2) a fallback matching the unresolved base name 'SQLDatabase' or 'base.SQLDatabase' is kept only when base_symbol_id is NULL, because the evidence states SQLDatabase is defined in that file; (3) test code is excluded using the files table's is_test flag, since the flag fully encodes the tests/ folder and test_*.py rules stated in the evidence; (4) methods are attributed to a class by requiring the method's qualified name to equal the class qualified name plus the method's own name and by line containment within the class definition, so only defs written directly in the class body count (properties and context-manager methods included, nested-class methods excluded); (5) public means the method name does not start with an underscore, which also removes __init__ and other dunders; (6) methods SQLDatabase itself defines are removed via a NOT EXISTS subquery that resolves SQLDatabase's own body methods the same way, so redefinitions of inherited public methods are excluded while inherited-but-not-redefined methods never appear anyway; (7) DISTINCT is retained because the request asks for one row per (class symbol ID, method name) pair. No time window applies; no zero/missing-value coercion or division is involved; no ranking/tie-breaking is needed, and rows are ordered by class symbol ID then method name for determinism.",
+      "label": "Reconstructing SQL"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "validate_sql_query",
+      "thought": null,
+      "label": "Validating SQL and intent"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "validate_sql_query",
+      "thought": "The SQL correctly identifies classes directly subclassing SQLDatabase by joining class_bases to the SQLDatabase symbol using the verified base_symbol_id -> symbol_id relationship and the authoritative file filter auto_ontology/connectors/base.py. It excludes test files via files.is_test = FALSE, returns distinct class symbol ID and method name, and identifies public methods defined directly in each connector class body by matching symbol qualname and line ranges. It also excludes methods already defined in SQLDatabase's own body via NOT EXISTS. No critical join, aggregation, projection, or evidence-compliance issue is present.",
+      "label": "Validating SQL and intent"
+    },
+    {
+      "type": "sql",
+      "node": "validate_sql_query",
+      "sql": "SELECT DISTINCT cls.symbol_id AS class_symbol_id, m.name AS method_name FROM auto_ontology_code.code.symbols AS cls JOIN auto_ontology_code.code.class_bases AS cb ON cb.class_symbol_id = cls.symbol_id JOIN auto_ontology_code.code.symbols AS sqldb ON (cb.base_symbol_id = sqldb.symbol_id OR (cb.base_symbol_id IS NULL AND cb.base_name IN ('SQLDatabase', 'base.SQLDatabase'))) AND sqldb.kind = 'class' AND sqldb.name = 'SQLDatabase' AND sqldb.file_id = 'auto_ontology/connectors/base.py' JOIN auto_ontology_code.code.files AS f ON f.file_id = cls.file_id JOIN auto_ontology_code.code.symbols AS m ON m.file_id = cls.file_id AND m.kind = 'method' AND m.qualname = cls.qualname || '.' || m.name AND m.line_start > cls.line_start AND m.line_end <= cls.line_end AND LEFT(m.name, 1) <> '_' WHERE cls.kind = 'class' AND f.is_test = FALSE AND NOT EXISTS (SELECT 1 FROM auto_ontology_code.code.symbols AS sm WHERE sm.file_id = sqldb.file_id AND sm.kind = 'method' AND sm.qualname = sqldb.qualname || '.' || sm.name AND sm.name = m.name AND sm.line_start > sqldb.line_start AND sm.line_end <= sqldb.line_end AND LEFT(sm.name, 1) <> '_') ORDER BY class_symbol_id, method_name"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "execute_sql_query",
+      "thought": null,
+      "label": "Executing SQL"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "execute_sql_query",
+      "thought": null,
+      "label": "Executing SQL"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "check_empty_like_result",
+      "thought": null,
+      "label": "Checking results"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "check_empty_like_result",
+      "thought": null,
+      "label": "Checking results"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "check_value_repair",
+      "thought": null,
+      "label": "Checking values"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "check_value_repair",
+      "thought": null,
+      "label": "Checking values"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "format_and_respond",
+      "thought": null,
+      "label": "Formatting response"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "format_and_respond",
+      "thought": null,
+      "label": "Formatting response"
+    },
+    {
+      "type": "result",
+      "answer": {
+        "response": "This lists, for every production connector class that directly subclasses the SQLDatabase class defined in the connectors base module, the public methods the class declares in its own body. Methods are matched to their class by their qualified name and definition line range, public means the name does not start with an underscore, and classes in test files are excluded. Any method that SQLDatabase itself declares is removed, and each class-and-method pair appears once, ordered by class symbol ID and then method name.",
+        "sql_code": "SELECT DISTINCT cls.symbol_id AS class_symbol_id, m.name AS method_name FROM auto_ontology_code.code.symbols AS cls JOIN auto_ontology_code.code.class_bases AS cb ON cb.class_symbol_id = cls.symbol_id JOIN auto_ontology_code.code.symbols AS sqldb ON (cb.base_symbol_id = sqldb.symbol_id OR (cb.base_symbol_id IS NULL AND cb.base_name IN ('SQLDatabase', 'base.SQLDatabase'))) AND sqldb.kind = 'class' AND sqldb.name = 'SQLDatabase' AND sqldb.file_id = 'auto_ontology/connectors/base.py' JOIN auto_ontology_code.code.files AS f ON f.file_id = cls.file_id JOIN auto_ontology_code.code.symbols AS m ON m.file_id = cls.file_id AND m.kind = 'method' AND m.qualname = cls.qualname || '.' || m.name AND m.line_start > cls.line_start AND m.line_end <= cls.line_end AND LEFT(m.name, 1) <> '_' WHERE cls.kind = 'class' AND f.is_test = FALSE AND NOT EXISTS (SELECT 1 FROM auto_ontology_code.code.symbols AS sm WHERE sm.file_id = sqldb.file_id AND sm.kind = 'method' AND sm.qualname = sqldb.qualname || '.' || sm.name AND sm.name = m.name AND sm.line_start > sqldb.line_start AND sm.line_end <= sqldb.line_end AND LEFT(sm.name, 1) <> '_') ORDER BY class_symbol_id, method_name",
+        "sql_columns": [
+          "bcd7d8ff-8adb-4b30-b850-803a2b395a2c",
+          "9b802991-5dd3-420b-a3fe-279785aa75c9",
+          "0968cf9f-5fbb-43da-8a7d-f2865588cfb1",
+          "ac812c22-74f2-41c9-93f6-c86dec124352",
+          "4ea0d5ff-450b-45a1-9019-04f93024da7f",
+          "0a252d0a-39ad-4b70-b966-1e7e1a7bce1b",
+          "f613e3b7-9a8d-4627-a6a4-2e6922ce7cc0",
+          "aea9da7d-ec36-4351-aaed-b8a7fb87d7f6",
+          "481f6897-0c08-40fb-9cc1-bef86f3c6973",
+          "31d4766a-c161-4df8-b5c8-d74626eba872",
+          "35910745-7728-4d6f-b4d0-f07c82508652",
+          "63bb0fe5-a1f8-49c2-b0e3-b498061b65ab"
+        ],
+        "custom_analyses_used": [],
+        "sql_response_from_db": [
+          "[{\"class_symbol_id\":\"auto_ontology\\/connectors\\/clickhouse.py::ClickHouseDatabase\",\"method_name\":\"ping\"},{\"class_symbol_id\":\"auto_ontology\\/connectors\\/databricks.py::DatabricksDatabase\",\"method_name\":\"auth_mode\"},{\"class_symbol_id\":\"auto_ontology\\/connectors\\/databricks.py::DatabricksDatabase\",\"method_name\":\"get_schemas\"},{\"class_symbol_id\":\"auto_ontology\\/connectors\\/databricks.py::DatabricksDatabase\",\"method_name\":\"ping\"},{\"class_symbol_id\":\"auto_ontology\\/connectors\\/databricks.py::DatabricksDatabase\",\"method_name\":\"reuse_connection\"},{\"class_symbol_id\":\"auto_ontology\\/connectors\\/heavydb.py::HeavyDBDatabase\",\"method_name\":\"ping\"},{\"class_symbol_id\":\"auto_ontology\\/connectors\\/kyuubi.py::KyuubiDatabase\",\"method_name\":\"get_schemas\"},{\"class_symbol_id\":\"auto_ontology\\/connectors\\/kyuubi.py::KyuubiDatabase\",\"method_name\":\"ping\"},{\"class_symbol_id\":\"auto_ontology\\/connectors\\/mysql.py::MySQLDatabase\",\"method_name\":\"ping\"},{\"class_symbol_id\":\"auto_ontology\\/connectors\\/postgres.py::PostgresDatabase\",\"method_name\":\"ping\"},{\"class_symbol_id\":\"auto_ontology\\/connectors\\/snowflake.py::SnowflakeDatabase\",\"method_name\":\"get_schemas\"},{\"class_symbol_id\":\"auto_ontology\\/connectors\\/snowflake.py::SnowflakeDatabase\",\"method_name\":\"ping\"},{\"class_symbol_id\":\"auto_ontology\\/connectors\\/trino.py::TrinoDatabase\",\"method_name\":\"get_schemas\"},{\"class_symbol_id\":\"auto_ontology\\/connectors\\/trino.py::TrinoDatabase\",\"method_name\":\"ping\"}]"
+        ],
+        "thoughts": "- Preparing candidates: The question focuses on listing public methods, and the output row is keyed by method name. The column code.inbound_call_counts.name represents the local method name (e.g., execute, get_columns), making it the primary subject column. Other columns are filters/joins (is_public, base_name, is_test, symbol_id), not the main listed attribute.\n- Preparing candidates: The query needs code symbols for connector classes and their methods, a way to exclude test files, and likely inheritance/base information to identify the connector classes relative to SQLDatabase. So I would keep `symbols`, `files`, and `class_bases`; the other candidate tables are not needed for required columns or row qualification.\n- Refining evidence: No repair is certain: the evidence contains no value anchors or sample values proving a different stored string representation, constant, or comparison operator, and the supplied question's grounded rules are consistent with the evidence.\n- Constructing SQL: Connector classes are identified by joining class_bases to the SQLDatabase class symbol (name SQLDatabase, in the file auto_ontology/connectors/base.py), so only direct subclasses qualify; a fallback on the unqualified base name is also allowed when the base symbol could not be resolved (assumption: an unresolved base written as SQLDatabase or base.SQLDatabase refers to that same class, because the evidence states SQLDatabase is defined there). Test code is excluded via the file's is_test flag (assumption: the flag fully encodes the tests/ directory and test_*.py rules stated in the evidence). Methods are matched to their class by requiring the method's qualified name to be exactly the class's qualified name plus the method's own name, plus line containment inside the class definition, so only defs written directly in the class body count and nested-class methods are dropped; public means the name does not start with an underscore, which also removes __init__ and other dunders. Methods SQLDatabase itself defines are removed with a NOT EXISTS subquery that resolves SQLDatabase's own body methods the same way, so redefinitions of inherited public methods are excluded. DISTINCT is used because the request asks for one row per (class symbol, method name) pair. No time window applies; no zero/missing-value or tie-breaking logic is needed since there is no aggregation or ranking. Rows are ordered by class symbol ID then method name for determinism.\n- Validating SQL and intent: The SQL plausibly answers the question. It identifies classes whose direct base is SQLDatabase in auto_ontology/connectors/base.py using class_bases and the SQLDatabase symbol, excludes test files via files.is_test = FALSE, finds methods directly defined in each connector class using kind = 'method', qualname/line-range checks, and public-name filtering, and excludes method names that SQLDatabase defines in its own body via NOT EXISTS. Output columns are correctly aliased and DISTINCT is used. No clearly wrong aggregation or nonsensical join is present. The fallback on base_name is a minor possible looseness but not a critical issue given the constraints on SQLDatabase’s file and name.\n- Executing SQL: Query failed, rewriting it: Catalog Error: Table with name symbols does not exist! Did you mean \"code.symbols\"? LINE 2: FROM symbols AS cls ^\n- Reconstructing SQL: The query references the table as `symbols`, but the catalog resolves it as `code.symbols`. This is a schema-qualification/search-path issue, not missing data. The same `symbols`, `class_bases`, and `files` tables can be used after qualifying the table names correctly (e.g., `code.symbols`, and likely `code.class_bases`, `code.files`).\n- Reconstructing SQL: The validation error is a catalog resolution issue: the schema must be qualified as auto_ontology_code.code.*, so every reference to the symbols, class_bases and files tables now uses the fully qualified name. All previously valid assumptions remain unchanged: (1) connector classes are identified as direct subclasses of the SQLDatabase class symbol located in auto_ontology/connectors/base.py by joining class_bases to that symbol; (2) a fallback matching the unresolved base name 'SQLDatabase' or 'base.SQLDatabase' is kept only when base_symbol_id is NULL, because the evidence states SQLDatabase is defined in that file; (3) test code is excluded using the files table's is_test flag, since the flag fully encodes the tests/ folder and test_*.py rules stated in the evidence; (4) methods are attributed to a class by requiring the method's qualified name to equal the class qualified name plus the method's own name and by line containment within the class definition, so only defs written directly in the class body count (properties and context-manager methods included, nested-class methods excluded); (5) public means the method name does not start with an underscore, which also removes __init__ and other dunders; (6) methods SQLDatabase itself defines are removed via a NOT EXISTS subquery that resolves SQLDatabase's own body methods the same way, so redefinitions of inherited public methods are excluded while inherited-but-not-redefined methods never appear anyway; (7) DISTINCT is retained because the request asks for one row per (class symbol ID, method name) pair. No time window applies; no zero/missing-value coercion or division is involved; no ranking/tie-breaking is needed, and rows are ordered by class symbol ID then method name for determinism.\n- Validating SQL and intent: The SQL correctly identifies classes directly subclassing SQLDatabase by joining class_bases to the SQLDatabase symbol using the verified base_symbol_id -> symbol_id relationship and the authoritative file filter auto_ontology/connectors/base.py. It excludes test files via files.is_test = FALSE, returns distinct class symbol ID and method name, and identifies public methods defined directly in each connector class body by matching symbol qualname and line ranges. It also excludes methods already defined in SQLDatabase's own body via NOT EXISTS. No critical join, aggregation, projection, or evidence-compliance issue is present."
+      }
+    }
+  ],
+  "question_id": 1,
+  "gold_sql": "SELECT b.class_symbol_id, m.name AS method_name FROM code.class_bases b JOIN code.symbols c ON c.symbol_id = b.class_symbol_id JOIN code.files f ON f.file_id = c.file_id JOIN code.symbols m ON m.file_id = c.file_id AND m.kind = 'method' AND m.qualname = c.qualname || '.' || m.name WHERE b.base_symbol_id = 'auto_ontology/connectors/base.py::SQLDatabase' AND NOT f.is_test AND m.is_public AND m.name NOT IN (SELECT bm.name FROM code.symbols bm WHERE bm.file_id = 'auto_ontology/connectors/base.py' AND bm.kind = 'method' AND bm.qualname LIKE 'SQLDatabase.%') ORDER BY 1, 2",
+  "gold_row_count": 1,
+  "agent_sql": "SELECT DISTINCT cls.symbol_id AS class_symbol_id, m.name AS method_name FROM auto_ontology_code.code.symbols AS cls JOIN auto_ontology_code.code.class_bases AS cb ON cb.class_symbol_id = cls.symbol_id JOIN auto_ontology_code.code.symbols AS sqldb ON (cb.base_symbol_id = sqldb.symbol_id OR (cb.base_symbol_id IS NULL AND cb.base_name IN ('SQLDatabase', 'base.SQLDatabase'))) AND sqldb.kind = 'class' AND sqldb.name = 'SQLDatabase' AND sqldb.file_id = 'auto_ontology/connectors/base.py' JOIN auto_ontology_code.code.files AS f ON f.file_id = cls.file_id JOIN auto_ontology_code.code.symbols AS m ON m.file_id = cls.file_id AND m.kind = 'method' AND m.qualname = cls.qualname || '.' || m.name AND m.line_start > cls.line_start AND m.line_end <= cls.line_end AND LEFT(m.name, 1) <> '_' WHERE cls.kind = 'class' AND f.is_test = FALSE AND NOT EXISTS (SELECT 1 FROM auto_ontology_code.code.symbols AS sm WHERE sm.file_id = sqldb.file_id AND sm.kind = 'method' AND sm.qualname = sqldb.qualname || '.' || sm.name AND sm.name = m.name AND sm.line_start > sqldb.line_start AND sm.line_end <= sqldb.line_end AND LEFT(sm.name, 1) <> '_') ORDER BY class_symbol_id, method_name",
+  "agent_answer": "This lists, for every production connector class that directly subclasses the SQLDatabase class defined in the connectors base module, the public methods the class declares in its own body. Methods are matched to their class by their qualified name and definition line range, public means the name does not start with an underscore, and classes in test files are excluded. Any method that SQLDatabase itself declares is removed, and each class-and-method pair appears once, ordered by class symbol ID and then method name.",
+  "agent_row_count": 14,
+  "correct_rows": false,
+  "error": null
+}

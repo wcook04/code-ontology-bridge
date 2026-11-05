@@ -1,0 +1,200 @@
+{
+  "request": {
+    "question": "auto_ontology/dal/session.py provides store() (the active connection handle) and write_transaction() (a context manager that groups store() queries into one transaction). Outside the auto_ontology/dal/ folder, and excluding test code (every file under a tests/ folder), which functions or methods open a transaction themselves by calling write_transaction directly (e.g. `with write_transaction():`) but never call store() directly anywhere in their own body? Only direct calls count; calls made by helpers they invoke do not. Return their symbol IDs.\n\nRequested output columns: symbol_id (string).\nReturn exactly the requested output columns, using each requested name as the column alias, in the requested order. Return complete repository-relative file paths and complete symbol IDs exactly as stored. When the question asks which files, symbols or modules, return each distinct one once unless it asks for occurrences.",
+    "calculation_only": true
+  },
+  "status": 200,
+  "elapsed_s": 204.4,
+  "events": [
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "question_intent",
+      "thought": null,
+      "label": "Classifying the question"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "question_intent",
+      "thought": null,
+      "label": "Classifying the question"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "question_extraction",
+      "thought": null,
+      "label": "Understanding the question"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "question_extraction",
+      "thought": null,
+      "label": "Understanding the question"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "retrieve_candidates",
+      "thought": null,
+      "label": "Retrieving candidates"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "retrieve_candidates",
+      "thought": null,
+      "label": "Retrieving candidates"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "prepare_candidates",
+      "thought": null,
+      "label": "Preparing candidates"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "prepare_candidates",
+      "thought": "The query needs the caller symbol identity/path, symbol kind, test/file filtering, and direct call predicates for `write_transaction` and `store`. The minimal core is `symbols` + `files` + `calls`; `files` is kept for `is_test` and path filtering, and `symbols`↔`files` is a required join bridge.",
+      "label": "Preparing candidates"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "refine_evidence",
+      "thought": null,
+      "label": "Refining evidence"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "refine_evidence",
+      "thought": "No certain repair applies: the evidence has no scalar string mismatch, constant mistake, or predicate operator error proven by the sanitized question, value anchors, or sample values.",
+      "label": "Refining evidence"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "construct_sql_from_candidates",
+      "thought": null,
+      "label": "Constructing SQL"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "construct_sql_from_candidates",
+      "thought": "The query counts nothing; it lists distinct caller symbols. I use the calls table filtered to call_kind = 'direct' (evidence: only direct calls count, callbacks excluded) with callee names resolving to write_transaction defined in auto_ontology/dal/session.py, matched both by callee_symbol_id (which encodes the file path and qualified name) and by callee_name forms such as 'write_transaction', 'session.write_transaction' or 'dal.write_transaction'. A second NOT EXISTS on the same direct calls table excludes symbols that themselves directly invoke store (any 'store'/'x.store' form pointing at session.py), again ignoring calls made indirectly through helpers. Assumptions: (1) time window — none applies, the request has no period; (2) zero/missing values — a symbol with no matching store call simply passes the NOT EXISTS, so zero-count cases are kept, as required; no division is used; (3) ties — no ranking, so ordering by symbol ID is only for stable output. Scope filters: the symbol's file path must not begin with auto_ontology/dal/ and the file must not be flagged as a test; only functions and methods are considered. Each symbol is returned once via DISTINCT.",
+      "label": "Constructing SQL"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "validate_sql_query",
+      "thought": null,
+      "label": "Validating SQL and intent"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "validate_sql_query",
+      "thought": "The SQL joins symbols to files via the verified path (symbols.file_id = files.file_id), filters to functions/methods, excludes test files (f.is_test = false) and the auto_ontology/dal/ directory as required. It uses the calls table with call_kind = 'direct', which correctly implements the evidence instruction that 'only direct calls count' and that helper-invoked calls do not. It checks for direct calls to write_transaction (via callee_symbol_id, callee_name, and qualified name patterns) and the NOT EXISTS clause properly excludes symbols that directly call store anywhere in their body. No aggregations are involved beyond DISTINCT, which matches the 'each distinct one once' requirement. The SELECT aliases the single requested column as symbol_id. The joins follow the authoritative paths and the logic faithfully captures the evidence-defined semantics (direct write_transaction, no direct store, exclude dal/ and tests).",
+      "label": "Validating SQL and intent"
+    },
+    {
+      "type": "sql",
+      "node": "validate_sql_query",
+      "sql": "SELECT DISTINCT s.symbol_id AS symbol_id\nFROM auto_ontology_code.code.symbols AS s\nJOIN auto_ontology_code.code.files AS f ON s.file_id = f.file_id\nWHERE s.kind IN ('function', 'method')\n  AND f.is_test = false\n  AND s.file_id NOT LIKE 'auto_ontology/dal/%'\n  AND EXISTS (\n      SELECT 1\n      FROM auto_ontology_code.code.calls AS c\n      WHERE c.caller_symbol_id = s.symbol_id\n        AND c.call_kind = 'direct'\n        AND (\n          c.callee_symbol_id LIKE 'auto_ontology/dal/session.py::write_transaction%'\n          OR c.callee_name = 'write_transaction'\n          OR c.callee_name LIKE '%.write_transaction'\n        )\n  )\n  AND NOT EXISTS (\n      SELECT 1\n      FROM auto_ontology_code.code.calls AS c2\n      WHERE c2.caller_symbol_id = s.symbol_id\n        AND c2.call_kind = 'direct'\n        AND (\n          c2.callee_symbol_id LIKE 'auto_ontology/dal/session.py::store%'\n          OR c2.callee_name = 'store'\n          OR c2.callee_name LIKE '%.store'\n        )\n  )\nORDER BY s.symbol_id"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "execute_sql_query",
+      "thought": null,
+      "label": "Executing SQL"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "execute_sql_query",
+      "thought": null,
+      "label": "Executing SQL"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "check_empty_like_result",
+      "thought": null,
+      "label": "Checking results"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "check_empty_like_result",
+      "thought": null,
+      "label": "Checking results"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "check_value_repair",
+      "thought": null,
+      "label": "Checking values"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "check_value_repair",
+      "thought": null,
+      "label": "Checking values"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "format_and_respond",
+      "thought": null,
+      "label": "Formatting response"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "format_and_respond",
+      "thought": null,
+      "label": "Formatting response"
+    },
+    {
+      "type": "result",
+      "answer": {
+        "response": "This lists the unique functions and methods, defined outside the data-access layer folder and outside test files, that themselves directly invoke the write-transaction helper while never directly invoking the connection-handle helper anywhere in their own body. It matches direct call sites by the callee's symbol identity and by the name written at the call site, so indirect calls made through helper functions are ignored. Files flagged as tests and anything under the data-access folder are excluded, and only functions and methods are considered.",
+        "sql_code": "SELECT DISTINCT s.symbol_id AS symbol_id\nFROM auto_ontology_code.code.symbols AS s\nJOIN auto_ontology_code.code.files AS f ON s.file_id = f.file_id\nWHERE s.kind IN ('function', 'method')\n  AND f.is_test = false\n  AND s.file_id NOT LIKE 'auto_ontology/dal/%'\n  AND EXISTS (\n      SELECT 1\n      FROM auto_ontology_code.code.calls AS c\n      WHERE c.caller_symbol_id = s.symbol_id\n        AND c.call_kind = 'direct'\n        AND (\n          c.callee_symbol_id LIKE 'auto_ontology/dal/session.py::write_transaction%'\n          OR c.callee_name = 'write_transaction'\n          OR c.callee_name LIKE '%.write_transaction'\n        )\n  )\n  AND NOT EXISTS (\n      SELECT 1\n      FROM auto_ontology_code.code.calls AS c2\n      WHERE c2.caller_symbol_id = s.symbol_id\n        AND c2.call_kind = 'direct'\n        AND (\n          c2.callee_symbol_id LIKE 'auto_ontology/dal/session.py::store%'\n          OR c2.callee_name = 'store'\n          OR c2.callee_name LIKE '%.store'\n        )\n  )\nORDER BY s.symbol_id",
+        "sql_columns": [
+          "0be21037-1c01-4bf6-bf79-3b9b91ddc067",
+          "ee95a694-70d8-4d56-9cf5-105de0a197cb",
+          "690dea58-4fb9-4b71-80c2-a4bbbb6085c4",
+          "b52ba3c8-b7df-4de8-afc3-6220513cf530",
+          "a4fcf3a0-72ef-4089-87e0-f3189b40c9a1",
+          "08beba83-9dce-44ef-ac6b-024849f4a2ce",
+          "5f4b25f4-c906-483d-afbb-43a16957b197",
+          "2bf32acb-eec0-4ecf-9652-4d0a5fb3de8f",
+          "d22dbf35-e212-4ff7-993c-13105225f655"
+        ],
+        "custom_analyses_used": [],
+        "sql_response_from_db": [
+          "[{\"symbol_id\":\"auto_ontology\\/catalog\\/store\\/schemas.py::add_schemas_edge\"},{\"symbol_id\":\"auto_ontology\\/catalog\\/write.py::populate_fks\"},{\"symbol_id\":\"auto_ontology\\/catalog\\/write.py::populate_pks\"},{\"symbol_id\":\"auto_ontology\\/server\\/rules\\/router.py::create_rule\"},{\"symbol_id\":\"auto_ontology\\/server\\/tags\\/router.py::detach_tag\"}]"
+        ],
+        "thoughts": "- Preparing candidates: The question’s primary subject is functions or methods, which is directly represented by code.symbols.kind.\n- Preparing candidates: The query needs the caller symbol identity/path, symbol kind, test/file filtering, and direct call predicates for `write_transaction` and `store`. The minimal core is `symbols` + `files` + `calls`; `files` is kept for `is_test` and path filtering, and `symbols`↔`files` is a required join bridge.\n- Refining evidence: The Evidence section does not contain any field-reference mappings to the supplied physical columns, so no question or evidence phrases should be replaced under the strict scope. The original natural-language question and evidence are therefore preserved unchanged.\n- Refining evidence: No certain repair applies: the evidence has no scalar string mismatch, constant mistake, or predicate operator error proven by the sanitized question, value anchors, or sample values.\n- Constructing SQL: The query counts nothing; it lists distinct caller symbols. I use the calls table filtered to call_kind = 'direct' (evidence: only direct calls count, callbacks excluded) with callee names resolving to write_transaction defined in auto_ontology/dal/session.py, matched both by callee_symbol_id (which encodes the file path and qualified name) and by callee_name forms such as 'write_transaction', 'session.write_transaction' or 'dal.write_transaction'. A second NOT EXISTS on the same direct calls table excludes symbols that themselves directly invoke store (any 'store'/'x.store' form pointing at session.py), again ignoring calls made indirectly through helpers. Assumptions: (1) time window — none applies, the request has no period; (2) zero/missing values — a symbol with no matching store call simply passes the NOT EXISTS, so zero-count cases are kept, as required; no division is used; (3) ties — no ranking, so ordering by symbol ID is only for stable output. Scope filters: the symbol's file path must not begin with auto_ontology/dal/ and the file must not be flagged as a test; only functions and methods are considered. Each symbol is returned once via DISTINCT.\n- Validating SQL and intent: The SQL joins symbols to files via the verified path (symbols.file_id = files.file_id), filters to functions/methods, excludes test files (f.is_test = false) and the auto_ontology/dal/ directory as required. It uses the calls table with call_kind = 'direct', which correctly implements the evidence instruction that 'only direct calls count' and that helper-invoked calls do not. It checks for direct calls to write_transaction (via callee_symbol_id, callee_name, and qualified name patterns) and the NOT EXISTS clause properly excludes symbols that directly call store anywhere in their body. No aggregations are involved beyond DISTINCT, which matches the 'each distinct one once' requirement. The SELECT aliases the single requested column as symbol_id. The joins follow the authoritative paths and the logic faithfully captures the evidence-defined semantics (direct write_transaction, no direct store, exclude dal/ and tests)."
+      }
+    }
+  ],
+  "question_id": 7,
+  "gold_sql": "SELECT DISTINCT c.caller_symbol_id AS symbol_id FROM code.calls c JOIN code.symbols s ON s.symbol_id = c.caller_symbol_id JOIN code.files f ON f.file_id = s.file_id WHERE c.callee_symbol_id = 'auto_ontology/dal/session.py::write_transaction' AND c.call_kind = 'direct' AND NOT f.is_test AND s.file_id NOT LIKE 'auto_ontology/dal/%' AND c.caller_symbol_id NOT IN (SELECT caller_symbol_id FROM code.calls WHERE callee_symbol_id = 'auto_ontology/dal/session.py::store' AND call_kind = 'direct') ORDER BY 1",
+  "gold_row_count": 1,
+  "agent_sql": "SELECT DISTINCT s.symbol_id AS symbol_id\nFROM auto_ontology_code.code.symbols AS s\nJOIN auto_ontology_code.code.files AS f ON s.file_id = f.file_id\nWHERE s.kind IN ('function', 'method')\n  AND f.is_test = false\n  AND s.file_id NOT LIKE 'auto_ontology/dal/%'\n  AND EXISTS (\n      SELECT 1\n      FROM auto_ontology_code.code.calls AS c\n      WHERE c.caller_symbol_id = s.symbol_id\n        AND c.call_kind = 'direct'\n        AND (\n          c.callee_symbol_id LIKE 'auto_ontology/dal/session.py::write_transaction%'\n          OR c.callee_name = 'write_transaction'\n          OR c.callee_name LIKE '%.write_transaction'\n        )\n  )\n  AND NOT EXISTS (\n      SELECT 1\n      FROM auto_ontology_code.code.calls AS c2\n      WHERE c2.caller_symbol_id = s.symbol_id\n        AND c2.call_kind = 'direct'\n        AND (\n          c2.callee_symbol_id LIKE 'auto_ontology/dal/session.py::store%'\n          OR c2.callee_name = 'store'\n          OR c2.callee_name LIKE '%.store'\n        )\n  )\nORDER BY s.symbol_id",
+  "agent_answer": "This lists the unique functions and methods, defined outside the data-access layer folder and outside test files, that themselves directly invoke the write-transaction helper while never directly invoking the connection-handle helper anywhere in their own body. It matches direct call sites by the callee's symbol identity and by the name written at the call site, so indirect calls made through helper functions are ignored. Files flagged as tests and anything under the data-access folder are excluded, and only functions and methods are considered.",
+  "agent_row_count": 5,
+  "correct_rows": false,
+  "error": null
+}

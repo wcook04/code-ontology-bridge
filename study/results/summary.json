@@ -126,6 +126,54 @@
       "prompt_tokens_per_request": 6171
     },
     {
+      "model": "deepseek",
+      "arm": "C-base",
+      "denominator": 12,
+      "repetitions": 3,
+      "snapshot": [
+        10,
+        11,
+        10
+      ],
+      "suite": [
+        7,
+        8,
+        7
+      ],
+      "snapshot_mean": 10.333333333333334,
+      "suite_mean": 7.333333333333333,
+      "suite_per_repo_mean": {
+        "auto_ontology": 7.333333333333333
+      },
+      "median_seconds": 178.75,
+      "cost_usd": 0.0,
+      "prompt_tokens_per_request": 0
+    },
+    {
+      "model": "deepseek",
+      "arm": "C-semantics",
+      "denominator": 12,
+      "repetitions": 3,
+      "snapshot": [
+        11,
+        12,
+        12
+      ],
+      "suite": [
+        9,
+        8,
+        9
+      ],
+      "snapshot_mean": 11.666666666666666,
+      "suite_mean": 8.666666666666666,
+      "suite_per_repo_mean": {
+        "auto_ontology": 8.666666666666666
+      },
+      "median_seconds": 248.65,
+      "cost_usd": 0.0,
+      "prompt_tokens_per_request": 0
+    },
+    {
       "model": "nemotron",
       "arm": "A",
       "denominator": 48,
@@ -248,6 +296,54 @@
       "median_seconds": 2.09,
       "cost_usd": 0.099,
       "prompt_tokens_per_request": 8869
+    },
+    {
+      "model": "nemotron",
+      "arm": "C-base",
+      "denominator": 12,
+      "repetitions": 3,
+      "snapshot": [
+        5,
+        1,
+        3
+      ],
+      "suite": [
+        4,
+        0,
+        2
+      ],
+      "snapshot_mean": 3,
+      "suite_mean": 2,
+      "suite_per_repo_mean": {
+        "auto_ontology": 2
+      },
+      "median_seconds": 222.6,
+      "cost_usd": 0.0,
+      "prompt_tokens_per_request": 0
+    },
+    {
+      "model": "nemotron",
+      "arm": "C-semantics",
+      "denominator": 12,
+      "repetitions": 3,
+      "snapshot": [
+        2,
+        6,
+        4
+      ],
+      "suite": [
+        1,
+        5,
+        2
+      ],
+      "snapshot_mean": 4,
+      "suite_mean": 2.6666666666666665,
+      "suite_per_repo_mean": {
+        "auto_ontology": 2.6666666666666665
+      },
+      "median_seconds": 217.39999999999998,
+      "cost_usd": 0.0,
+      "prompt_tokens_per_request": 0
     }
   ],
   "paired": [
@@ -370,6 +466,17 @@
       "mean_suite_rate_change": 0.1542
     },
     {
+      "model": "deepseek",
+      "from": "C-base",
+      "to": "C-semantics",
+      "questions": 12,
+      "improved": [
+        "ao-12"
+      ],
+      "regressed": [],
+      "mean_suite_rate_change": 0.1111
+    },
+    {
       "model": "nemotron",
       "from": "A",
       "to": "B",
@@ -447,6 +554,355 @@
         "rich-06"
       ],
       "mean_suite_rate_change": 0.0083
+    },
+    {
+      "model": "nemotron",
+      "from": "C-base",
+      "to": "C-semantics",
+      "questions": 12,
+      "improved": [
+        "ao-03"
+      ],
+      "regressed": [],
+      "mean_suite_rate_change": 0.0556
+    }
+  ],
+  "question_list": [
+    {
+      "id": "ao-01",
+      "repo": "auto_ontology",
+      "question": "The production database connectors are the classes that directly subclass SQLDatabase (defined in auto_ontology/connectors/base.py), excluding any class defined in test code (every file under a tests/ folder counts as test code). For each such connector class, which public methods does the class define in its own body that SQLDatabase itself does not define? A method is public when its name does not start with an underscore (so __init__ and other dunder methods are excluded); anything written with def directly in the class body counts as a method, including properties and context-manager methods. Methods inherited without being redefined do not count. Return one row per (connector class symbol ID, method name).",
+      "topic": "inheritance + method definitions (set difference)",
+      "difficulty": "hard"
+    },
+    {
+      "id": "ao-02",
+      "repo": "auto_ontology",
+      "question": "When the text-to-SQL LangGraph is assembled by create_graph in auto_ontology/retrieval/text_to_sql/text_to_sql_graph.py, which functions or methods of this repository does create_graph hand over by reference, i.e. pass the function object itself as an argument to another call (as with graph.add_conditional_edges(node, router_fn, ...)) rather than calling it? Count only plain names passed directly as call arguments; functions that create_graph calls itself, values that are the result of a call (such as _make_soft_check_router(...)), lambdas, and local variables holding nodes do not count. Functions passed only inside an if/else branch of create_graph count. Return each distinct function's symbol ID.",
+      "topic": "callbacks (functions passed by reference)",
+      "difficulty": "medium"
+    },
+    {
+      "id": "ao-03",
+      "repo": "auto_ontology",
+      "question": "invoke_with_structured_output in auto_ontology/utils/llm_invoke.py is the main structured-LLM-call wrapper. Which functions or methods in non-test code (every file under a tests/ folder is test code) reach it at exactly two hops: they do not call invoke_with_structured_output directly themselves, but they directly call at least one function or method that does call it directly? Consider direct calls only on both hops, and follow only calls to a named function or to a method on self (a call through another object's attribute, such as self._backend.classify(), is not followed); a function passed as an argument (e.g. pool.submit(f)) does not count as calling it. The intermediate function may live anywhere, including test code, but the functions you list must be in non-test code. Return their symbol IDs.",
+      "topic": "two-hop call chain",
+      "difficulty": "hard"
+    },
+    {
+      "id": "ao-04",
+      "repo": "auto_ontology",
+      "question": "Consider the agent classes defined in non-test code that directly subclass BaseAgent from auto_ontology/retrieval/text_to_sql/base.py (every file under a tests/ folder, conftest.py and helpers included, is test code). Which of these agent classes are constructed (the class is called by name, e.g. ResponseAgent()) somewhere in non-test code but are never constructed anywhere in test code? Count only direct constructor calls written in a function or method body; patching or referencing a class without calling it does not count, and a test that calls a function which constructs the class does not count as constructing it. Return their class symbol IDs.",
+      "topic": "inheritance + instantiation, set logic",
+      "difficulty": "hard"
+    },
+    {
+      "id": "ao-05",
+      "repo": "auto_ontology",
+      "question": "Which non-test Python files anywhere in the repository (including folders outside the auto_ontology package, such as dev_tools/) but outside the auto_ontology/connectors/ folder import anything from the connectors package (auto_ontology.connectors itself or any of its modules)? Count every import statement, including imports placed inside functions and imports under an `if TYPE_CHECKING:` guard; mentions in comments or docstrings are not imports. Every file under a tests/ folder is test code and is excluded. Return repository-relative file paths.",
+      "topic": "module dependencies (imports)",
+      "difficulty": "medium"
+    },
+    {
+      "id": "ao-06",
+      "repo": "auto_ontology",
+      "question": "Among the production database connector classes that directly subclass SQLDatabase (auto_ontology/connectors/base.py), excluding classes in test code (any file under a tests/ folder), which ones override get_columns with their own get_columns method that has no docstring of its own (a leading # comment is not a docstring)? Return the symbol ID of each such get_columns method.",
+      "topic": "docstrings on overriding methods",
+      "difficulty": "medium"
+    },
+    {
+      "id": "ao-07",
+      "repo": "auto_ontology",
+      "question": "auto_ontology/dal/session.py provides store() (the active connection handle) and write_transaction() (a context manager that groups store() queries into one transaction). Outside the auto_ontology/dal/ folder, and excluding test code (every file under a tests/ folder), which functions or methods open a transaction themselves by calling write_transaction directly (e.g. `with write_transaction():`) but never call store() directly anywhere in their own body? Only direct calls count; calls made by helpers they invoke do not. Return their symbol IDs.",
+      "topic": "call set logic (X but not Y)",
+      "difficulty": "hard"
+    },
+    {
+      "id": "ao-08",
+      "repo": "auto_ontology",
+      "question": "Which five functions in the data-access layer are used most widely by the rest of the codebase? Consider module-level functions (not methods or classes) defined in non-test files under auto_ontology/dal/, excluding auto_ontology/dal/session.py. Rank them by the number of distinct functions or methods that call them directly, counting only callers that are in non-test files (every file under a tests/ folder is test code) located outside auto_ontology/dal/. Calls through a module alias (e.g. `dal.fetch_databases()` after `from auto_ontology.dal import datasources as dal`) or an import alias count; a function passed by reference without being called does not. Highest count first; break ties by symbol ID ascending and return exactly five rows. Return the symbol ID and the caller count.",
+      "topic": "ranking by distinct callers",
+      "difficulty": "hard"
+    },
+    {
+      "id": "ao-09",
+      "repo": "auto_ontology",
+      "question": "Which test files are statically associated with auto_ontology/semantic/visit_enter.py, meaning the test file imports that module (anywhere in the file, including inside a test function) or is named test_visit_enter.py? Mentions in comments or patch target strings do not count. Return each test file's repository-relative path once.",
+      "topic": "test associations",
+      "difficulty": "easy"
+    },
+    {
+      "id": "ao-10",
+      "repo": "auto_ontology",
+      "question": "Within auto_ontology/server/, which immediate subfolders contain more than 1,000 lines of Python in total? Count every .py file anywhere inside the subfolder, including its test files and __init__.py; files directly in auto_ontology/server/ itself belong to no subfolder. Return the subfolder's repository-relative path (e.g. auto_ontology/server/chat) and its total line count.",
+      "topic": "folder sizes",
+      "difficulty": "medium"
+    },
+    {
+      "id": "ao-11",
+      "repo": "auto_ontology",
+      "question": "How many public classes, public module-level functions and public methods are defined in the non-test code of the auto_ontology/retrieval/kumo/ package (files under its tests/ folder excluded)? A name is public when it does not start with an underscore, so dunder methods such as __init__ are not public, and methods of a class whose name starts with an underscore are not public either. Nested functions and nested classes are not counted. Return one row per kind, with kind being 'class', 'function' or 'method'.",
+      "topic": "definition counts by kind and visibility",
+      "difficulty": "easy"
+    },
+    {
+      "id": "ao-12",
+      "repo": "auto_ontology",
+      "question": "Which classes inherit from ApiModel (auto_ontology/server/models.py) only indirectly, i.e. through at least one intermediate class of this repository, and do not name ApiModel directly in their class statement? An import alias of ApiModel (auto_ontology/server/responses.py imports it as _Payload) counts as naming ApiModel directly, and a subscripted base such as ListResponse[T] counts as its class. For each, give the class symbol ID and the length of the shortest inheritance chain to ApiModel (2 when the parent class directly subclasses ApiModel).",
+      "topic": "transitive inheritance",
+      "difficulty": "hard"
+    },
+    {
+      "id": "click-01",
+      "repo": "click",
+      "question": "What are the five largest non-test Python files in the repository by line count? Non-test files include the library, examples and docs. Give the repository-relative file path and its line count, largest first, ties broken by file path.",
+      "topic": "files and sizes",
+      "difficulty": "easy"
+    },
+    {
+      "id": "click-02",
+      "repo": "click",
+      "question": "Which modules of the click library package (files under src/click/) start with a module docstring (a leading # comment block is not a docstring)? Give the repository-relative file path.",
+      "topic": "module docstrings",
+      "difficulty": "easy"
+    },
+    {
+      "id": "click-03",
+      "repo": "click",
+      "question": "Which other modules of the click library does src/click/termui.py import from? Count every import statement in the file, including imports placed inside functions and under TYPE_CHECKING. Give the repository-relative file path of each imported module, once each.",
+      "topic": "module dependencies",
+      "difficulty": "easy"
+    },
+    {
+      "id": "click-04",
+      "repo": "click",
+      "question": "Which public module-level functions in src/click/_compat.py have no docstring? Public means the name does not start with an underscore; methods and classes are excluded. Give the symbol ID.",
+      "topic": "docstrings",
+      "difficulty": "medium"
+    },
+    {
+      "id": "click-05",
+      "repo": "click",
+      "question": "Which module-level functions or methods in the click library (src/click/, excluding tests and examples) call the echo function from src/click/utils.py directly, and how many call sites does each have? Only direct calls count, not passing echo as an argument. A call written inside a nested helper function counts for the enclosing function or method only when the enclosing one calls that helper or passes it as an argument to another call (a helper merely assigned to a variable or dictionary key does not count). Give the caller's symbol ID and the number of call sites.",
+      "topic": "direct callers",
+      "difficulty": "medium"
+    },
+    {
+      "id": "click-06",
+      "repo": "click",
+      "question": "Which test files contain an import statement that imports the click.testing module or any name from it? A test that only reaches click.testing through an attribute of the click package without importing it does not count. tests/conftest.py counts as a test file. Give the repository-relative path of each test file.",
+      "topic": "test imports",
+      "difficulty": "medium"
+    },
+    {
+      "id": "click-07",
+      "repo": "click",
+      "question": "Inside the bodies of functions and methods in the click library (src/click/), where is a module-level function or a method defined in the repository passed by reference as an argument to another call (so the receiving call is expected to invoke it) rather than being called at that point? Module-level code outside any function, and nested helper functions, do not count. Give the symbol ID of the function or method containing the call and the symbol ID of the function passed, one row per distinct pair.",
+      "topic": "callback references",
+      "difficulty": "medium"
+    },
+    {
+      "id": "click-08",
+      "repo": "click",
+      "question": "Which classes in the click library (src/click/) inherit from ClickException (src/click/exceptions.py), directly or through other classes? For each, give its symbol ID and the number of inheritance steps between it and ClickException (1 for a direct subclass).",
+      "topic": "inheritance closure",
+      "difficulty": "hard"
+    },
+    {
+      "id": "click-09",
+      "repo": "click",
+      "question": "Which methods of the Group class in src/click/core.py override a method that its base class Command (same file) defines itself under the same name? Count only methods written in the body of Command, not ones Command inherits; __init__ counts as an override. Give the symbol ID of the Group method.",
+      "topic": "method overrides",
+      "difficulty": "hard"
+    },
+    {
+      "id": "click-10",
+      "repo": "click",
+      "question": "Which modules of the click library (src/click/) import from both src/click/_compat.py and src/click/utils.py but do not import from src/click/core.py at all? Count every import statement, including imports inside functions and under type-checking guards. Give the repository-relative file path.",
+      "topic": "import set logic",
+      "difficulty": "hard"
+    },
+    {
+      "id": "click-11",
+      "repo": "click",
+      "question": "Which functions or methods in the click library (src/click/) reach term_len (src/click/_compat.py) within at most two direct calls: either calling it directly, or directly calling a repository function or method that itself calls term_len directly? Count only calls written as a plain function name or as a method call on self; calls through other objects (e.g. formatter.write_dl(...)) and passing a function as an argument do not count. Give the symbol ID and the minimum number of calls in the chain (1 for a direct caller, 2 otherwise).",
+      "topic": "multi-hop calls",
+      "difficulty": "hard"
+    },
+    {
+      "id": "click-12",
+      "repo": "click",
+      "question": "Which functions or methods in the click library (src/click/) directly call both the style function from src/click/termui.py and the echo function from src/click/utils.py? Give the symbol ID.",
+      "topic": "call set logic",
+      "difficulty": "hard"
+    },
+    {
+      "id": "httpx-01",
+      "repo": "httpx",
+      "question": "Which source files of the httpx library itself (test code excluded) start with a module-level docstring? Give the repository-relative file paths.",
+      "topic": "module docstrings",
+      "difficulty": "easy"
+    },
+    {
+      "id": "httpx-02",
+      "repo": "httpx",
+      "question": "Which functions or methods anywhere in the repository (test code included) directly call the `request_context` context manager defined in httpx/_exceptions.py? Count only direct call sites, not places where it is passed as an argument. Give each caller's symbol ID.",
+      "topic": "direct callers",
+      "difficulty": "medium"
+    },
+    {
+      "id": "httpx-03",
+      "repo": "httpx",
+      "question": "Which Python files that are not test files (every file under tests/, including helpers such as tests/common.py and conftest.py, is a test file) have no associated test file at all, meaning no test file imports that module directly (importing only the top-level httpx package counts as importing httpx/__init__.py, not its submodules) and no test file's name is exactly test_ followed by the source file's name (e.g. test_asgi.py for asgi.py; test_decoders.py does not match _decoders.py)? Give the repository-relative file paths.",
+      "topic": "test associations",
+      "difficulty": "medium"
+    },
+    {
+      "id": "httpx-04",
+      "repo": "httpx",
+      "question": "Which methods defined directly in the body of the synchronous `Client` class in httpx/_client.py have no docstring? Include private and dunder methods; exclude methods inherited from BaseClient. Give their symbol IDs.",
+      "topic": "method docstrings",
+      "difficulty": "medium"
+    },
+    {
+      "id": "httpx-05",
+      "repo": "httpx",
+      "question": "What are the five longest functions or methods (classes excluded) in the non-test code, measured as the number of lines from the def line (decorators not counted) through the last line of the body? Return each symbol ID with its line count, longest first, ties broken by symbol ID alphabetically.",
+      "topic": "largest functions",
+      "difficulty": "medium"
+    },
+    {
+      "id": "httpx-06",
+      "repo": "httpx",
+      "question": "Which classes in the non-test code define at least 20 methods directly in their own body? Count every method definition separately (a property getter and its setter count as two; inherited methods and methods of nested classes do not count). Return each class's symbol ID and its method count, largest count first, ties broken by symbol ID alphabetically.",
+      "topic": "class size",
+      "difficulty": "medium"
+    },
+    {
+      "id": "httpx-07",
+      "repo": "httpx",
+      "question": "Which classes inherit from httpx's `RequestError` exception (httpx/_exceptions.py), either directly or through any number of intermediate classes? Exclude RequestError itself. Give their symbol IDs.",
+      "topic": "transitive inheritance",
+      "difficulty": "hard"
+    },
+    {
+      "id": "httpx-08",
+      "repo": "httpx",
+      "question": "Which classes defined in httpx/_exceptions.py are not subclassed by any other class anywhere in the repository (tests included)? Give their symbol IDs.",
+      "topic": "exception leaves",
+      "difficulty": "hard"
+    },
+    {
+      "id": "httpx-09",
+      "repo": "httpx",
+      "question": "Within httpx/_client.py, which functions or methods eventually lead to a call of `Client._send_single_request`, through a chain of one or more direct calls whose every step is inside httpx/_client.py? Count direct calls only (no callbacks) and exclude `_send_single_request` itself. Give their symbol IDs.",
+      "topic": "multi-hop call chain",
+      "difficulty": "hard"
+    },
+    {
+      "id": "httpx-10",
+      "repo": "httpx",
+      "question": "Which internal httpx modules are imported directly by both httpx/_client.py and httpx/_models.py? Give the repository-relative file paths of the imported modules.",
+      "topic": "shared module dependencies",
+      "difficulty": "hard"
+    },
+    {
+      "id": "httpx-11",
+      "repo": "httpx",
+      "question": "In tests/client/test_redirects.py, which test functions both pass that module's `redirects` handler function as an argument (for example to a mock transport) and create an `httpx.AsyncClient`? Give their symbol IDs.",
+      "topic": "test set logic",
+      "difficulty": "hard"
+    },
+    {
+      "id": "httpx-12",
+      "repo": "httpx",
+      "question": "Which functions in httpx/_main.py are handed over by name as a callback argument to another call (not called directly; a function given to functools.partial counts as handed over) in the CLI command function `main` in httpx/_main.py, counting the arguments of the click decorators applied to `main` as part of `main`? Give their symbol IDs.",
+      "topic": "callback references",
+      "difficulty": "medium"
+    },
+    {
+      "id": "rich-01",
+      "repo": "rich",
+      "question": "Which classes directly subclass ProgressColumn (defined in rich/progress.py), i.e. name it as a base class in their own class statement? Do not include classes that only inherit from it through another class. Give each class's symbol ID.",
+      "topic": "inheritance: direct subclasses",
+      "difficulty": "easy"
+    },
+    {
+      "id": "rich-02",
+      "repo": "rich",
+      "question": "In the Markdown renderer, which classes inherit from MarkdownElement (rich/markdown.py) either directly or indirectly through any number of intermediate classes? Exclude MarkdownElement itself. Give each class's symbol ID.",
+      "topic": "inheritance: transitive subclasses",
+      "difficulty": "hard"
+    },
+    {
+      "id": "rich-03",
+      "repo": "rich",
+      "question": "Outside the test suite, which functions and methods directly call the cell_len function from rich/cells.py, and how many call sites to it does each contain? Count direct call sites only (occurrences, not distinct lines); passing the function as a callback does not count, and only calls that name cell_len itself count (a call through a local alias such as _cell_len = cell_len does not). Give the caller's symbol ID and the number of call sites.",
+      "topic": "calls: direct callers with counts",
+      "difficulty": "medium"
+    },
+    {
+      "id": "rich-04",
+      "repo": "rich",
+      "question": "The markup parser's entry point is the render function in rich/markup.py. Which functions and methods defined under the rich/ folder reach it through exactly one intermediate step (they directly call some function or method that itself directly calls rich/markup.py's render) but do not call render directly themselves? Direct calls only; callback references do not count. Give their symbol IDs.",
+      "topic": "calls: two-hop reachability",
+      "difficulty": "hard"
+    },
+    {
+      "id": "rich-05",
+      "repo": "rich",
+      "question": "Which of Rich's own Python files does rich/table.py import? Count every import statement anywhere in the file, including type-checking-only imports and the imports in its `if __name__ == \"__main__\"` demo block, and list each imported file once by its repository-relative path. A statement such as `from . import box` imports rich/box.py, not rich/__init__.py.",
+      "topic": "imports: module dependencies",
+      "difficulty": "easy"
+    },
+    {
+      "id": "rich-06",
+      "repo": "rich",
+      "question": "Which Python files under the rich/ folder import rich/console.py but never import rich/text.py? Count import statements anywhere in a file (top level, type-checking-only blocks, inside functions, and `__main__` demo blocks). Only imports that name the console or text module itself count, not imports of the rich package; rich/text.py qualifies if it imports rich/console.py. Give the repository-relative file paths.",
+      "topic": "imports: set difference",
+      "difficulty": "hard"
+    },
+    {
+      "id": "rich-07",
+      "repo": "rich",
+      "question": "Which five classes outside the test suite define the most methods in their own class body? Count every method definition separately, so a property getter and its setter, or each @overload stub, count as separate methods. Give the class's symbol ID and the method count, ordered by count descending, ties broken by symbol ID ascending.",
+      "topic": "ranking: methods per class",
+      "difficulty": "medium"
+    },
+    {
+      "id": "rich-08",
+      "repo": "rich",
+      "question": "Which classes name JupyterMixin (from rich/jupyter.py) directly as a base class but do not define their own __rich_measure__ method in their class body? Give each class's symbol ID.",
+      "topic": "inheritance + definitions: exclusion",
+      "difficulty": "hard"
+    },
+    {
+      "id": "rich-09",
+      "repo": "rich",
+      "question": "Progress.get_renderable in rich/progress.py builds what a progress display shows. Which functions or methods use it, either by calling it directly or by passing the method itself as an argument to another call (a callback reference)? Give the user's symbol ID and how it is used, as 'direct' or 'callback'.",
+      "topic": "calls: direct and callback",
+      "difficulty": "medium"
+    },
+    {
+      "id": "rich-10",
+      "repo": "rich",
+      "question": "Which Python files sitting directly in the rich/ folder (not in its subfolders), including the package's __init__.py, start with a module docstring? Give the repository-relative file paths.",
+      "topic": "docstrings: module descriptions",
+      "difficulty": "easy"
+    },
+    {
+      "id": "rich-11",
+      "repo": "rich",
+      "question": "Under the rich/ folder, which five files contain the most public functions and methods that have no docstring? A function or method is public when neither its own name nor the name of its enclosing class starts with an underscore (so dunder methods are not public); classes themselves are not counted, and every definition counts separately (each @overload stub and each property getter or setter). Give the file path and the count, ordered by count descending, ties broken by file path ascending.",
+      "topic": "docstrings: ranking undocumented API",
+      "difficulty": "hard"
+    },
+    {
+      "id": "rich-12",
+      "repo": "rich",
+      "question": "Which Python files sitting directly in the rich/ folder (not in its subfolders) are at least 100 lines long yet have no test file associated with them, where a test is associated when it imports the file or its name is test_<filename>.py? Give the file path and its line count.",
+      "topic": "test links + file size",
+      "difficulty": "medium"
     }
   ],
   "per_question_suite_rate": {
@@ -650,6 +1106,34 @@
       "rich-11": 1.0,
       "rich-12": 1.0
     },
+    "deepseek/C-base": {
+      "ao-01": 0.6666666666666666,
+      "ao-02": 0.3333333333333333,
+      "ao-03": 0.0,
+      "ao-04": 0.3333333333333333,
+      "ao-05": 1.0,
+      "ao-06": 1.0,
+      "ao-07": 0.0,
+      "ao-08": 0.6666666666666666,
+      "ao-09": 1.0,
+      "ao-10": 1.0,
+      "ao-11": 1.0,
+      "ao-12": 0.3333333333333333
+    },
+    "deepseek/C-semantics": {
+      "ao-01": 1.0,
+      "ao-02": 0.3333333333333333,
+      "ao-03": 0.0,
+      "ao-04": 0.3333333333333333,
+      "ao-05": 1.0,
+      "ao-06": 1.0,
+      "ao-07": 0.0,
+      "ao-08": 1.0,
+      "ao-09": 1.0,
+      "ao-10": 1.0,
+      "ao-11": 1.0,
+      "ao-12": 1.0
+    },
     "nemotron/A": {
       "ao-01": 0.0,
       "ao-02": 0.0,
@@ -849,6 +1333,34 @@
       "rich-10": 0.0,
       "rich-11": 0.0,
       "rich-12": 0.0
+    },
+    "nemotron/C-base": {
+      "ao-01": 0.0,
+      "ao-02": 0.0,
+      "ao-03": 0.0,
+      "ao-04": 0.0,
+      "ao-05": 0.3333333333333333,
+      "ao-06": 0.0,
+      "ao-07": 0.0,
+      "ao-08": 0.0,
+      "ao-09": 0.3333333333333333,
+      "ao-10": 0.3333333333333333,
+      "ao-11": 0.6666666666666666,
+      "ao-12": 0.3333333333333333
+    },
+    "nemotron/C-semantics": {
+      "ao-01": 0.0,
+      "ao-02": 0.0,
+      "ao-03": 0.6666666666666666,
+      "ao-04": 0.0,
+      "ao-05": 0.3333333333333333,
+      "ao-06": 0.3333333333333333,
+      "ao-07": 0.0,
+      "ao-08": 0.3333333333333333,
+      "ao-09": 0.0,
+      "ao-10": 0.3333333333333333,
+      "ao-11": 0.3333333333333333,
+      "ao-12": 0.3333333333333333
     }
   }
 }

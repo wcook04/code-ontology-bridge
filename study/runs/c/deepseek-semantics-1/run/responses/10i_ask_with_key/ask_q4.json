@@ -1,0 +1,200 @@
+{
+  "request": {
+    "question": "Consider the agent classes defined in non-test code that directly subclass BaseAgent from auto_ontology/retrieval/text_to_sql/base.py (every file under a tests/ folder, conftest.py and helpers included, is test code). Which of these agent classes are constructed (the class is called by name, e.g. ResponseAgent()) somewhere in non-test code but are never constructed anywhere in test code? Count only direct constructor calls written in a function or method body; patching or referencing a class without calling it does not count, and a test that calls a function which constructs the class does not count as constructing it. Return their class symbol IDs.\n\nRequested output columns: class_symbol_id (string).\nReturn exactly the requested output columns, using each requested name as the column alias, in the requested order. Return complete repository-relative file paths and complete symbol IDs exactly as stored. When the question asks which files, symbols or modules, return each distinct one once unless it asks for occurrences.",
+    "calculation_only": true
+  },
+  "status": 200,
+  "elapsed_s": 293.9,
+  "events": [
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "question_intent",
+      "thought": null,
+      "label": "Classifying the question"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "question_intent",
+      "thought": null,
+      "label": "Classifying the question"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "question_extraction",
+      "thought": null,
+      "label": "Understanding the question"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "question_extraction",
+      "thought": null,
+      "label": "Understanding the question"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "retrieve_candidates",
+      "thought": null,
+      "label": "Retrieving candidates"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "retrieve_candidates",
+      "thought": null,
+      "label": "Retrieving candidates"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "prepare_candidates",
+      "thought": null,
+      "label": "Preparing candidates"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "prepare_candidates",
+      "thought": "The question asks to return distinct class_symbol_id values, which map to code.symbol_profile.symbol_id, the unique identifier for a code symbol.",
+      "label": "Preparing candidates"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "refine_evidence",
+      "thought": null,
+      "label": "Refining evidence"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "refine_evidence",
+      "thought": "No certain repair is supported by a value anchor or verified sample value; all string scalars, constants, and predicates in the evidence and sanitized question remain valid.",
+      "label": "Refining evidence"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "construct_sql_from_candidates",
+      "thought": null,
+      "label": "Constructing SQL"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "construct_sql_from_candidates",
+      "thought": "The query identifies classes that directly subclass BaseAgent from auto_ontology/retrieval/text_to_sql/base.py by matching class_bases.base_symbol_id to that base symbol (using LIKE to tolerate an optional @L suffix). It restricts to classes defined in non-test files via symbol_profile.in_test_file = FALSE and is_class = TRUE. Construction in non-test code is required through an EXISTS on call_edges with calls_directly = TRUE, caller_in_test_file = FALSE, and callee_kind = 'class'. No construction in test code is enforced with NOT EXISTS on call_edges with calls_directly = TRUE, caller_in_test_file = TRUE, and callee_kind = 'class'. Assumptions: (1) time window — none, because the question has no time dimension; (2) zero/missing values — no zero-count or NULL groups are needed, and EXISTS/NOT EXISTS naturally exclude missing construction edges; (3) ties — not applicable, since the query returns a distinct set of class symbol IDs. The callee_kind = 'class' filter ensures only constructor calls are counted, not references or patching.",
+      "label": "Constructing SQL"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "validate_sql_query",
+      "thought": null,
+      "label": "Validating SQL and intent"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "validate_sql_query",
+      "thought": "The SQL answers the question: it starts from class_bases, filters to classes whose base_symbol_id is BaseAgent in the specified file, restricts to non-test class definitions via symbol_profile, and uses EXISTS/NOT EXISTS on call_edges with calls_directly = TRUE to require a non-test direct call and prohibit any test direct call. The join between class_bases.class_symbol_id and symbol_profile.symbol_id is plausible for filtering class metadata. No clearly wrong aggregation is present; the query returns one distinct column as requested. The callee_kind = 'class' filter and LIKE prefix are not fatal for this request. No critical join or aggregation problem is present.",
+      "label": "Validating SQL and intent"
+    },
+    {
+      "type": "sql",
+      "node": "validate_sql_query",
+      "sql": "SELECT DISTINCT cb.class_symbol_id AS class_symbol_id\nFROM auto_ontology_code.code.class_bases AS cb\nJOIN auto_ontology_code.code.symbol_profile AS sp\n  ON sp.symbol_id = cb.class_symbol_id\n AND sp.is_class = TRUE\n AND sp.in_test_file = FALSE\nWHERE cb.base_symbol_id LIKE 'auto_ontology/retrieval/text_to_sql/base.py::BaseAgent%'\nAND EXISTS (\n  SELECT 1\n  FROM auto_ontology_code.code.call_edges AS ce\n  WHERE ce.callee_symbol_id = cb.class_symbol_id\n    AND ce.calls_directly = TRUE\n    AND ce.caller_in_test_file = FALSE\n    AND ce.callee_kind = 'class'\n)\nAND NOT EXISTS (\n  SELECT 1\n  FROM auto_ontology_code.code.call_edges AS ce2\n  WHERE ce2.callee_symbol_id = cb.class_symbol_id\n    AND ce2.calls_directly = TRUE\n    AND ce2.caller_in_test_file = TRUE\n    AND ce2.callee_kind = 'class'\n)\nORDER BY cb.class_symbol_id;"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "execute_sql_query",
+      "thought": null,
+      "label": "Executing SQL"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "execute_sql_query",
+      "thought": null,
+      "label": "Executing SQL"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "check_empty_like_result",
+      "thought": null,
+      "label": "Checking results"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "check_empty_like_result",
+      "thought": null,
+      "label": "Checking results"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "check_value_repair",
+      "thought": null,
+      "label": "Checking values"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "check_value_repair",
+      "thought": null,
+      "label": "Checking values"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "format_and_respond",
+      "thought": null,
+      "label": "Formatting response"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "format_and_respond",
+      "thought": null,
+      "label": "Formatting response"
+    },
+    {
+      "type": "result",
+      "answer": {
+        "response": "This query finds agent classes that directly inherit from BaseAgent in the text-to-SQL base module and are defined in non-test files. It keeps only classes that are directly constructed somewhere in non-test code and excludes any class that is directly constructed in test code. The result is a distinct list of class symbol IDs, ordered alphabetically.",
+        "sql_code": "SELECT DISTINCT cb.class_symbol_id AS class_symbol_id\nFROM auto_ontology_code.code.class_bases AS cb\nJOIN auto_ontology_code.code.symbol_profile AS sp\n  ON sp.symbol_id = cb.class_symbol_id\n AND sp.is_class = TRUE\n AND sp.in_test_file = FALSE\nWHERE cb.base_symbol_id LIKE 'auto_ontology/retrieval/text_to_sql/base.py::BaseAgent%'\nAND EXISTS (\n  SELECT 1\n  FROM auto_ontology_code.code.call_edges AS ce\n  WHERE ce.callee_symbol_id = cb.class_symbol_id\n    AND ce.calls_directly = TRUE\n    AND ce.caller_in_test_file = FALSE\n    AND ce.callee_kind = 'class'\n)\nAND NOT EXISTS (\n  SELECT 1\n  FROM auto_ontology_code.code.call_edges AS ce2\n  WHERE ce2.callee_symbol_id = cb.class_symbol_id\n    AND ce2.calls_directly = TRUE\n    AND ce2.caller_in_test_file = TRUE\n    AND ce2.callee_kind = 'class'\n)\nORDER BY cb.class_symbol_id;",
+        "sql_columns": [
+          "676d746c-8561-4cef-9089-5664266ec41a",
+          "6c7dd796-2c19-48ca-9d05-89b70eb1dac3",
+          "724221b5-2526-43ed-b5f5-de43bdf0e4e4",
+          "32da5b14-0aa6-4574-9e5d-8367da4fd7d5",
+          "3987ecdb-ebe2-4a2f-8f31-66df295cbb2b",
+          "9a167a46-f777-4222-881c-1196f4082b7f",
+          "0fd59059-a2b1-4586-af08-1302cfe429bf",
+          "e1b6dfb5-6fa5-4861-a249-bb5c479f6272",
+          "f3b63582-3f33-4010-9a27-26d839c279ab"
+        ],
+        "custom_analyses_used": [],
+        "sql_response_from_db": [
+          "[{\"class_symbol_id\":\"auto_ontology\\/retrieval\\/entity_coverage\\/agents\\/coverage.py::CoverageGradeAgent\"},{\"class_symbol_id\":\"auto_ontology\\/retrieval\\/text_to_sql\\/agents\\/empty_like_result_check.py::EmptyLikeResultCheckAgent\"},{\"class_symbol_id\":\"auto_ontology\\/retrieval\\/text_to_sql\\/agents\\/join_path_check.py::JoinPathCheckAgent\"},{\"class_symbol_id\":\"auto_ontology\\/retrieval\\/text_to_sql\\/agents\\/jsonb_path_check.py::JsonbPathCheckAgent\"},{\"class_symbol_id\":\"auto_ontology\\/retrieval\\/text_to_sql\\/agents\\/kumo_prediction.py::KumoPredictionAgent\"},{\"class_symbol_id\":\"auto_ontology\\/retrieval\\/text_to_sql\\/agents\\/prediction_graph.py::PredictionGraphAgent\"},{\"class_symbol_id\":\"auto_ontology\\/retrieval\\/text_to_sql\\/agents\\/proactive_value_check.py::ProactiveValueCheckAgent\"},{\"class_symbol_id\":\"auto_ontology\\/retrieval\\/text_to_sql\\/agents\\/response.py::ResponseAgent\"}]"
+        ],
+        "thoughts": "- Preparing candidates: The question asks to return distinct class_symbol_id values, which map to code.symbol_profile.symbol_id, the unique identifier for a code symbol.\n- Refining evidence: The evidence defines \"Test code\" and \"Constructed\". I ground test/non-test construction to `code`.`call_edges`.`caller_in_test_file` together with direct-call semantics from `code`.`call_edges`.`calls_directly`, and ground the requested return field `class_symbol_id` to `code`.`class_bases`.`class_symbol_id`. Other subclass wording is left unchanged because it is not further mapped by the evidence.\n- Refining evidence: No certain repair is supported by a value anchor or verified sample value; all string scalars, constants, and predicates in the evidence and sanitized question remain valid.\n- Constructing SQL: The query identifies classes that directly subclass BaseAgent from auto_ontology/retrieval/text_to_sql/base.py by matching class_bases.base_symbol_id to that base symbol (using LIKE to tolerate an optional @L suffix). It restricts to classes defined in non-test files via symbol_profile.in_test_file = FALSE and is_class = TRUE. Construction in non-test code is required through an EXISTS on call_edges with calls_directly = TRUE, caller_in_test_file = FALSE, and callee_kind = 'class'. No construction in test code is enforced with NOT EXISTS on call_edges with calls_directly = TRUE, caller_in_test_file = TRUE, and callee_kind = 'class'. Assumptions: (1) time window — none, because the question has no time dimension; (2) zero/missing values — no zero-count or NULL groups are needed, and EXISTS/NOT EXISTS naturally exclude missing construction edges; (3) ties — not applicable, since the query returns a distinct set of class symbol IDs. The callee_kind = 'class' filter ensures only constructor calls are counted, not references or patching.\n- Validating SQL and intent: The SQL answers the question: it starts from class_bases, filters to classes whose base_symbol_id is BaseAgent in the specified file, restricts to non-test class definitions via symbol_profile, and uses EXISTS/NOT EXISTS on call_edges with calls_directly = TRUE to require a non-test direct call and prohibit any test direct call. The join between class_bases.class_symbol_id and symbol_profile.symbol_id is plausible for filtering class metadata. No clearly wrong aggregation is present; the query returns one distinct column as requested. The callee_kind = 'class' filter and LIKE prefix are not fatal for this request. No critical join or aggregation problem is present."
+      }
+    }
+  ],
+  "question_id": 4,
+  "gold_sql": "SELECT b.class_symbol_id FROM code.class_bases b JOIN code.symbols s ON s.symbol_id = b.class_symbol_id JOIN code.files f ON f.file_id = s.file_id WHERE b.base_symbol_id = 'auto_ontology/retrieval/text_to_sql/base.py::BaseAgent' AND NOT f.is_test AND EXISTS (SELECT 1 FROM code.calls c JOIN code.symbols cs ON cs.symbol_id = c.caller_symbol_id JOIN code.files cf ON cf.file_id = cs.file_id WHERE c.callee_symbol_id = b.class_symbol_id AND c.call_kind = 'direct' AND NOT cf.is_test) AND NOT EXISTS (SELECT 1 FROM code.calls c JOIN code.symbols cs ON cs.symbol_id = c.caller_symbol_id JOIN code.files cf ON cf.file_id = cs.file_id WHERE c.callee_symbol_id = b.class_symbol_id AND c.call_kind = 'direct' AND cf.is_test) ORDER BY 1",
+  "gold_row_count": 1,
+  "agent_sql": "SELECT DISTINCT cb.class_symbol_id AS class_symbol_id\nFROM auto_ontology_code.code.class_bases AS cb\nJOIN auto_ontology_code.code.symbol_profile AS sp\n  ON sp.symbol_id = cb.class_symbol_id\n AND sp.is_class = TRUE\n AND sp.in_test_file = FALSE\nWHERE cb.base_symbol_id LIKE 'auto_ontology/retrieval/text_to_sql/base.py::BaseAgent%'\nAND EXISTS (\n  SELECT 1\n  FROM auto_ontology_code.code.call_edges AS ce\n  WHERE ce.callee_symbol_id = cb.class_symbol_id\n    AND ce.calls_directly = TRUE\n    AND ce.caller_in_test_file = FALSE\n    AND ce.callee_kind = 'class'\n)\nAND NOT EXISTS (\n  SELECT 1\n  FROM auto_ontology_code.code.call_edges AS ce2\n  WHERE ce2.callee_symbol_id = cb.class_symbol_id\n    AND ce2.calls_directly = TRUE\n    AND ce2.caller_in_test_file = TRUE\n    AND ce2.callee_kind = 'class'\n)\nORDER BY cb.class_symbol_id;",
+  "agent_answer": "This query finds agent classes that directly inherit from BaseAgent in the text-to-SQL base module and are defined in non-test files. It keeps only classes that are directly constructed somewhere in non-test code and excludes any class that is directly constructed in test code. The result is a distinct list of class symbol IDs, ordered alphabetically.",
+  "agent_row_count": 8,
+  "correct_rows": false,
+  "error": null
+}

@@ -1,0 +1,250 @@
+{
+  "request": {
+    "question": "Which five functions in the data-access layer are used most widely by the rest of the codebase? Consider module-level functions (not methods or classes) defined in non-test files under auto_ontology/dal/, excluding auto_ontology/dal/session.py. Rank them by the number of distinct functions or methods that call them directly, counting only callers that are in non-test files (every file under a tests/ folder is test code) located outside auto_ontology/dal/. Calls through a module alias (e.g. `dal.fetch_databases()` after `from auto_ontology.dal import datasources as dal`) or an import alias count; a function passed by reference without being called does not. Highest count first; break ties by symbol ID ascending and return exactly five rows. Return the symbol ID and the caller count.\n\nRequested output columns: symbol_id (string), caller_count (integer).\nReturn exactly the requested output columns, using each requested name as the column alias, in the requested order. Return complete repository-relative file paths and complete symbol IDs exactly as stored. When the question asks which files, symbols or modules, return each distinct one once unless it asks for occurrences.\nOrder the rows as the question asks.",
+    "calculation_only": true
+  },
+  "status": 200,
+  "elapsed_s": 307.3,
+  "events": [
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "question_intent",
+      "thought": null,
+      "label": "Classifying the question"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "question_intent",
+      "thought": null,
+      "label": "Classifying the question"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "question_extraction",
+      "thought": null,
+      "label": "Understanding the question"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "question_extraction",
+      "thought": null,
+      "label": "Understanding the question"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "retrieve_candidates",
+      "thought": null,
+      "label": "Retrieving candidates"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "retrieve_candidates",
+      "thought": null,
+      "label": "Retrieving candidates"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "prepare_candidates",
+      "thought": null,
+      "label": "Preparing candidates"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "prepare_candidates",
+      "thought": "The needed query path is: `symbols` to identify module-level target functions and their complete `symbol_id`s, `files` to enforce that the target file is non-test, and `call_edges` to filter direct callers by caller kind, non-test status, and caller location outside `auto_ontology/dal/`, then count distinct callers. The other candidate tables either duplicate already-covered filters or are unrelated to this call-count query.",
+      "label": "Preparing candidates"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "refine_evidence",
+      "thought": null,
+      "label": "Refining evidence"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "refine_evidence",
+      "thought": "No certain repair applies. The evidence line contains only counting instructions and no scalar/operator value contradicted by the question or value anchors. The question's paths and numeric limits are consistent with the supplied table descriptions and sample values.",
+      "label": "Refining evidence"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "construct_sql_from_candidates",
+      "thought": null,
+      "label": "Constructing SQL"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "construct_sql_from_candidates",
+      "thought": "Module-level functions are identified as symbols with kind 'function' and no dot in qualname, because methods/classes are represented by other kinds and nested functions would contain dots. Non-test targets use files.is_test = FALSE, and non-test callers use call_edges.caller_in_test_file = FALSE. Direct calls use calls_directly = TRUE; callers are restricted to function or method kinds and to files outside auto_ontology/dal/ by caller_file_id prefix. Functions with no direct callers are excluded rather than coerced to zero, since only the top used functions matter. Ties are broken by symbol_id ascending as requested.",
+      "label": "Constructing SQL"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "validate_sql_query",
+      "thought": null,
+      "label": "Validating SQL and intent"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "validate_sql_query",
+      "thought": "The query answers the question with a sound structure: it starts from `symbols` restricted to `kind='function'`, `qualname NOT LIKE '%.%'` (module-level, excluding methods/classes), non-test files (`files.is_test = FALSE`), under `auto_ontology/dal/`, excluding `session.py`. It joins `call_edges` on the verified bridge `call_edges.callee_symbol_id = symbols.symbol_id`, filters `calls_directly = TRUE` (direct calls only), restricts callers to non-test files outside the DAL (`caller_in_test_file = FALSE`, `caller_file_id NOT LIKE 'auto_ontology/dal/%'`), and counts distinct `caller_symbol_id` — exactly the requested 'distinct callers' metric. The `symbols.file_id = files.file_id` join is a verified path in the evidence. The aggregation is `COUNT(DISTINCT caller_symbol_id)`, which matches the requested caller count (no SUM/other substitution). Ordering (`caller_count DESC, symbol_id ASC`) and `LIMIT 5` match the requested ranking and row count, and the output aliases/order (`symbol_id`, `caller_count`) match the requested columns. No evidence-defined value, filter, or formula is contradicted.",
+      "label": "Validating SQL and intent"
+    },
+    {
+      "type": "sql",
+      "node": "validate_sql_query",
+      "sql": "SELECT s.symbol_id AS symbol_id, COUNT(DISTINCT ce.caller_symbol_id) AS caller_count FROM symbols AS s JOIN files AS f ON s.file_id = f.file_id JOIN call_edges AS ce ON ce.callee_symbol_id = s.symbol_id WHERE s.kind = 'function' AND s.qualname NOT LIKE '%.%' AND f.is_test = FALSE AND s.file_id LIKE 'auto_ontology/dal/%' AND s.file_id <> 'auto_ontology/dal/session.py' AND ce.calls_directly = TRUE AND ce.caller_kind IN ('function', 'method') AND ce.caller_in_test_file = FALSE AND ce.caller_file_id NOT LIKE 'auto_ontology/dal/%' GROUP BY s.symbol_id ORDER BY caller_count DESC, s.symbol_id ASC LIMIT 5;"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "execute_sql_query",
+      "thought": null,
+      "label": "Executing SQL"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "execute_sql_query",
+      "thought": "Query failed, rewriting it: Catalog Error: Table with name symbols does not exist! Did you mean \"code.symbols\"? LINE 1: ..., COUNT(DISTINCT ce.caller_symbol_id) AS caller_count FROM symbols AS s JOIN files AS f ON s.file_id = f.file_id JOIN... ^",
+      "label": "Executing SQL"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "reconstruct_sql",
+      "thought": null,
+      "label": "Reconstructing SQL"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "reconstruct_sql",
+      "thought": "The logic of the previous query remains valid; only the physical table references had to change because the underlying tables live in the code schema, so the symbols, files and call-edges tables are now referenced with that schema. Remaining assumptions: (1) module-level functions = symbols with kind 'function' and a bare qualified name containing no dot, because methods and nested/class-level functions carry a dotted qualified name and methods/classes have their own kinds; (2) target scope = file path starting with auto_ontology/dal/, restricted to non-test rows of the files table, and excluding auto_ontology/dal/session.py by exact path; (3) direct calls only = calls_directly true, so pure by-reference/callback passing is excluded, while alias-based calls are still recorded as direct calls and therefore count; (4) callers = rows whose caller kind is function or method, flagged not in a test file, and whose caller file path is outside auto_ontology/dal/; (5) counting = distinct caller symbol IDs, so one caller calling the same function many times counts once and a caller calling through several aliases still counts once per caller symbol; (6) zero-caller functions are excluded (INNER JOIN) rather than shown as 0, since only the most-used functions matter and no division is involved; (7) ties in the ranking are broken by symbol ID ascending, and exactly five rows are returned.",
+      "label": "Reconstructing SQL"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "validate_sql_query",
+      "thought": null,
+      "label": "Validating SQL and intent"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "validate_sql_query",
+      "thought": "The SQL correctly targets module-level functions in auto_ontology/dal/ by filtering symbols to kind = 'function', excluding names with dots to avoid methods/classes/nested functions, excluding test files, and excluding auto_ontology/dal/session.py. It counts distinct direct callers using call_edges with calls_directly = TRUE, counts only caller functions/methods, excludes test-file callers and callers inside auto_ontology/dal/, orders by caller_count descending with symbol_id ascending as the tie-breaker, and limits to five rows. The requested output columns and aliases are present. No critical join or aggregation issue is present.",
+      "label": "Validating SQL and intent"
+    },
+    {
+      "type": "sql",
+      "node": "validate_sql_query",
+      "sql": "SELECT s.symbol_id AS symbol_id, COUNT(DISTINCT ce.caller_symbol_id) AS caller_count FROM code.symbols AS s JOIN code.files AS f ON s.file_id = f.file_id JOIN code.call_edges AS ce ON ce.callee_symbol_id = s.symbol_id WHERE s.kind = 'function' AND s.qualname NOT LIKE '%.%' AND f.is_test = FALSE AND s.file_id LIKE 'auto_ontology/dal/%' AND s.file_id <> 'auto_ontology/dal/session.py' AND ce.calls_directly = TRUE AND ce.caller_kind IN ('function', 'method') AND ce.caller_in_test_file = FALSE AND ce.caller_file_id NOT LIKE 'auto_ontology/dal/%' GROUP BY s.symbol_id ORDER BY caller_count DESC, s.symbol_id ASC LIMIT 5;"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "execute_sql_query",
+      "thought": null,
+      "label": "Executing SQL"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "execute_sql_query",
+      "thought": null,
+      "label": "Executing SQL"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "check_empty_like_result",
+      "thought": null,
+      "label": "Checking results"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "check_empty_like_result",
+      "thought": null,
+      "label": "Checking results"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "check_value_repair",
+      "thought": null,
+      "label": "Checking values"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "check_value_repair",
+      "thought": null,
+      "label": "Checking values"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "format_and_respond",
+      "thought": null,
+      "label": "Formatting response"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "format_and_respond",
+      "thought": null,
+      "label": "Formatting response"
+    },
+    {
+      "type": "result",
+      "answer": {
+        "response": "This ranks the module-level functions defined in the data-access layer (excluding the session module) by how many distinct functions or methods elsewhere in the non-test codebase call them directly. Call records are used to keep only direct calls made by functions or methods in non-test files outside the data-access package, then the distinct callers are counted per function. The results show the five most widely used functions, highest caller count first, with ties broken by symbol ID.",
+        "sql_code": "SELECT s.symbol_id AS symbol_id, COUNT(DISTINCT ce.caller_symbol_id) AS caller_count FROM code.symbols AS s JOIN code.files AS f ON s.file_id = f.file_id JOIN code.call_edges AS ce ON ce.callee_symbol_id = s.symbol_id WHERE s.kind = 'function' AND s.qualname NOT LIKE '%.%' AND f.is_test = FALSE AND s.file_id LIKE 'auto_ontology/dal/%' AND s.file_id <> 'auto_ontology/dal/session.py' AND ce.calls_directly = TRUE AND ce.caller_kind IN ('function', 'method') AND ce.caller_in_test_file = FALSE AND ce.caller_file_id NOT LIKE 'auto_ontology/dal/%' GROUP BY s.symbol_id ORDER BY caller_count DESC, s.symbol_id ASC LIMIT 5;",
+        "sql_columns": [
+          "8291a9b9-b175-41dd-9aca-4b3bfd3ca544",
+          "5c084e25-083a-4c6b-8727-ac5caa8b83e2",
+          "63db06d4-0ead-44b9-adfb-b3bc03cb014c",
+          "a581e842-04f8-4bdb-9f9b-866b0a31a702",
+          "622fbc5c-7e53-4541-b286-e7491a04f1b1",
+          "316956ff-0e86-4a13-a2e5-e8f627f8ad48",
+          "87088250-39bf-4c24-b0e2-b60968dcb3bd",
+          "2d14a18d-2556-4928-a3f2-720dbddb0411",
+          "7b73cd62-ba52-4818-8f7e-249f325e1ce5",
+          "1b811314-a6e5-47ba-af9c-490b60df848c",
+          "685e5e64-bb9f-4d0f-ba54-c49520b13882",
+          "d7a455bf-2e57-4006-ab8d-5579adf335a9"
+        ],
+        "custom_analyses_used": [],
+        "sql_response_from_db": [
+          "[{\"symbol_id\":\"auto_ontology\\/dal\\/owners.py::edit_subject\",\"caller_count\":9},{\"symbol_id\":\"auto_ontology\\/dal\\/connections.py::list_connections\",\"caller_count\":8},{\"symbol_id\":\"auto_ontology\\/dal\\/datasources.py::fetch_databases\",\"caller_count\":8},{\"symbol_id\":\"auto_ontology\\/dal\\/datasources.py::fetch_schemas_for_database\",\"caller_count\":7},{\"symbol_id\":\"auto_ontology\\/dal\\/datasources.py::fetch_schemas_by_ids\",\"caller_count\":6}]"
+        ],
+        "thoughts": "- Preparing candidates: The question asks to rank module-level functions by how many distinct callers call them and return caller_count. The decisive metric column is code.inbound_call_counts.distinct_callers, which stores the number of distinct callers for a code entity. Other listed columns (kind, symbol_id, directory, package, is_test) are filters/identifiers, not the primary measured subject.\n- Preparing candidates: The needed query path is: `symbols` to identify module-level target functions and their complete `symbol_id`s, `files` to enforce that the target file is non-test, and `call_edges` to filter direct callers by caller kind, non-test status, and caller location outside `auto_ontology/dal/`, then count distinct callers. The other candidate tables either duplicate already-covered filters or are unrelated to this call-count query.\n- Refining evidence: No certain repair applies. The evidence line contains only counting instructions and no scalar/operator value contradicted by the question or value anchors. The question's paths and numeric limits are consistent with the supplied table descriptions and sample values.\n- Constructing SQL: Module-level functions are identified as symbols with kind 'function' and no dot in qualname, because methods/classes are represented by other kinds and nested functions would contain dots. Non-test targets use files.is_test = FALSE, and non-test callers use call_edges.caller_in_test_file = FALSE. Direct calls use calls_directly = TRUE; callers are restricted to function or method kinds and to files outside auto_ontology/dal/ by caller_file_id prefix. Functions with no direct callers are excluded rather than coerced to zero, since only the top used functions matter. Ties are broken by symbol_id ascending as requested.\n- Validating SQL and intent: The query answers the question with a sound structure: it starts from `symbols` restricted to `kind='function'`, `qualname NOT LIKE '%.%'` (module-level, excluding methods/classes), non-test files (`files.is_test = FALSE`), under `auto_ontology/dal/`, excluding `session.py`. It joins `call_edges` on the verified bridge `call_edges.callee_symbol_id = symbols.symbol_id`, filters `calls_directly = TRUE` (direct calls only), restricts callers to non-test files outside the DAL (`caller_in_test_file = FALSE`, `caller_file_id NOT LIKE 'auto_ontology/dal/%'`), and counts distinct `caller_symbol_id` — exactly the requested 'distinct callers' metric. The `symbols.file_id = files.file_id` join is a verified path in the evidence. The aggregation is `COUNT(DISTINCT caller_symbol_id)`, which matches the requested caller count (no SUM/other substitution). Ordering (`caller_count DESC, symbol_id ASC`) and `LIMIT 5` match the requested ranking and row count, and the output aliases/order (`symbol_id`, `caller_count`) match the requested columns. No evidence-defined value, filter, or formula is contradicted.\n- Executing SQL: Query failed, rewriting it: Catalog Error: Table with name symbols does not exist! Did you mean \"code.symbols\"? LINE 1: ..., COUNT(DISTINCT ce.caller_symbol_id) AS caller_count FROM symbols AS s JOIN files AS f ON s.file_id = f.file_id JOIN... ^\n- Reconstructing SQL: The query failed because it referenced an unqualified table name `symbols`, while the actual catalog table is `code.symbols`. This is a schema-qualification/syntax issue, not missing data; the same schema and tables can answer the question after qualifying table names.\n- Reconstructing SQL: The logic of the previous query remains valid; only the physical table references had to change because the underlying tables live in the code schema, so the symbols, files and call-edges tables are now referenced with that schema. Remaining assumptions: (1) module-level functions = symbols with kind 'function' and a bare qualified name containing no dot, because methods and nested/class-level functions carry a dotted qualified name and methods/classes have their own kinds; (2) target scope = file path starting with auto_ontology/dal/, restricted to non-test rows of the files table, and excluding auto_ontology/dal/session.py by exact path; (3) direct calls only = calls_directly true, so pure by-reference/callback passing is excluded, while alias-based calls are still recorded as direct calls and therefore count; (4) callers = rows whose caller kind is function or method, flagged not in a test file, and whose caller file path is outside auto_ontology/dal/; (5) counting = distinct caller symbol IDs, so one caller calling the same function many times counts once and a caller calling through several aliases still counts once per caller symbol; (6) zero-caller functions are excluded (INNER JOIN) rather than shown as 0, since only the most-used functions matter and no division is involved; (7) ties in the ranking are broken by symbol ID ascending, and exactly five rows are returned.\n- Validating SQL and intent: The SQL correctly targets module-level functions in auto_ontology/dal/ by filtering symbols to kind = 'function', excluding names with dots to avoid methods/classes/nested functions, excluding test files, and excluding auto_ontology/dal/session.py. It counts distinct direct callers using call_edges with calls_directly = TRUE, counts only caller functions/methods, excludes test-file callers and callers inside auto_ontology/dal/, orders by caller_count descending with symbol_id ascending as the tie-breaker, and limits to five rows. The requested output columns and aliases are present. No critical join or aggregation issue is present."
+      }
+    }
+  ],
+  "question_id": 8,
+  "gold_sql": "SELECT c.callee_symbol_id AS symbol_id, COUNT(DISTINCT c.caller_symbol_id) AS caller_count FROM code.calls c JOIN code.symbols cs ON cs.symbol_id = c.caller_symbol_id JOIN code.files cf ON cf.file_id = cs.file_id JOIN code.symbols t ON t.symbol_id = c.callee_symbol_id JOIN code.files tf ON tf.file_id = t.file_id WHERE c.call_kind = 'direct' AND NOT cf.is_test AND cs.kind IN ('function', 'method') AND cs.file_id NOT LIKE 'auto_ontology/dal/%' AND t.kind = 'function' AND t.file_id LIKE 'auto_ontology/dal/%' AND NOT tf.is_test AND t.file_id <> 'auto_ontology/dal/session.py' GROUP BY 1 ORDER BY 2 DESC, 1 LIMIT 5",
+  "gold_row_count": 1,
+  "agent_sql": "SELECT s.symbol_id AS symbol_id, COUNT(DISTINCT ce.caller_symbol_id) AS caller_count FROM code.symbols AS s JOIN code.files AS f ON s.file_id = f.file_id JOIN code.call_edges AS ce ON ce.callee_symbol_id = s.symbol_id WHERE s.kind = 'function' AND s.qualname NOT LIKE '%.%' AND f.is_test = FALSE AND s.file_id LIKE 'auto_ontology/dal/%' AND s.file_id <> 'auto_ontology/dal/session.py' AND ce.calls_directly = TRUE AND ce.caller_kind IN ('function', 'method') AND ce.caller_in_test_file = FALSE AND ce.caller_file_id NOT LIKE 'auto_ontology/dal/%' GROUP BY s.symbol_id ORDER BY caller_count DESC, s.symbol_id ASC LIMIT 5;",
+  "agent_answer": "This ranks the module-level functions defined in the data-access layer (excluding the session module) by how many distinct functions or methods elsewhere in the non-test codebase call them directly. Call records are used to keep only direct calls made by functions or methods in non-test files outside the data-access package, then the distinct callers are counted per function. The results show the five most widely used functions, highest caller count first, with ties broken by symbol ID.",
+  "agent_row_count": 5,
+  "correct_rows": false,
+  "error": null
+}

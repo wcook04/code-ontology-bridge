@@ -1,0 +1,34 @@
+{
+  "question_id": "ao-07",
+  "arm": "C-semantics",
+  "model": "deepseek/deepseek-v4.1-flash-1017",
+  "error": null,
+  "elapsed_s": 168.1,
+  "attempts": [
+    {
+      "sql": "SELECT DISTINCT s.symbol_id AS symbol_id FROM auto_ontology_code.code.symbols AS s WHERE s.kind IN ('function', 'method') AND s.file_id NOT LIKE 'auto_ontology/dal/%' AND s.file_id NOT LIKE 'tests/%' AND s.file_id NOT LIKE '%/tests/%' AND EXISTS (SELECT 1 FROM auto_ontology_code.code.calls AS cwt JOIN auto_ontology_code.code.symbols AS swt ON cwt.callee_symbol_id = swt.symbol_id WHERE cwt.caller_symbol_id = s.symbol_id AND cwt.call_kind = 'direct' AND swt.file_id = 'auto_ontology/dal/session.py' AND swt.name = 'write_transaction') AND NOT EXISTS (SELECT 1 FROM auto_ontology_code.code.calls AS cst JOIN auto_ontology_code.code.symbols AS sst ON cst.callee_symbol_id = sst.symbol_id WHERE cst.caller_symbol_id = s.symbol_id AND cst.call_kind = 'direct' AND sst.file_id = 'auto_ontology/dal/session.py' AND sst.name = 'store') ORDER BY s.symbol_id"
+    }
+  ],
+  "usage": {},
+  "request": "auto_ontology/dal/session.py provides store() (the active connection handle) and write_transaction() (a context manager that groups store() queries into one transaction). Outside the auto_ontology/dal/ folder, and excluding test code (every file under a tests/ folder), which functions or methods open a transaction themselves by calling write_transaction directly (e.g. `with write_transaction():`) but never call store() directly anywhere in their own body? Only direct calls count; calls made by helpers they invoke do not. Return their symbol IDs.\n\nRequested output columns: symbol_id (string).\nReturn exactly the requested output columns, using each requested name as the column alias, in the requested order. Return complete repository-relative file paths and complete symbol IDs exactly as stored. When the question asks which files, symbols or modules, return each distinct one once unless it asks for occurrences.",
+  "explanation": "This returns the distinct symbols for functions and methods outside the data-access layer and outside any tests folder that directly call write_transaction but have no direct call to store. It checks caller-to-callee call relationships, restricts to direct calls, and uses the symbol definitions in the session module to identify write_transaction and store. Results are deduplicated and ordered by symbol ID.",
+  "sql": "SELECT DISTINCT s.symbol_id AS symbol_id FROM auto_ontology_code.code.symbols AS s WHERE s.kind IN ('function', 'method') AND s.file_id NOT LIKE 'auto_ontology/dal/%' AND s.file_id NOT LIKE 'tests/%' AND s.file_id NOT LIKE '%/tests/%' AND EXISTS (SELECT 1 FROM auto_ontology_code.code.calls AS cwt JOIN auto_ontology_code.code.symbols AS swt ON cwt.callee_symbol_id = swt.symbol_id WHERE cwt.caller_symbol_id = s.symbol_id AND cwt.call_kind = 'direct' AND swt.file_id = 'auto_ontology/dal/session.py' AND swt.name = 'write_transaction') AND NOT EXISTS (SELECT 1 FROM auto_ontology_code.code.calls AS cst JOIN auto_ontology_code.code.symbols AS sst ON cst.callee_symbol_id = sst.symbol_id WHERE cst.caller_symbol_id = s.symbol_id AND cst.call_kind = 'direct' AND sst.file_id = 'auto_ontology/dal/session.py' AND sst.name = 'store') ORDER BY s.symbol_id",
+  "rows": [
+    {
+      "symbol_id": "auto_ontology/catalog/store/schemas.py::add_schemas_edge"
+    },
+    {
+      "symbol_id": "auto_ontology/catalog/write.py::populate_fks"
+    },
+    {
+      "symbol_id": "auto_ontology/catalog/write.py::populate_pks"
+    },
+    {
+      "symbol_id": "auto_ontology/server/rules/router.py::create_rule"
+    },
+    {
+      "symbol_id": "auto_ontology/server/tags/router.py::detach_tag"
+    }
+  ],
+  "source_record": "run/responses/10i_ask_with_key/ask_q7.json"
+}

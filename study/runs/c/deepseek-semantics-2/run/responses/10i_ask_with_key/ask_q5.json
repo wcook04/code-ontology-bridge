@@ -1,0 +1,196 @@
+{
+  "request": {
+    "question": "Which non-test Python files anywhere in the repository (including folders outside the auto_ontology package, such as dev_tools/) but outside the auto_ontology/connectors/ folder import anything from the connectors package (auto_ontology.connectors itself or any of its modules)? Count every import statement, including imports placed inside functions and imports under an `if TYPE_CHECKING:` guard; mentions in comments or docstrings are not imports. Every file under a tests/ folder is test code and is excluded. Return repository-relative file paths.\n\nRequested output columns: file_path (string).\nReturn exactly the requested output columns, using each requested name as the column alias, in the requested order. Return complete repository-relative file paths and complete symbol IDs exactly as stored. When the question asks which files, symbols or modules, return each distinct one once unless it asks for occurrences.",
+    "calculation_only": true
+  },
+  "status": 200,
+  "elapsed_s": 202.0,
+  "events": [
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "question_intent",
+      "thought": null,
+      "label": "Classifying the question"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "question_intent",
+      "thought": null,
+      "label": "Classifying the question"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "question_extraction",
+      "thought": null,
+      "label": "Understanding the question"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "question_extraction",
+      "thought": null,
+      "label": "Understanding the question"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "retrieve_candidates",
+      "thought": null,
+      "label": "Retrieving candidates"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "retrieve_candidates",
+      "thought": null,
+      "label": "Retrieving candidates"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "prepare_candidates",
+      "thought": null,
+      "label": "Preparing candidates"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "prepare_candidates",
+      "thought": "The question reduces to: find import records whose imported module/package is connectors, then return the importer files that are not tests. `code.imports` supplies the import target (`module_name` / `imported_file_id`) and importer `file_id`; `code.files` supplies the importer path and `is_test` filter. The join path is direct: `code.imports.file_id -> code.files.file_id`.",
+      "label": "Preparing candidates"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "refine_evidence",
+      "thought": null,
+      "label": "Refining evidence"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "refine_evidence",
+      "thought": "No certain repair is supported by the supplied question, value anchors, or fallback samples.",
+      "label": "Refining evidence"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "construct_sql_from_candidates",
+      "thought": null,
+      "label": "Constructing SQL"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "construct_sql_from_candidates",
+      "thought": "The question asks for files, so I project each matching importer file once with DISTINCT. I start from import statements in code.imports and join each to code.files via i.file_id = f.file_id. I restrict importers to non-test Python files using f.is_test = false and a .py path check, and exclude files under auto_ontology/connectors/ with NOT LIKE. I match connector imports by module_name equal to or prefixed by auto_ontology.connectors, and also by imported_file_id under auto_ontology/connectors/ to catch forms such as from auto_ontology import connectors. No aggregation or division is involved, and no tie-breaking is needed.",
+      "label": "Constructing SQL"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "validate_sql_query",
+      "thought": null,
+      "label": "Validating SQL and intent"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "validate_sql_query",
+      "thought": "The SQL correctly filters non-test Python files outside auto_ontology/connectors/ and identifies imports from the connectors package via module_name or imported_file_id, returning distinct file paths as requested.",
+      "label": "Validating SQL and intent"
+    },
+    {
+      "type": "sql",
+      "node": "validate_sql_query",
+      "sql": "SELECT DISTINCT f.file_id AS file_path FROM code.imports AS i JOIN code.files AS f ON i.file_id = f.file_id WHERE f.is_test = false AND f.file_id LIKE '%.py' AND f.file_id NOT LIKE 'auto_ontology/connectors/%' AND (i.module_name = 'auto_ontology.connectors' OR i.module_name LIKE 'auto_ontology.connectors.%' OR i.imported_file_id LIKE 'auto_ontology/connectors/%') ORDER BY file_path;"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "execute_sql_query",
+      "thought": null,
+      "label": "Executing SQL"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "execute_sql_query",
+      "thought": null,
+      "label": "Executing SQL"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "check_empty_like_result",
+      "thought": null,
+      "label": "Checking results"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "check_empty_like_result",
+      "thought": null,
+      "label": "Checking results"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "check_value_repair",
+      "thought": null,
+      "label": "Checking values"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "check_value_repair",
+      "thought": null,
+      "label": "Checking values"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "format_and_respond",
+      "thought": null,
+      "label": "Formatting response"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "format_and_respond",
+      "thought": null,
+      "label": "Formatting response"
+    },
+    {
+      "type": "result",
+      "answer": {
+        "response": "This returns the distinct repository-relative paths of non-test Python files outside the connectors folder that import the connectors package or any of its modules. It joins import records to their importing files, excludes test files and files under the connectors directory, and treats both direct package imports and imports of connector submodules as matches.",
+        "sql_code": "SELECT DISTINCT f.file_id AS file_path FROM code.imports AS i JOIN code.files AS f ON i.file_id = f.file_id WHERE f.is_test = false AND f.file_id LIKE '%.py' AND f.file_id NOT LIKE 'auto_ontology/connectors/%' AND (i.module_name = 'auto_ontology.connectors' OR i.module_name LIKE 'auto_ontology.connectors.%' OR i.imported_file_id LIKE 'auto_ontology/connectors/%') ORDER BY file_path;",
+        "sql_columns": [
+          "a4fcf3a0-72ef-4089-87e0-f3189b40c9a1",
+          "ecc7fa40-0896-4b3b-bd42-4caa4a53a950",
+          "0be21037-1c01-4bf6-bf79-3b9b91ddc067",
+          "c1889e8d-cc4f-419b-a760-0f12c0cba082",
+          "3d4f0c14-786c-4577-a7b3-fd79dee31ef1"
+        ],
+        "custom_analyses_used": [],
+        "sql_response_from_db": [
+          "[{\"file_path\":\"auto_ontology\\/catalog\\/extract.py\"},{\"file_path\":\"auto_ontology\\/catalog\\/ingest.py\"},{\"file_path\":\"auto_ontology\\/dal\\/connections.py\"},{\"file_path\":\"auto_ontology\\/ingestion_service\\/connections.py\"},{\"file_path\":\"auto_ontology\\/ingestion_service\\/data_scheduler.py\"},{\"file_path\":\"auto_ontology\\/ingestion_service\\/ingest.py\"},{\"file_path\":\"auto_ontology\\/retrieval\\/entity_coverage\\/state.py\"},{\"file_path\":\"auto_ontology\\/retrieval\\/kumo\\/pql_gen.py\"},{\"file_path\":\"auto_ontology\\/retrieval\\/text_to_sql\\/agents\\/sql_execution.py\"},{\"file_path\":\"auto_ontology\\/retrieval\\/text_to_sql\\/connector_routing.py\"},{\"file_path\":\"auto_ontology\\/retrieval\\/text_to_sql\\/db_probe\\/executor.py\"},{\"file_path\":\"auto_ontology\\/retrieval\\/text_to_sql\\/state.py\"},{\"file_path\":\"auto_ontology\\/semantic\\/semantic_fk.py\"},{\"file_path\":\"auto_ontology\\/semantic\\/visit_enter.py\"},{\"file_path\":\"auto_ontology\\/server\\/chat\\/router.py\"},{\"file_path\":\"auto_ontology\\/server\\/chat\\/worker.py\"},{\"file_path\":\"auto_ontology\\/server\\/connections\\/service.py\"},{\"file_path\":\"auto_ontology\\/server\\/metadata\\/service.py\"},{\"file_path\":\"auto_ontology\\/server\\/model_interchange\\/service.py\"},{\"file_path\":\"auto_ontology\\/server\\/sql_attributes\\/service.py\"},{\"file_path\":\"auto_ontology\\/server\\/sql_utils.py\"},{\"file_path\":\"dev_tools\\/fixtures\\/seed_graph_fixture.py\"},{\"file_path\":\"dev_tools\\/local_ingest.py\"}]"
+        ],
+        "thoughts": "- Preparing candidates: The question’s main subject is non-test Python files. The schema column that directly represents whether a file is a test is code.files.is_test, so it best captures the “non-test” file focus.\n- Preparing candidates: The question reduces to: find import records whose imported module/package is connectors, then return the importer files that are not tests. `code.imports` supplies the import target (`module_name` / `imported_file_id`) and importer `file_id`; `code.files` supplies the importer path and `is_test` filter. The join path is direct: `code.imports.file_id -> code.files.file_id`.\n- Refining evidence: Replace only concepts described by the Evidence. In the question, the non-test file concept is grounded using `\"code\".\"files\".\"is_test\" = false`. In the evidence, file references are grounded to `\"code\".\"files\".\"file_id\"`, the exclusion under tests/ is grounded to `\"code\".\"files\".\"is_test\" = false`, and import statements are grounded to `\"code\".\"imports\".\"import_id\"`. The connectors package phrase remains unchanged because the Evidence does not map it to an exact qualified module-name value or operator.\n- Refining evidence: No certain repair is supported by the supplied question, value anchors, or fallback samples.\n- Constructing SQL: The question asks for files, so I project each matching importer file once with DISTINCT. I start from import statements in code.imports and join each to code.files via i.file_id = f.file_id. I restrict importers to non-test Python files using f.is_test = false and a .py path check, and exclude files under auto_ontology/connectors/ with NOT LIKE. I match connector imports by module_name equal to or prefixed by auto_ontology.connectors, and also by imported_file_id under auto_ontology/connectors/ to catch forms such as from auto_ontology import connectors. No aggregation or division is involved, and no tie-breaking is needed.\n- Validating SQL and intent: The SQL correctly filters non-test Python files outside auto_ontology/connectors/ and identifies imports from the connectors package via module_name or imported_file_id, returning distinct file paths as requested."
+      }
+    }
+  ],
+  "question_id": 5,
+  "gold_sql": "SELECT DISTINCT i.file_id AS file_path FROM code.imports i JOIN code.files f ON f.file_id = i.file_id WHERE i.imported_file_id LIKE 'auto_ontology/connectors/%' AND i.file_id NOT LIKE 'auto_ontology/connectors/%' AND NOT f.is_test ORDER BY 1",
+  "gold_row_count": 1,
+  "agent_sql": "SELECT DISTINCT f.file_id AS file_path FROM code.imports AS i JOIN code.files AS f ON i.file_id = f.file_id WHERE f.is_test = false AND f.file_id LIKE '%.py' AND f.file_id NOT LIKE 'auto_ontology/connectors/%' AND (i.module_name = 'auto_ontology.connectors' OR i.module_name LIKE 'auto_ontology.connectors.%' OR i.imported_file_id LIKE 'auto_ontology/connectors/%') ORDER BY file_path;",
+  "agent_answer": "This returns the distinct repository-relative paths of non-test Python files outside the connectors folder that import the connectors package or any of its modules. It joins import records to their importing files, excludes test files and files under the connectors directory, and treats both direct package imports and imports of connector submodules as matches.",
+  "agent_row_count": 23,
+  "correct_rows": false,
+  "error": null
+}

@@ -1,0 +1,31 @@
+{
+  "question_id": "ao-11",
+  "arm": "C-semantics",
+  "model": "deepseek/deepseek-v4.1-flash-1017",
+  "error": null,
+  "elapsed_s": 292.2,
+  "attempts": [
+    {
+      "sql": "WITH scoped AS (SELECT kind, is_class, is_function, is_method, qualname, enclosing_class_symbol_id FROM auto_ontology_code.code.symbol_profile WHERE in_test_file = FALSE AND is_public = TRUE AND name NOT LIKE '!_%' ESCAPE '!' AND file_id LIKE 'auto_ontology/retrieval/kumo/%' AND file_id NOT LIKE 'auto_ontology/retrieval/kumo/tests/%' AND file_id NOT LIKE '%/tests/%' AND module NOT LIKE 'auto_ontology.retrieval.kumo.tests%') SELECT 'class' AS kind, COUNT(*) AS public_count FROM scoped WHERE is_class = TRUE AND enclosing_class_symbol_id IS NULL AND qualname NOT LIKE '%.%' UNION ALL SELECT 'function' AS kind, COUNT(*) AS public_count FROM scoped WHERE is_function = TRUE AND qualname NOT LIKE '%.%' UNION ALL SELECT 'method' AS kind, COUNT(*) AS public_count FROM scoped WHERE is_method = TRUE"
+    }
+  ],
+  "usage": {},
+  "request": "How many public classes, public module-level functions and public methods are defined in the non-test code of the auto_ontology/retrieval/kumo/ package (files under its tests/ folder excluded)? A name is public when it does not start with an underscore, so dunder methods such as __init__ are not public, and methods of a class whose name starts with an underscore are not public either. Nested functions and nested classes are not counted. Return one row per kind, with kind being 'class', 'function' or 'method'.\n\nRequested output columns: kind (string), public_count (integer).\nReturn exactly the requested output columns, using each requested name as the column alias, in the requested order. Return complete repository-relative file paths and complete symbol IDs exactly as stored. When the question asks which files, symbols or modules, return each distinct one once unless it asks for occurrences.",
+  "explanation": "This counts public symbols in the kumo package by kind, using each symbol's name, flags, qualified name, and file path. Test code is filtered out, underscore-prefixed and dunder names are treated as non-public, and nested classes and nested functions are dropped via the qualified-name check. The result returns one row each for class, function, and method with their public counts, in that order.",
+  "sql": "WITH scoped AS (SELECT kind, is_class, is_function, is_method, qualname, enclosing_class_symbol_id FROM auto_ontology_code.code.symbol_profile WHERE in_test_file = FALSE AND is_public = TRUE AND name NOT LIKE '!_%' ESCAPE '!' AND file_id LIKE 'auto_ontology/retrieval/kumo/%' AND file_id NOT LIKE 'auto_ontology/retrieval/kumo/tests/%' AND file_id NOT LIKE '%/tests/%' AND module NOT LIKE 'auto_ontology.retrieval.kumo.tests%') SELECT 'class' AS kind, COUNT(*) AS public_count FROM scoped WHERE is_class = TRUE AND enclosing_class_symbol_id IS NULL AND qualname NOT LIKE '%.%' UNION ALL SELECT 'function' AS kind, COUNT(*) AS public_count FROM scoped WHERE is_function = TRUE AND qualname NOT LIKE '%.%' UNION ALL SELECT 'method' AS kind, COUNT(*) AS public_count FROM scoped WHERE is_method = TRUE",
+  "rows": [
+    {
+      "kind": "class",
+      "public_count": 17
+    },
+    {
+      "kind": "function",
+      "public_count": 32
+    },
+    {
+      "kind": "method",
+      "public_count": 13
+    }
+  ],
+  "source_record": "run/responses/10i_ask_with_key/ask_q11.json"
+}

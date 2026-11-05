@@ -1,0 +1,375 @@
+{
+  "request": {
+    "question": "Which five functions in the data-access layer are used most widely by the rest of the codebase? Consider module-level functions (not methods or classes) defined in non-test files under auto_ontology/dal/, excluding auto_ontology/dal/session.py. Rank them by the number of distinct functions or methods that call them directly, counting only callers that are in non-test files (every file under a tests/ folder is test code) located outside auto_ontology/dal/. Calls through a module alias (e.g. `dal.fetch_databases()` after `from auto_ontology.dal import datasources as dal`) or an import alias count; a function passed by reference without being called does not. Highest count first; break ties by symbol ID ascending and return exactly five rows. Return the symbol ID and the caller count.\n\nRequested output columns: symbol_id (string), caller_count (integer).\nReturn exactly the requested output columns, using each requested name as the column alias, in the requested order. Return complete repository-relative file paths and complete symbol IDs exactly as stored. When the question asks which files, symbols or modules, return each distinct one once unless it asks for occurrences.\nOrder the rows as the question asks.",
+    "calculation_only": true
+  },
+  "status": 200,
+  "elapsed_s": 354.7,
+  "events": [
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "question_intent",
+      "thought": null,
+      "label": "Classifying the question"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "question_intent",
+      "thought": null,
+      "label": "Classifying the question"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "question_extraction",
+      "thought": null,
+      "label": "Understanding the question"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "question_extraction",
+      "thought": null,
+      "label": "Understanding the question"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "retrieve_candidates",
+      "thought": null,
+      "label": "Retrieving candidates"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "retrieve_candidates",
+      "thought": null,
+      "label": "Retrieving candidates"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "prepare_candidates",
+      "thought": null,
+      "label": "Preparing candidates"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "prepare_candidates",
+      "thought": "The question asks for the five most widely called module-level functions in auto_ontology/dal/ ranked by distinct cross-module call count from outside the package. This requires (1) identifying module-level functions, (2) counting their distinct cross-module callers from outside the package, and (3) ranking them. The symbol_profile and symbols tables contain function metadata; inbound_call_counts contains call frequency data; calls and call_edges contain raw call relationships. The files table may help filter to the dal/ package. No table can be removed without jeopardizing function identification or call counting.",
+      "label": "Preparing candidates"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "refine_evidence",
+      "thought": null,
+      "label": "Refining evidence"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "refine_evidence",
+      "thought": "No mistakes were found in the provided evidence lines or the sanitized question that meet the strict criteria for string_representation, constant_value, or predicate_operator corrections. All column names, sample value references, and question phrasing are already consistent with the database schema and sample values supplied. Therefore, every evidence line is copied verbatim (minus the `N| ` prefix) and the question is copied unchanged.",
+      "label": "Refining evidence"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "construct_sql_from_candidates",
+      "thought": null,
+      "label": "Constructing SQL"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "construct_sql_from_candidates",
+      "thought": "To answer this question, I need to find the five most widely called module-level functions in auto_ontology/dal/ (excluding session.py), ranked by distinct cross-module callers from outside the package. The question requires: (1) identifying module-level functions (not methods/classes) defined in non-test files under auto_ontology/dal/, (2) counting distinct callers from outside the package, (3) ranking by count with ties broken by symbol_id ascending. \n\nFrom the authoritative evidence, the key column is \"distinct_callers\" from inbound_call_counts, which \"The number of unique entities that have called or invoked the object, reflecting its reach.\" I need to identify functions (is_function = True) in the dal package, exclude session.py, exclude test files, and count callers from outside the package.\n\nThe semantic hint points to inbound_call_counts as the starting table, with symbol_id as the join key to symbol_profile to filter for functions and get file_id. I'll need to join through symbols to get file_id, then filter files to auto_ontology/dal/ paths excluding session.py and test files.\n\nKey joins identified from semantic hints:\n- inbound_call_counts.symbol_id = symbol_profile.symbol_id (to get is_function, module info)\n- symbol_profile.enclosing_class_symbol_id = symbols.symbol_id (structural bridge)\n- symbols.file_id = files.file_id (to filter to dal/ package)\n- files.package and files.module to identify dal/ files\n\nI need to filter: is_function = True, files.package = 'auto_ontology.dal' (or files.file_id starting with 'auto_ontology/dal/'), files.is_test = False, and files.file_id not excluding session.py specifically.\n\nThe call count should be from outside the package - this means callers whose file_id is not in the auto_ontology/dal/ package. I'll use call_edges or calls table to identify external callers.\n\nI need to be careful about what counts as a \"distinct caller from outside the package\". The question says \"counting only callers that are in non-test files (every file under a tests/ folder is test code) located outside auto_ontology/dal/\". So I need to count distinct caller_symbol_id values from calls/call_edges where the caller_file_id points to a file outside auto_ontology/d/ and is not a test file.\n\nLet me construct the query starting from inbound_call_counts, joining to symbol_profile for function filter, then to symbols for file_id, then to files for package/test filtering.",
+      "label": "Constructing SQL"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "validate_sql_query",
+      "thought": null,
+      "label": "Validating SQL and intent"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "validate_sql_query",
+      "thought": "Let me analyze the generated SQL query against the requirements and evidence to check for critical issues.",
+      "label": "Validating SQL and intent"
+    },
+    {
+      "type": "sql",
+      "node": "validate_sql_query",
+      "sql": "SELECT ic.symbol_id, COUNT(DISTINCT caller_file_id) AS caller_count FROM auto_ontology_code.code.inbound_call_counts ic JOIN auto_ontology_code.code.symbol_profile sp ON ic.symbol_id = sp.symbol_id JOIN auto_ontology_code.code.symbols s ON sp.enclosing_class_symbol_id = s.symbol_id JOIN auto_ontology_code.code.files f ON s.file_id = f.file_id WHERE sp.is_function = TRUE AND f.package = 'auto_ontology.dal' AND f.is_test = FALSE AND f.file_id != 'auto_ontology/dal/session.py' GROUP BY ic.symbol_id ORDER BY caller_count DESC, ic.symbol_id ASC LIMIT 5"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "execute_sql_query",
+      "thought": null,
+      "label": "Executing SQL"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "execute_sql_query",
+      "thought": "Query failed, rewriting it: Binder Error: Referenced column \"caller_file_id\" not found in FROM clause! Candidate bindings: \"callers_any_kind\", \"callback_references\", \"s.line_end\", \"sp.line_end\", \"f.file_id\" LINE 1: SELECT ic.symbol_id, COUNT(DISTINCT caller_file_id) AS caller_count FROM auto_ontology_code... ^",
+      "label": "Executing SQL"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "reconstruct_sql",
+      "thought": null,
+      "label": "Reconstructing SQL"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "reconstruct_sql",
+      "thought": "The referenced column 'caller_file_id' does not appear in the resolved schema columns (inbound_call_counts, symbol_profile, call_edges, calls, files, symbols, etc.). The query intent—ranking functions by distinct external callers—can be achieved using existing columns such as inbound_call_counts.distinct_callers or call_edges.caller_symbol_id. The error is a wrong column reference, not a fundamental absence of required data.",
+      "label": "Reconstructing SQL"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "validate_sql_query",
+      "thought": null,
+      "label": "Validating SQL and intent"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "validate_sql_query",
+      "thought": null,
+      "label": "Validating SQL and intent"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "unconstructable_sql_response",
+      "thought": null,
+      "label": "SQL could not be constructed"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "unconstructable_sql_response",
+      "thought": null,
+      "label": "SQL could not be constructed"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "question_intent",
+      "thought": null,
+      "label": "Classifying the question"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "question_intent",
+      "thought": null,
+      "label": "Classifying the question"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "question_extraction",
+      "thought": null,
+      "label": "Understanding the question"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "question_extraction",
+      "thought": null,
+      "label": "Understanding the question"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "retrieve_candidates",
+      "thought": null,
+      "label": "Retrieving candidates"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "retrieve_candidates",
+      "thought": null,
+      "label": "Retrieving candidates"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "prepare_candidates",
+      "thought": null,
+      "label": "Preparing candidates"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "prepare_candidates",
+      "thought": "The question asks to rank module-level functions by distinct caller count and return the top five. The user then provides schema column attributes and explicitly asks to map evidence concepts to listed schema.table.column physical references and return the id of the single column attribute that best represents the primary subject of the question. The primary subject of the question is the ranking metric itself - the distinct caller count that functions are being ranked by. Among the available column attributes, the one that directly represents this metric is id: 88f3ca2f-6a81-49b8-9fe2-9d0bce74dd58, which is described as 'The number of unique entities that have called or invoked the object, reflecting its reach.' This is the 'distinct_callers' physical column referenced in the question's own description of what is being ranked. While other columns like caller_symbol_id and module are relevant to the functions being analyzed, the primary subject of the question - what functions are being ranked by - is the distinct caller count itself.",
+      "label": "Preparing candidates"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "refine_evidence",
+      "thought": null,
+      "label": "Refining evidence"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "refine_evidence",
+      "thought": "The evidence line 1 contains a potential predicate_operator issue. The WHERE clause has: '\"code\".\"symbol_profile\".\"module\" LIKE 'auto_ontology/dal/%' AND \"code\".\"symbol_profile\".\"module\" NOT LIKE 'auto_ontology/dal/session.py%'. The question asks for 'module-level functions in the data-access layer', which corresponds to the data-access module path pattern. The LIKE pattern 'auto_ontology/dal/%' correctly matches DAL modules. The NOT LIKE 'auto_ontology/dal/session.py%' excludes session.py files. However, looking at the sample values for callee_file_id in call_edges: 'auto_ontology/dal/session.py, auto_ontology/dal/tags.py, auto_ontology/dal/terms.py'. This suggests that session.py is a DAL file. The question specifies 'data-access layer', and if session.py is considered part of the DAL, then the NOT LIKE clause excluding session.py might be incorrect, or conversely, the LIKE pattern might need adjustment. But more importantly, the question asks to rank 'module-level functions in the data-access layer'. The current query filters module LIKE 'auto_ontology/dal/%' AND NOT LIKE 'auto_ontology/dal/session.py%'. This explicitly excludes session.py. If the intent is to include all DAL modules including session.py, the NOT LIKE should be removed. However, the question does not explicitly state to include or exclude session.py. Let's re-read the question: 'Rank module-level functions in the data-access layer by distinct caller count and return the top five with symbol ID and caller count.' The query has 'module LIKE 'auto_ontology/dal/%' AND module NOT LIKE 'auto_ontology/dal/session.py%'. This seems to define the data-access layer as DAL minus session.py. But is this certain? The sample values for callee_file_id include session.py. If the user considers session.py as part of the data-access layer, then the NOT LIKE is wrong. But the question doesn't specify. Let's look for other clues. The evidence line 1 also has: '\"code\".\"call_edges\".\"caller_in_test_file\" = False'. This is correct per question implicit non-test. '\"code\".\"symbol_profile\".\"kind\" = 'function'' - correct. '\"code\".\"symbol_profile\".\"is_function\" = True AND \"code\".\"symbol_profile\".\"is_method\" = False AND \"code\".\"symbol_profile\".\"is_class\" = False AND \"code\".\"symbol_profile\".\"in_test_file\" = False' - all correct for module-level functions. The only potential issue is the session.py exclusion. But without explicit indication from the question that session.py should be included, I should not change it. However, the prompt says: 'change only =, !=, <>, >, >=, <, or <= when the sanitized question makes the evidence operator unquestionably wrong. For example,",
+      "label": "Refining evidence"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "construct_sql_from_candidates",
+      "thought": null,
+      "label": "Constructing SQL"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "construct_sql_from_candidates",
+      "thought": "The question asks for the top 5 module-level functions in the data-access layer (auto_ontology/dal/) excluding session.py, ranked by the number of distinct non-test callers outside auto_ontology/dal/. The authoritative evidence SQL provides the exact ranking logic: filter symbol_profile for kind='function', is_function=True, is_method=False, is_class=False, in_test_file=False, module starting with 'auto_ontology/dal/' but not 'session.py'. Then join with call_edges, filter caller_in_test_file=False and caller_file_id not starting with 'auto_ontology/dal/', group by symbol_id, count distinct caller_symbol_id, order by count desc then symbol_id asc, limit 5. I will follow this evidence SQL exactly, mapping each condition to the correct table and column from the available schema.",
+      "label": "Constructing SQL"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "validate_sql_query",
+      "thought": null,
+      "label": "Validating SQL and intent"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "validate_sql_query",
+      "thought": "Let me analyze the generated SQL against the user's question requirements and the authoritative evidence.\n\n**Requirement-by-requirement check:**\n\n1. **Module-level functions (not methods/classes)**: The WHERE clause correctly filters with `kind = 'function'`, `is_function = True`, `is_method = False`, `is_class = False`. ✓\n\n2. **Non-test files under auto_ontology/dal/**: `in_test_file = False` and `module LIKE 'auto_ontology/dal/%'` correctly target this. ✓\n\n3. **Exclude session.py**: `module NOT LIKE 'auto_ontology/dal/session.py%'` handles this. ✓\n\n4. **Callers in non-test files located outside auto_ontology/dal/**: `caller_in_test_file = False` and `caller_file_id NOT LIKE 'auto_ontology/dal/%'` correctly filter callers. ✓\n\n5. **Count distinct caller functions/methods**: `COUNT(DISTINCT code.call_edges.caller_symbol_id)` correctly counts distinct caller symbols. ✓\n\n6. **Rank by count, ties by symbol ID ascending**: `ORDER BY caller_count DESC, code.symbol_profile.symbol_id ASC` matches. ✓\n\n7. **Return exactly 5 rows**: `LIMIT 5` matches. ✓\n\n8. **Output columns symbol_id, caller_count**: Select clause matches requested order and names. ✓\n\n**Evidence compliance check (#3):**\n- The SQL uses exactly the filter values, columns, tables, and operators specified in the authoritative evidence verbatim.\n- The formula `COUNT(DISTINCT call_edges.caller_symbol_id)` matches the evidence exactly.\n- All WHERE conditions appear in the same order as the evidence.\n- No values or column mappings are substituted.\n\n**Join path analysis:**\n- The SQL joins `symbol_profile.symbol_id = call_edges.callee_symbol_id`, which is the correct direction for finding functions that are called by others and counting distinct callers.\n- This follows the verified path pattern `call_edges.caller_symbol_id = symbol_profile.symbol_id` (inverse orientation for this question's semantics).\n- The AUTHORITATIVE JOIN PATHS list `call_edges.caller_symbol_id = symbol_profile.symbol_id` as a verified option; using `callee_symbol_id` is the logical inverse needed for \"who calls whom\" analysis.\n\n**No critical issues found.** The SQL correctly implements all question requirements, follows the evidence exactly, and uses valid join paths. The query is valid.",
+      "label": "Validating SQL and intent"
+    },
+    {
+      "type": "sql",
+      "node": "validate_sql_query",
+      "sql": "SELECT code.symbol_profile.symbol_id, COUNT(DISTINCT code.call_edges.caller_symbol_id) AS caller_count FROM code.symbol_profile INNER JOIN code.call_edges ON code.symbol_profile.symbol_id = code.call_edges.callee_symbol_id WHERE code.symbol_profile.kind = 'function' AND code.symbol_profile.is_function = True AND code.symbol_profile.is_method = False AND code.symbol_profile.is_class = False AND code.symbol_profile.in_test_file = False AND code.symbol_profile.module LIKE 'auto_ontology/dal/%' AND code.symbol_profile.module NOT LIKE 'auto_ontology/dal/session.py%' AND code.call_edges.caller_in_test_file = False AND code.call_edges.caller_file_id NOT LIKE 'auto_ontology/dal/%' GROUP BY code.symbol_profile.symbol_id ORDER BY caller_count DESC, code.symbol_profile.symbol_id ASC LIMIT 5"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "execute_sql_query",
+      "thought": null,
+      "label": "Executing SQL"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "execute_sql_query",
+      "thought": null,
+      "label": "Executing SQL"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "check_empty_like_result",
+      "thought": null,
+      "label": "Checking results"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "check_empty_like_result",
+      "thought": null,
+      "label": "Checking results"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "check_value_repair",
+      "thought": null,
+      "label": "Checking values"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "check_value_repair",
+      "thought": null,
+      "label": "Checking values"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "reconstruct_sql",
+      "thought": null,
+      "label": "Reconstructing SQL"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "reconstruct_sql",
+      "thought": "The query filters caller conditions (`caller_in_test_file`, `caller_file_id`) on `code.call_edges`, but the schema resolution shows that caller file paths and test-file membership are stored in `reachability.caller_file_id` and `reachability.caller_symbol_id`, not in `call_edges`. The INNER JOIN with `call_edges` combined with those filter conditions eliminates all rows (join drops interest), producing the empty result set. The fix is to redirect the caller-filtering joins to `reachability` (or include it alongside `call_edges`), using the same set of available tables. Since the necessary columns and tables exist in the provided schema, the issue is a misattributed column reference rather than missing data.",
+      "label": "Reconstructing SQL"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "validate_sql_query",
+      "thought": null,
+      "label": "Validating SQL and intent"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "validate_sql_query",
+      "thought": null,
+      "label": "Validating SQL and intent"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "unconstructable_sql_response",
+      "thought": null,
+      "label": "SQL could not be constructed"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "unconstructable_sql_response",
+      "thought": null,
+      "label": "SQL could not be constructed"
+    },
+    {
+      "type": "result",
+      "answer": {
+        "response": "SQL can't be constructed from the data.",
+        "sql_code": "",
+        "sql_columns": [],
+        "custom_analyses_used": [],
+        "sql_response_from_db": null,
+        "thoughts": "- Preparing candidates: The question asks to rank module-level functions by distinct caller count and return the top five. The user then provides schema column attributes and explicitly asks to map evidence concepts to listed schema.table.column physical references and return the id of the single column attribute that best represents the primary subject of the question. The primary subject of the question is the ranking metric itself - the distinct caller count that functions are being ranked by. Among the available column attributes, the one that directly represents this metric is id: 88f3ca2f-6a81-49b8-9fe2-9d0bce74dd58, which is described as 'The number of unique entities that have called or invoked the object, reflecting its reach.' This is the 'distinct_callers' physical column referenced in the question's own description of what is being ranked. While other columns like caller_symbol_id and module are relevant to the functions being analyzed, the primary subject of the question - what functions are being ranked by - is the distinct caller count itself.\n- Refining evidence: Construct SQL to rank module-level functions by distinct caller count. Must filter for module-level functions (non-method, non-class, non-test files under auto_ontology/dal/ excluding session.py), count distinct callers from non-test files outside auto_ontology/dal, order by distinct_callers desc then symbol_id asc, limit 5. The evidence references caller_symbol_id and distinct_callers columns. Need to join symbol_profile to identify functions and inbound_call_counts or call_edges to count callers. Based on evidence: module-level functions filtered by kind='function', is_function=True, in_test_file=False, file_path pattern. Callers counted from non-test files outside dal. Use call_edges or inbound_call_counts. Let's structure query using call_edges for caller counting with proper filters.\n- Refining evidence: The evidence line 1 contains a potential predicate_operator issue. The WHERE clause has: '\"code\".\"symbol_profile\".\"module\" LIKE 'auto_ontology/dal/%' AND \"code\".\"symbol_profile\".\"module\" NOT LIKE 'auto_ontology/dal/session.py%'. The question asks for 'module-level functions in the data-access layer', which corresponds to the data-access module path pattern. The LIKE pattern 'auto_ontology/dal/%' correctly matches DAL modules. The NOT LIKE 'auto_ontology/dal/session.py%' excludes session.py files. However, looking at the sample values for callee_file_id in call_edges: 'auto_ontology/dal/session.py, auto_ontology/dal/tags.py, auto_ontology/dal/terms.py'. This suggests that session.py is a DAL file. The question specifies 'data-access layer', and if session.py is considered part of the DAL, then the NOT LIKE clause excluding session.py might be incorrect, or conversely, the LIKE pattern might need adjustment. But more importantly, the question asks to rank 'module-level functions in the data-access layer'. The current query filters module LIKE 'auto_ontology/dal/%' AND NOT LIKE 'auto_ontology/dal/session.py%'. This explicitly excludes session.py. If the intent is to include all DAL modules including session.py, the NOT LIKE should be removed. However, the question does not explicitly state to include or exclude session.py. Let's re-read the question: 'Rank module-level functions in the data-access layer by distinct caller count and return the top five with symbol ID and caller count.' The query has 'module LIKE 'auto_ontology/dal/%' AND module NOT LIKE 'auto_ontology/dal/session.py%'. This seems to define the data-access layer as DAL minus session.py. But is this certain? The sample values for callee_file_id include session.py. If the user considers session.py as part of the data-access layer, then the NOT LIKE is wrong. But the question doesn't specify. Let's look for other clues. The evidence line 1 also has: '\"code\".\"call_edges\".\"caller_in_test_file\" = False'. This is correct per question implicit non-test. '\"code\".\"symbol_profile\".\"kind\" = 'function'' - correct. '\"code\".\"symbol_profile\".\"is_function\" = True AND \"code\".\"symbol_profile\".\"is_method\" = False AND \"code\".\"symbol_profile\".\"is_class\" = False AND \"code\".\"symbol_profile\".\"in_test_file\" = False' - all correct for module-level functions. The only potential issue is the session.py exclusion. But without explicit indication from the question that session.py should be included, I should not change it. However, the prompt says: 'change only =, !=, <>, >, >=, <, or <= when the sanitized question makes the evidence operator unquestionably wrong. For example,\n- Constructing SQL: The question asks for the top 5 module-level functions in the data-access layer (auto_ontology/dal/) excluding session.py, ranked by the number of distinct non-test callers outside auto_ontology/dal/. The authoritative evidence SQL provides the exact ranking logic: filter symbol_profile for kind='function', is_function=True, is_method=False, is_class=False, in_test_file=False, module starting with 'auto_ontology/dal/' but not 'session.py'. Then join with call_edges, filter caller_in_test_file=False and caller_file_id not starting with 'auto_ontology/dal/', group by symbol_id, count distinct caller_symbol_id, order by count desc then symbol_id asc, limit 5. I will follow this evidence SQL exactly, mapping each condition to the correct table and column from the available schema.\n- Validating SQL and intent: Let me analyze the generated SQL against the user's question requirements and the authoritative evidence.\n\n**Requirement-by-requirement check:**\n\n1. **Module-level functions (not methods/classes)**: The WHERE clause correctly filters with `kind = 'function'`, `is_function = True`, `is_method = False`, `is_class = False`. ✓\n\n2. **Non-test files under auto_ontology/dal/**: `in_test_file = False` and `module LIKE 'auto_ontology/dal/%'` correctly target this. ✓\n\n3. **Exclude session.py**: `module NOT LIKE 'auto_ontology/dal/session.py%'` handles this. ✓\n\n4. **Callers in non-test files located outside auto_ontology/dal/**: `caller_in_test_file = False` and `caller_file_id NOT LIKE 'auto_ontology/dal/%'` correctly filter callers. ✓\n\n5. **Count distinct caller functions/methods**: `COUNT(DISTINCT code.call_edges.caller_symbol_id)` correctly counts distinct caller symbols. ✓\n\n6. **Rank by count, ties by symbol ID ascending**: `ORDER BY caller_count DESC, code.symbol_profile.symbol_id ASC` matches. ✓\n\n7. **Return exactly 5 rows**: `LIMIT 5` matches. ✓\n\n8. **Output columns symbol_id, caller_count**: Select clause matches requested order and names. ✓\n\n**Evidence compliance check (#3):**\n- The SQL uses exactly the filter values, columns, tables, and operators specified in the authoritative evidence verbatim.\n- The formula `COUNT(DISTINCT call_edges.caller_symbol_id)` matches the evidence exactly.\n- All WHERE conditions appear in the same order as the evidence.\n- No values or column mappings are substituted.\n\n**Join path analysis:**\n- The SQL joins `symbol_profile.symbol_id = call_edges.callee_symbol_id`, which is the correct direction for finding functions that are called by others and counting distinct callers.\n- This follows the verified path pattern `call_edges.caller_symbol_id = symbol_profile.symbol_id` (inverse orientation for this question's semantics).\n- The AUTHORITATIVE JOIN PATHS list `call_edges.caller_symbol_id = symbol_profile.symbol_id` as a verified option; using `callee_symbol_id` is the logical inverse needed for \"who calls whom\" analysis.\n\n**No critical issues found.** The SQL correctly implements all question requirements, follows the evidence exactly, and uses valid join paths. The query is valid.\n- Reconstructing SQL: The query filters caller conditions (`caller_in_test_file`, `caller_file_id`) on `code.call_edges`, but the schema resolution shows that caller file paths and test-file membership are stored in `reachability.caller_file_id` and `reachability.caller_symbol_id`, not in `call_edges`. The INNER JOIN with `call_edges` combined with those filter conditions eliminates all rows (join drops interest), producing the empty result set. The fix is to redirect the caller-filtering joins to `reachability` (or include it alongside `call_edges`), using the same set of available tables. Since the necessary columns and tables exist in the provided schema, the issue is a misattributed column reference rather than missing data."
+      }
+    }
+  ],
+  "question_id": 8,
+  "gold_sql": "SELECT c.callee_symbol_id AS symbol_id, COUNT(DISTINCT c.caller_symbol_id) AS caller_count FROM code.calls c JOIN code.symbols cs ON cs.symbol_id = c.caller_symbol_id JOIN code.files cf ON cf.file_id = cs.file_id JOIN code.symbols t ON t.symbol_id = c.callee_symbol_id JOIN code.files tf ON tf.file_id = t.file_id WHERE c.call_kind = 'direct' AND NOT cf.is_test AND cs.kind IN ('function', 'method') AND cs.file_id NOT LIKE 'auto_ontology/dal/%' AND t.kind = 'function' AND t.file_id LIKE 'auto_ontology/dal/%' AND NOT tf.is_test AND t.file_id <> 'auto_ontology/dal/session.py' GROUP BY 1 ORDER BY 2 DESC, 1 LIMIT 5",
+  "gold_row_count": 1,
+  "agent_sql": "",
+  "agent_answer": "SQL can't be constructed from the data.",
+  "agent_row_count": 0,
+  "correct_rows": false,
+  "error": null
+}

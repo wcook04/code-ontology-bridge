@@ -1,0 +1,199 @@
+{
+  "request": {
+    "question": "When the text-to-SQL LangGraph is assembled by create_graph in auto_ontology/retrieval/text_to_sql/text_to_sql_graph.py, which functions or methods of this repository does create_graph hand over by reference, i.e. pass the function object itself as an argument to another call (as with graph.add_conditional_edges(node, router_fn, ...)) rather than calling it? Count only plain names passed directly as call arguments; functions that create_graph calls itself, values that are the result of a call (such as _make_soft_check_router(...)), lambdas, and local variables holding nodes do not count. Functions passed only inside an if/else branch of create_graph count. Return each distinct function's symbol ID.\n\nRequested output columns: symbol_id (string).\nReturn exactly the requested output columns, using each requested name as the column alias, in the requested order. Return complete repository-relative file paths and complete symbol IDs exactly as stored. When the question asks which files, symbols or modules, return each distinct one once unless it asks for occurrences.",
+    "calculation_only": true
+  },
+  "status": 200,
+  "elapsed_s": 185.9,
+  "events": [
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "question_intent",
+      "thought": null,
+      "label": "Classifying the question"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "question_intent",
+      "thought": null,
+      "label": "Classifying the question"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "question_extraction",
+      "thought": null,
+      "label": "Understanding the question"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "question_extraction",
+      "thought": null,
+      "label": "Understanding the question"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "retrieve_candidates",
+      "thought": null,
+      "label": "Retrieving candidates"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "retrieve_candidates",
+      "thought": null,
+      "label": "Retrieving candidates"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "prepare_candidates",
+      "thought": null,
+      "label": "Preparing candidates"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "prepare_candidates",
+      "thought": "The question asks for distinct symbol_id (function/method) names that belong to a specific file path and are involved in a specific functional pattern (hands over by reference, implying a callback). `auto_ontology_code.code.symbols` provides the symbol definitions, `auto_ontology_code.code.files` provides file path context, and `auto_ontology_code.code.calls` is necessary to identify the callback usage pattern.",
+      "label": "Preparing candidates"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "refine_evidence",
+      "thought": null,
+      "label": "Refining evidence"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "refine_evidence",
+      "thought": "No certain repairs: the evidence explicitly uses call_kind = 'callback', and the file path and string values match the supplied anchors. No operator or scalar correction is warranted.",
+      "label": "Refining evidence"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "construct_sql_from_candidates",
+      "thought": null,
+      "label": "Constructing SQL"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "construct_sql_from_candidates",
+      "thought": "Identify the create_graph function in the specified file, then find callback rows where create_graph passes a function object as an argument. Join caller and callee symbols to return the callee's symbol ID. Assumptions: (1) time window — none, because the question has no time component; (2) zero/missing values — inner joins exclude callback rows with no resolved callee symbol, because a symbol ID is required; (3) ties — no ranking, so no tie-breaker is needed. Plain names are enforced by excluding callee names containing a dot, parenthesis, or 'lambda', because the evidence says only plain names passed directly as call arguments count.",
+      "label": "Constructing SQL"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "validate_sql_query",
+      "thought": null,
+      "label": "Validating SQL and intent"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "validate_sql_query",
+      "thought": "The SQL is reasonably aligned with the question and the authoritative evidence. It identifies call sites whose caller is create_graph in the specified file, restricts to call_kind = 'callback', and returns distinct callee symbol IDs. The joins from calls.caller_symbol_id/callee_symbol_id to symbols are plausible and consistent with the available FK relationships; the authoritative callback evidence is followed via call_kind = 'callback'. The filters on callee_name plausibly implement the evidence’s exclusions for non-plain names, call-result expressions, and lambdas, while callee.kind limits results to functions/methods. DISTINCT matches the requested distinct symbol IDs, and no incorrect aggregation is present. Any residual inability to perfectly distinguish every local-variable case in SQL is not a critical defect given the metadata and evidence patterns.",
+      "label": "Validating SQL and intent"
+    },
+    {
+      "type": "sql",
+      "node": "validate_sql_query",
+      "sql": "SELECT DISTINCT callee.symbol_id AS symbol_id\nFROM auto_ontology_code.code.calls AS c\nJOIN auto_ontology_code.code.symbols AS caller\n  ON c.caller_symbol_id = caller.symbol_id\nJOIN auto_ontology_code.code.symbols AS callee\n  ON c.callee_symbol_id = callee.symbol_id\nWHERE caller.file_id = 'auto_ontology/retrieval/text_to_sql/text_to_sql_graph.py'\n  AND caller.name = 'create_graph'\n  AND caller.kind = 'function'\n  AND c.call_kind = 'callback'\n  AND c.callee_name NOT LIKE '%.%'\n  AND c.callee_name NOT LIKE '%(%'\n  AND c.callee_name NOT LIKE '%lambda%'\n  AND callee.kind IN ('function', 'method')\nORDER BY symbol_id;"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "execute_sql_query",
+      "thought": null,
+      "label": "Executing SQL"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "execute_sql_query",
+      "thought": null,
+      "label": "Executing SQL"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "check_empty_like_result",
+      "thought": null,
+      "label": "Checking results"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "check_empty_like_result",
+      "thought": null,
+      "label": "Checking results"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "check_value_repair",
+      "thought": null,
+      "label": "Checking values"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "check_value_repair",
+      "thought": null,
+      "label": "Checking values"
+    },
+    {
+      "type": "step",
+      "phase": "start",
+      "node": "format_and_respond",
+      "thought": null,
+      "label": "Formatting response"
+    },
+    {
+      "type": "step",
+      "phase": "end",
+      "node": "format_and_respond",
+      "thought": null,
+      "label": "Formatting response"
+    },
+    {
+      "type": "result",
+      "answer": {
+        "response": "This returns the distinct symbol IDs of repository functions or methods that the create_graph function in the text-to-SQL graph module passes by reference as callback arguments. It looks at callback call records made by create_graph, keeps only plain-name arguments, and resolves each to its internal symbol definition. The results are deduplicated and ordered by symbol ID.",
+        "sql_code": "SELECT DISTINCT callee.symbol_id AS symbol_id\nFROM auto_ontology_code.code.calls AS c\nJOIN auto_ontology_code.code.symbols AS caller\n  ON c.caller_symbol_id = caller.symbol_id\nJOIN auto_ontology_code.code.symbols AS callee\n  ON c.callee_symbol_id = callee.symbol_id\nWHERE caller.file_id = 'auto_ontology/retrieval/text_to_sql/text_to_sql_graph.py'\n  AND caller.name = 'create_graph'\n  AND caller.kind = 'function'\n  AND c.call_kind = 'callback'\n  AND c.callee_name NOT LIKE '%.%'\n  AND c.callee_name NOT LIKE '%(%'\n  AND c.callee_name NOT LIKE '%lambda%'\n  AND callee.kind IN ('function', 'method')\nORDER BY symbol_id;",
+        "sql_columns": [
+          "8a22668d-79ef-4149-bb4a-36e248ffb350",
+          "7a98141c-dcbf-4f0c-b170-ae8d7991d492",
+          "e985a9b4-89d7-4a6e-abee-4d4d37e97cec",
+          "2813b840-5873-48a6-b4b9-afe375afc17b",
+          "af7f0352-5957-47f0-9232-e5c97005530a",
+          "92c54b6e-126f-45dc-9a8c-55249f8114f4",
+          "d6fa4ed2-8d2b-4096-8a08-2c94386c9b00",
+          "936a82ab-c901-43e9-804c-f9afeaab319d"
+        ],
+        "custom_analyses_used": [],
+        "sql_response_from_db": [
+          "[{\"symbol_id\":\"auto_ontology\\/retrieval\\/text_to_sql\\/text_to_sql_graph.py::_entry_router_fn\"},{\"symbol_id\":\"auto_ontology\\/retrieval\\/text_to_sql\\/text_to_sql_graph.py::route_after_candidate_retrieval\"},{\"symbol_id\":\"auto_ontology\\/retrieval\\/text_to_sql\\/text_to_sql_graph.py::route_decision\"},{\"symbol_id\":\"auto_ontology\\/retrieval\\/text_to_sql\\/text_to_sql_graph.py::route_evidence_refinement\"},{\"symbol_id\":\"auto_ontology\\/retrieval\\/text_to_sql\\/text_to_sql_graph.py::route_generated_sql\"},{\"symbol_id\":\"auto_ontology\\/retrieval\\/text_to_sql\\/text_to_sql_graph.py::route_question_type_or_evidence\"},{\"symbol_id\":\"auto_ontology\\/retrieval\\/text_to_sql\\/text_to_sql_graph.py::route_reconstructed_sql\"},{\"symbol_id\":\"auto_ontology\\/retrieval\\/text_to_sql\\/text_to_sql_graph.py::route_sql_execution\"},{\"symbol_id\":\"auto_ontology\\/retrieval\\/text_to_sql\\/text_to_sql_graph.py::route_sql_validation\"}]"
+        ],
+        "thoughts": "- Preparing candidates: The question asks for distinct function or method symbol_id values, so the primary column is the symbol identifier in code.symbols.\n- Preparing candidates: The question asks for distinct symbol_id (function/method) names that belong to a specific file path and are involved in a specific functional pattern (hands over by reference, implying a callback). `auto_ontology_code.code.symbols` provides the symbol definitions, `auto_ontology_code.code.files` provides file path context, and `auto_ontology_code.code.calls` is necessary to identify the callback usage pattern.\n- Refining evidence: The evidence defines the concept 'hand over by reference' as passing a function object as an argument to another call, which corresponds to code.calls.call_kind = 'callback'. No other evidence-described field mappings are present, so all other wording remains unchanged.\n- Refining evidence: No certain repairs: the evidence explicitly uses call_kind = 'callback', and the file path and string values match the supplied anchors. No operator or scalar correction is warranted.\n- Constructing SQL: Identify the create_graph function in the specified file, then find callback rows where create_graph passes a function object as an argument. Join caller and callee symbols to return the callee's symbol ID. Assumptions: (1) time window — none, because the question has no time component; (2) zero/missing values — inner joins exclude callback rows with no resolved callee symbol, because a symbol ID is required; (3) ties — no ranking, so no tie-breaker is needed. Plain names are enforced by excluding callee names containing a dot, parenthesis, or 'lambda', because the evidence says only plain names passed directly as call arguments count.\n- Validating SQL and intent: The SQL is reasonably aligned with the question and the authoritative evidence. It identifies call sites whose caller is create_graph in the specified file, restricts to call_kind = 'callback', and returns distinct callee symbol IDs. The joins from calls.caller_symbol_id/callee_symbol_id to symbols are plausible and consistent with the available FK relationships; the authoritative callback evidence is followed via call_kind = 'callback'. The filters on callee_name plausibly implement the evidence’s exclusions for non-plain names, call-result expressions, and lambdas, while callee.kind limits results to functions/methods. DISTINCT matches the requested distinct symbol IDs, and no incorrect aggregation is present. Any residual inability to perfectly distinguish every local-variable case in SQL is not a critical defect given the metadata and evidence patterns."
+      }
+    }
+  ],
+  "question_id": 2,
+  "gold_sql": "SELECT DISTINCT callee_symbol_id AS symbol_id FROM code.calls WHERE caller_symbol_id = 'auto_ontology/retrieval/text_to_sql/text_to_sql_graph.py::create_graph' AND call_kind = 'callback' ORDER BY 1",
+  "gold_row_count": 1,
+  "agent_sql": "SELECT DISTINCT callee.symbol_id AS symbol_id\nFROM auto_ontology_code.code.calls AS c\nJOIN auto_ontology_code.code.symbols AS caller\n  ON c.caller_symbol_id = caller.symbol_id\nJOIN auto_ontology_code.code.symbols AS callee\n  ON c.callee_symbol_id = callee.symbol_id\nWHERE caller.file_id = 'auto_ontology/retrieval/text_to_sql/text_to_sql_graph.py'\n  AND caller.name = 'create_graph'\n  AND caller.kind = 'function'\n  AND c.call_kind = 'callback'\n  AND c.callee_name NOT LIKE '%.%'\n  AND c.callee_name NOT LIKE '%(%'\n  AND c.callee_name NOT LIKE '%lambda%'\n  AND callee.kind IN ('function', 'method')\nORDER BY symbol_id;",
+  "agent_answer": "This returns the distinct symbol IDs of repository functions or methods that the create_graph function in the text-to-SQL graph module passes by reference as callback arguments. It looks at callback call records made by create_graph, keeps only plain-name arguments, and resolves each to its internal symbol definition. The results are deduplicated and ordered by symbol ID.",
+  "agent_row_count": 9,
+  "correct_rows": false,
+  "error": null
+}

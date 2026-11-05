@@ -1,0 +1,75 @@
+{
+  "question_id": "ao-01",
+  "arm": "C-semantics",
+  "model": "deepseek/deepseek-v4.1-flash-1017",
+  "error": null,
+  "elapsed_s": 259.9,
+  "attempts": [
+    {
+      "sql": "SELECT DISTINCT m.enclosing_class_symbol_id AS class_symbol_id, m.name AS method_name FROM auto_ontology_code.code.symbol_profile AS m JOIN ( SELECT DISTINCT cb.class_symbol_id FROM auto_ontology_code.code.class_bases AS cb JOIN auto_ontology_code.code.symbols AS bs ON cb.base_symbol_id = bs.symbol_id JOIN auto_ontology_code.code.symbols AS cs ON cs.symbol_id = cb.class_symbol_id WHERE bs.file_id = 'auto_ontology/connectors/base.py' AND bs.name = 'SQLDatabase' AND bs.kind = 'class' AND cs.file_id NOT LIKE '%tests/%' ) AS c ON m.enclosing_class_symbol_id = c.class_symbol_id WHERE m.is_method = true AND m.is_public = true AND left(m.name, 1) <> '_' AND NOT EXISTS ( SELECT 1 FROM auto_ontology_code.code.symbol_profile AS dm JOIN auto_ontology_code.code.symbols AS bs2 ON dm.enclosing_class_symbol_id = bs2.symbol_id WHERE bs2.file_id = 'auto_ontology/connectors/base.py' AND bs2.name = 'SQLDatabase' AND dm.is_method = true AND dm.name = m.name ) ORDER BY class_symbol_id, method_name"
+    }
+  ],
+  "usage": {},
+  "request": "The production database connectors are the classes that directly subclass SQLDatabase (defined in auto_ontology/connectors/base.py), excluding any class defined in test code (every file under a tests/ folder counts as test code). For each such connector class, which public methods does the class define in its own body that SQLDatabase itself does not define? A method is public when its name does not start with an underscore (so __init__ and other dunder methods are excluded); anything written with def directly in the class body counts as a method, including properties and context-manager methods. Methods inherited without being redefined do not count. Return one row per (connector class symbol ID, method name).\n\nRequested output columns: class_symbol_id (string), method_name (string).\nReturn exactly the requested output columns, using each requested name as the column alias, in the requested order. Return complete repository-relative file paths and complete symbol IDs exactly as stored. When the question asks which files, symbols or modules, return each distinct one once unless it asks for occurrences.",
+  "explanation": "This lists, for every production connector class that directly inherits from the base SQLDatabase class, the public methods written in that class's own body that the base class does not itself define. It identifies base SQLDatabase by its file and name, restricts to classes outside test files, keeps only public non-underscore methods belonging to those classes, and removes any method name already defined on SQLDatabase. Results are one row per class and method name, ordered by class symbol ID and then method name.",
+  "sql": "SELECT DISTINCT m.enclosing_class_symbol_id AS class_symbol_id, m.name AS method_name FROM auto_ontology_code.code.symbol_profile AS m JOIN ( SELECT DISTINCT cb.class_symbol_id FROM auto_ontology_code.code.class_bases AS cb JOIN auto_ontology_code.code.symbols AS bs ON cb.base_symbol_id = bs.symbol_id JOIN auto_ontology_code.code.symbols AS cs ON cs.symbol_id = cb.class_symbol_id WHERE bs.file_id = 'auto_ontology/connectors/base.py' AND bs.name = 'SQLDatabase' AND bs.kind = 'class' AND cs.file_id NOT LIKE '%tests/%' ) AS c ON m.enclosing_class_symbol_id = c.class_symbol_id WHERE m.is_method = true AND m.is_public = true AND left(m.name, 1) <> '_' AND NOT EXISTS ( SELECT 1 FROM auto_ontology_code.code.symbol_profile AS dm JOIN auto_ontology_code.code.symbols AS bs2 ON dm.enclosing_class_symbol_id = bs2.symbol_id WHERE bs2.file_id = 'auto_ontology/connectors/base.py' AND bs2.name = 'SQLDatabase' AND dm.is_method = true AND dm.name = m.name ) ORDER BY class_symbol_id, method_name",
+  "rows": [
+    {
+      "class_symbol_id": "auto_ontology/connectors/clickhouse.py::ClickHouseDatabase",
+      "method_name": "ping"
+    },
+    {
+      "class_symbol_id": "auto_ontology/connectors/databricks.py::DatabricksDatabase",
+      "method_name": "auth_mode"
+    },
+    {
+      "class_symbol_id": "auto_ontology/connectors/databricks.py::DatabricksDatabase",
+      "method_name": "get_schemas"
+    },
+    {
+      "class_symbol_id": "auto_ontology/connectors/databricks.py::DatabricksDatabase",
+      "method_name": "ping"
+    },
+    {
+      "class_symbol_id": "auto_ontology/connectors/databricks.py::DatabricksDatabase",
+      "method_name": "reuse_connection"
+    },
+    {
+      "class_symbol_id": "auto_ontology/connectors/heavydb.py::HeavyDBDatabase",
+      "method_name": "ping"
+    },
+    {
+      "class_symbol_id": "auto_ontology/connectors/kyuubi.py::KyuubiDatabase",
+      "method_name": "get_schemas"
+    },
+    {
+      "class_symbol_id": "auto_ontology/connectors/kyuubi.py::KyuubiDatabase",
+      "method_name": "ping"
+    },
+    {
+      "class_symbol_id": "auto_ontology/connectors/mysql.py::MySQLDatabase",
+      "method_name": "ping"
+    },
+    {
+      "class_symbol_id": "auto_ontology/connectors/postgres.py::PostgresDatabase",
+      "method_name": "ping"
+    },
+    {
+      "class_symbol_id": "auto_ontology/connectors/snowflake.py::SnowflakeDatabase",
+      "method_name": "get_schemas"
+    },
+    {
+      "class_symbol_id": "auto_ontology/connectors/snowflake.py::SnowflakeDatabase",
+      "method_name": "ping"
+    },
+    {
+      "class_symbol_id": "auto_ontology/connectors/trino.py::TrinoDatabase",
+      "method_name": "get_schemas"
+    },
+    {
+      "class_symbol_id": "auto_ontology/connectors/trino.py::TrinoDatabase",
+      "method_name": "ping"
+    }
+  ],
+  "source_record": "run/responses/10i_ask_with_key/ask_q1.json"
+}
