@@ -68,4 +68,4 @@ The questions were written by AI annotators under the rules above, not by the re
 
 ## Amendments
 
-None.
+**5 November 2026, 10:35 UTC, during the first repetition of arms A, B, V and S.** One run (Nemotron, arm A, httpx, repetition 1) was killed by the operating system when a model-written query exhausted the machine's memory. From this point every DuckDB connection in the runner and scorer has a 1,500 MB memory limit and two threads, so such a query fails with an ordinary error and counts as a wrong answer. The killed run is discarded whole and repeated under the same settings as every later run; it is listed in `study/results/discarded.md`. Runs completed before this point are unaffected by the change except for queries that would have exceeded the limit, which would also have stopped the run.

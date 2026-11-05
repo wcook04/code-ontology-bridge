@@ -90,6 +90,8 @@ def jsonable(v):
 
 
 QUERY_TIMEOUT_S = 60
+# A runaway query (e.g. an unbounded join) fails with an out-of-memory error instead of exhausting the machine.
+DB_CONFIG = {"memory_limit": "1500MB", "threads": "2"}
 
 
 def timed(con, sql: str):
@@ -150,7 +152,7 @@ def parse_reply(text: str) -> tuple[str, str]:
 
 
 def ask(q: dict, args, system: str, key: str | None) -> dict:
-    con = duckdb.connect(str(args.db), read_only=True)
+    con = duckdb.connect(str(args.db), read_only=True, config=DB_CONFIG)
     request = q["question"] + "\n\n" + contract_text(q)
     messages = [{"role": "system", "content": system}, {"role": "user", "content": request}]
     attempts, usage_total, started = [], {}, time.monotonic()

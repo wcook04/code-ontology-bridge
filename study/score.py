@@ -73,7 +73,8 @@ def rows_match(rows: list[dict] | None, want: list[tuple], fields: list[dict], o
 
 @lru_cache(maxsize=None)
 def connect(path: str):
-    return duckdb.connect(path, read_only=True)
+    from run_direct import DB_CONFIG
+    return duckdb.connect(path, read_only=True, config=DB_CONFIG)
 
 
 def execute(path: str, sql: str):
