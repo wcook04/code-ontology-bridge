@@ -94,6 +94,8 @@ for model in sorted({k[0] for k in cell_q}):
                           "improved": better, "regressed": worse,
                           "mean_suite_rate_change": round(sum(qy[q] - qx[q] for q in common) / len(common), 4)})
 summary["paired"] = pairs
+summary["question_list"] = [{"id": q["id"], "repo": q["repo"], "question": q["question"], "topic": q["topic"],
+                             "difficulty": q["difficulty"]} for q in questions.values()]
 summary["per_question_suite_rate"] = {f"{m}/{arm}": v for (m, arm), v in cell_q.items()}
 a.out.mkdir(parents=True, exist_ok=True)
 (a.out / "summary.json").write_text(json.dumps(summary, indent=2) + "\n")
