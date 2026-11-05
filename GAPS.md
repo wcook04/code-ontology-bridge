@@ -1,20 +1,22 @@
 # Capabilities and remaining work
 
-The bridge exports a Python source map, imports it into Auto Ontology and lets its database agent query the resulting rows. The [three-arm comparison](examples/auto-ontology/live/RESULTS.md) measured what the exported semantic model and Auto Ontology each add, with two models on 22 development and 16 held-out questions. This file tracks current limits. Earlier development observations remain in Git history.
+The bridge exports a Python source map, imports it into Auto Ontology and lets its database agent query the resulting rows. The current evidence is the [48-question study](study/RESULTS.md) across four repositories, with repeated runs and eight altered copies of each database. The earlier [three-arm comparison](examples/auto-ontology/live/RESULTS.md) (38 author-written questions about one repository, one run per arm) and the 22-question walkthrough run are kept as history. This file tracks current limits.
 
 ## Current evaluation limits
 
 | Issue | Evidence | Remaining work |
 | --- | --- | --- |
-| Author-written questions, one repository | All 38 questions and reference queries were written by the author, about Auto Ontology's own code. | Questions written by someone else; a second repository. |
-| One run per arm | Each arm ran each set once; 16 held-out questions is a small sample. | Repeated runs to estimate run-to-run variation. |
-| Ambiguous wording | Held-out [Q101](examples/auto-ontology/live/experiment/deepseek/auto_ontology-heldout/responses/ask_q101.json) says "functions or methods"; Auto Ontology excluded a constructor call the reference counts. | Questions reviewed for a single reading before the next freeze. |
-| Prose can be a stub | Development [Q2](examples/auto-ontology/live/current/responses/10i_ask_with_key/ask_q2.json) has correct rows and the explanation "Purple". | Response validation that examines substance; a finite placeholder list is insufficient. |
-| Schema-qualification errors | Twelve of 22 first queries in the DeepSeek development run omitted the `code.` schema and needed a repair. | Report upstream; the catalog could give qualified names. |
-| No Nemotron held-out result inside Auto Ontology | The runner sent Nemotron through the OpenAI-compatible client, which cannot switch reasoning off; the amended runs through ChatNVIDIA were rate-limited by the NVIDIA API ([discarded runs](examples/auto-ontology/live/experiment/discarded.txt)). | Repeat both Nemotron arm C runs through ChatNVIDIA on a key with a higher rate limit. |
+| Questions written by AI authors | The 48 questions were written and independently annotated by separate AI authors under the [protocol](study/PROTOCOL.md), not by the repositories' maintainers. | A maintainer-authored question set. |
+| Reference queries can miss the wording | After the runs, an outside review found that one reference query did not apply the question's own "function or method" restriction; an audit of all 48 followed. The corrected references and the original are both scored ([corrections](study/questions/corrections.json)). | Hand-worked expected rows on a small fixture for each reference. |
+| Small integrated comparison | Inside Auto Ontology the study uses the 12 Auto Ontology questions and three runs per configuration; the differences are a few answers per run. | More questions inside the agent. |
+| Auto Ontology arm settings and usage | That arm ran through Auto Ontology's own chat clients (temperature 0, its own token limits, the provider's default reasoning) and its responses carry no provider cost or token counts. | Record the request settings and usage per call. |
+| Mixed direct and callback pairs | In the study a semantic-model answer filtered `calls_directly AND NOT passes_as_callback` and dropped a caller that does both. The layer's definitions now state that the flags are independent; that wording was added after the study and has not been evaluated. | Evaluate the clarified definitions on new questions. |
+| Prose can be a stub | Walkthrough [Q2](examples/auto-ontology/live/current/responses/10i_ask_with_key/ask_q2.json) has correct rows and the explanation "Purple". | Response validation that examines substance; a finite placeholder list is insufficient. |
+| Schema-qualification errors | Twelve of 22 first queries in the earlier DeepSeek development run omitted the `code.` schema and needed a repair. | Report upstream; the catalog could give qualified names. |
+| Current Auto Ontology revision untested | All agent runs used `cdaf61e` with the twelve-file patch. | One import and one question against a named current revision through the documented public route. |
 | Upstream benchmark not run | Exports and compatibility tests use NVIDIA's dataset contracts. | Run NVIDIA's own benchmark harness on the exported dataset. |
 
-Every run is retained as collected. No question was asked again, and no reference changed after a run.
+Every run is retained as collected and no question was asked again. Reference corrections are applied as a separate, named evaluator version; the frozen references and their scores stay published beside them.
 
 ## Source-analysis limits
 

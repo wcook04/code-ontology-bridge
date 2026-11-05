@@ -10,7 +10,7 @@ date: 5 November 2026
 
 ## Abstract
 
-Can a database agent answer questions about software if the source is represented as tables? We built **code-ontology-bridge**, a Python extractor that turns source files, symbols, calls and existing docstrings into relational data and a semantic model for NVIDIA Auto Ontology. A second export, the semantics layer, adds verified views for calls, callbacks, reachability, file and symbol facts, dependencies and inheritance. We tested both on 48 questions about four repositories, written by separate AI authors who never saw what the bridge adds, re-derived by independent annotators and frozen before any model ran. Each answer counts as correct only if its SQL also returns the right rows on eight counterfactual versions of the database. Asked directly, DeepSeek v4.1 Flash rose from 20.6 correct answers with the schema alone to 34.0 with the exported model, and NVIDIA Nemotron 3.5 Lightning from 2.4 to 9.4 with the semantics layer, averaged over five runs. Inside Auto Ontology's own agent, the semantics layer was the only import that raised the score above Auto Ontology's own catalog of the database, by a small margin on 12 questions. The questions come from AI authors rather than the repositories' maintainers, and the extractor misses some calls that the source makes.
+Which code semantics can an outside project supply to NVIDIA Auto Ontology through its existing data and model contracts, and do they change the agent's answers? We built **code-ontology-bridge**, a Python extractor that turns source files, symbols, calls and existing docstrings into relational data and a semantic model for Auto Ontology. A second export, the semantics layer, adds verified views for calls, callbacks, reachability, file and symbol facts, dependencies and inheritance. We tested both on 48 questions about four repositories, written by separate AI authors who never saw what the bridge adds, re-derived by independent AI annotators and frozen before any model ran. An answer counts as robust only if its SQL also returns the right rows on eight counterfactual versions of the database. After the runs, an audit corrected 21 reference queries that missed a restriction stated in their question, and every saved response was rescored. Asked directly, DeepSeek v4.1 Flash rose from 18.0 robust answers with the schema alone to 27.2 with the exported model, and NVIDIA Nemotron 3.5 Lightning from 2.4 to 7.6 with the semantics layer, averaged over five runs. Inside Auto Ontology's own agent, its own catalog already answered most questions for DeepSeek (10.3 of 12); importing the semantics layer gave 10.7, within run-to-run variation, and the base model alone 8.7. The questions come from AI authors rather than the repositories' maintainers, and the extractor misses some calls that the source makes.
 
 ## 1. The question and the contribution
 
@@ -18,7 +18,7 @@ Suppose a developer changes `resolve_semantic_fks`, the function that resolves s
 
 A source map can record those relationships once and make them available to SQL. NVIDIA Auto Ontology already has the other half of this workflow: an agent that retrieves semantic context, writes SQL and executes it against a connected database. This project connects the two. Instead of asking Auto Ontology about a sales database, we ask it about a database of its own implementation.
 
-The work has three parts:
+The work has four parts:
 
 - **A source adapter.** A standalone extractor records Python source facts and exports DuckDB rows, model YAML and an evaluation dataset using Auto Ontology's existing contracts.
 - **An exercised integration.** A compatibility patch configures public model clients and exposes an existing SQL routing option at the chat boundary. The retained run connects ingestion, model import, semantic compilation and question answering.
@@ -138,7 +138,7 @@ The [saved response](../examples/auto-ontology/live/current/responses/10i_ask_wi
 The study ([protocol](../study/PROTOCOL.md)) asks how much each part of what the bridge exports contributes to correct answers, on questions written without knowledge of it. The order of work is fixed by public commits.
 
 1. **The semantics layer came first.** Six DuckDB views over the exported tables define common code-question concepts once: `call_edges` (direct calls and callback references for each caller and callee), `reachability` (the shortest chain of calls between two symbols, through direct calls only and through callbacks too, unbounded and safe on cycles), `symbol_profile`, `file_profile` (including each file's folder), `file_dependencies` and `class_ancestry`. Every view and column is documented in the native model with keys and joins. Property tests check each view against an independent Python computation on random code maps. The layer and its tests were committed before any question existed.
-2. **Four authors wrote 12 questions each**, one per repository: NVIDIA Auto Ontology at a current upstream commit (474 Python files), pallets/click (91), encode/httpx (60) and Textualize/rich (213). The authors were separate AI agents with the source checkout and a database containing only the base tables, instructed not to open the layer, its tests or the study folder. They chose topics freely, wrote reference SQL and checked each answer against the source.
+2. **Four authors wrote 12 questions each**, one per repository: NVIDIA Auto Ontology at a current upstream commit (474 Python files), pallets/click (91), encode/httpx (60) and Textualize/rich (213). The authors were separate AI agents with the source checkout and a database containing only the base tables, instructed not to open the layer, its tests or the study folder. They chose topics freely, wrote reference SQL and checked each answer against the source. Section 4.3 describes the references corrected after the runs.
 3. **A second annotator per repository** received only the question text and output columns and wrote its own SQL. All 48 answers agreed with the authors'. Wherever the annotator named a second plausible reading, the question was reworded so one reading remains: 17 questions, with no reference changed and none removed.
 4. **The questions, references and protocol were committed and pushed** before any model saw them.
 
@@ -151,40 +151,46 @@ Four briefings of the same model, querying the same database:
 - **V, views.** A plus the semantics layer's views listed by name and type, without descriptions; a control for the views alone.
 - **S, semantics layer.** B plus the layer's views, documented columns, keys, joins and a short glossary of definitions.
 
-Inside Auto Ontology, the agent with its retrieval, validation and repair, the database contents and the chat model are fixed, and only the import changes: **nothing** (Auto Ontology's own catalog of the database), the **base model**, or the **semantics layer**.
+Inside Auto Ontology, the agent with its retrieval, validation and repair, the source facts and the chat model are fixed. Three configurations differ: **nothing** imported (Auto Ontology's own catalog of the database), the **base model** imported, or the **semantics layer**, which adds the six views to the database and imports the model that describes them.
 
-DeepSeek v4.1 Flash and NVIDIA Nemotron 3.5 Lightning answered through OpenRouter, at temperature 0 with reasoning off. Arms A, B, V and S ran five complete times; the Auto Ontology arms three times each on the 12 Auto Ontology questions.
+DeepSeek v4.1 Flash and NVIDIA Nemotron 3.5 Lightning answered through OpenRouter. Arms A, B, V and S set temperature 0, reasoning off and at most 4,000 output tokens in every request and ran five complete times. The Auto Ontology arms ran three times each on the 12 Auto Ontology questions through Auto Ontology's own chat clients: temperature 0, its own output limits and the provider's default reasoning setting.
 
-Each answer is scored twice. **Exact rows**: the returned rows equal the reference rows, with named and typed columns and the requested order. **Robust**: the same SQL also returns the reference SQL's rows on eight counterfactual copies of the repository's database, which add calls, callbacks, same-named functions, methods, imports and bases, remove some calls and change docstrings and sizes. A query can return the right rows on one database by coincidence; following [Zhong, Yu and Klein (2020)](https://aclanthology.org/2020.emnlp-main.29/), the counterfactual databases expose many such queries. The reference answer changes on at least one counterfactual database for 44 of the 48 questions. Substituting the reference SQL for the model scores 48 of 48 on both measures.
+Each answer is scored twice. **Exact rows**: the returned rows equal the reference rows, with named and typed columns and the requested order. **Robust**: the same SQL also returns the reference SQL's rows on eight counterfactual copies of the repository's database, which add calls, callbacks, same-named functions, methods, imports and bases, remove some calls and change docstrings and sizes. A query can return the right rows on one database by coincidence; following [Zhong, Yu and Klein (2020)](https://aclanthology.org/2020.emnlp-main.29/), the counterfactual databases expose many such queries, so the robust score approximates semantic accuracy. The reference answer changes on at least one counterfactual database for 44 of the 48 questions. Substituting the reference SQL for the model scores 48 of 48 on both measures.
 
 ### 4.3 Results
+
+**Reference corrections.** After the runs, an outside reviewer found that the reference query for `ao-03` ignores its question's restriction to functions and methods. The extracted symbols also include classes. A class appears as a caller when its body makes a call, and as a callee when it is constructed.
+
+Four auditors then compared all 48 reference queries with their questions' wording, without seeing any model answer or score. They found 21 reference queries that missed a condition stated in the question; 15 of these lacked the same function-or-method restriction. Five questions can be read two ways, and the scorer now accepts either reading. The corrected queries were published before rescoring, and the saved answers were rescored without new model calls. The original scores remain published.
+
+No corrected query changes its answer on a real database, so exact-row scores are unchanged. Robust scores do change. Directly prompted models usually left out the restriction, as the original references did, so they lose robust answers. Auto Ontology's agent with DeepSeek usually wrote the restriction, so it gains. The tables below use the corrected references.
 
 A model asked directly, robust answers out of 48, mean of five runs (lowest and highest in brackets):
 
 | Briefing | DeepSeek v4.1 Flash | Nemotron 3.5 Lightning |
 | --- | ---: | ---: |
-| A, schema | 20.6 (18–23) | 2.4 (2–4) |
-| B, base model | 34.0 (32–37) | 5.6 (5–6) |
-| V, views without descriptions | 28.0 (26–31) | 2.8 (2–5) |
-| S, semantics layer | 33.8 (31–37) | 9.4 (7–12) |
+| A, schema | 18.0 (15–20) | 2.4 (2–4) |
+| B, base model | 27.2 (24–30) | 5.4 (4–6) |
+| V, views without descriptions | 25.4 (23–29) | 2.8 (2–5) |
+| S, semantics layer | 26.8 (25–29) | 7.6 (5–10) |
 
 Inside Auto Ontology, robust answers out of 12, mean of three runs:
 
-| Auto Ontology imports | DeepSeek v4.1 Flash | Nemotron 3.5 Lightning |
+| Auto Ontology is given | DeepSeek v4.1 Flash | Nemotron 3.5 Lightning |
 | --- | ---: | ---: |
-| Nothing | 7.3 | 1.3 |
-| Base model | 7.3 | 2.0 |
-| Semantics layer | 8.7 | 2.7 |
+| Nothing | 10.3 (10–11) | 0.7 (0–1) |
+| Base model | 8.7 (8–9) | 2.3 (0–5) |
+| Semantics layer | 10.7 (10–12) | 2.3 (1–4) |
 
-**The exported models make a large difference to a model asked directly.** With DeepSeek, the base model adds 13 robust answers out of 48; question by question, 14 improve and one regresses. With Nemotron the semantics layer lifts robust answers from 2.4 to 9.4; eight questions improve and none regress.
+**The exported models make a large difference to a model asked directly.** With DeepSeek, the base model adds about nine robust answers out of 48; question by question, nine improve and one regresses. With Nemotron the semantics layer lifts robust answers from 2.4 to 7.6; six questions improve and none regress.
 
-**The layer's value depends on the model and the agent.** For DeepSeek asked directly, the base model and the semantics layer tie (six questions improve and six regress). For Nemotron the layer is clearly better than the base model. The views without their descriptions do worse than the base model for both, so the documentation carries the effect.
+**The layer's value depends on the model and the agent.** For DeepSeek asked directly, the base model and the semantics layer tie (five questions improve and six regress). For Nemotron the layer is the best briefing, and adding the layer's definitions to its views improves six questions with none regressing. For DeepSeek the views alone already help, and their definitions add little on these questions.
 
-**Inside Auto Ontology, the semantics layer gives the highest score for both models.** For DeepSeek, Auto Ontology's own catalog of the database scores the same as the imported base model; for Nemotron the base model raises the robust score from 1.3 to 2.0 and the layer to 2.7. For DeepSeek the layer, whose views encode reachability, callbacks and folders, raises the robust score from 7.3 to 8.7. The difference is small in absolute terms, on 12 questions and three runs.
+**Inside Auto Ontology, the agent's own catalog is a strong baseline.** With DeepSeek, Auto Ontology alone answers 10.3 of 12 robustly; the semantics layer gives 10.7, within run-to-run variation, and the base model alone 8.7. With Nemotron both imports raise the score from 0.7 to 2.3. The agent with DeepSeek usually applied the questions' restrictions on kind of symbol, which directly prompted models usually missed.
 
 ### 4.4 Limits
 
-The questions were written by AI authors under the protocol's rules, not by the repositories' maintainers, and their topics reflect what the base database can answer. Reference answers are correct for the extracted database. The authors' source checks found facts the extractor misses: calls through a local alias, calls to functions with `@overload` stubs, names reached through package re-exports and calls on objects of unknown type. Each is recorded with its question. Nemotron scores low on these questions throughout with reasoning off. The Auto Ontology arms used revision `cdaf61e` with a twelve-file compatibility patch and took a median of three to four minutes per question; arms A to S took one to three seconds and cost under a dollar in total.
+The questions were written by AI authors under the protocol's rules, not by the repositories' maintainers, and their topics reflect what the base database can answer. Reference answers are correct for the extracted database. The authors' source checks found facts the extractor misses: calls through a local alias, calls to functions with `@overload` stubs, names reached through package re-exports and calls on objects of unknown type. Each is recorded with its question. Nemotron scores low on these questions throughout. The Auto Ontology arms used revision `cdaf61e` with a twelve-file compatibility patch and took a median of three to four minutes per question; arms A to S took one to three seconds and cost under a dollar in total.
 
 An earlier experiment with 38 author-written questions about Auto Ontology alone, one run per arm, found the same direction for the base model and shaped this design; its records are kept with the [earlier protocol](experiment-protocol.md) and [results](../examples/auto-ontology/live/RESULTS.md).
 
@@ -212,4 +218,4 @@ The next tests are questions written by the repositories' maintainers, a compari
 
 Separate [governance commands](governance.md) record certification history, annotate SQL and reconcile definitions. They do not enforce certified-only retrieval or prove which definitions the agent used. This evaluation makes no new claim about those commands.
 
-The runs used Auto Ontology [`cdaf61e`](https://github.com/NVIDIA/auto-ontology/tree/cdaf61e1bd0cf3820d11d72b43bb460816aebbd3) and bridge [`2d3686c`](https://github.com/wcook04/code-ontology-bridge/tree/2d3686ccef8b398ab9e693b0bbbee54ea6ac5929); the two DeepSeek Auto Ontology runs started at the next commit, `e1d41b3`, which changed only the website and the results summariser. Each Auto Ontology run's manifest binds full revisions, model settings, the database digest and frozen inputs. Follow the [reproduction guide](reproduction.md) for extraction, compatibility tests or a new live run. [Figure notes](figures/README.md) document the illustrations' sources and omissions.
+The study's Auto Ontology runs used Auto Ontology [`cdaf61e`](https://github.com/NVIDIA/auto-ontology/tree/cdaf61e1bd0cf3820d11d72b43bb460816aebbd3); every run's manifest in `study/runs/` names the bridge revision it started from, all at or after the commit that froze the study, `37b4f05`. The earlier comparison used bridge [`2d3686c`](https://github.com/wcook04/code-ontology-bridge/tree/2d3686ccef8b398ab9e693b0bbbee54ea6ac5929), with its two DeepSeek Auto Ontology runs starting at `e1d41b3`, which changed only the website and the results summariser. Each Auto Ontology run's manifest binds full revisions, model settings, the database digest and frozen inputs. Follow the [reproduction guide](reproduction.md) for extraction, compatibility tests or a new live run. [Figure notes](figures/README.md) document the illustrations' sources and omissions.

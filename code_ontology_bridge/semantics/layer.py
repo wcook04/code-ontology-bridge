@@ -44,6 +44,8 @@ CALL_EDGES = LayerView(
     "One row per ordered pair of internal symbols where the first calls or references the second, "
     "aggregating every call site between them. Use calls_directly for 'calls' or 'direct callers'; "
     "a pair can exist only because the caller passes the callee as a callback (calls_directly false). "
+    "The two flags are independent: one pair can have both, e.g. helper() and pool.submit(helper) in the same body. "
+    "To select direct callers, filter calls_directly alone; do not add NOT passes_as_callback. "
     "Only resolved internal callees appear; calls to builtins, third-party code and unresolved names are not edges.",
     """SELECT c.caller_symbol_id,
        c.callee_symbol_id,
@@ -93,7 +95,11 @@ REACHABILITY = LayerView(
     "with the length of the shortest chain. direct_depth follows direct calls only and is null when the target is reachable "
     "only through a callback reference; any_depth also follows callback references. The chain length is unbounded and cycles "
     "are handled. A symbol is never listed as reaching itself. Use this view for 'directly or indirectly', 'transitively', "
-    "'can reach', 'impact of changing' and shortest-depth questions instead of writing a recursive query.",
+    "'can reach', 'impact of changing' and shortest-depth questions instead of writing a recursive query. "
+    "It records only the two endpoints of a chain, so it cannot enforce a condition on the symbols in between "
+    "(every hop inside one file, every intermediate a method, no test code along the way). Filtering its caller or "
+    "target columns restricts the endpoints only; for a condition on every hop, write a recursive query over "
+    "code.call_edges filtered by that condition.",
     """WITH RECURSIVE
 edges AS (
   SELECT DISTINCT caller_symbol_id AS caller, callee_symbol_id AS callee, call_kind = 'direct' AS is_direct
@@ -329,9 +335,9 @@ SELECT class_symbol_id, ancestor_symbol_id, depth FROM anc""",
 LAYER_VIEWS: tuple[LayerView, ...] = (CALL_EDGES, REACHABILITY, SYMBOL_PROFILE, FILE_PROFILE, FILE_DEPENDENCIES, CLASS_ANCESTRY)
 
 GLOSSARY: tuple[tuple[str, str], ...] = (
-    ("calls / direct caller", "A calls B when a call site in A's body invokes B: code.call_edges with calls_directly. Passing B as an argument (a callback reference) is not a call."),
+    ("calls / direct caller", "A calls B when a call site in A's body invokes B: code.call_edges with calls_directly. Passing B as an argument (a callback reference) is not a call. A pair that is both called and passed as a callback is still a direct caller: filter calls_directly alone."),
     ("callback reference", "A passes B by name as an argument to another call, e.g. asyncio.to_thread(B) or Thread(target=B): code.call_edges with passes_as_callback. The receiving call is expected to run B, but this is a static reference, not an observed execution."),
-    ("reaches / transitive or indirect caller", "A chain of call edges leads from A to B: code.reachability. Use direct_depth for chains of direct calls only, any_depth when callback references count."),
+    ("reaches / transitive or indirect caller", "A chain of call edges leads from A to B: code.reachability. Use direct_depth for chains of direct calls only, any_depth when callback references count. A condition on every hop of the chain (stays in one file, passes only through methods) needs a recursive query over the filtered code.call_edges; code.reachability cannot express it."),
     ("function, method, class", "A function is a module-level def (kind = 'function'); a method is a def in a class body; a class is neither, although calling a class constructs an instance and appears as a call to the class."),
     ("public", "is_public: neither the name nor an enclosing class name starts with an underscore. Dunder methods such as __init__ are therefore not public."),
     ("test code", "Anything defined in a file with is_test true. 'Outside tests' means in_test_file / caller_in_test_file false."),

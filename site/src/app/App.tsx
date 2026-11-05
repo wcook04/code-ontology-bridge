@@ -143,7 +143,8 @@ function Footer({ pub }: { pub: Publication | null }) {
             <Out href="https://github.com/NVIDIA/auto-ontology">NVIDIA Auto Ontology</Out>, made by Will Cook. It is not affiliated with or endorsed by NVIDIA.
           </p>
           <p className="small muted">
-            Every page reads a static publication of the recorded run:{" "}
+            The study page reads <a href="./study/summary.json">study/summary.json</a>, copied from{" "}
+            <Out href={`${REPO}/blob/main/study/results/summary.json`}>study/results/summary.json</Out>. The walkthrough pages read a static publication of the recorded run:{" "}
             <a href="./data/index.json">data/index.json</a>
             {pub ? (
               <>

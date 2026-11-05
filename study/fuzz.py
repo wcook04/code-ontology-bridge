@@ -23,6 +23,8 @@ from pathlib import Path
 
 import duckdb
 
+from code_ontology_bridge.codemap.resolve import is_test_path
+
 ROOT = Path(__file__).resolve().parents[1]
 
 
@@ -77,7 +79,7 @@ def mutate(db: Path, k: int, seed: int, t_syms: list[str], t_files: list[str]) -
         doc = rng.random() < 0.5
         con.execute("INSERT INTO code.files VALUES (?, ?, ?, ?, ?, 'fuzz', ?, ?, false)", [
             f, f.rsplit("/", 1)[0].replace("/", ".") if "/" in f else "", f.removesuffix(".py").replace("/", "."),
-            f.startswith("tests/"), rng.randint(5, 400), "Fuzz module." if doc else "", "module_docstring" if doc else "none"])
+            is_test_path(f), rng.randint(5, 400), "Fuzz module." if doc else "", "module_docstring" if doc else "none"])
         files.append(f)
     stats["files_added"] = len(new_files)
 

@@ -1,0 +1,109 @@
+[
+ {
+  "id": "ao-01",
+  "verdict": "mismatch",
+  "explanation": "Two latent divergences. (1) The wording defines a public method as one whose name does not start with an underscore, but m.is_public is also false when the enclosing class name starts with an underscore, so a production connector class such as _YDatabase(SQLDatabase) would lose all its methods. (2) The question asks for one row per (class, method name), but the reference has no DISTINCT; a property getter+setter or any repeated def of the same name in the class body yields two method symbols (the second with an @L suffix) and so duplicate rows; the same happens if class_bases lists SQLDatabase twice for one class. Repeated qualnames do occur in this repo (e.g. _FakeCursor.execute twice in connectors tests). Neither case occurs on the 9 study DBs. Cross-cutting test-code note: the question defines test code as every file under a tests/ folder, and the reference uses files.is_test. On the real DB the two agree exactly. In fuzz variants v0, v1, v3, v4, v5 and v7, study/fuzz.py inserts <existing folder>/fuzz_mod<k>.py with is_test = f.startswith('tests/'), so files such as auto_ontology/connectors/tests/fuzz_mod1.py are under a tests/ folder yet is_test = false (this also contradicts the is_test column description). The corrected SQL uses (is_test OR file_id LIKE 'tests/%' OR file_id LIKE '%/tests/%'); the better repair is to fix fuzz.py so is_test follows the path rule. (No test-path witness for this question either.)",
+  "corrected_sql": "SELECT DISTINCT b.class_symbol_id, m.name AS method_name FROM code.class_bases b JOIN code.symbols c ON c.symbol_id = b.class_symbol_id JOIN code.files f ON f.file_id = c.file_id JOIN code.symbols m ON m.file_id = c.file_id AND m.kind = 'method' AND m.qualname = c.qualname || '.' || m.name WHERE b.base_symbol_id = 'auto_ontology/connectors/base.py::SQLDatabase' AND NOT (f.is_test OR f.file_id LIKE 'tests/%' OR f.file_id LIKE '%/tests/%') AND NOT starts_with(m.name, '_') AND m.name NOT IN (SELECT bm.name FROM code.symbols bm WHERE bm.file_id = 'auto_ontology/connectors/base.py' AND bm.kind = 'method' AND bm.qualname LIKE 'SQLDatabase.%') ORDER BY 1, 2",
+  "differs_on": [],
+  "example": "Constructed in-memory DB: XDatabase(SQLDatabase) with two 'mode' method symbols (getter and setter) and production class _YDatabase(SQLDatabase) defining ping. Original returns [(x.py::XDatabase, mode), (x.py::XDatabase, mode)]; corrected returns [(x.py::XDatabase, mode), (x.py::_YDatabase, ping)]."
+ },
+ {
+  "id": "ao-02",
+  "verdict": "mismatch",
+  "explanation": "The question asks which functions or methods are handed over by reference, but the reference returns every callback callee with no kind filter; a class passed by name (callback row whose callee is kind='class') is returned. Same defect class as ao-03.",
+  "corrected_sql": "SELECT DISTINCT c.callee_symbol_id AS symbol_id FROM code.calls c JOIN code.symbols s ON s.symbol_id = c.callee_symbol_id WHERE c.caller_symbol_id = 'auto_ontology/retrieval/text_to_sql/text_to_sql_graph.py::create_graph' AND c.call_kind = 'callback' AND s.kind IN ('function', 'method') ORDER BY 1",
+  "differs_on": [
+   "auto_ontology_v7.duckdb"
+  ],
+  "example": "v7: original additionally returns auto_ontology/retrieval/text_to_sql/agents/kumo_prediction.py::KumoPredictionAgent (a class) as a callback callee of create_graph; corrected omits it (9 vs 8 rows)."
+ },
+ {
+  "id": "ao-03",
+  "verdict": "mismatch",
+  "explanation": "Confirmed reviewer finding: neither the returned callers nor the intermediate are restricted to functions/methods. Class symbols appear as callers (class bodies) in calls, so (a) a class that directly calls an intermediate is returned, and (b) a class that directly calls invoke_with_structured_output acts as an intermediate, pulling in its callers. Cross-cutting test-code note: the question defines test code as every file under a tests/ folder, and the reference uses files.is_test. On the real DB the two agree exactly. In fuzz variants v0, v1, v3, v4, v5 and v7, study/fuzz.py inserts <existing folder>/fuzz_mod<k>.py with is_test = f.startswith('tests/'), so files such as auto_ontology/connectors/tests/fuzz_mod1.py are under a tests/ folder yet is_test = false (this also contradicts the is_test column description). The corrected SQL uses (is_test OR file_id LIKE 'tests/%' OR file_id LIKE '%/tests/%'); the better repair is to fix fuzz.py so is_test follows the path rule.",
+  "corrected_sql": "WITH d AS (SELECT DISTINCT c.caller_symbol_id AS s FROM code.calls c JOIN code.symbols k ON k.symbol_id = c.caller_symbol_id WHERE c.call_kind = 'direct' AND c.callee_symbol_id = 'auto_ontology/utils/llm_invoke.py::invoke_with_structured_output' AND k.kind IN ('function', 'method')) SELECT DISTINCT c.caller_symbol_id AS symbol_id FROM code.calls c JOIN code.symbols x ON x.symbol_id = c.caller_symbol_id JOIN code.files f ON f.file_id = x.file_id WHERE c.call_kind = 'direct' AND x.kind IN ('function', 'method') AND c.callee_symbol_id IN (SELECT s FROM d) AND c.caller_symbol_id NOT IN (SELECT s FROM d) AND NOT (f.is_test OR f.file_id LIKE 'tests/%' OR f.file_id LIKE '%/tests/%') ORDER BY 1",
+  "differs_on": [
+   "auto_ontology_v1.duckdb",
+   "auto_ontology_v3.duckdb"
+  ],
+  "example": "v1: original returns classes coverage.py::CoverageGradeAgent and catalog/extract.py::_fz1_12 (10 vs 8 rows). v3: class ResponseAgent directly calls invoke_with_structured_output, so via that class intermediate the original returns databricks.py::DatabricksDatabase.get_columns, text_to_sql_graph.py::create_graph and server/tags/router.py::detach_tag (15 vs 12 rows). Differences come from the kind filters only; the test-path change alters nothing here."
+ },
+ {
+  "id": "ao-04",
+  "verdict": "mismatch",
+  "explanation": "The question counts only constructor calls 'written in a function or method body', but both EXISTS subqueries accept any caller, including class symbols (class-body calls are recorded in calls). A class constructed only in a non-test class body is wrongly kept; symmetrically a construction in a test class body wrongly disqualifies. Cross-cutting test-code note: the question defines test code as every file under a tests/ folder, and the reference uses files.is_test. On the real DB the two agree exactly. In fuzz variants v0, v1, v3, v4, v5 and v7, study/fuzz.py inserts <existing folder>/fuzz_mod<k>.py with is_test = f.startswith('tests/'), so files such as auto_ontology/connectors/tests/fuzz_mod1.py are under a tests/ folder yet is_test = false (this also contradicts the is_test column description). The corrected SQL uses (is_test OR file_id LIKE 'tests/%' OR file_id LIKE '%/tests/%'); the better repair is to fix fuzz.py so is_test follows the path rule.",
+  "corrected_sql": "SELECT b.class_symbol_id FROM code.class_bases b JOIN code.symbols s ON s.symbol_id = b.class_symbol_id JOIN code.files f ON f.file_id = s.file_id WHERE b.base_symbol_id = 'auto_ontology/retrieval/text_to_sql/base.py::BaseAgent' AND NOT (f.is_test OR f.file_id LIKE 'tests/%' OR f.file_id LIKE '%/tests/%') AND EXISTS (SELECT 1 FROM code.calls c JOIN code.symbols cs ON cs.symbol_id = c.caller_symbol_id JOIN code.files cf ON cf.file_id = cs.file_id WHERE c.callee_symbol_id = b.class_symbol_id AND c.call_kind = 'direct' AND cs.kind IN ('function', 'method') AND NOT (cf.is_test OR cf.file_id LIKE 'tests/%' OR cf.file_id LIKE '%/tests/%')) AND NOT EXISTS (SELECT 1 FROM code.calls c JOIN code.symbols cs ON cs.symbol_id = c.caller_symbol_id JOIN code.files cf ON cf.file_id = cs.file_id WHERE c.callee_symbol_id = b.class_symbol_id AND c.call_kind = 'direct' AND cs.kind IN ('function', 'method') AND (cf.is_test OR cf.file_id LIKE 'tests/%' OR cf.file_id LIKE '%/tests/%')) ORDER BY 1",
+  "differs_on": [
+   "auto_ontology_v5.duckdb"
+  ],
+  "example": "v5: JsonbPathCheckAgent's only non-test construction comes from class KumoPredictionAgent (caller kind='class'), and PredictionGraphAgent's from class catalog/table_filter.py::_test_get_fks_is_always_empty; original returns both, corrected does not (6 vs 4 rows). Kind filter alone reproduces the whole difference."
+ },
+ {
+  "id": "ao-05",
+  "verdict": "ok",
+  "explanation": "Import rows of non-test files outside connectors/ whose imported_file_id is under auto_ontology/connectors/ (including __init__.py) match the wording; function-level and TYPE_CHECKING imports are rows in code.imports. Cross-cutting test-code note: the question defines test code as every file under a tests/ folder, and the reference uses files.is_test. On the real DB the two agree exactly. In fuzz variants v0, v1, v3, v4, v5 and v7, study/fuzz.py inserts <existing folder>/fuzz_mod<k>.py with is_test = f.startswith('tests/'), so files such as auto_ontology/connectors/tests/fuzz_mod1.py are under a tests/ folder yet is_test = false (this also contradicts the is_test column description). The corrected SQL uses (is_test OR file_id LIKE 'tests/%' OR file_id LIKE '%/tests/%'); the better repair is to fix fuzz.py so is_test follows the path rule. No difference on any of the 9 DBs with the path-based predicate.",
+  "corrected_sql": null,
+  "differs_on": [],
+  "example": null
+ },
+ {
+  "id": "ao-06",
+  "verdict": "ok",
+  "explanation": "Direct SQLDatabase subclasses in non-test files, their own method with qualname Class.get_columns and summary_source='none'; matches the wording. Cross-cutting test-code note: the question defines test code as every file under a tests/ folder, and the reference uses files.is_test. On the real DB the two agree exactly. In fuzz variants v0, v1, v3, v4, v5 and v7, study/fuzz.py inserts <existing folder>/fuzz_mod<k>.py with is_test = f.startswith('tests/'), so files such as auto_ontology/connectors/tests/fuzz_mod1.py are under a tests/ folder yet is_test = false (this also contradicts the is_test column description). The corrected SQL uses (is_test OR file_id LIKE 'tests/%' OR file_id LIKE '%/tests/%'); the better repair is to fix fuzz.py so is_test follows the path rule. No difference on any of the 9 DBs.",
+  "corrected_sql": null,
+  "differs_on": [],
+  "example": null
+ },
+ {
+  "id": "ao-07",
+  "verdict": "mismatch",
+  "explanation": "The question asks for functions or methods, but the caller is not restricted by kind; a class whose body calls write_transaction (class-body calls are in code.calls) is returned. Cross-cutting test-code note: the question defines test code as every file under a tests/ folder, and the reference uses files.is_test. On the real DB the two agree exactly. In fuzz variants v0, v1, v3, v4, v5 and v7, study/fuzz.py inserts <existing folder>/fuzz_mod<k>.py with is_test = f.startswith('tests/'), so files such as auto_ontology/connectors/tests/fuzz_mod1.py are under a tests/ folder yet is_test = false (this also contradicts the is_test column description). The corrected SQL uses (is_test OR file_id LIKE 'tests/%' OR file_id LIKE '%/tests/%'); the better repair is to fix fuzz.py so is_test follows the path rule.",
+  "corrected_sql": "SELECT DISTINCT c.caller_symbol_id AS symbol_id FROM code.calls c JOIN code.symbols s ON s.symbol_id = c.caller_symbol_id JOIN code.files f ON f.file_id = s.file_id WHERE c.callee_symbol_id = 'auto_ontology/dal/session.py::write_transaction' AND c.call_kind = 'direct' AND NOT (f.is_test OR f.file_id LIKE 'tests/%' OR f.file_id LIKE '%/tests/%') AND s.kind IN ('function', 'method') AND s.file_id NOT LIKE 'auto_ontology/dal/%' AND c.caller_symbol_id NOT IN (SELECT caller_symbol_id FROM code.calls WHERE callee_symbol_id = 'auto_ontology/dal/session.py::store' AND call_kind = 'direct') ORDER BY 1",
+  "differs_on": [
+   "auto_ontology_v6.duckdb"
+  ],
+  "example": "v6: original additionally returns auto_ontology/connectors/snowflake.py::SnowflakeDatabase (kind='class') as a write_transaction caller (5 vs 4 rows). Kind filter alone reproduces the difference."
+ },
+ {
+  "id": "ao-08",
+  "verdict": "mismatch",
+  "explanation": "Kind filters, direct-only, distinct callers, session.py exclusion and the tie-break are all correct. The only divergence is the test-code definition: a caller in a file under a tests/ folder whose is_test is false is counted. This is caused by the fuzz.py is_test defect rather than a wording gap in the reference, so fixing fuzz.py is the preferable repair. Cross-cutting test-code note: the question defines test code as every file under a tests/ folder, and the reference uses files.is_test. On the real DB the two agree exactly. In fuzz variants v0, v1, v3, v4, v5 and v7, study/fuzz.py inserts <existing folder>/fuzz_mod<k>.py with is_test = f.startswith('tests/'), so files such as auto_ontology/connectors/tests/fuzz_mod1.py are under a tests/ folder yet is_test = false (this also contradicts the is_test column description). The corrected SQL uses (is_test OR file_id LIKE 'tests/%' OR file_id LIKE '%/tests/%'); the better repair is to fix fuzz.py so is_test follows the path rule.",
+  "corrected_sql": "SELECT c.callee_symbol_id AS symbol_id, COUNT(DISTINCT c.caller_symbol_id) AS caller_count FROM code.calls c JOIN code.symbols cs ON cs.symbol_id = c.caller_symbol_id JOIN code.files cf ON cf.file_id = cs.file_id JOIN code.symbols t ON t.symbol_id = c.callee_symbol_id JOIN code.files tf ON tf.file_id = t.file_id WHERE c.call_kind = 'direct' AND NOT (cf.is_test OR cf.file_id LIKE 'tests/%' OR cf.file_id LIKE '%/tests/%') AND cs.kind IN ('function', 'method') AND cs.file_id NOT LIKE 'auto_ontology/dal/%' AND t.kind = 'function' AND t.file_id LIKE 'auto_ontology/dal/%' AND NOT (tf.is_test OR tf.file_id LIKE 'tests/%' OR tf.file_id LIKE '%/tests/%') AND t.file_id <> 'auto_ontology/dal/session.py' GROUP BY 1 ORDER BY 2 DESC, 1 LIMIT 5",
+  "differs_on": [
+   "auto_ontology_v1.duckdb"
+  ],
+  "example": "v1: auto_ontology/connectors/tests/fuzz_mod1.py::_build_coverage_payload (is_test=false) calls dal/datasources.py::fetch_schemas_for_database, so its rank-5 count is 6 in the original and 5 in the corrected SQL (rows 1-4 identical)."
+ },
+ {
+  "id": "ao-09",
+  "verdict": "ok",
+  "explanation": "test_links holds exactly imports_target and name_match associations into the target file; DISTINCT on test_file_id matches 'each test file once'.",
+  "corrected_sql": null,
+  "differs_on": [],
+  "example": null
+ },
+ {
+  "id": "ao-10",
+  "verdict": "ok",
+  "explanation": "LIKE 'auto_ontology/server/%/%' excludes files directly in server/, split_part(...,3) gives the immediate subfolder, every .py including tests and __init__.py is summed, and > 1000 is strict as worded.",
+  "corrected_sql": null,
+  "differs_on": [],
+  "example": null
+ },
+ {
+  "id": "ao-11",
+  "verdict": "ok",
+  "explanation": "is_public (false for underscore names and for methods of underscore classes) matches the wording; nested defs are not symbols. Minor: a kind with zero public definitions yields no row rather than a 0 row; with counts 17/32/13 this never arises here and the wording does not clearly demand zero rows. Repeated definitions (@L symbols) are each counted, consistent with counting definitions. Cross-cutting test-code note: the question defines test code as every file under a tests/ folder, and the reference uses files.is_test. On the real DB the two agree exactly. In fuzz variants v0, v1, v3, v4, v5 and v7, study/fuzz.py inserts <existing folder>/fuzz_mod<k>.py with is_test = f.startswith('tests/'), so files such as auto_ontology/connectors/tests/fuzz_mod1.py are under a tests/ folder yet is_test = false (this also contradicts the is_test column description). The corrected SQL uses (is_test OR file_id LIKE 'tests/%' OR file_id LIKE '%/tests/%'); the better repair is to fix fuzz.py so is_test follows the path rule. No difference on any of the 9 DBs.",
+  "corrected_sql": null,
+  "differs_on": [],
+  "example": null
+ },
+ {
+  "id": "ao-12",
+  "verdict": "ok",
+  "explanation": "Recursive ancestry over resolved class_bases; MIN(depth) >= 2 is exactly 'reached only through an intermediate and never names ApiModel directly' (an alias resolves to the same base_symbol_id), and MIN gives the shortest chain. Cycles cannot occur in valid Python and fuzz.py avoids them.",
+  "corrected_sql": null,
+  "differs_on": [],
+  "example": null
+ }
+]

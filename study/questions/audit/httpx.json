@@ -1,0 +1,116 @@
+[
+  {
+    "id": "httpx-01",
+    "verdict": "mismatch",
+    "explanation": "The question asks for source files 'of the httpx library itself (test code excluded)'. The reference keeps every non-test file with a docstring, so a non-test file outside the httpx/ package (a script, a docs helper, another top-level package) would be returned. On the real DB every non-test file lives under httpx/, so the results agree there. The counterfactual DBs add fuzzpkg<k>/core.py with a docstring, and the reference returns it. A reader who takes 'the library itself' to mean only test code is excluded would accept the reference, but the stronger reading restricts to httpx/.",
+    "corrected_sql": "SELECT file_id AS file_path FROM code.files WHERE NOT is_test AND description_source <> 'none' AND starts_with(file_id, 'httpx/') ORDER BY file_id",
+    "differs_on": [
+      "httpx_v0.duckdb",
+      "httpx_v1.duckdb",
+      "httpx_v3.duckdb",
+      "httpx_v6.duckdb"
+    ],
+    "example": "httpx_v0.duckdb: reference returns 'fuzzpkg0/core.py' (non-test, module_docstring), which is not part of the httpx package; corrected omits it."
+  },
+  {
+    "id": "httpx-02",
+    "verdict": "mismatch",
+    "explanation": "The question asks which 'functions or methods' directly call request_context. The reference returns every caller_symbol_id, and code.calls also records calls made from class bodies (the caller is a kind='class' symbol). The counterfactual DBs contain such class callers. Fix: join code.symbols and keep kind IN ('function','method'). The other filters are correct: direct only, tests included, DISTINCT.",
+    "corrected_sql": "SELECT DISTINCT c.caller_symbol_id AS symbol_id FROM code.calls c JOIN code.symbols s ON s.symbol_id = c.caller_symbol_id WHERE c.callee_symbol_id = 'httpx/_exceptions.py::request_context' AND c.call_kind = 'direct' AND s.kind IN ('function','method') ORDER BY symbol_id",
+    "differs_on": [
+      "httpx_v4.duckdb",
+      "httpx_v5.duckdb",
+      "httpx_v6.duckdb"
+    ],
+    "example": "httpx_v4.duckdb: call fuzz4:16 has caller httpx/_exceptions.py::StreamClosed (kind='class') calling request_context directly; the reference returns StreamClosed and the corrected SQL does not. Likewise ConnectError on v5 and CookieConflict on v6."
+  },
+  {
+    "id": "httpx-03",
+    "verdict": "mismatch",
+    "explanation": "The question spells out its association rule: some test file imports the module directly (imports table), or some test file's base name is exactly 'test_' + the source file's base name. The reference instead uses the precomputed code.test_links table. On the real DB the two agree exactly (verified: an import- and name-derived query gives the same 18 files). On any DB where test_links disagrees with imports or file names, the reference no longer follows the stated rule. That happens on all 8 counterfactual DBs, because fuzz.py inserts test_links rows with arbitrary reasons and test-file imports without matching links. Caveat: someone who treats test_links as the authoritative encoding of this rule would call the reference fine, and the divergence needs internally inconsistent data. Still, the English never mentions the table, and the difference changes answers on every variant, so the owner should decide which side of the contract is binding. Test-file identity uses files.is_test, which matches the question's 'everything under tests/ is a test file' on all 9 DBs.",
+    "corrected_sql": "SELECT f.file_id AS file_path FROM code.files f WHERE NOT f.is_test AND NOT EXISTS (SELECT 1 FROM code.imports i JOIN code.files t ON t.file_id = i.file_id WHERE t.is_test AND i.imported_file_id = f.file_id) AND NOT EXISTS (SELECT 1 FROM code.files t WHERE t.is_test AND regexp_extract(t.file_id, '[^/]+$') = 'test_' || regexp_extract(f.file_id, '[^/]+$')) ORDER BY f.file_id",
+    "differs_on": [
+      "httpx_v0.duckdb",
+      "httpx_v1.duckdb",
+      "httpx_v2.duckdb",
+      "httpx_v3.duckdb",
+      "httpx_v4.duckdb",
+      "httpx_v5.duckdb",
+      "httpx_v6.duckdb",
+      "httpx_v7.duckdb"
+    ],
+    "example": "httpx_v3.duckdb: test_links has ('tests/client/test_cookies.py','httpx/_auth.py','imports_target'), but no test file imports httpx/_auth.py and no test_auth.py name rule applies (the file is _auth.py). By the stated rule _auth.py has no associated test, so the corrected SQL returns it and the reference does not. httpx_v0.duckdb: tests/test_config.py imports httpx/_client.py (fuzz0:38) with no test_links row, so the reference wrongly lists httpx/_client.py as untested."
+  },
+  {
+    "id": "httpx-04",
+    "verdict": "ok",
+    "explanation": "kind='method', the fixed file, qualname 'Client.<name>' with no further dot (excludes nested-class methods; the LIKE pattern has no '_' wildcard), and summary_source='none' match the wording. Methods inherited from BaseClient have BaseClient.* qualnames and are correctly excluded.",
+    "corrected_sql": null,
+    "differs_on": [],
+    "example": null
+  },
+  {
+    "id": "httpx-05",
+    "verdict": "ok",
+    "explanation": "Functions and methods only; non-test via is_test (the question gives no stricter definition); line_end - line_start + 1 with line_start excluding decorators, which matches 'from the def line'; ordering and tie-break are as stated; LIMIT 5 is deterministic after the tie-break.",
+    "corrected_sql": null,
+    "differs_on": [],
+    "example": null
+  },
+  {
+    "id": "httpx-06",
+    "verdict": "mismatch",
+    "explanation": "Low-severity escaping bug. The method match uses m.qualname LIKE c.qualname || '.%'. A class qualname that contains '_' (common for private classes) turns '_' into a single-character wildcard, so a class _RL picks up URL's methods in the same file, for example. Counting, the kind filter, direct-body-only and the ordering are otherwise right. The fix replaces LIKE with starts_with plus a no-further-dot check. No row differs on the 9 DBs. Separately, if two classes in one file share a qualname (the @L case), each would be credited with the other's methods. That is inherent to the data, so no correction is offered for it.",
+    "corrected_sql": "SELECT c.symbol_id, COUNT(m.symbol_id) AS method_count FROM code.symbols c JOIN code.files f ON f.file_id = c.file_id JOIN code.symbols m ON m.file_id = c.file_id AND m.kind = 'method' AND starts_with(m.qualname, c.qualname || '.') AND strpos(substr(m.qualname, length(c.qualname) + 2), '.') = 0 WHERE c.kind = 'class' AND NOT f.is_test GROUP BY c.symbol_id HAVING COUNT(m.symbol_id) >= 20 ORDER BY method_count DESC, c.symbol_id",
+    "differs_on": [],
+    "example": "In-memory copy of the real DB plus one symbol ('httpx/_urls.py::_RL', kind='class', no methods): the reference returns ('httpx/_urls.py::_RL', 28) because '_RL.%' matches every 'URL.<method>' qualname; the corrected SQL does not."
+  },
+  {
+    "id": "httpx-07",
+    "verdict": "ok",
+    "explanation": "Transitive closure over class_bases.base_symbol_id with UNION (no cycles in Python inheritance; fuzz also avoids them). RequestError cannot appear in its own closure. Note: a base written as an unresolved dotted name (base_symbol_id NULL, e.g. httpx.ReadError in a test) is not followed. That is an extractor limit the schema documents, so it is not flagged.",
+    "corrected_sql": null,
+    "differs_on": [],
+    "example": null
+  },
+  {
+    "id": "httpx-08",
+    "verdict": "ok",
+    "explanation": "Classes in the file with no class_bases row naming them as a resolved base. Same note as httpx-07: subclasses whose base is left unresolved (base_symbol_id NULL) are invisible. That is a documented extractor limit, not a defect in the SQL.",
+    "corrected_sql": null,
+    "differs_on": [],
+    "example": null
+  },
+  {
+    "id": "httpx-09",
+    "verdict": "mismatch",
+    "explanation": "This is the same defect class the outside reviewer reported. The question asks which 'functions or methods' lead to _send_single_request. The recursive CTE neither filters the returned symbols nor the intermediate hops by kind, but class bodies can be callers and classes can be callees (instantiation). (1) A class whose body calls a member of the chain is returned. (2) A chain can pass through a class node, A -> C (instantiation) -> class-body call -> X. Calling C does not execute C's class body, so A does not actually lead to X. The correction restricts every node, start and intermediates alike, to kind IN ('function','method') in httpx/_client.py, which also removes the LIKE '_' wildcard on the path. Direct-only, same-file and self-exclusion are otherwise right. Applying the kind filter only to the output, not to the hops, gives the same rows on all 9 DBs. No row differs on the 9 DBs.",
+    "corrected_sql": "WITH RECURSIVE fm AS (SELECT symbol_id FROM code.symbols WHERE file_id = 'httpx/_client.py' AND kind IN ('function','method')), up(symbol_id) AS (SELECT c.caller_symbol_id FROM code.calls c JOIN fm ON fm.symbol_id = c.caller_symbol_id WHERE c.callee_symbol_id = 'httpx/_client.py::Client._send_single_request' AND c.call_kind = 'direct' UNION SELECT c.caller_symbol_id FROM code.calls c JOIN up ON c.callee_symbol_id = up.symbol_id JOIN fm ON fm.symbol_id = c.caller_symbol_id WHERE c.call_kind = 'direct') SELECT symbol_id FROM up WHERE symbol_id <> 'httpx/_client.py::Client._send_single_request' ORDER BY symbol_id",
+    "differs_on": [],
+    "example": "In-memory real DB plus class 'httpx/_client.py::Helper' (body directly calls Client._send_single_request) and function 'httpx/_client.py::make_helper' (directly calls Helper): the reference returns both Helper and make_helper; the corrected SQL returns neither."
+  },
+  {
+    "id": "httpx-10",
+    "verdict": "ambiguous",
+    "explanation": "'internal httpx modules' can mean files of the analysed httpx repository (imported_file_id IS NOT NULL, which is the reference's reading and the schema's sense of 'internal'), or modules of the httpx package (httpx/...). The two differ when both files import a repository file outside httpx/ (a scripts/ helper, a tests/ helper, fuzzpkg). Otherwise the INTERSECT (a set, direct imports, NULLs excluded) is correct. No row differs on the 9 DBs. If the package reading is intended, use the corrected SQL.",
+    "corrected_sql": "SELECT imported_file_id AS file_path FROM code.imports WHERE file_id = 'httpx/_client.py' AND starts_with(imported_file_id, 'httpx/') INTERSECT SELECT imported_file_id FROM code.imports WHERE file_id = 'httpx/_models.py' AND starts_with(imported_file_id, 'httpx/') ORDER BY file_path",
+    "differs_on": [],
+    "example": "In-memory real DB plus a non-test file scripts/compat.py imported by both httpx/_client.py and httpx/_models.py: the reference returns scripts/compat.py; the package-restricted query does not."
+  },
+  {
+    "id": "httpx-11",
+    "verdict": "mismatch",
+    "explanation": "Two gaps. (a) Creating an httpx.AsyncClient is matched only by the literal callee_name 'httpx.AsyncClient'. A test that writes 'from httpx import AsyncClient; AsyncClient(...)' resolves to callee_symbol_id 'httpx/_client.py::AsyncClient' with callee_name 'AsyncClient' and is missed. (b) The question asks for 'test functions', but the reference returns any caller in the file: a helper function such as a fixture factory, or a class body. The question itself contrasts the 'redirects' handler function with test functions. The correction requires kind IN ('function','method') and a pytest-style 'test' name prefix, and accepts either spelling of AsyncClient as a direct call. If 'test function' is meant to cover every function in the test file, drop the starts_with(s.name,'test') condition. No row differs on the 9 DBs.",
+    "corrected_sql": "SELECT c.caller_symbol_id AS symbol_id FROM code.calls c JOIN code.symbols s ON s.symbol_id = c.caller_symbol_id WHERE c.callee_symbol_id = 'tests/client/test_redirects.py::redirects' AND c.call_kind = 'callback' AND s.file_id = 'tests/client/test_redirects.py' AND s.kind IN ('function','method') AND starts_with(s.name, 'test') INTERSECT SELECT caller_symbol_id FROM code.calls WHERE (callee_name = 'httpx.AsyncClient' OR callee_symbol_id = 'httpx/_client.py::AsyncClient') AND call_kind = 'direct' AND caller_symbol_id LIKE 'tests/client/test_redirects.py::%' ORDER BY symbol_id",
+    "differs_on": [],
+    "example": "In-memory real DB plus (1) function test_async_from_import with a callback to redirects and a direct call resolved to httpx/_client.py::AsyncClient (callee_name 'AsyncClient'): the corrected SQL returns it and the reference misses it; (2) a helper function make_async_client that passes redirects and calls httpx.AsyncClient: the reference returns it and the corrected SQL does not."
+  },
+  {
+    "id": "httpx-12",
+    "verdict": "mismatch",
+    "explanation": "The question asks for 'functions in httpx/_main.py'. The reference keeps any callee in the file, so classes (and methods) handed over as callbacks are also returned. The counterfactual generator does create callback rows that target classes. The correction joins code.symbols with kind='function' in httpx/_main.py, which also replaces the LIKE pattern whose '_' is a wildcard. Methods are a judgement call: a reader might count a method passed by name as a 'function in _main.py'. Classes are clearly excluded. No row differs on the 9 DBs.",
+    "corrected_sql": "SELECT DISTINCT c.callee_symbol_id AS symbol_id FROM code.calls c JOIN code.symbols s ON s.symbol_id = c.callee_symbol_id WHERE c.caller_symbol_id = 'httpx/_main.py::main' AND c.call_kind = 'callback' AND s.file_id = 'httpx/_main.py' AND s.kind = 'function' ORDER BY symbol_id",
+    "differs_on": [],
+    "example": "In-memory real DB plus class 'httpx/_main.py::JSONParam' and a callback row main -> JSONParam: the reference returns JSONParam and the corrected SQL does not."
+  }
+]

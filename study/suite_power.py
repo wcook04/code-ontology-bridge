@@ -1,6 +1,6 @@
 """For each question, count the counterfactual databases on which the reference answer differs from the real one.
 
-usage: python study/suite_power.py [--questions ...] [--fuzz-dir build/study/fuzz] [--out study/results/suite_power.json]
+usage: python study/suite_power.py [--evaluator corrected|frozen] [--fuzz-dir build/study/fuzz] [--out study/results/suite_power.json]
 """
 import argparse
 import glob
@@ -8,16 +8,22 @@ import json
 from collections import Counter
 from pathlib import Path
 
+import sys
+
 import duckdb
 
 ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT / "study"))
+from score import FUZZ_DIRS, load_questions  # noqa: E402
+
 p = argparse.ArgumentParser()
-p.add_argument("--questions", type=Path, default=ROOT / "study/questions/questions.json")
-p.add_argument("--fuzz-dir", type=Path, default=ROOT / "build/study/fuzz")
+p.add_argument("--evaluator", choices=["frozen", "corrected"], default="corrected")
+p.add_argument("--fuzz-dir", type=Path)
 p.add_argument("--out", type=Path)
 a = p.parse_args()
+a.fuzz_dir = a.fuzz_dir or FUZZ_DIRS[a.evaluator]
 res = {}
-for q in json.loads(a.questions.read_text()):
+for q in load_questions(a.evaluator).values():
     base = duckdb.connect(str(ROOT / f"study/data/{q['repo']}/{q['repo']}_code.duckdb"), read_only=True)
     ref = Counter(base.execute(q["reference_sql"]).fetchall())
     n = 0

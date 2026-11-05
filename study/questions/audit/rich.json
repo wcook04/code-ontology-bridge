@@ -1,0 +1,121 @@
+[
+ {
+  "id": "rich-01",
+  "verdict": "ok",
+  "explanation": "Direct bases via base_symbol_id, which resolves aliased/qualified base expressions. Duplicate rows would need a class naming the same base twice, which Python rejects; none occur on any of the 9 DBs (DISTINCT variant identical everywhere).",
+  "corrected_sql": null,
+  "differs_on": [],
+  "example": null
+ },
+ {
+  "id": "rich-02",
+  "verdict": "ambiguous",
+  "explanation": "Recursive closure with UNION (dedup, cycle-safe) is correct for 'all transitive subclasses of MarkdownElement'. The lead-in 'In the Markdown renderer' can be read as restricting results to classes in rich/markdown.py; the reference does not restrict. Identical on the real DB (all 16 live in markdown.py) but the fuzz DBs add subclasses in other files. If the restrictive reading is intended, use the corrected SQL; otherwise reword to drop the lead-in or say 'anywhere in the repository'.",
+  "corrected_sql": "WITH RECURSIVE sub(cls) AS (SELECT class_symbol_id FROM code.class_bases WHERE base_symbol_id = 'rich/markdown.py::MarkdownElement' UNION SELECT b.class_symbol_id FROM code.class_bases b JOIN sub ON b.base_symbol_id = sub.cls) SELECT cls AS class_symbol_id FROM sub WHERE cls LIKE 'rich/markdown.py::%' ORDER BY cls",
+  "differs_on": [
+   "rich_v1.duckdb",
+   "rich_v2.duckdb",
+   "rich_v3.duckdb",
+   "rich_v4.duckdb",
+   "rich_v5.duckdb",
+   "rich_v6.duckdb",
+   "rich_v7.duckdb"
+  ],
+  "example": "rich_v2: reference also returns examples/fullscreen.py::Header and rich/pretty.py::BrokenRepr (subclasses outside markdown.py)"
+ },
+ {
+  "id": "rich-03",
+  "verdict": "mismatch",
+  "explanation": "Question asks which 'functions and methods' call cell_len, but the reference does not restrict the caller's kind; code.calls records calls in class bodies with the class as caller (37 class-caller rows on the real DB). A class whose body calls cell_len would be returned. Other clauses are fine: is_test matches 'outside the test suite'; direct-only; COUNT(*) counts occurrences; alias calls are unresolved so excluded (callee_name is 'cell_len' or 'cells.cell_len', both name cell_len itself).",
+  "corrected_sql": "SELECT c.caller_symbol_id, COUNT(*) AS call_sites FROM code.calls c JOIN code.symbols s ON s.symbol_id = c.caller_symbol_id JOIN code.files f ON f.file_id = s.file_id WHERE c.callee_symbol_id = 'rich/cells.py::cell_len' AND c.call_kind = 'direct' AND s.kind IN ('function','method') AND NOT f.is_test GROUP BY c.caller_symbol_id ORDER BY c.caller_symbol_id",
+  "differs_on": [
+   "rich_v6.duckdb"
+  ],
+  "example": "rich_v6: reference returns ('rich/markdown.py::TableRowElement', 1) and ('rich/segment.py::Segments', 1), both kind='class'"
+ },
+ {
+  "id": "rich-04",
+  "verdict": "mismatch",
+  "explanation": "Same defect class as the reviewer's finding: both the returned symbols ('functions and methods defined under rich/') and the intermediate ('some function or method that itself directly calls render') must be functions/methods. The reference allows classes in both roles: hop1 (intermediates) is any caller kind, and the final result is not kind-filtered. Classes appear as callers and callees (constructor calls) in real and fuzz data. The 'does not call render directly' exclusion correctly stays over all direct callers (hop1 unfiltered). Real DB unaffected.",
+  "corrected_sql": "WITH hop1 AS (SELECT DISTINCT caller_symbol_id AS s FROM code.calls WHERE callee_symbol_id = 'rich/markup.py::render' AND call_kind = 'direct'), mid AS (SELECT h.s FROM hop1 h JOIN code.symbols m ON m.symbol_id = h.s WHERE m.kind IN ('function','method')), hop2 AS (SELECT DISTINCT c.caller_symbol_id AS s FROM code.calls c JOIN mid ON c.callee_symbol_id = mid.s WHERE c.call_kind = 'direct') SELECT h.s AS symbol_id FROM hop2 h JOIN code.symbols sy ON sy.symbol_id = h.s WHERE sy.file_id LIKE 'rich/%' AND sy.kind IN ('function','method') AND h.s NOT IN (SELECT s FROM hop1) ORDER BY h.s",
+  "differs_on": [
+   "rich_v1.duckdb",
+   "rich_v2.duckdb",
+   "rich_v5.duckdb",
+   "rich_v6.duckdb",
+   "rich_v7.duckdb"
+  ],
+  "example": "rich_v5: reference returns rich/traceback.py::Traceback._render_stack, reached only through a class intermediate; rich_v6: returns classes rich/markdown.py::TableRowElement and rich/segment.py::Segments"
+ },
+ {
+  "id": "rich-05",
+  "verdict": "ok",
+  "explanation": "DISTINCT non-null imported_file_id over all import rows of rich/table.py (top-level, TYPE_CHECKING, __main__ block). `from . import box` resolves to rich/box.py in the data. Imported files are internal by construction of imported_file_id.",
+  "corrected_sql": null,
+  "differs_on": [],
+  "example": null
+ },
+ {
+  "id": "rich-06",
+  "verdict": "ok",
+  "explanation": "Set difference over imported_file_id is right; NOT IN has no NULL risk (file_id is non-null). Only theoretical edge: a self-import row rich/text.py -> rich/text.py would drop text.py though the question says text.py qualifies if it imports console; no such row on any DB (variant excluding self-imports identical on all 9).",
+  "corrected_sql": null,
+  "differs_on": [],
+  "example": null
+ },
+ {
+  "id": "rich-07",
+  "verdict": "ok",
+  "explanation": "Counts kind='method' rows per class, every definition separately, non-test files, ties by id, LIMIT 5. Deriving the class id from file_id||'::'||first qualname segment would be wrong only for duplicate-qualname classes (ids with @L); none exist on any DB, and a variant joining to actual class symbols is identical on all 9.",
+  "corrected_sql": null,
+  "differs_on": [],
+  "example": null
+ },
+ {
+  "id": "rich-08",
+  "verdict": "ok",
+  "explanation": "Direct JupyterMixin bases minus classes with an own __rich_measure__ method (matched by qualname in the same file). No duplicate base rows on any DB.",
+  "corrected_sql": null,
+  "differs_on": [],
+  "example": null
+ },
+ {
+  "id": "rich-09",
+  "verdict": "mismatch",
+  "explanation": "Question asks which 'functions or methods' use Progress.get_renderable; reference returns any caller kind, including classes whose body passes or calls it. DISTINCT (caller, call_kind) correctly returns one row per usage kind.",
+  "corrected_sql": "SELECT DISTINCT c.caller_symbol_id, c.call_kind AS usage FROM code.calls c JOIN code.symbols s ON s.symbol_id = c.caller_symbol_id WHERE c.callee_symbol_id = 'rich/progress.py::Progress.get_renderable' AND s.kind IN ('function','method') ORDER BY c.caller_symbol_id, usage",
+  "differs_on": [
+   "rich_v2.duckdb"
+  ],
+  "example": "rich_v2: reference returns ('rich/markdown.py::TableHeaderElement', 'callback'), a class"
+ },
+ {
+  "id": "rich-10",
+  "verdict": "ok",
+  "explanation": "Top-level rich/*.py with non-empty description. description<>'' and description_source<>'none' agree on all 9 DBs; an empty-string docstring would be an edge but none exists.",
+  "corrected_sql": null,
+  "differs_on": [],
+  "example": null
+ },
+ {
+  "id": "rich-11",
+  "verdict": "ok",
+  "explanation": "is_public equals the question's definition (name and enclosing class not underscore-prefixed) on all 9 DBs; kind IN (function, method) excludes classes; summary='' agrees with summary_source='none' everywhere; every definition counted; ties by file path.",
+  "corrected_sql": null,
+  "differs_on": [],
+  "example": null
+ },
+ {
+  "id": "rich-12",
+  "verdict": "ambiguous",
+  "explanation": "The question defines association itself ('a test imports the file or its name is test_<filename>.py'); the reference uses the materialized code.test_links table, which is documented as exactly that inference. On the real DB they agree, but the fuzz DBs add imports from test files without test_links rows and add test_links rows that no import or name match supports, so the two readings diverge in both directions. If the English definition is binding, use the corrected SQL (derived from code.imports and file names); if test_links is the intended authority, the wording should point to the recorded test links. NOT f.is_test is harmless (no test-named files directly in rich/).",
+  "corrected_sql": "SELECT f.file_id, f.line_count FROM code.files f WHERE f.file_id LIKE 'rich/%' AND f.file_id NOT LIKE 'rich/%/%' AND NOT f.is_test AND f.line_count >= 100 AND NOT EXISTS (SELECT 1 FROM code.imports i JOIN code.files t ON t.file_id = i.file_id WHERE t.is_test AND i.imported_file_id = f.file_id) AND NOT EXISTS (SELECT 1 FROM code.files t WHERE t.is_test AND split_part(t.file_id, '/', -1) = 'test_' || split_part(f.file_id, '/', -1)) ORDER BY f.file_id",
+  "differs_on": [
+   "rich_v0.duckdb",
+   "rich_v2.duckdb",
+   "rich_v4.duckdb",
+   "rich_v6.duckdb"
+  ],
+  "example": "rich_v2: reference returns ('rich/_emoji_codes.py', 3610) although a test file imports it in code.imports; rich_v6: reference omits ('rich/default_styles.py', 4629) because of an unsupported test_links row"
+ }
+]
