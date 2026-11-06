@@ -1,6 +1,6 @@
 # code-ontology-bridge
 
-code-ontology-bridge lets [NVIDIA Auto Ontology](https://github.com/NVIDIA/auto-ontology) answer questions about a Python codebase, such as "if this function changed, which other functions would be affected?". It reads the source code and writes a database of its files, functions, classes, calls and imports. Auto Ontology's agent then answers by writing SQL against that database, so every answer arrives with the query that produced it and rows that name exact files and functions, and a person can check it.
+A program is made of functions that call one another, and questions such as "if this function changed, which other functions would be affected?" are slow to answer by reading files. code-ontology-bridge reads Python source code and writes a database of its files, functions, classes, calls and imports, so that [NVIDIA Auto Ontology](https://github.com/NVIDIA/auto-ontology), NVIDIA's open-source system for answering questions about databases, can answer such questions. Auto Ontology's agent, an AI model that writes database queries, answers in SQL, so every answer arrives with the query that produced it and rows naming exact files and functions, and a person can check it.
 
 [See one question answered, step by step](https://wcook04.github.io/code-ontology-bridge/) · [Results](#results) · [Run it locally](#quickstart) · [Paper (PDF)](docs/case-study.pdf)
 
@@ -26,7 +26,7 @@ Auto Ontology's DuckDB connector at the tested revision reports no primary or fo
 
 `resolve_semantic_fks` is the Auto Ontology function that resolves foreign keys (links between tables). Asked about a code database of its own source, Auto Ontology's agent returned four functions:
 
-| Function | Calls between it and `resolve_semantic_fks` | How it gets there |
+| Function | Steps to `resolve_semantic_fks` (calls or hand-overs) | How it gets there |
 | --- | ---: | --- |
 | `_run_semantic_compilation` | 1 | Calls it directly. |
 | `run_semantic_compilation` | 2 | Calls `_run_semantic_compilation`. |
@@ -41,40 +41,51 @@ tables_processed = await asyncio.to_thread(
 )
 ```
 
-A text search for calls written as `run_semantic_compilation(` finds `main` and misses the scheduler, because the scheduler never writes the brackets. The extractor records this line as a **callback**: a function passed to another call that will run it. That row is what lets a database query find the scheduler.
+The extractor records this line as a **callback**: a function handed to another call that will run it. Because callbacks are rows of their own, one recursive query can follow the chain across three files, distinguish a call from a hand-over and report the number of steps. A text search finds the name but cannot tell a call from a hand-over or follow the chain.
 
 ![Arrows from four calling functions to resolve_semantic_fks. The scheduler's arrow is dashed because it passes the function as an argument.](docs/figures/caller-chain.png)
 
-The request told the agent to follow calls backwards and to include callbacks, so the agent did not discover that method. What the example shows is that the callback exists as a row the agent can query. The saved answer, with the full request and the SQL the agent wrote, is [ask_q11.json](examples/auto-ontology/live/current/responses/10i_ask_with_key/ask_q11.json). This example comes from the development run, whose questions the author wrote; the blind study is below.
+In the figure, Compiler is `_run_semantic_compilation`, Wrapper is `run_semantic_compilation`, Scheduler is `SemanticScheduler._run_once`, CLI entry is `main`, and FK resolver is `resolve_semantic_fks`.
+
+The request told the agent to follow calls backwards and to include callbacks, so the agent did not discover that method. What the example shows is that the callback exists as a row the agent can query. The saved answer, with the full request and the SQL the agent wrote, is [ask_q11.json](examples/auto-ontology/live/current/responses/10i_ask_with_key/ask_q11.json). This question comes from the earlier experiment, whose questions the author wrote.
+
+A question from the blind study below, written by someone else, asked which functions Auto Ontology's query pipeline hands over to be run later (`ao-02`). Auto Ontology's agent, given only the code database, answered it correctly in all 3 runs. The same model asked directly, without Auto Ontology, answered it correctly in none of 5 runs given the table names or the table descriptions, and in 1 of 5 given the descriptions and ready-made queries.
 
 ## Results
 
-**Given only the code database, with nothing imported, Auto Ontology's agent with DeepSeek v4.1 Flash answered 10.3 of 12 code questions correctly** (mean of three runs; 11.7 of 12 on the unaltered database). **Asked directly, outside Auto Ontology, the same model answered 27.2 of 48 correctly with the table descriptions, against 18.0 with table names alone.**
+The study asked 48 questions about four open-source Python codebases: Auto Ontology, click, httpx and rich. An answer counts as **correct** when its SQL returns the right rows on all of these:
 
-An answer counts as **correct** only if its SQL returns the right rows on the real code database and on eight altered copies of it. The copies add calls, callbacks, classes and functions with duplicate names, and remove some calls, so a query that matches the right rows by luck on one database fails. The 48 questions cover four open-source Python codebases: Auto Ontology, click, httpx and rich. Separate AI models wrote them, with the correct answers, from the source code and the bare code database, without seeing the table descriptions or the ready-made queries. A second AI model re-derived every answer from the question wording as a check on the answer key. Everything was published before any test ran ([protocol](study/PROTOCOL.md)).
+- the real code database;
+- eight altered copies of it, which add calls, callbacks, classes and functions with duplicate names and remove some calls, so that a query matching the right rows by luck fails.
 
-**Asked directly** (all 48 questions, mean of five runs, correct answers):
+Separate AI models wrote the questions and their answer keys from the source code and the bare code database, without seeing the table descriptions or the ready-made queries. A second AI model re-derived every answer from the question wording; on the real databases all 48 matched. Everything was published before any test ran ([protocol](study/PROTOCOL.md)).
 
-| The model is given | DeepSeek v4.1 Flash | Nemotron 3.5 Lightning |
+**Inside Auto Ontology, with only the code database connected, the agent with DeepSeek v4.1 Flash answered 10.3 of the 12 questions about Auto Ontology's own code correctly** (mean of three runs), Auto Ontology building its own description of the database. Asked the same 12 questions directly, outside Auto Ontology, DeepSeek answered 3.2 correctly, or 4.4 with the table descriptions. Auto Ontology's agent adds retrieval and repair of failed queries and ran with the provider's default reasoning setting, so this compares the two whole setups.
+
+**Asked directly, the table descriptions lift DeepSeek from 18.0 to 27.2 of all 48 questions** (mean of five runs); counting only the real database, from 28.6 to 41.6. With the descriptions, 9 questions improve and 1 gets worse.
+
+After the runs, an outside reviewer found that one answer key ignored its question's "functions or methods" condition. Four further AI auditors, who saw no scores, found that 21 of the 48 answer keys missed a condition their question states, and that 5 of the 48 questions can be read two ways. Both checks above had matched on the real databases; the missing conditions only change results on the altered copies. The corrections were published before rescoring and no model was asked again. They raised Auto Ontology's 10.3 from 7.3 and lowered the direct result with descriptions from 34.0 to 27.2; the original scores stay published ([what changed](study/PROTOCOL.md#corrections-after-the-runs)).
+
+**Asked directly** (all 48 questions, correct answers, mean of five runs). Each row gives the model more information about the database:
+
+| The model is given | DeepSeek v4.1 Flash | NVIDIA Nemotron 3.5 Lightning |
 | --- | ---: | ---: |
 | Table names only | 18.0 | 2.4 |
 | + table descriptions | **27.2** | 5.4 |
 | + ready-made queries, without descriptions | 25.4 | 2.8 |
 | + table descriptions and ready-made queries | 26.8 | **7.6** |
 
-With the table descriptions, DeepSeek answers 9 questions better and 1 worse than with table names alone. Nemotron does best with the descriptions and ready-made queries together: 6 questions better, none worse.
+**Inside Auto Ontology** (the 12 Auto Ontology questions, correct answers, mean of three runs). Every row queries the same code database; the rows differ in what is imported on top:
 
-**Inside Auto Ontology** (the 12 questions about Auto Ontology's own code, mean of three runs, correct answers; every row queries the same code database):
-
-| Auto Ontology is given | DeepSeek v4.1 Flash | Nemotron 3.5 Lightning |
+| Auto Ontology is given | DeepSeek v4.1 Flash | NVIDIA Nemotron 3.5 Lightning |
 | --- | ---: | ---: |
 | The code database, nothing imported | 10.3 | 0.7 |
 | + table descriptions | 8.7 | 2.3 |
 | + table descriptions and ready-made queries | 10.7 | 2.3 |
 
-Inside Auto Ontology, importing the descriptions did not measurably help DeepSeek: 10.3 against 10.7 is smaller than the spread between repeat runs (10 to 11 against 10 to 12), and the descriptions alone scored lower. For Nemotron both imports raised the score from 0.7 to 2.3. Nemotron scored low throughout. It ran at temperature 0 with reasoning switched off, and most of its failures are queries that run but return the wrong rows.
+For DeepSeek inside Auto Ontology, the table descriptions alone scored lower than nothing imported (8.7 against 10.3; runs ranged 8 to 9 against 10 to 11), and adding the ready-made queries gave 10.7, within the spread between runs. For Nemotron both imports raised the score from 0.7 to 2.3.
 
-The answer keys were corrected after the runs. An outside reviewer found that one answer key ignored its question's "functions or methods" condition; four further AI auditors, who did not see any scores, then found 21 answer keys that missed a condition their question states, and 5 questions that can be read two ways. The corrections were published before rescoring, no model was asked again, and the original scores stay published ([what changed](study/PROTOCOL.md#corrections-after-the-runs)). Every question, answer key, saved answer and score is in [study/RESULTS.md](study/RESULTS.md).
+Nemotron, NVIDIA's own model and the default model family in Auto Ontology's configuration, scored low throughout. Asked directly it ran at temperature 0 with reasoning switched off; inside Auto Ontology it used the provider's default. Most of its failures are queries that run but return the wrong rows. Every question, answer key, saved answer and score is in [study/RESULTS.md](study/RESULTS.md).
 
 ## Quickstart
 
@@ -91,7 +102,7 @@ uv run cob export-model --codemap build/codemap.json --out build/repository.mode
 uv run cob semantics --duckdb build/repository.duckdb --model build/repository.model.yaml --out-model build/repository.with-queries.model.yaml
 ```
 
-These commands map this package's own source. The third writes the code database, the fourth the table descriptions, and the fifth adds the ready-made queries to the database and writes a second model that also describes them. To map another codebase, replace `code_ontology_bridge` with its source folder.
+These commands map this package's own source. `cob build` reads the source, `cob export-duckdb` writes the code database, `cob export-model` writes the table descriptions, and `cob semantics` adds the ready-made queries to the database and writes a second set of descriptions that also covers them. To map another codebase, replace `code_ontology_bridge` with its source folder.
 
 Then ask which functions lead to `summarise`, the function that counts the rows in a code map:
 
@@ -115,7 +126,13 @@ Each line shows the fewest calls from that function to `summarise` counting call
 
 <a id="build-the-exports-locally"></a>
 
-To load these files into a running Auto Ontology, follow the [reproduction guide](docs/reproduction.md). It needs PostgreSQL, model credentials and the compatibility patch described below.
+### Load it into Auto Ontology
+
+[`run_live.sh`](examples/auto-ontology/live/run_live.sh) does these three steps against a local Auto Ontology; the [reproduction guide](docs/reproduction.md) lists what it needs (PostgreSQL, model credentials and the compatibility patch described below).
+
+1. Start Auto Ontology's ingestion service with `CONNECTION_STRINGS=duckdb:///<absolute path>/repository.duckdb`, so it catalogs the code database through its DuckDB connector.
+2. Rewrite the table descriptions' catalog IDs to the IDs the server gave those tables ([`remap_catalog_ids.py`](examples/auto-ontology/live/remap_catalog_ids.py)). Without this step the import tries to create the tables a second time and fails on Auto Ontology's unique-name constraints.
+3. Send the YAML to `POST /api/model/import?replace=false` with content type `application/x-yaml`.
 
 ## Compatibility with Auto Ontology
 
@@ -129,7 +146,7 @@ The DuckDB connector and the model import ran unmodified. The patch, twelve file
 
 ## Limits
 
-- The questions were written by AI models under the protocol's rules, not by the codebases' maintainers. Inside Auto Ontology there are 12 questions.
+- The questions were written by AI models under the protocol's rules, not by the codebases' maintainers. Inside Auto Ontology there are 12 questions, and all runs used Auto Ontology at `cdaf61e`.
 - The answer keys are correct for the code database. The extractor reads source text, so it misses calls made dynamically, calls through a local alias and names reached through package re-exports, and a recorded callback is not proof that the function runs. Test files are linked to code by imports and file names, which is not test coverage ([all source-analysis limits](GAPS.md#source-analysis-limits)).
 
 ## Evidence
@@ -137,8 +154,7 @@ The DuckDB connector and the model import ran unmodified. The patch, twelve file
 | Evidence | What it is |
 | --- | --- |
 | [The study](study/) | The 48 questions above, every saved answer and score, and the protocol. The current evidence. |
-| [Recorded walkthrough](examples/auto-ontology/live/current/) | The 22-question development run inside Auto Ontology, with author-written questions, including the example above. The website follows it. |
-| [Earlier comparison](examples/auto-ontology/live/RESULTS.md) | 38 author-written questions about Auto Ontology, one run per setting. Kept as history, with [its protocol](docs/experiment-protocol.md). |
+| [Earlier experiment](examples/auto-ontology/live/RESULTS.md) | 38 author-written questions about Auto Ontology, 22 for development and 16 held out, one run per setting. Kept as history, with [its protocol](docs/experiment-protocol.md). The example above and the website's walkthrough come from [its recorded development run](examples/auto-ontology/live/current/). |
 
 <a id="serve-data-for-a-website"></a>
 

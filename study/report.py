@@ -15,15 +15,15 @@ cells = {(c["model"], c["arm"]): c for c in S["cells"]}
 frozen = {(c["model"], c["arm"]): c for c in F["cells"]}
 NAMES = {"deepseek": "DeepSeek v4.1 Flash", "nemotron": "Nemotron 3.5 Lightning"}
 ARMS = [
-    ("A", "Schema only"),
-    ("B", "+ bridge base model (descriptions, keys, joins)"),
-    ("V", "+ semantics-layer views, undocumented"),
-    ("S", "+ bridge semantics layer (views, definitions)"),
+    ("A", "Table names only (schema)"),
+    ("B", "+ table descriptions (base model: descriptions, keys, joins)"),
+    ("V", "+ ready-made queries without descriptions (views only)"),
+    ("S", "+ table descriptions and ready-made queries (semantics layer)"),
 ]
 C_ARMS = [
-    ("C-native", "Auto Ontology alone (no model imported)"),
-    ("C-base", "Auto Ontology + bridge base model"),
-    ("C-semantics", "Auto Ontology + layer views + semantic model"),
+    ("C-native", "Code database, nothing imported"),
+    ("C-base", "+ table descriptions"),
+    ("C-semantics", "+ table descriptions and ready-made queries"),
 ]
 models = [m for m in ("deepseek", "nemotron") if any(k[0] == m for k in cells)]
 
@@ -62,7 +62,8 @@ out.append("")
 
 if any(k[1].startswith("C") for k in cells):
     out += ["## Inside NVIDIA Auto Ontology: the 12 Auto Ontology questions, same agent, three runs each", "",
-            "The agent, its retrieval, validation and repair, the source facts, the requests and the chat model are fixed. "
+            "Every row queries the same code database written by the bridge. The agent, its retrieval, validation and repair, the "
+            "requests and the chat model are fixed. "
             "C-base imports the base model; C-semantics adds the six layer views to the database and imports the model "
             "that describes them. Chat runs through Auto Ontology's own clients: temperature 0, its own output limits and "
             "the provider's default reasoning.", "",

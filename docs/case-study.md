@@ -10,22 +10,22 @@ date: 5 November 2026
 
 ## Abstract
 
-Which code semantics can an outside project supply to NVIDIA Auto Ontology through its existing data and model contracts, and do they change the agent's answers? We built **code-ontology-bridge**, a Python extractor that turns source files, symbols, calls and existing docstrings into relational data and a semantic model for Auto Ontology. A second export, the semantics layer, adds verified views for calls, callbacks, reachability, file and symbol facts, dependencies and inheritance. We tested both on 48 questions about four repositories, written by separate AI authors who never saw what the bridge adds, re-derived by independent AI annotators and frozen before any model ran. An answer counts as robust only if its SQL also returns the right rows on eight counterfactual versions of the database. After the runs, an audit corrected 21 reference queries that missed a restriction stated in their question, and every saved response was rescored. Asked directly, DeepSeek v4.1 Flash rose from 18.0 robust answers with the schema alone to 27.2 with the exported model, and NVIDIA Nemotron 3.5 Lightning from 2.4 to 7.6 with the semantics layer, averaged over five runs. Inside Auto Ontology's own agent, its own catalog already answered most questions for DeepSeek (10.3 of 12); importing the semantics layer gave 10.7, within run-to-run variation, and the base model alone 8.7. The questions come from AI authors rather than the repositories' maintainers, and the extractor misses some calls that the source makes.
+Which code semantics can an outside project supply to NVIDIA Auto Ontology through its existing data and model contracts, and do they change the agent's answers? We built **code-ontology-bridge**, a Python extractor that turns source files, symbols, calls and existing docstrings into a code database, with table descriptions (a semantic model in Auto Ontology's import format). An optional semantics layer adds six ready-made SQL views for calls, callbacks, reachability, file and symbol facts, dependencies and inheritance, each tested against a separate Python implementation. We tested both on 48 questions about four repositories, written by separate AI authors from the source and the bare code database, without seeing the table descriptions or the views, re-derived by independent AI annotators and frozen before any model ran. An answer counts as robust only if its SQL also returns the right rows on eight counterfactual versions of the database. After the runs, an audit corrected 21 reference queries that missed a restriction stated in their question, and every saved response was rescored. Inside Auto Ontology, with only the code database connected, the agent with DeepSeek v4.1 Flash answered 10.3 of the 12 Auto Ontology questions robustly (mean of three runs), against 3.2 for the same model asked those questions directly; importing the table descriptions did not raise that score. Asked directly, the table descriptions raised DeepSeek from 18.0 to 27.2 robust answers of 48 and NVIDIA Nemotron 3.5 Lightning from 2.4 to 5.4 (mean of five runs); adding the views took Nemotron to 7.6. The corrections raised the first figure from 7.3 and lowered the second from 34.0. The questions come from AI authors rather than the repositories' maintainers, and the extractor misses some calls that the source makes.
 
 ## 1. The question and the contribution
 
 Suppose a developer changes `resolve_semantic_fks`, the function that resolves semantic foreign keys in Auto Ontology. Which callers reach it? Searching for its name finds an immediate caller. Reaching the scheduler also requires following a wrapper and recognizing a function passed as an argument. The question spans several files and two kinds of relationship: direct calls and callback references.
 
-A source map can record those relationships once and make them available to SQL. NVIDIA Auto Ontology already has the other half of this workflow: an agent that retrieves semantic context, writes SQL and executes it against a connected database. This project connects the two. Instead of asking Auto Ontology about a sales database, we ask it about a database of its own implementation.
+A code database extracted from the source can record those relationships once and make them available to SQL. NVIDIA Auto Ontology already has the other half of this workflow: an agent that retrieves semantic context, writes SQL and executes it against a connected database. This project connects the two. Instead of asking Auto Ontology about a sales database, we ask it about a database of its own implementation.
 
 The work has four parts:
 
 - **A source adapter.** A standalone extractor records Python source facts and exports DuckDB rows, model YAML and an evaluation dataset using Auto Ontology's existing contracts.
 - **An exercised integration.** A compatibility patch configures public model clients and exposes an existing SQL routing option at the chat boundary. The retained run connects ingestion, model import, semantic compilation and question answering.
-- **A code semantics layer.** Six verified views that define direct calls, callback references, reachability, file and symbol facts, dependencies and inheritance once, documented in the native model.
+- **A code semantics layer.** Six SQL views, tested against a separate Python implementation, that define direct calls, callback references, reachability, file and symbol facts, dependencies and inheritance once, documented in the native model.
 - **A blind, repeated study.** 48 questions about four repositories, written without sight of the bridge, scored on real and counterfactual databases, with every run, response and failure published.
 
-The source-map approach comes from **CodeMap**, Will Cook's earlier source-navigation tool. This bridge adapts that approach into an installable package; it does not depend on CodeMap's private interface. NVIDIA supplies the database agent and semantic layer. The bridge supplies the source-derived data and its model.
+The source-map approach comes from **CodeMap**, Will Cook's earlier source-navigation tool. This bridge adapts that approach into an installable package; it does not depend on CodeMap's private interface. NVIDIA supplies the database agent and its semantic catalog. The bridge supplies the code database and its table descriptions.
 
 ## 2. How the source reaches the agent
 
@@ -35,7 +35,7 @@ Auto Ontology needs both a live database to query and semantic context that expl
 
 The **DuckDB export** contains eight tables: files, docstring headings, symbols, class bases, calls, imports, test links and a source snapshot. Two views summarize incoming calls and public symbols without test associations. Auto Ontology reads these through its existing DuckDB connector.
 
-The **model YAML** describes tables, terms, attributes and joins. It declares keys that the pinned DuckDB connector does not report. The live runner first ingests the database, maps the exported catalog identifiers to the server's identifiers, imports the model and compiles the semantic layer. Importing YAML alone does not create a queryable database.
+The **model YAML** describes tables, terms, attributes and joins. It declares keys that the pinned DuckDB connector does not report. The live runner first ingests the database, maps the exported catalog identifiers to the server's identifiers, imports the model and compiles its semantic catalog. Importing YAML alone does not create a queryable database.
 
 A third export supplies DDL, CSV data and reference questions in NVIDIA's evaluation format. It provides a route toward a controlled comparison, but the full upstream benchmark harness was not run for this study.
 
@@ -147,11 +147,11 @@ The study ([protocol](../study/PROTOCOL.md)) asks how much each part of what the
 Four briefings of the same model, querying the same database:
 
 - **A, schema.** Table and column names and types.
-- **B, base model.** A plus every table's and column's description, the keys and the joins: the model this project has always exported.
+- **B, table descriptions.** A plus every table's and column's description, the keys and the joins.
 - **V, views.** A plus the semantics layer's views listed by name and type, without descriptions; a control for the views alone.
 - **S, semantics layer.** B plus the layer's views, documented columns, keys, joins and a short glossary of definitions.
 
-Inside Auto Ontology, the agent with its retrieval, validation and repair, the source facts and the chat model are fixed. Three configurations differ: **nothing** imported (Auto Ontology's own catalog of the database), the **base model** imported, or the **semantics layer**, which adds the six views to the database and imports the model that describes them.
+Inside Auto Ontology, the agent with its retrieval, validation and repair, the source facts and the chat model are fixed. Every configuration queries the same code database. Three configurations differ: **nothing** imported, so the agent works from the catalog Auto Ontology builds from the database by itself, the **table descriptions** imported, or the **semantics layer**, which adds the six views to the database and imports the model that describes them.
 
 DeepSeek v4.1 Flash and NVIDIA Nemotron 3.5 Lightning answered through OpenRouter. Arms A, B, V and S set temperature 0, reasoning off and at most 4,000 output tokens in every request and ran five complete times. The Auto Ontology arms ran three times each on the 12 Auto Ontology questions through Auto Ontology's own chat clients: temperature 0, its own output limits and the provider's default reasoning setting.
 
@@ -170,7 +170,7 @@ A model asked directly, robust answers out of 48, mean of five runs (lowest and 
 | Briefing | DeepSeek v4.1 Flash | Nemotron 3.5 Lightning |
 | --- | ---: | ---: |
 | A, schema | 18.0 (15–20) | 2.4 (2–4) |
-| B, base model | 27.2 (24–30) | 5.4 (4–6) |
+| B, table descriptions | 27.2 (24–30) | 5.4 (4–6) |
 | V, views without descriptions | 25.4 (23–29) | 2.8 (2–5) |
 | S, semantics layer | 26.8 (25–29) | 7.6 (5–10) |
 
@@ -178,23 +178,23 @@ Inside Auto Ontology, robust answers out of 12, mean of three runs:
 
 | Auto Ontology is given | DeepSeek v4.1 Flash | Nemotron 3.5 Lightning |
 | --- | ---: | ---: |
-| Nothing | 10.3 (10–11) | 0.7 (0–1) |
-| Base model | 8.7 (8–9) | 2.3 (0–5) |
-| Semantics layer | 10.7 (10–12) | 2.3 (1–4) |
+| Code database, nothing imported | 10.3 (10–11) | 0.7 (0–1) |
+| + table descriptions | 8.7 (8–9) | 2.3 (0–5) |
+| + table descriptions and semantics layer | 10.7 (10–12) | 2.3 (1–4) |
 
-**The exported models make a large difference to a model asked directly.** With DeepSeek, the base model adds about nine robust answers out of 48; question by question, nine improve and one regresses. With Nemotron the semantics layer lifts robust answers from 2.4 to 7.6; six questions improve and none regress.
+**The table descriptions make a large difference to a model asked directly.** With DeepSeek, they add about nine robust answers out of 48; question by question, nine improve and one regresses. With Nemotron the semantics layer lifts robust answers from 2.4 to 7.6; six questions improve and none regress.
 
-**The layer's value depends on the model and the agent.** For DeepSeek asked directly, the base model and the semantics layer tie (five questions improve and six regress). For Nemotron the layer is the best briefing, and adding the layer's definitions to its views improves six questions with none regressing. For DeepSeek the views alone already help, and their definitions add little on these questions.
+**The layer's value depends on the model and the agent.** For DeepSeek asked directly, the table descriptions and the semantics layer tie (five questions improve and six regress). For Nemotron the layer is the best briefing, and adding the layer's definitions to its views improves six questions with none regressing. For DeepSeek the views alone already help, and their definitions add little on these questions.
 
-**Inside Auto Ontology, the agent's own catalog is a strong baseline.** With DeepSeek, Auto Ontology alone answers 10.3 of 12 robustly; the semantics layer gives 10.7, within run-to-run variation, and the base model alone 8.7. With Nemotron both imports raise the score from 0.7 to 2.3. The agent with DeepSeek usually applied the questions' restrictions on kind of symbol, which directly prompted models usually missed.
+**Inside Auto Ontology, the code database alone answers most questions.** With DeepSeek and nothing imported, the agent answers 10.3 of 12 robustly; the semantics layer gives 10.7, within run-to-run variation, and the table descriptions alone 8.7. With Nemotron both imports raise the score from 0.7 to 2.3. The agent with DeepSeek usually applied the questions' restrictions on kind of symbol, which directly prompted models usually missed.
 
 ### 4.4 Limits
 
 The questions were written by AI authors under the protocol's rules, not by the repositories' maintainers, and their topics reflect what the base database can answer. Reference answers are correct for the extracted database. The authors' source checks found facts the extractor misses: calls through a local alias, calls to functions with `@overload` stubs, names reached through package re-exports and calls on objects of unknown type. Each is recorded with its question. Nemotron scores low on these questions throughout. The Auto Ontology arms used revision `cdaf61e` with a twelve-file compatibility patch and took a median of three to four minutes per question; arms A to S took one to three seconds and cost under a dollar in total.
 
-An earlier experiment with 38 author-written questions about Auto Ontology alone, one run per arm, found the same direction for the base model and shaped this design; its records are kept with the [earlier protocol](experiment-protocol.md) and [results](../examples/auto-ontology/live/RESULTS.md).
+An earlier experiment with 38 author-written questions about Auto Ontology alone, one run per arm, found the same direction for the table descriptions and shaped this design; its records are kept with the [earlier protocol](experiment-protocol.md) and [results](../examples/auto-ontology/live/RESULTS.md).
 
-## 5. What the source map records
+## 5. What the code database records
 
 Before the earlier experiment, two extractor defects were fixed and its database rebuilt: imports now bind only in the scope that contains them, and calls in a nested function count for its enclosing function only when that function calls or passes on the nested one. The rebuild removed 21 of 9,442 linked calls and added 7; the question 11 answer did not change.
 
