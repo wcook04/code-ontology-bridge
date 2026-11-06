@@ -114,6 +114,10 @@ export function Study() {
   return (
     <section className="band page comparison" aria-labelledby="study-title">
       <h1 id="study-title">Does describing code to an AI help it answer questions about the code?</h1>
+      <p className="study-answer">
+        Asked directly, yes: the table descriptions lift DeepSeek from 18.0 to 27.2 of 48 correct answers. Inside NVIDIA Auto Ontology,
+        the code database alone already let its agent answer 10.3 of 12, and importing the descriptions did not raise that.
+      </p>
       <p className="lede-2">
         A program is made of functions that call one another. Questions such as “which functions end up running this one?” are hard to
         answer by reading files. This project turns a program’s source code into a database, with a written explanation of every table,
@@ -130,8 +134,9 @@ export function Study() {
           eight deliberately altered copies, so a query that is right by luck on one database does not count.</p>
       </div>
       <p className="measure small">
-        After the runs, a check found 21 answer keys that missed a condition stated in their own question. They were fixed before
-        rescoring; no AI was asked again. <Out href={`${REPO}/study/PROTOCOL.md#corrections-after-the-runs`}>What changed</Out>,{" "}
+        After the runs, an outside reviewer and four AI auditors who saw no scores found that 21 of the 48 answer keys missed a condition
+        stated in their own question. They were fixed before rescoring and no AI was asked again. The fix raised Auto Ontology’s 10.3
+        from 7.3 and lowered the direct 27.2 from 34.0. <Out href={`${REPO}/study/PROTOCOL.md#corrections-after-the-runs`}>What changed</Out>,{" "}
         <Out href={`${REPO}/study/results/frozen/RESULTS.md`}>scores before the fix</Out>,{" "}
         <Out href={`${REPO}/study/RESULTS.md`}>every number</Out>.
       </p>
@@ -166,13 +171,13 @@ export function Study() {
 }
 
 const GRID_ARMS: { id: string; short: string; name: string }[] = [
-  { id: "A", short: "A", name: "asked directly, table names only" },
-  { id: "B", short: "B", name: "asked directly, with table descriptions" },
-  { id: "V", short: "V", name: "asked directly, with ready-made queries but no descriptions" },
-  { id: "S", short: "S", name: "asked directly, with table descriptions and ready-made queries" },
+  { id: "A", short: "Names", name: "asked directly, table names only" },
+  { id: "B", short: "+Desc", name: "asked directly, with table descriptions" },
+  { id: "V", short: "+Views", name: "asked directly, with ready-made queries but no descriptions" },
+  { id: "S", short: "+Both", name: "asked directly, with table descriptions and ready-made queries" },
   { id: "C-native", short: "AO", name: "inside Auto Ontology, code database only" },
-  { id: "C-base", short: "AO+B", name: "inside Auto Ontology, with descriptions" },
-  { id: "C-semantics", short: "AO+S", name: "inside Auto Ontology, with table descriptions and ready-made queries" },
+  { id: "C-base", short: "AO+Desc", name: "inside Auto Ontology, with table descriptions" },
+  { id: "C-semantics", short: "AO+Both", name: "inside Auto Ontology, with table descriptions and ready-made queries" },
 ];
 
 function QuestionGrid({ data, models }: { data: StudySummary; models: string[] }) {

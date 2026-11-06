@@ -12,20 +12,20 @@ Temperature 0, reasoning off, at most 4,000 output tokens, set in every request.
 
 | Model is given | DeepSeek v4.1 Flash snapshot | DeepSeek v4.1 Flash suite | Nemotron 3.5 Lightning snapshot | Nemotron 3.5 Lightning suite |
 | --- | ---: | ---: | ---: | ---: |
-| A. Schema only | 28.6 (24–32) | 18.0 (15–20) | 3.6 (2–5) | 2.4 (2–4) |
-| B. + bridge base model (descriptions, keys, joins) | 41.6 (40–45) | 27.2 (24–30) | 8.2 (7–10) | 5.4 (4–6) |
-| V. + semantics-layer views, undocumented | 36.8 (35–39) | 25.4 (23–29) | 4.4 (4–6) | 2.8 (2–5) |
-| S. + bridge semantics layer (views, definitions) | 41.8 (40–44) | 26.8 (25–29) | 11.8 (10–14) | 7.6 (5–10) |
+| A. Table names only (schema) | 28.6 (24–32) | 18.0 (15–20) | 3.6 (2–5) | 2.4 (2–4) |
+| B. + table descriptions (base model: descriptions, keys, joins) | 41.6 (40–45) | 27.2 (24–30) | 8.2 (7–10) | 5.4 (4–6) |
+| V. + ready-made queries without descriptions (views only) | 36.8 (35–39) | 25.4 (23–29) | 4.4 (4–6) | 2.8 (2–5) |
+| S. + table descriptions and ready-made queries (semantics layer) | 41.8 (40–44) | 26.8 (25–29) | 11.8 (10–14) | 7.6 (5–10) |
 
 ## Inside NVIDIA Auto Ontology: the 12 Auto Ontology questions, same agent, three runs each
 
-The agent, its retrieval, validation and repair, the source facts, the requests and the chat model are fixed. C-base imports the base model; C-semantics adds the six layer views to the database and imports the model that describes them. Chat runs through Auto Ontology's own clients: temperature 0, its own output limits and the provider's default reasoning.
+Every row queries the same code database written by the bridge. The agent, its retrieval, validation and repair, the requests and the chat model are fixed. C-base imports the base model; C-semantics adds the six layer views to the database and imports the model that describes them. Chat runs through Auto Ontology's own clients: temperature 0, its own output limits and the provider's default reasoning.
 
 | Auto Ontology is given | DeepSeek v4.1 Flash snapshot | DeepSeek v4.1 Flash suite | Nemotron 3.5 Lightning snapshot | Nemotron 3.5 Lightning suite |
 | --- | ---: | ---: | ---: | ---: |
-| Auto Ontology alone (no model imported) | 11.7 (11–12) | 10.3 (10–11) | 3.0 (2–5) | 0.7 (0–1) |
-| Auto Ontology + bridge base model | 10.3 (10–11) | 8.7 (8–9) | 3.0 (1–5) | 2.3 (0–5) |
-| Auto Ontology + layer views + semantic model | 11.7 (11–12) | 10.7 (10–12) | 4.0 (2–6) | 2.3 (1–4) |
+| Code database, nothing imported | 11.7 (11–12) | 10.3 (10–11) | 3.0 (2–5) | 0.7 (0–1) |
+| + table descriptions | 10.3 (10–11) | 8.7 (8–9) | 3.0 (1–5) | 2.3 (0–5) |
+| + table descriptions and ready-made queries | 11.7 (11–12) | 10.7 (10–12) | 4.0 (2–6) | 2.3 (1–4) |
 
 ## Paired, question by question (suite)
 

@@ -549,7 +549,6 @@ function OutcomesTeaser() {
                       <span className="cases__status">
                         <TableStatus value={q.assessment.table_match} />
                       </span>
-                      <span className="small">The rows are right; the written explanation is the single word “Purple”.</span>
                     </li>
                   ) : null,
                 )}
@@ -605,6 +604,8 @@ function Limits({ model }: { model: ModelStep }) {
           </ul>
         </div>
       </div>
+      <details className="evidence__fold">
+        <summary>How this run was set up, and which of its stages were saved</summary>
       <RunConfig />
       <h3>Which stages of the run were saved</h3>
       <ul className="stages">
@@ -623,6 +624,7 @@ function Limits({ model }: { model: ModelStep }) {
           );
         })}
       </ul>
+      </details>
     </section>
   );
 }
