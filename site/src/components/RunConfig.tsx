@@ -36,7 +36,7 @@ export function RunConfig() {
         </tr>
         <tr>
           <th scope="row">Not measured</th>
-          <td>Cost, and which table descriptions each question retrieved. What the semantic model and Auto Ontology each add is measured on the comparison page.</td>
+          <td>Cost, and which table descriptions each question retrieved. What the table descriptions and Auto Ontology each add is measured on the comparison page.</td>
         </tr>
       </tbody>
       <tfoot>

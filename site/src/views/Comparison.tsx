@@ -29,8 +29,8 @@ interface Summary {
 
 const ARMS: { id: string; name: string; what: string }[] = [
   { id: "schema", name: "Schema only", what: "The model sees table and column names and types, and writes SQL." },
-  { id: "schema_model", name: "Schema + exported model", what: "The model also sees this project’s semantic model: what each table and column means, the keys and the joins." },
-  { id: "auto_ontology", name: "Auto Ontology", what: "Auto Ontology imports the semantic model, and its agent retrieves context, writes, checks and repairs the SQL." },
+  { id: "schema_model", name: "Schema + exported model", what: "The model also sees this project’s table descriptions: what each table and column means, the keys and the joins." },
+  { id: "auto_ontology", name: "Auto Ontology", what: "Auto Ontology imports the table descriptions, and its agent retrieves context, writes, checks and repairs the SQL." },
 ];
 const MODEL_NAMES: Record<string, string> = { nemotron: "NVIDIA Nemotron 3.5 Lightning", deepseek: "DeepSeek v4.1 Flash" };
 const SET_NAMES: Record<string, string> = { development: "Development questions", heldout: "Held-out questions" };

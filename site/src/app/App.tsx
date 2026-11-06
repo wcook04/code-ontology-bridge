@@ -40,7 +40,7 @@ export function App() {
 
   useEffect(() => {
     const titles: Record<string, string> = {
-      home: "Code Ontology Bridge: make a Python repository queryable by a SQL agent",
+      home: "Code Ontology Bridge: ask NVIDIA Auto Ontology about a Python codebase",
       outcomes: "The 22 recorded questions | Code Ontology Bridge",
       question: route.view === "question" ? `Question ${route.id} | Code Ontology Bridge` : "",
       source: "Source excerpt | Code Ontology Bridge",

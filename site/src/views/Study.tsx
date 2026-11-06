@@ -33,14 +33,14 @@ export interface StudySummary {
 export const MODEL_NAMES: Record<string, string> = { deepseek: "DeepSeek v4.1 Flash", nemotron: "NVIDIA Nemotron 3.5 Lightning" };
 const DIRECT: { id: string; name: string; what: string }[] = [
   { id: "A", name: "Table names only", what: "The names of the tables and columns, nothing more." },
-  { id: "B", name: "+ the bridge’s descriptions", what: "A written explanation of every table and column, and how the tables link up." },
-  { id: "V", name: "+ ready-made queries, unexplained", what: "Six ready-made queries (for example “who calls whom”), with no explanation." },
-  { id: "S", name: "+ descriptions and explained queries", what: "The descriptions plus the six ready-made queries, each explained." },
+  { id: "B", name: "+ table descriptions", what: "What every table and column means, each table’s key, and how the tables join." },
+  { id: "V", name: "+ ready-made queries, without descriptions", what: "Six SQL views (for example “which functions can reach which”), listed by name only." },
+  { id: "S", name: "+ table descriptions and ready-made queries", what: "The table descriptions plus the six views, each described." },
 ];
 const INSIDE: { id: string; name: string; what: string }[] = [
-  { id: "C-native", name: "Nothing from the bridge", what: "NVIDIA’s system works out what the database means by itself." },
-  { id: "C-base", name: "+ the bridge’s descriptions", what: "The written explanation of every table and column is loaded in." },
-  { id: "C-semantics", name: "+ descriptions and explained queries", what: "The six ready-made queries are added, with their explanations." },
+  { id: "C-native", name: "The code database, nothing imported", what: "Auto Ontology reads the bridge’s code database and works out what it means by itself." },
+  { id: "C-base", name: "+ table descriptions", what: "The table descriptions are imported as well." },
+  { id: "C-semantics", name: "+ table descriptions and ready-made queries", what: "The six views are added to the database and described in the import." },
 ];
 const REPOS: Record<string, string> = { auto_ontology: "NVIDIA Auto Ontology", click: "pallets/click", httpx: "encode/httpx", rich: "Textualize/rich" };
 
@@ -121,7 +121,7 @@ export function Study() {
       </p>
       <div className="study-explain">
         <p><strong>What we asked.</strong> 48 questions about four real open-source Python programs, including NVIDIA’s own Auto Ontology.
-          Separate AI writers produced the questions and the correct answers without seeing this project, and everything was fixed in
+          Separate AI models wrote the questions and the correct answers from the source code and the bare code database, without seeing the table descriptions or the ready-made queries, and everything was fixed in
           place before any test ran.</p>
         <p><strong>Who answered.</strong> Two AI language models, DeepSeek v4.1 Flash and NVIDIA Nemotron 3.5 Lightning: first asked
           directly, then working inside <Out href="https://github.com/NVIDIA/auto-ontology">NVIDIA Auto Ontology</Out>, NVIDIA’s system
@@ -147,13 +147,14 @@ export function Study() {
           <h2>The same AI inside NVIDIA Auto Ontology</h2>
           <p className="measure small">
             The 12 questions about Auto Ontology’s own code, answered by Auto Ontology’s question-answering agent, averaged over three
-            runs. Only what the bridge supplies changes from row to row.
+            runs. Every row queries the same code database written by the bridge; the rows differ in what is imported on top.
           </p>
           <ResultTable rows={inside} models={models} cell={cell} label="Auto Ontology is given" />
           <p className="measure small">
-            Asked directly, the bridge’s descriptions lift DeepSeek from 18.0 to 27.2 correct answers. Inside Auto Ontology, NVIDIA’s
-            system already answers most questions on its own. For DeepSeek the full bridge adds a little, within the variation between
-            runs, and the descriptions alone take a little away; for Nemotron both lift it from almost none to about two.
+            Given only the code database, Auto Ontology with DeepSeek answered 10.3 of 12 correctly. Importing the descriptions did not
+            measurably add to that: 10.7 with everything is within the spread between repeat runs, and the descriptions alone scored
+            8.7. For Nemotron both imports raised the score from 0.7 to 2.3. Asked directly, outside Auto Ontology, the table
+            descriptions lift DeepSeek from 18.0 to 27.2 of 48.
           </p>
         </>
       ) : null}
@@ -166,12 +167,12 @@ export function Study() {
 
 const GRID_ARMS: { id: string; short: string; name: string }[] = [
   { id: "A", short: "A", name: "asked directly, table names only" },
-  { id: "B", short: "B", name: "asked directly, with descriptions" },
-  { id: "V", short: "V", name: "asked directly, with unexplained ready-made queries" },
-  { id: "S", short: "S", name: "asked directly, with descriptions and explained queries" },
-  { id: "C-native", short: "AO", name: "inside Auto Ontology, nothing from the bridge" },
+  { id: "B", short: "B", name: "asked directly, with table descriptions" },
+  { id: "V", short: "V", name: "asked directly, with ready-made queries but no descriptions" },
+  { id: "S", short: "S", name: "asked directly, with table descriptions and ready-made queries" },
+  { id: "C-native", short: "AO", name: "inside Auto Ontology, code database only" },
   { id: "C-base", short: "AO+B", name: "inside Auto Ontology, with descriptions" },
-  { id: "C-semantics", short: "AO+S", name: "inside Auto Ontology, with descriptions and explained queries" },
+  { id: "C-semantics", short: "AO+S", name: "inside Auto Ontology, with table descriptions and ready-made queries" },
 ];
 
 function QuestionGrid({ data, models }: { data: StudySummary; models: string[] }) {
@@ -203,9 +204,18 @@ function QuestionGrid({ data, models }: { data: StudySummary; models: string[] }
             </tr>
           </thead>
           <tbody>
-            {data.question_list.map((q) => {
+            {data.question_list.map((q, i) => {
               const isOpen = open === q.id;
+              const first = i === 0 || data.question_list[i - 1].repo !== q.repo;
               return [
+                first ? (
+                  <tr key={`${q.repo}-head`} className="study-grid__repo">
+                    <th scope="colgroup" colSpan={arms.length + 1}>
+                      {REPOS[q.repo]}
+                      {q.repo === "auto_ontology" ? "" : " (asked directly only; Auto Ontology was tested on its own 12 questions)"}
+                    </th>
+                  </tr>
+                ) : null,
                 <tr key={q.id}>
                   <th scope="row">
                     <button type="button" className="study-grid__q" aria-expanded={isOpen} onClick={() => setOpen(isOpen ? null : q.id)}>
