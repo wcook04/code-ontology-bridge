@@ -12,7 +12,7 @@ export function RunConfig() {
       <tbody>
         <tr>
           <th scope="row">Agent system</th>
-          <td>NVIDIA Auto Ontology at commit <code>cdaf61e</code>, with a twelve-file patch for public model APIs and the SQL-only chat route</td>
+          <td>NVIDIA Auto Ontology at commit <code>cdaf61e</code>, with a twelve-file patch for public model APIs, the SQL-only chat route and placeholder-answer validation</td>
         </tr>
         <tr>
           <th scope="row">Language model</th>

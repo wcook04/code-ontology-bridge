@@ -131,7 +131,7 @@ export function Study() {
           directly, then working inside <Out href="https://github.com/NVIDIA/auto-ontology">NVIDIA Auto Ontology</Out>, NVIDIA’s system
           for answering questions about databases.</p>
         <p><strong>How we scored.</strong> An answer counts only if its query gives the right rows on the real database and also on
-          eight deliberately altered copies, so a query that is right by luck on one database does not count.</p>
+          eight deliberately altered copies, so most queries that are right by luck on one database fail.</p>
       </div>
       <p className="measure small">
         After the runs, an outside reviewer and four AI auditors who saw no scores found that 21 of the 48 answer keys missed a condition
@@ -152,14 +152,14 @@ export function Study() {
           <h2>The same AI inside NVIDIA Auto Ontology</h2>
           <p className="measure small">
             The 12 questions about Auto Ontology’s own code, answered by Auto Ontology’s question-answering agent, averaged over three
-            runs. Every row queries the same code database written by the bridge; the rows differ in what is imported on top.
+            runs. Every row starts from the same code database written by the bridge; the last also adds the six ready-made queries to it.
           </p>
           <ResultTable rows={inside} models={models} cell={cell} label="Auto Ontology is given" />
           <p className="measure small">
-            Given only the code database, Auto Ontology with DeepSeek answered 10.3 of 12 correctly. Importing the descriptions did not
-            measurably add to that: 10.7 with everything is within the spread between repeat runs, and the descriptions alone scored
-            8.7. For Nemotron both imports raised the score from 0.7 to 2.3. Asked directly, outside Auto Ontology, the table
-            descriptions lift DeepSeek from 18.0 to 27.2 of 48.
+            Given only the code database, Auto Ontology with DeepSeek answered 10.3 of 12 correctly (runs of 10, 10 and 11), and 9 of
+            the 12 in every run; the same model asked directly answered 3.2. Adding the descriptions and ready-made queries gave 10.7
+            (runs of 10, 12 and 10, one run answering all 12); the descriptions alone gave 8.7. For Nemotron both imports raised the
+            score from 0.7 to 2.3.
           </p>
         </>
       ) : null}

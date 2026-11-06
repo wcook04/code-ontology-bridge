@@ -60,9 +60,9 @@ function Hero() {
           if this one changed?” with the SQL it ran and rows naming exact functions.
         </p>
         <p className="recorded">
-          Given only the code database, Auto Ontology’s agent answered 10.3 of 12 code questions correctly. Asked directly, a language
-          model answered 27.2 of 48 correctly with the table descriptions, against 18.0 without. Every run is recorded; nothing here runs
-          live.
+          Given only the code database, Auto Ontology’s agent with DeepSeek v4.1 Flash answered 10.3 of 12 questions about Auto Ontology’s
+          own code correctly (mean of three runs); the same model asked directly answered 3.2. Asked directly about all 48 questions, the
+          table descriptions raised it from 18.0 to 27.2. Every number comes from a saved run.
         </p>
         <HeadlineResult />
         <Stages />
@@ -70,7 +70,7 @@ function Hero() {
           In the recorded example, following direct calls finds three of the four functions that reach{" "}
           <Term id="resolver">resolve_semantic_fks</Term>. The fourth, <Term id="scheduler">a scheduler</Term>, does not call the wrapper directly: at line
           203 it passes it to <Term id="to_thread">asyncio.to_thread</Term>. The extractor records that hand-over, and Auto Ontology’s SQL
-          found all four. In this run, whose questions the author wrote (most with a hint), all 22 came back with exactly the expected rows.
+          found all four. In this development run of 22 author-written questions, 18 of them with a hint, Auto Ontology returned exactly the expected rows for all 22.
         </p>
         <div className="actions">
           <a className="btn" href={href({ view: "home", step: "source" })} onClick={(e) => { e.preventDefault(); jump("source"); }}>
@@ -109,7 +109,7 @@ function Hero() {
             <h3>What the run needed</h3>
             <p className="small">
               Auto Ontology at commit <code>cdaf61e</code> with a twelve-file patch: it lets the service use public model APIs and exposes its
-              existing SQL-only route through the chat API. The extractor and both exports need no patch and no model.{" "}
+              existing SQL-only route through the chat API, and it extends an existing validator that rejects placeholder answers. The extractor and both exports need no patch and no model.{" "}
               <Out href={`${REPO}/blob/main/examples/auto-ontology/live/upstream-fix/README.md`}>Read what the patch changes</Out>
             </p>
           </div>
