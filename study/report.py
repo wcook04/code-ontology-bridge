@@ -62,11 +62,11 @@ out.append("")
 
 if any(k[1].startswith("C") for k in cells):
     out += ["## Inside NVIDIA Auto Ontology: the 12 Auto Ontology questions, same agent, three runs each", "",
-            "Every row queries the same code database written by the bridge. The agent, its retrieval, validation and repair, the "
+            "Every row starts from the same code database written by the bridge. The agent, its retrieval, validation and repair, the "
             "requests and the chat model are fixed. "
             "C-base imports the base model; C-semantics adds the six layer views to the database and imports the model "
-            "that describes them. Chat runs through Auto Ontology's own clients: temperature 0, its own output limits and "
-            "the provider's default reasoning.", "",
+            "that describes them. Chat runs through Auto Ontology's own clients, with its own output limits and the provider's "
+            "default temperature and reasoning settings.", "",
             "| Auto Ontology is given | " + " | ".join(f"{NAMES[m]} snapshot | {NAMES[m]} suite" for m in models) + " |",
             "| --- |" + " ---: | ---: |" * len(models)]
     for arm, label in C_ARMS:

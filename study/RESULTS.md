@@ -19,7 +19,7 @@ Temperature 0, reasoning off, at most 4,000 output tokens, set in every request.
 
 ## Inside NVIDIA Auto Ontology: the 12 Auto Ontology questions, same agent, three runs each
 
-Every row queries the same code database written by the bridge. The agent, its retrieval, validation and repair, the requests and the chat model are fixed. C-base imports the base model; C-semantics adds the six layer views to the database and imports the model that describes them. Chat runs through Auto Ontology's own clients: temperature 0, its own output limits and the provider's default reasoning.
+Every row starts from the same code database written by the bridge. The agent, its retrieval, validation and repair, the requests and the chat model are fixed. C-base imports the base model; C-semantics adds the six layer views to the database and imports the model that describes them. Chat runs through Auto Ontology's own clients, with its own output limits and the provider's default temperature and reasoning settings.
 
 | Auto Ontology is given | DeepSeek v4.1 Flash snapshot | DeepSeek v4.1 Flash suite | Nemotron 3.5 Lightning snapshot | Nemotron 3.5 Lightning suite |
 | --- | ---: | ---: | ---: | ---: |

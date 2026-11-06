@@ -59,8 +59,10 @@ export function HeadlineResult() {
   return (
     <figure className="headline-cmp" aria-labelledby="headline-cmp-cap">
       <figcaption id="headline-cmp-cap" className="headline-cmp__lead">
-        Two AI models answered 48 questions about four real Python codebases. An answer counts as correct only if its query returns
-        the right rows on the code database and on eight altered copies of it. Mean of repeated runs:
+        Two AI models answered 48 questions about four real Python codebases, written by separate AI authors. With only the code
+        database, Auto Ontology’s agent answered 10.3 of the 12 questions about its own code; asked directly, the table descriptions
+        raised DeepSeek from 18.0 to 27.2 of 48. An answer counts only if its query returns the right rows on the real database and on
+        eight altered copies. Mean of repeated runs:
       </figcaption>
       {table(ROWS, "The AI asked directly, given")}
       {inside.length ? table(inside, "Inside NVIDIA Auto Ontology, 12 questions") : null}
