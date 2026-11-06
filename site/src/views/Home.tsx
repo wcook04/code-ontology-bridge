@@ -52,15 +52,17 @@ function Hero() {
   return (
     <>
       <section className="hero band" aria-labelledby="hero-title">
-        <h1 id="hero-title">Make a Python repository queryable by a SQL agent</h1>
+        <h1 id="hero-title">Ask NVIDIA Auto Ontology questions about a Python codebase</h1>
         <p className="lede">
-          code-ontology-bridge reads a Python repository and writes two files: a database of its files, functions, calls and imports, and a{" "}
-          <Term id="semantic-model">semantic model</Term> describing those tables. Both are in formats{" "}
-          <Term id="auto-ontology">NVIDIA Auto Ontology</Term> already imports, so its SQL agent can answer questions about the code.
+          code-ontology-bridge reads Python source code and writes a code database of its files, functions, calls and imports, with{" "}
+          <Term id="semantic-model">table descriptions</Term> saying what each table means. <Term id="auto-ontology">NVIDIA Auto Ontology</Term>{" "}
+          loads both through its existing connector and import, and its agent answers questions such as “which functions would be affected
+          if this one changed?” with the SQL it ran and rows naming exact functions.
         </p>
         <p className="recorded">
-          The study below asked 48 questions about four repositories, written without seeing this project, to two language models and to
-          Auto Ontology’s own agent, with and without what this project exports. Every run is recorded; nothing here runs live.
+          Given only the code database, Auto Ontology’s agent answered 10.3 of 12 code questions correctly. Asked directly, a language
+          model answered 27.2 of 48 correctly with the table descriptions, against 18.0 without. Every run is recorded; nothing here runs
+          live.
         </p>
         <HeadlineResult />
         <Stages />
@@ -68,7 +70,7 @@ function Hero() {
           In the recorded example, following direct calls finds three of the four functions that reach{" "}
           <Term id="resolver">resolve_semantic_fks</Term>. The fourth, <Term id="scheduler">a scheduler</Term>, does not call the wrapper directly: at line
           203 it passes it to <Term id="to_thread">asyncio.to_thread</Term>. The extractor records that hand-over, and Auto Ontology’s SQL
-          found all four. In the recorded run, all 22 development questions came back with exactly the expected rows.
+          found all four. In this run, whose questions the author wrote (most with a hint), all 22 came back with exactly the expected rows.
         </p>
         <div className="actions">
           <a className="btn" href={href({ view: "home", step: "source" })} onClick={(e) => { e.preventDefault(); jump("source"); }}>
@@ -83,7 +85,7 @@ function Hero() {
         <h2 id="split-title">What this project adds, and what NVIDIA supplies</h2>
         <SystemDiagram onOpen={jump} />
         <p className="small muted measure">
-          The arrows show how Auto Ontology is built to work. The run saved what went in and what came out: the database, the semantic model,
+          The arrows show how Auto Ontology is built to work. The run saved what went in and what came out: the database, the table descriptions,
           each question, the SQL and the rows. It did not save which table descriptions the agent looked up for a question.
         </p>
         <div className="split-cols">
@@ -94,13 +96,13 @@ function Hero() {
               <li>Each call is classified: resolved to a function in the repository, or labelled as a built-in, an external library, a dynamic attribute or unresolved. A call the extractor cannot follow keeps no target rather than a guessed one. Linked calls follow plain names only; the published limits list the patterns, such as a local variable shadowing a module-level name, that can still link the wrong definition.</li>
               <li>Functions passed as arguments, as in <Term id="to_thread">asyncio.to_thread</Term>(f), are recorded as <Term id="callback">callback references</Term>, kept apart from direct calls.</li>
               <li>A <Term id="duckdb">DuckDB</Term> export of the tables and a semantic-model export in Auto Ontology’s own YAML format, both stamped with the source commit. The database keeps each file’s SHA-256; the YAML records a fingerprint of all of them.</li>
-              <li>The table keys and joins. At this revision Auto Ontology’s DuckDB connector reports no primary or foreign keys (its get_pks and get_fks return empty tables), so the semantic model is where Auto Ontology learns them: it declares a key for each of the 10 tables and 10 joins, such as <code>code.calls.callee_symbol_id</code> → <code>code.symbols.symbol_id</code>.</li>
+              <li>The table keys and joins. At this revision Auto Ontology’s DuckDB connector reports no primary or foreign keys (its get_pks and get_fks return empty tables), so the table descriptions are where Auto Ontology learns them: they declare a key for each of the 8 tables and 2 views, and 10 joins, such as <code>code.calls.callee_symbol_id</code> → <code>code.symbols.symbol_id</code>.</li>
             </ul>
           </div>
           <div>
             <h3>Supplied by Auto Ontology</h3>
             <ul className="facts">
-              <li>Importing the semantic model into its catalog.</li>
+              <li>Importing the table descriptions into its catalog.</li>
               <li>The SQL agent that reads the table descriptions, writes SQL and explains it.</li>
               <li>The DuckDB connector that runs the SQL.</li>
             </ul>
@@ -129,7 +131,7 @@ function Stages() {
       </li>
       <li className="is-ours">
         <span className="stages3__owner">This project</span>
-        <span className="stages3__name">Code database and semantic model</span>
+        <span className="stages3__name">Code database and table descriptions</span>
         <span className="stages3__what">Tables of functions, calls and imports, described in English</span>
       </li>
       <li>
@@ -317,7 +319,7 @@ function TablesPart({ records, model }: { records: RecordsStep; model: ModelStep
       <PartHead n={2} id="h-records" title="What the extractor writes" />
       <p className="measure">
         The extractor reads every Python file and fills a <Term id="duckdb">DuckDB</Term> database. Three of its eight tables matter here.
-        Beside the database it writes the <Term id="semantic-model">semantic model</Term>, which describes each table in English so that
+        Beside the database it writes the <Term id="semantic-model">table descriptions</Term>, a semantic model in Auto Ontology’s format, which describes each table in English so that
         Auto Ontology’s agent knows where to look.
       </p>
       <ol className="schema" aria-label="Three tables and how they link">
@@ -334,7 +336,7 @@ function TablesPart({ records, model }: { records: RecordsStep; model: ModelStep
               </ul>
               {t.term ? (
                 <p className="schema__model">
-                  <span className="schema__label">The semantic model calls this “{t.term.name}”:</span> {firstSentence(t.term.description)}
+                  <span className="schema__label">The table descriptions call this “{t.term.name}”:</span> {firstSentence(t.term.description)}
                 </p>
               ) : null}
             </div>
@@ -585,9 +587,9 @@ function Limits({ model }: { model: ModelStep }) {
         <div>
           <h3>It shows</h3>
           <ul className="facts">
-            <li>Auto Ontology can import the extractor’s semantic model and query its database through the existing DuckDB connector.</li>
+            <li>Auto Ontology can import the extractor’s table descriptions and query its code database through the existing DuckDB connector.</li>
             <li>In one complete run with DeepSeek v4.1 Flash, the SQL its agent wrote returned exactly the rows of the author’s reference query for all 22 development questions.</li>
-            <li>The semantic model helps on its own. Given only the table and column names, Nemotron 3.5 Lightning answered 6 of 16 held-out questions and DeepSeek 13; given the semantic model as well, 13 and 16.</li>
+            <li>In that earlier comparison (author-written questions, one run per setting, scored on the real database only), Nemotron 3.5 Lightning answered 6 of 16 held-out questions from table names alone and 13 with the table descriptions; DeepSeek 13 and 16. The study above measures the same question more strictly.</li>
             <li>A relationship only the extractor records, a function handed to asyncio.to_thread, reached the final answer: direct calls alone find three of the four callers.</li>
             <li>Every request, SQL statement, returned row and written response is published unchanged, including the runs that scored worst.</li>
           </ul>
@@ -607,7 +609,7 @@ function Limits({ model }: { model: ModelStep }) {
       <h3>Which stages of the run were saved</h3>
       <ul className="stages">
         <li>
-          <span>The semantic model the extractor wrote</span>
+          <span>The table descriptions the extractor wrote</span>
           <span className="status status--pass">{model.exported_input.status === "recorded" ? "Saved" : model.exported_input.status}</span>
         </li>
         {Object.entries(model.stages).map(([key, stage]) => {

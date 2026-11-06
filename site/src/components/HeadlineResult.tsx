@@ -6,13 +6,14 @@ import { MODEL_NAMES, useStudy } from "../views/Study";
 
 const ROWS: { id: string; name: string; ours: boolean }[] = [
   { id: "A", name: "Table names only", ours: false },
-  { id: "B", name: "+ the bridge’s descriptions", ours: true },
-  { id: "S", name: "+ descriptions and explained queries", ours: true },
+  { id: "B", name: "+ table descriptions", ours: true },
+  { id: "V", name: "+ ready-made queries, without descriptions", ours: true },
+  { id: "S", name: "+ table descriptions and ready-made queries", ours: true },
 ];
 const INSIDE: { id: string; name: string; ours: boolean }[] = [
-  { id: "C-native", name: "Nothing from the bridge", ours: false },
-  { id: "C-base", name: "+ the bridge’s descriptions", ours: true },
-  { id: "C-semantics", name: "+ descriptions and explained queries", ours: true },
+  { id: "C-native", name: "The code database, nothing imported", ours: true },
+  { id: "C-base", name: "+ table descriptions", ours: true },
+  { id: "C-semantics", name: "+ table descriptions and ready-made queries", ours: true },
 ];
 
 export function HeadlineResult() {
@@ -58,9 +59,8 @@ export function HeadlineResult() {
   return (
     <figure className="headline-cmp" aria-labelledby="headline-cmp-cap">
       <figcaption id="headline-cmp-cap" className="headline-cmp__lead">
-        We asked two AI models 48 questions about four real Python programs, with and without this project’s description of the
-        code. Number of questions answered correctly, counting an answer only if its query also works on eight altered copies of the
-        data, averaged over repeated runs:
+        Two AI models answered 48 questions about four real Python codebases. An answer counts as correct only if its query returns
+        the right rows on the code database and on eight altered copies of it. Mean of repeated runs:
       </figcaption>
       {table(ROWS, "The AI asked directly, given")}
       {inside.length ? table(inside, "Inside NVIDIA Auto Ontology, 12 questions") : null}
