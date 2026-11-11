@@ -49,7 +49,7 @@ function Body({ q, total }: { q: QuestionDetail; total: number }) {
       {f && f.title !== q.question ? <p className="asked">Asked as: “{q.question}”</p> : null}
 
       <section className="finding" aria-labelledby="finding-title">
-        <h2 id="finding-title" className="visually-hidden">What the returned rows show</h2>
+        <h2 id="finding-title" className="visually-hidden">What is in the returned rows</h2>
         {f ? <p className="finding__says">{f.says(rows)}</p> : null}
         {f ? <ResultView finding={f} rows={rows} contract={q.output_contract} referenceText={q.reference_rows} links={links} /> : <p className="notice">This question’s columns differ from the ones this website’s summary was written for, so no summary is shown. The recorded rows are under “The recorded evidence”.</p>}
         {f?.limit ? <p className="finding__limit">{f.limit}</p> : null}

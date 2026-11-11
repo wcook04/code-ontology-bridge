@@ -2,7 +2,7 @@
 
 The website at https://wcook04.github.io/code-ontology-bridge/ explains what this project does and has two kinds of page:
 
-- **The study** (`#/study`): the 48-question study's scores, directly and inside Auto Ontology, and a per-question grid whose rows open the full question and a link to every run's saved answer. It fetches `study/summary.json`, a copy of `study/results/summary.json` staged beside the site; that file is not part of the pinned `data/` publication.
+- **The study** (`#/study`): the 48-question study's scores, directly and inside Auto Ontology, and a per-question grid whose rows open the full question and a link to every run's saved answer. `#/study/<question id>` (for example `#/study/ao-02`) opens the page with that question open. It fetches `study/summary.json`, a copy of `study/results/summary.json` staged beside the site; that file is not part of the pinned `data/` publication.
 - **The walkthrough** (the front page and `#/walkthrough/...`): one recorded question, question 11, followed from a line of Python in Auto Ontology's scheduler to the rows Auto Ontology returned, and the 22 recorded walkthrough questions with request, SQL, returned rows, reference rows and both assessments. These pages read only the static publication described in [deployment](../docs/deployment.md): they fetch `data/index.json`, follow the pinned manifest and resolve each API route through `manifest.api_routes`.
 
 The site runs no model and no SQL. Missing, failed and empty data are shown as three different states, and nothing is substituted when a request fails.

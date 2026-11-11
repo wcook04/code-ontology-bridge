@@ -33,12 +33,12 @@ const entries: GlossaryEntry[] = [
   {
     id: "callback",
     label: "Callback reference",
-    text: "A place where code passes a function to another call instead of calling it, as in asyncio.to_thread(f). The extractor records these in the Calls table with the kind “callback”, separate from direct calls. asyncio.to_thread is documented to run the function it receives; for other receiving calls the extractor assumes, without proof, that they do. A callback reference shows where a function is handed over, not that it ran.",
+    text: "A place where code passes a function to another call instead of calling it, as in asyncio.to_thread(f). The extractor records these in the Calls table with the kind “callback”, separate from direct calls. asyncio.to_thread is documented to run the function it receives; for other receiving calls the extractor assumes, without proof, that they do. A callback reference records where a function is handed over. It is not evidence that the function ran.",
   },
   {
     id: "semantic-model",
     label: "Semantic model",
-    text: "A YAML file the extractor writes beside the database. In plain English it says what each table and column holds and which columns link tables together. Auto Ontology imports it so its agent knows where to look before writing SQL.",
+    text: "A YAML file the extractor writes beside the database. It lists in plain English what each table and column holds and which columns link tables together. Auto Ontology imports it so its agent knows where to look before writing SQL.",
   },
   {
     id: "auto-ontology",

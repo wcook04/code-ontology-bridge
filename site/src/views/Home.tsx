@@ -3,7 +3,7 @@
 // returned. Prose uses plain names; the exact identifiers are in glossary cards.
 
 import { useEffect, useRef, useState } from "react";
-import type { AnswerStep, ModelStep, Outcomes, RecordsStep, RequestStep, SourceStep, SqlStep, Term as ModelTerm, Walkthrough } from "../data/types";
+import type { AnswerStep, Graph, ModelStep, Outcomes, RecordsStep, RequestStep, SourceStep, SqlStep, Term as ModelTerm, Walkthrough } from "../data/types";
 import { useRoute } from "../data/useRoute";
 import { CallerGraph, type Selection } from "../components/CallerGraph";
 import { SystemDiagram } from "../components/SystemDiagram";
@@ -15,7 +15,7 @@ import { CopyButton, Excerpt, Gate, Out, RowsTable, TableStatus } from "../compo
 import { RunConfig } from "../components/RunConfig";
 import { AnswerProse, AssessmentBlock, RequestBlock, Results, SqlPair } from "../components/Evidence";
 import { entryState, href, onLinkClick, replaceView } from "../app/router";
-import { ROLES, filePart, qualname, roleOf } from "../app/roles";
+import { ROLES, qualname, roleOf } from "../app/roles";
 import { termForSymbol } from "../app/glossary";
 
 const WALKTHROUGH = "/api/v1/walkthroughs/caller-chain-q11";
@@ -94,7 +94,7 @@ function FitBand() {
       <Stages />
       <SystemDiagram onOpen={jump} />
       <p className="small muted measure">
-        The arrows show how Auto Ontology is built to work. The run saved what went in and what came out: the database, the table descriptions,
+        The arrows are drawn from Auto Ontology’s design. The run saved what went in and what came out: the database, the table descriptions,
         each question, the SQL and the rows. It did not save which table descriptions the agent looked up for a question.
       </p>
       <div className="split-cols">
@@ -211,7 +211,7 @@ function Example({ w, stepTarget }: { w: Walkthrough; stepTarget?: string }) {
               ))}
             </ol>
           </div>
-          <AnswerPreview rows={answer.result_tables[0] ?? []} />
+          <AnswerPreview rows={answer.result_tables[0] ?? []} graph={records.graphs.all_relationships} />
         </div>
       </section>
 
@@ -272,11 +272,18 @@ const STEPS: [string, string][] = [
   ["answer", "The rows that came back"],
 ];
 
-/** The recorded rows, in recorded order, before the steps that explain them. */
-function AnswerPreview({ rows }: { rows: Record<string, unknown>[] }) {
+/** The recorded answer before the steps that explain it: the calls as a graph, then the rows in recorded order. */
+function AnswerPreview({ rows, graph }: { rows: Record<string, unknown>[]; graph: Graph }) {
   return (
     <figure className="answer-preview">
       <figcaption className="answer-preview__cap">The {rows.length} rows Auto Ontology returned</figcaption>
+      <div className="answer-preview__graph">
+        <CallerGraph layoutGraph={graph} shown={graph} selection={null} onSelect={() => jump("graph")} idPrefix="preview-" />
+        <p className="answer-preview__key">
+          Each arrow is one recorded call, from the calling function to the function it calls. The dashed arrow, labelled
+          callback, is the hand-over at line 203.
+        </p>
+      </div>
       <ol className="answer-preview__rows">
         {rows.map((r) => {
           const id = String(r.symbol_id);
@@ -287,18 +294,20 @@ function AnswerPreview({ rows }: { rows: Record<string, unknown>[] }) {
                 <strong>{String(r.depth)}</strong> {Number(r.depth) === 1 ? "step" : "steps"}
               </span>
               <span className="answer-preview__sym">
+                <span className="answer-preview__role">{roleOf(id)}</span>
                 <code translate="no">{qualname(id)}</code>
-                <span className="answer-preview__file" translate="no">{filePart(id)}</span>
-                {viaCallback ? <span className="answer-preview__tag">reached only through a callback</span> : null}
+                {viaCallback ? <span className="answer-preview__tag">reached only through the hand-over</span> : null}
               </span>
             </li>
           );
         })}
       </ol>
       <p className="answer-preview__foot">
-        Steps are counted along recorded calls and hand-overs to <code translate="no">resolve_semantic_fks</code>. These are source
-        relationships, places to inspect; they are not a record of what ran.{" "}
-        <a href={href({ view: "home", step: "graph" })} onClick={(e) => { e.preventDefault(); jump("graph"); }}>The same rows as a graph</a>
+        A step is one recorded call or hand-over on the way to <code translate="no">resolve_semantic_fks</code>. The bridge reads the
+        source text and does not run the code, so each row is a place to inspect.{" "}
+        <a href={href({ view: "home", step: "graph" })} onClick={(e) => { e.preventDefault(); jump("graph"); }}>
+          Step 3 has the graph with and without the hand-over
+        </a>
       </p>
     </figure>
   );
@@ -326,8 +335,8 @@ function SourcePart({ source }: { source: SourceStep }) {
             miss this line, yet the scheduler depends on the wrapper running.
           </p>
           <p>
-            The extractor records the line anyway, as a <Term id="callback">callback reference</Term>. That record says where the wrapper is
-            handed over; it does not show that the wrapper ran.
+            The extractor records the line anyway, as a <Term id="callback">callback reference</Term>. That record gives the place where the wrapper
+            is handed over. It is not evidence that the wrapper ran.
           </p>
           {call ? (
             <p className="actions actions--small">
@@ -481,7 +490,7 @@ function GraphPart({ records }: { records: RecordsStep }) {
       <PartHead n={3} id="h-graph" title="Following calls backwards from the resolver" />
       <p className="measure">
         Each arrow is a row in the Calls table, pointing from caller to callee. To answer the question, the calls are followed backwards from the
-        resolver. Switch between the two views to see what the callback row adds.
+        resolver. The two views differ by one row, the callback row.
       </p>
       <div className="preset" role="radiogroup" aria-label="Which calls to follow">
         <button type="button" role="radio" aria-checked={preset === "direct"} className="preset__opt" onClick={() => setPreset("direct")}>
@@ -552,7 +561,7 @@ function GraphPart({ records }: { records: RecordsStep }) {
                 </p>
               </>
             ) : (
-              <p className="small muted">Select a box or an arrow.</p>
+              <p className="small muted">No box or arrow is selected.</p>
             )}
           </aside>
           <div>
@@ -642,14 +651,14 @@ const STAGE_WORDS: Record<string, { name: string; recorded: string }> = {
 function Limits({ model }: { model: ModelStep }) {
   return (
     <section className="band band--plain" id="step-limits" tabIndex={-1} aria-labelledby="h-limits">
-      <h2 id="h-limits">What this walkthrough’s run shows, and what it does not</h2>
+      <h2 id="h-limits">What the run behind this example establishes, and what it does not</h2>
       <p className="measure small muted">
         This walkthrough comes from the earlier experiment. The <a href="#/study" onClick={onLinkClick}>study</a> repeats the test with
         questions written blind, four repositories, repeated runs and counterfactual databases.
       </p>
       <div className="split-cols">
         <div>
-          <h3>It shows</h3>
+          <h3>Established</h3>
           <ul className="facts">
             <li>Auto Ontology can import the extractor’s table descriptions and query its code database through the existing DuckDB connector.</li>
             <li>In one complete run with DeepSeek v4.1 Flash, the SQL its agent wrote returned exactly the rows of the author’s reference query for all 22 development questions.</li>
@@ -659,7 +668,7 @@ function Limits({ model }: { model: ModelStep }) {
           </ul>
         </div>
         <div>
-          <h3>It does not show</h3>
+          <h3>Not established</h3>
           <ul className="facts">
             <li>Accuracy on a benchmark someone else wrote: the author wrote all 38 questions and their reference queries, about one repository.</li>
             <li>Stable rates: each arm ran each question set once, and 16 held-out questions is a small sample.</li>

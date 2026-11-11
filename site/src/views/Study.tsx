@@ -106,7 +106,7 @@ function ResultTable({ rows, models, cell, label }: {
   );
 }
 
-export function Study() {
+export function Study({ question }: { question?: string }) {
   const data = useStudy();
   if (data === null) return <section className="band page"><p className="gate" role="status">Loading the study…</p></section>;
   if (data === "error") return <section className="band page"><p className="gate gate--error" role="alert">The study results could not be loaded.</p></section>;
@@ -172,7 +172,7 @@ export function Study() {
       ) : null}
 
       <h2>Question by question</h2>
-      <QuestionGrid data={data} models={models} />
+      <QuestionGrid data={data} models={models} question={question} />
     </section>
   );
 }
