@@ -154,7 +154,7 @@ function OutcomeTable({ o, params }: { o: OutcomeList; params: URLSearchParams }
                     </button>
                   </p>
                 ) : (
-                  <p className="qlist__says">{d && f ? f.says(rows) : d ? "See the recorded rows." : " "}</p>
+                  <p className="qlist__says">{d && f ? f.says(rows) : d ? "The recorded rows are on this question’s page." : " "}</p>
                 )}
                 <p className="qlist__status">
                   <span className={i.assessment.table_match === "pass" ? "ok" : "bad"}>

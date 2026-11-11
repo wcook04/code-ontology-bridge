@@ -29,7 +29,7 @@ const file = (id: unknown) => String(id).split("::")[0].split("/").pop() ?? Stri
 const count = (rows: Row[], noun: string, plural = `${noun}s`) => `${rows.length} ${rows.length === 1 ? noun : plural}`;
 
 const STATIC_CALLS =
-  "These are calls the extractor found in the source text. Calls made through dynamic attributes or other indirection are not linked, so a function can have callers this list does not show.";
+  "These are calls the extractor found in the source text. Calls made through dynamic attributes or other indirection are not linked, so a function can have callers that are missing from this list.";
 
 export const FINDINGS: Record<number, Finding> = {
   1: {

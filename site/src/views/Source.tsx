@@ -40,7 +40,7 @@ export function Source({ spanId }: { spanId: string }) {
               <p>
                 {isCall
                   ? `Line ${span.line_start}: the occurrence the extractor recorded.`
-                  : `Lines ${span.line_start}–${span.line_end}. The excerpt shows where the definition starts.`}
+                  : `Lines ${span.line_start}–${span.line_end}. The excerpt includes the first line of the definition.`}
               </p>
               <Excerpt text={span.excerpt} start={span.excerpt_line_start} mark={[span.line_start]} label={`${span.path} excerpt`} />
               <p className="small muted">

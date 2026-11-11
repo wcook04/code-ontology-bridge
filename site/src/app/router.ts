@@ -3,6 +3,7 @@
 //   #/outcomes?table=fail      all 22 recorded outcomes, with optional filters
 //   #/questions/14             one recorded question
 //   #/source/<span id>         one verified source excerpt
+//   #/study                    the 48-question study (and #/study/<question id> with that question open)
 //
 // History follows Proof Reader's rule (web/src/app/history.ts): opening something
 // pushes an entry; changing a view inside a page only rewrites the entry it is in.
@@ -17,7 +18,7 @@ export type Route =
   | { view: "question"; id: number }
   | { view: "source"; span: string }
   | { view: "comparison" }
-  | { view: "study" }
+  | { view: "study"; question?: string }
   | { view: "missing"; hash: string };
 
 export interface EntryState {
@@ -46,6 +47,7 @@ export function parse(hash: string): Route {
   if (parts[0] === "questions" && parts.length === 2 && /^\d+$/.test(parts[1])) return { view: "question", id: Number(parts[1]) };
   if (parts[0] === "comparison" && parts.length === 1) return { view: "comparison" };
   if (parts[0] === "study" && parts.length === 1) return { view: "study" };
+  if (parts[0] === "study" && parts.length === 2) return { view: "study", question: decode(parts[1]) };
   if (parts[0] === "source" && parts.length >= 2) return { view: "source", span: decode(parts.slice(1).join("/")) };
   return { view: "missing", hash };
 }
@@ -65,7 +67,7 @@ export function href(route: Route): string {
     case "comparison":
       return "#/comparison";
     case "study":
-      return "#/study";
+      return route.question ? `#/study/${encodeURIComponent(route.question)}` : "#/study";
     case "missing":
       return route.hash;
   }

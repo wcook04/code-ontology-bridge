@@ -3,7 +3,9 @@
 // count is exact, with links to every run's saved response on GitHub.
 
 import "../styles/study-grid.css";
-import { Fragment, useState } from "react";
+import { Fragment, useEffect, useState } from "react";
+import { href, replaceView } from "../app/router";
+import { CopyButton } from "../components/parts";
 import { MODEL_NAMES, type StudySummary } from "./Study";
 
 const REPO = "https://github.com/wcook04/code-ontology-bridge/blob/main";
@@ -39,10 +41,21 @@ function runsCorrect(r: number, n: number): number | null {
 
 const capital = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 
-export function QuestionGrid({ data, models }: { data: StudySummary; models: string[] }) {
+export function QuestionGrid({ data, models, question }: { data: StudySummary; models: string[]; question?: string }) {
   const [model, setModel] = useState(models[0]);
   const [filter, setFilter] = useState<Filter>("all");
-  const [open, setOpen] = useState<string | null>(null);
+  // The open question is in the address (#/study/<id>), so a link to one question opens it.
+  const known = question && data.question_list.some((q) => q.id === question) ? question : null;
+  const [open, setOpenState] = useState<string | null>(known);
+  const setOpen = (id: string | null) => {
+    setOpenState(id);
+    replaceView({}, href({ view: "study", question: id ?? undefined }));
+  };
+  useEffect(() => {
+    if (!known) return;
+    setOpenState(known);
+    document.getElementById(`sg-row-${known}`)?.scrollIntoView({ block: "center" });
+  }, [known]);
 
   const rates = (arm: string) => data.per_question_suite_rate[`${model}/${arm}`];
   const arms = GRID_ARMS.filter((a) => rates(a.id));
@@ -121,7 +134,7 @@ export function QuestionGrid({ data, models }: { data: StudySummary; models: str
                       </th>
                     </tr>
                   ) : null}
-                  <tr className={isOpen ? "sg-row is-open" : "sg-row"}>
+                  <tr id={`sg-row-${q.id}`} className={isOpen ? "sg-row is-open" : "sg-row"}>
                     <th scope="row" className="sg-qcol">
                       <button type="button" className="study-grid__q sg-q" aria-expanded={isOpen} aria-controls={isOpen ? detailId : undefined}
                         onClick={() => setOpen(isOpen ? null : q.id)}>
@@ -153,6 +166,8 @@ export function QuestionGrid({ data, models }: { data: StudySummary; models: str
                         <div className="sg-detail" id={detailId}>
                           <p className="sg-detail__id">
                             <span translate="no">{q.id}</span>, {REPOS[q.repo]}
+                            {" "}
+                            <CopyButton text={new URL(href({ view: "study", question: q.id }), window.location.href).href} label="Copy a link to this question" />
                           </p>
                           <dl className="sg-detail__facts">
                             <div><dt>Topic</dt><dd>{q.topic}</dd></div>
@@ -182,7 +197,7 @@ export function QuestionGrid({ data, models }: { data: StudySummary; models: str
                             })}
                           </ul>
                           <p className="sg-detail__note">
-                            The results summary records how many runs were correct, not which ones; each saved answer holds the query that
+                            The results summary records how many runs were correct and does not record which runs they were. Each saved answer contains the query that
                             run wrote and the rows it returned.{" "}
                             <a href={QUESTIONS_URL} target="_blank" rel="noreferrer">All {all.length} questions with their answer keys, on GitHub</a>
                             {" "}(this one is <span translate="no">{q.id}</span>).

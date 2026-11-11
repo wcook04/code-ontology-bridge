@@ -2,6 +2,8 @@
 // Positions come from the all-relationships preset's depths and never move:
 // switching to direct calls only greys out what that preset does not reach,
 // so the reader sees which relationship makes the difference.
+// Boxes carry the plain role name and the distance only; the exact function name is in the
+// accessible label, the inspector and the rows beside the graph.
 // Arrows always point from caller to callee. Hover previews; click or Enter selects.
 
 import { useEffect, useLayoutEffect, useRef, useState, type KeyboardEvent } from "react";
@@ -15,6 +17,8 @@ interface Props {
   shown: Graph;
   selection: Selection;
   onSelect: (selection: Selection) => void;
+  /** Prefix for the arrowhead ids, so two graphs on one page do not share them. */
+  idPrefix?: string;
 }
 
 interface Box {
@@ -71,7 +75,7 @@ function activate(event: KeyboardEvent, run: () => void): void {
   }
 }
 
-export function CallerGraph({ layoutGraph, shown, selection, onSelect }: Props) {
+export function CallerGraph({ layoutGraph, shown, selection, onSelect, idPrefix = "" }: Props) {
   const frame = useRef<HTMLDivElement>(null);
   const [vertical, setVertical] = useState(false);
   const [preview, setPreview] = useState<Selection>(null);
@@ -103,10 +107,10 @@ export function CallerGraph({ layoutGraph, shown, selection, onSelect }: Props) 
         aria-label={`Caller graph, ${shown.call_kind === "direct" ? "direct calls only" : "direct calls and callback references"}. Arrows point from caller to callee. A list of the same relationships follows the drawing.`}
       >
         <defs>
-          <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+          <marker id={`${idPrefix}arrow`} viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
             <path d="M0,0 L10,5 L0,10 z" className="arrow" />
           </marker>
-          <marker id="arrow-cb" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+          <marker id={`${idPrefix}arrow-cb`} viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
             <path d="M0,0 L10,5 L0,10 z" className="arrow arrow--cb" />
           </marker>
         </defs>
@@ -134,7 +138,7 @@ export function CallerGraph({ layoutGraph, shown, selection, onSelect }: Props) 
               onPointerLeave={() => setPreview(null)}
             >
               <path d={d} className="edge__hit" />
-              <path d={d} className="edge__line" markerEnd={`url(#${callback ? "arrow-cb" : "arrow"})`} />
+              <path d={d} className="edge__line" markerEnd={`url(#${idPrefix}${callback ? "arrow-cb" : "arrow"})`} />
               {callback && present ? (
                 <text x={vertical ? from.x + 6 : from.x + from.w + 10} y={vertical ? from.y + from.h + 26 : from.y + from.h / 2 - 10} textAnchor="start" className="edge__label">
                   callback
@@ -150,7 +154,6 @@ export function CallerGraph({ layoutGraph, shown, selection, onSelect }: Props) 
           const shownNode = shown.nodes.find((n) => n.symbol_id === node.symbol_id);
           const cls = ["node", root ? "node--root" : "", present ? "" : "node--ghost", isSelected("node", node.symbol_id) ? "is-selected" : "", isPreview("node", node.symbol_id) ? "is-preview" : ""].join(" ");
           const name = qualname(node.symbol_id);
-          const short = vertical && name.length > 20 ? `${name.slice(0, 19)}…` : name;
           return (
             <g
               key={node.symbol_id}
@@ -165,13 +168,11 @@ export function CallerGraph({ layoutGraph, shown, selection, onSelect }: Props) 
               onPointerLeave={() => setPreview(null)}
             >
               <rect x={box.x} y={box.y} width={box.w} height={box.h} rx={7} className="node__box" />
-              <text x={box.x + 12} y={box.y + 24} className="node__role">
+              <text x={box.x + 14} y={box.y + box.h / 2 - 3} className="node__role">
                 {roleOf(node.symbol_id)}
-                {present && !root ? <tspan className="node__depth">{`  depth ${shownNode?.depth}`}</tspan> : null}
-                {!present ? <tspan className="node__depth">{"  not reached"}</tspan> : null}
               </text>
-              <text x={box.x + 12} y={box.y + 45} className="node__name">
-                {short}
+              <text x={box.x + 14} y={box.y + box.h / 2 + 16} className="node__depth">
+                {!present ? "not reached" : root ? "the function asked about" : `${shownNode?.depth} ${shownNode?.depth === 1 ? "step" : "steps"} away`}
               </text>
             </g>
           );

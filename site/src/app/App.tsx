@@ -40,7 +40,7 @@ export function App() {
 
   useEffect(() => {
     const titles: Record<string, string> = {
-      home: "Code Ontology Bridge: ask NVIDIA Auto Ontology about a Python codebase",
+      home: "Code Ontology Bridge: NVIDIA Auto Ontology answers questions about its own code",
       outcomes: "The 22 recorded questions | Code Ontology Bridge",
       question: route.view === "question" ? `Question ${route.id} | Code Ontology Bridge` : "",
       source: "Source excerpt | Code Ontology Bridge",
@@ -60,7 +60,7 @@ export function App() {
         {route.view === "question" ? <Question key={route.id} id={route.id} total={pub?.manifest.question_count ?? 22} /> : null}
         {route.view === "source" ? <Source spanId={route.span} /> : null}
         {route.view === "comparison" ? <Comparison /> : null}
-        {route.view === "study" ? <Study /> : null}
+        {route.view === "study" ? <Study question={route.question} /> : null}
         {route.view === "missing" ? (
           <section className="band page">
             <h1>Nothing at this address</h1>
