@@ -4,6 +4,8 @@
 
 import { useEffect, useState } from "react";
 import { Out } from "../components/parts";
+import { FilmPair } from "../components/Films";
+import { QuestionGrid } from "./StudyGrid";
 
 const REPO = "https://github.com/wcook04/code-ontology-bridge/blob/main";
 
@@ -16,6 +18,7 @@ export interface Cell {
   suite: number[];
   snapshot_mean: number;
   suite_mean: number;
+  suite_per_repo_mean?: Record<string, number>;
   median_seconds: number | null;
   cost_usd: number | null;
 }
@@ -42,7 +45,6 @@ const INSIDE: { id: string; name: string; what: string }[] = [
   { id: "C-base", name: "+ table descriptions", what: "The table descriptions are imported as well." },
   { id: "C-semantics", name: "+ table descriptions and ready-made queries", what: "The six views are added to the database and described in the import." },
 ];
-const REPOS: Record<string, string> = { auto_ontology: "NVIDIA Auto Ontology", click: "pallets/click", httpx: "encode/httpx", rich: "Textualize/rich" };
 
 export function useStudy(): StudySummary | null | "error" {
   const [data, setData] = useState<StudySummary | null | "error">(null);
@@ -113,6 +115,8 @@ export function Study() {
   const inside = INSIDE.filter((a) => models.some((m) => cell(m, a.id)));
   return (
     <section className="band page comparison" aria-labelledby="study-title">
+      <div className="study-head">
+      <div>
       <h1 id="study-title">Does describing code to an AI help it answer questions about the code?</h1>
       <p className="study-answer">
         Asked directly, yes: the table descriptions lift DeepSeek from 18.0 to 27.2 of 48 correct answers. Inside NVIDIA Auto Ontology,
@@ -121,16 +125,19 @@ export function Study() {
       <p className="lede-2">
         A program is made of functions that call one another. Questions such as “which functions end up running this one?” are hard to
         answer by reading files. This project turns a program’s source code into a database, with a written explanation of every table,
-        so that an AI can answer by writing a database query. We tested whether those explanations make the AI’s answers right.
+        so that an AI can answer by writing a database query. The study tests whether those explanations make the AI’s answers right.
       </p>
+      </div>
+      <FilmPair compact />
+      </div>
       <div className="study-explain">
-        <p><strong>What we asked.</strong> 48 questions about four real open-source Python programs, including NVIDIA’s own Auto Ontology.
+        <p><strong>What was asked.</strong> 48 questions about four real open-source Python programs, including NVIDIA’s own Auto Ontology.
           Separate AI models wrote the questions and the correct answers from the source code and the bare code database, without seeing the table descriptions or the ready-made queries, and everything was fixed in
           place before any test ran.</p>
         <p><strong>Who answered.</strong> Two AI language models, DeepSeek v4.1 Flash and NVIDIA Nemotron 3.5 Lightning: first asked
           directly, then working inside <Out href="https://github.com/NVIDIA/auto-ontology">NVIDIA Auto Ontology</Out>, NVIDIA’s system
           for answering questions about databases.</p>
-        <p><strong>How we scored.</strong> An answer counts only if its query gives the right rows on the real database and also on
+        <p><strong>How answers were scored.</strong> An answer counts only if its query gives the right rows on the real database and also on
           eight deliberately altered copies, so most queries that are right by luck on one database fail.</p>
       </div>
       <p className="measure small">
@@ -168,93 +175,4 @@ export function Study() {
       <QuestionGrid data={data} models={models} />
     </section>
   );
-}
-
-const GRID_ARMS: { id: string; short: string; name: string }[] = [
-  { id: "A", short: "Names", name: "asked directly, table names only" },
-  { id: "B", short: "+Desc", name: "asked directly, with table descriptions" },
-  { id: "V", short: "+Views", name: "asked directly, with ready-made queries but no descriptions" },
-  { id: "S", short: "+Both", name: "asked directly, with table descriptions and ready-made queries" },
-  { id: "C-native", short: "AO", name: "inside Auto Ontology, code database only" },
-  { id: "C-base", short: "AO+Desc", name: "inside Auto Ontology, with table descriptions" },
-  { id: "C-semantics", short: "AO+Both", name: "inside Auto Ontology, with table descriptions and ready-made queries" },
-];
-
-function QuestionGrid({ data, models }: { data: StudySummary; models: string[] }) {
-  const [model, setModel] = useState(models[0]);
-  const [open, setOpen] = useState<string | null>(null);
-  const arms = GRID_ARMS.filter((a) => data.per_question_suite_rate[`${model}/${a.id}`]);
-  return (
-    <>
-      <div className="study-grid__head">
-        <p className="measure small">
-          How often each question was answered correctly, across runs. Click a question to read it in full; click a number to see
-          the AI’s saved answer, with the query it wrote and the rows it got.
-        </p>
-        <div className="study-switch" role="group" aria-label="Model">
-          {models.map((m) => (
-            <button key={m} type="button" aria-pressed={m === model} onClick={() => setModel(m)}>{MODEL_NAMES[m]}</button>
-          ))}
-        </div>
-      </div>
-      <dl className="study-key">
-        {GRID_ARMS.map((a) => <div key={a.id}><dt>{a.short}</dt><dd>{a.name}</dd></div>)}
-      </dl>
-      <div className="table-wrap">
-        <table className="rows rows--compact cmp-grid study-grid">
-          <thead>
-            <tr>
-              <th scope="col">Question</th>
-              {arms.map((a) => <th key={a.id} scope="col" className="num"><abbr title={a.name}>{a.short}</abbr></th>)}
-            </tr>
-          </thead>
-          <tbody>
-            {data.question_list.map((q, i) => {
-              const isOpen = open === q.id;
-              const first = i === 0 || data.question_list[i - 1].repo !== q.repo;
-              return [
-                first ? (
-                  <tr key={`${q.repo}-head`} className="study-grid__repo">
-                    <th scope="colgroup" colSpan={arms.length + 1}>
-                      {REPOS[q.repo]}
-                      {q.repo === "auto_ontology" ? "" : " (asked directly only; Auto Ontology was tested on its own 12 questions)"}
-                    </th>
-                  </tr>
-                ) : null,
-                <tr key={q.id}>
-                  <th scope="row">
-                    <button type="button" className="study-grid__q" aria-expanded={isOpen} onClick={() => setOpen(isOpen ? null : q.id)}>
-                      {q.label ?? q.topic}
-                    </button>
-                  </th>
-                  {arms.map((a) => {
-                    const r = data.per_question_suite_rate[`${model}/${a.id}`]?.[q.id];
-                    return (
-                      <td key={a.id} className={`num ${r === undefined ? "" : r >= 0.5 ? "ok" : "bad"}`}>
-                        {r === undefined ? "" : (
-                          <a className="cmp-grid__link" href={responseUrl(model, a.id, q.repo, q.id)} target="_blank" rel="noreferrer"
-                            title={`${MODEL_NAMES[model]}, ${a.name}: open the first run's response`}>{`${Math.round(r * 100)}%`}</a>
-                        )}
-                      </td>
-                    );
-                  })}
-                </tr>,
-                isOpen ? (
-                  <tr key={`${q.id}-text`} className="study-grid__text">
-                    <td colSpan={arms.length + 1}><p><span className="study-grid__id" translate="no">{q.id}, {REPOS[q.repo]}.</span> {q.question}</p></td>
-                  </tr>
-                ) : null,
-              ];
-            })}
-          </tbody>
-        </table>
-      </div>
-    </>
-  );
-}
-
-// The first run's saved response for one question and configuration, on GitHub.
-function responseUrl(model: string, arm: string, repo: string, qid: string): string {
-  const run = arm.startsWith("C-") ? `c/${model}-${arm.slice(2)}-1` : `direct/${model}/${arm}/${repo}/r1`;
-  return `${REPO}/study/runs/${run}/responses/${qid}.json`;
 }
