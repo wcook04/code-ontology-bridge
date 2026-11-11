@@ -4,6 +4,8 @@ A program is made of functions that call one another, and questions such as "if 
 
 [See one question answered, step by step](https://wcook04.github.io/code-ontology-bridge/) · [Results](#results) · [Run it locally](#quickstart) · [Paper (PDF)](docs/case-study.pdf)
 
+[Introduction to the projects](https://www.youtube.com/watch?v=Yk_kUQUCylc) · [Code Ontology Bridge walkthrough](https://www.youtube.com/watch?v=2ex1zrskbQ8) · [Short demo](https://www.youtube.com/watch?v=3HWzQFvMFFY)
+
 ## How it works
 
 ```
@@ -21,6 +23,8 @@ Auto Ontology's DuckDB connector at the tested revision reports no primary or fo
 <a id="one-question-all-the-way-through"></a>
 
 ## One question, answered
+
+The [full CodeMap walkthrough](https://www.youtube.com/watch?v=OnBO9U9T2IQ) and [CodeMap short](https://www.youtube.com/watch?v=-emncc_EHww) show the private code map that inspired this bridge.
 
 > If `resolve_semantic_fks` changed, which other functions in Auto Ontology would be affected, and through how many calls?
 
