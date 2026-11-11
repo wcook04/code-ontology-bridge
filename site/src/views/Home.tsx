@@ -8,12 +8,14 @@ import { useRoute } from "../data/useRoute";
 import { CallerGraph, type Selection } from "../components/CallerGraph";
 import { SystemDiagram } from "../components/SystemDiagram";
 import { HeadlineResult } from "../components/HeadlineResult";
+import { ScoreCard } from "../components/ScoreCard";
+import { FilmPair } from "../components/Films";
 import { Term } from "../components/Term";
 import { CopyButton, Excerpt, Gate, Out, RowsTable, TableStatus } from "../components/parts";
 import { RunConfig } from "../components/RunConfig";
 import { AnswerProse, AssessmentBlock, RequestBlock, Results, SqlPair } from "../components/Evidence";
 import { entryState, href, onLinkClick, replaceView } from "../app/router";
-import { ROLES, roleOf } from "../app/roles";
+import { ROLES, filePart, qualname, roleOf } from "../app/roles";
 import { termForSymbol } from "../app/glossary";
 
 const WALKTHROUGH = "/api/v1/walkthroughs/caller-chain-q11";
@@ -44,78 +46,84 @@ export function Home({ stepTarget }: { stepTarget?: string }) {
       <Gate loaded={walkthrough} what="the recorded example">
         {(w) => <Example w={w} stepTarget={stepTarget} />}
       </Gate>
+      <ResultsBand />
+      <FitBand />
     </>
   );
 }
 
 function Hero() {
   return (
-    <>
-      <section className="hero band" aria-labelledby="hero-title">
-        <h1 id="hero-title">Ask NVIDIA Auto Ontology questions about a Python codebase</h1>
+    <section className="hero band" aria-labelledby="hero-title">
+      <div className="hero__text">
+        <h1 id="hero-title">NVIDIA Auto Ontology answers questions about its own code</h1>
         <p className="lede">
-          code-ontology-bridge reads Python source code and writes a code database of its files, functions, calls and imports, with{" "}
-          <Term id="semantic-model">table descriptions</Term> saying what each table means. <Term id="auto-ontology">NVIDIA Auto Ontology</Term>{" "}
-          loads both through its existing connector and import, and its agent answers questions such as “which functions would be affected
-          if this one changed?” with the SQL it ran and rows naming exact functions.
-        </p>
-        <p className="recorded">
-          Given only the code database, Auto Ontology’s agent with DeepSeek v4.1 Flash answered 10.3 of 12 questions about Auto Ontology’s
-          own code correctly (mean of three runs); the same model asked directly answered 3.2. Asked directly about all 48 questions, the
-          table descriptions raised it from 18.0 to 27.2. Every number comes from a saved run.
-        </p>
-        <HeadlineResult />
-        <Stages />
-        <p className="headline-result">
-          In the recorded example, following direct calls finds three of the four functions that reach{" "}
-          <Term id="resolver">resolve_semantic_fks</Term>. The fourth, <Term id="scheduler">a scheduler</Term>, does not call the wrapper directly: at line
-          203 it passes it to <Term id="to_thread">asyncio.to_thread</Term>. The extractor records that hand-over, and Auto Ontology’s SQL
-          found all four. In this development run of 22 author-written questions, 18 of them with a hint, Auto Ontology returned exactly the expected rows for all 22.
+          Code Ontology Bridge reads Python source without running it and writes a database of every function and which function calls
+          which. <Term id="auto-ontology">NVIDIA Auto Ontology</Term>, NVIDIA’s open-source system for answering English questions about a
+          database, was given that database of its own code.
         </p>
         <div className="actions">
-          <a className="btn" href={href({ view: "home", step: "source" })} onClick={(e) => { e.preventDefault(); jump("source"); }}>
+          <a className="btn" href={href({ view: "home", step: "example" })} onClick={(e) => { e.preventDefault(); jump("example"); }}>
             Follow one question from code to answer
           </a>
-          <a className="btn-ghost" href="#/outcomes" onClick={onLinkClick}>
-            See the 22 recorded questions
+          <a className="btn-ghost" href="#/study" onClick={onLinkClick}>
+            The study, with every run
           </a>
         </div>
-      </section>
-      <section className="band" aria-labelledby="split-title">
-        <h2 id="split-title">What this project adds, and what NVIDIA supplies</h2>
-        <SystemDiagram onOpen={jump} />
-        <p className="small muted measure">
-          The arrows show how Auto Ontology is built to work. The run saved what went in and what came out: the database, the table descriptions,
-          each question, the SQL and the rows. It did not save which table descriptions the agent looked up for a question.
-        </p>
-        <div className="split-cols">
-          <div>
-            <h3>Built here</h3>
-            <ul className="facts">
-              <li>An extractor that parses every Python file git tracks in the repository and records files, functions, methods, classes, calls, imports, base classes, docstrings and links between tests and source files, in eight tables.</li>
-              <li>Each call is classified: resolved to a function in the repository, or labelled as a built-in, an external library, a dynamic attribute or unresolved. A call the extractor cannot follow keeps no target rather than a guessed one. Linked calls follow plain names only; the published limits list the patterns, such as a local variable shadowing a module-level name, that can still link the wrong definition.</li>
-              <li>Functions passed as arguments, as in <Term id="to_thread">asyncio.to_thread</Term>(f), are recorded as <Term id="callback">callback references</Term>, kept apart from direct calls.</li>
-              <li>A <Term id="duckdb">DuckDB</Term> export of the tables and a semantic-model export in Auto Ontology’s own YAML format, both stamped with the source commit. The database keeps each file’s SHA-256; the YAML records a fingerprint of all of them.</li>
-              <li>The table keys and joins. At this revision Auto Ontology’s DuckDB connector reports no primary or foreign keys (its get_pks and get_fks return empty tables), so the table descriptions are where Auto Ontology learns them: they declare a key for each of the 8 tables and 2 views, and 10 joins, such as <code>code.calls.callee_symbol_id</code> → <code>code.symbols.symbol_id</code>.</li>
-            </ul>
-          </div>
-          <div>
-            <h3>Supplied by Auto Ontology</h3>
-            <ul className="facts">
-              <li>Importing the table descriptions into its catalog.</li>
-              <li>The SQL agent that reads the table descriptions, writes SQL and explains it.</li>
-              <li>The DuckDB connector that runs the SQL.</li>
-            </ul>
-            <h3>What the run needed</h3>
-            <p className="small">
-              Auto Ontology at commit <code>cdaf61e</code> with a twelve-file patch: it lets the service use public model APIs and exposes its
-              existing SQL-only route through the chat API, and it extends an existing validator that rejects placeholder answers. The extractor and both exports need no patch and no model.{" "}
-              <Out href={`${REPO}/blob/main/examples/auto-ontology/live/upstream-fix/README.md`}>Read what the patch changes</Out>
-            </p>
-          </div>
+        <FilmPair />
+      </div>
+      <ScoreCard />
+    </section>
+  );
+}
+
+/** Both models and every setting, after the example. */
+function ResultsBand() {
+  return (
+    <section className="band" id="step-results" tabIndex={-1} aria-labelledby="results-title">
+      <h2 id="results-title">Both models, every setting</h2>
+      <HeadlineResult />
+    </section>
+  );
+}
+
+function FitBand() {
+  return (
+    <section className="band" aria-labelledby="split-title">
+      <h2 id="split-title">What this project adds, and what NVIDIA supplies</h2>
+      <Stages />
+      <SystemDiagram onOpen={jump} />
+      <p className="small muted measure">
+        The arrows show how Auto Ontology is built to work. The run saved what went in and what came out: the database, the table descriptions,
+        each question, the SQL and the rows. It did not save which table descriptions the agent looked up for a question.
+      </p>
+      <div className="split-cols">
+        <div>
+          <h3>Built here</h3>
+          <ul className="facts">
+            <li>An extractor that parses every Python file git tracks in the repository and records files, functions, methods, classes, calls, imports, base classes, docstrings and links between tests and source files, in eight tables.</li>
+            <li>Each call is classified: resolved to a function in the repository, or labelled as a built-in, an external library, a dynamic attribute or unresolved. A call the extractor cannot follow keeps no target rather than a guessed one. Linked calls follow plain names only; the published limits list the patterns, such as a local variable shadowing a module-level name, that can still link the wrong definition.</li>
+            <li>Functions passed as arguments, as in <Term id="to_thread">asyncio.to_thread</Term>(f), are recorded as <Term id="callback">callback references</Term>, kept apart from direct calls.</li>
+            <li>A <Term id="duckdb">DuckDB</Term> export of the tables and a semantic-model export in Auto Ontology’s own YAML format, both stamped with the source commit. The database keeps each file’s SHA-256; the YAML records a fingerprint of all of them.</li>
+            <li>The table keys and joins. At this revision Auto Ontology’s DuckDB connector reports no primary or foreign keys (its get_pks and get_fks return empty tables), so the table descriptions are where Auto Ontology learns them: they declare a key for each of the 8 tables and 2 views, and 10 joins, such as <code>code.calls.callee_symbol_id</code> → <code>code.symbols.symbol_id</code>.</li>
+          </ul>
         </div>
-      </section>
-    </>
+        <div>
+          <h3>Supplied by Auto Ontology</h3>
+          <ul className="facts">
+            <li>Importing the table descriptions into its catalog.</li>
+            <li>The SQL agent that reads the table descriptions, writes SQL and explains it.</li>
+            <li>The DuckDB connector that runs the SQL.</li>
+          </ul>
+          <h3>What the run needed</h3>
+          <p className="small">
+            Auto Ontology at commit <code>cdaf61e</code> with a twelve-file patch: it lets the service use public model APIs and exposes its
+            existing SQL-only route through the chat API, and it extends an existing validator that rejects placeholder answers. The extractor and both exports need no patch and no model.{" "}
+            <Out href={`${REPO}/blob/main/examples/auto-ontology/live/upstream-fix/README.md`}>Read what the patch changes</Out>
+          </p>
+        </div>
+      </div>
+    </section>
   );
 }
 
@@ -177,17 +185,34 @@ function Example({ w, stepTarget }: { w: Walkthrough; stepTarget?: string }) {
 
   return (
     <>
-      <section className="band walk-intro" aria-labelledby="walk-title">
+      <section className="band walk-intro" id="step-example" tabIndex={-1} aria-labelledby="walk-title">
         <h2 id="walk-title">One question, followed from the code to the answer</h2>
-        <p className="lede-2">
-          Question {w.question_id} asked: if <Term id="resolver">resolve_semantic_fks</Term> changed, which other functions would be
-          affected? Auto Ontology returned four. One of them, <Sym id={SCHEDULER} lower />, never calls any of the others directly.
-        </p>
-        <p className="measure">
-          The request told the agent how to search: follow calls backwards, and include callback references. The agent did not have to work out that
-          method itself. What made the answer possible is that the extractor had recorded the line where the scheduler hands a function over, as a row
-          the agent could query. The five steps below follow that row from the source to the returned rows.
-        </p>
+        <div className="walk-intro__cols">
+          <div>
+            <blockquote className="asked">
+              <p className="asked__by">Asked of Auto Ontology, question {w.question_id} of an earlier experiment</p>
+              <p className="asked__q">{request.request.question.split("\n\n")[0]}</p>
+            </blockquote>
+            <p className="measure">
+              Following direct calls finds three of the four functions that reach <Term id="resolver">resolve_semantic_fks</Term>. The
+              fourth, <Term id="scheduler">a scheduler</Term>, does not call the wrapper directly: at line 203 it passes it to{" "}
+              <Term id="to_thread">asyncio.to_thread</Term>. The extractor records that hand-over as a row, and Auto Ontology’s SQL found
+              all four.
+            </p>
+            <p className="measure">
+              The request told the agent how to search: follow calls backwards, and include callback references. The agent did not have
+              to work out that method itself. The five steps follow the hand-over from the source to the returned rows.
+            </p>
+            <ol className="step-index" aria-label="The five steps">
+              {STEPS.map(([id, title]) => (
+                <li key={id}>
+                  <a href={href({ view: "home", step: id })} onClick={(e) => { e.preventDefault(); jump(id); }}>{title}</a>
+                </li>
+              ))}
+            </ol>
+          </div>
+          <AnswerPreview rows={answer.result_tables[0] ?? []} />
+        </div>
       </section>
 
       <SourcePart source={source} />
@@ -236,6 +261,46 @@ function Example({ w, stepTarget }: { w: Walkthrough; stepTarget?: string }) {
       <OutcomesTeaser />
       <Limits model={model} />
     </>
+  );
+}
+
+const STEPS: [string, string][] = [
+  ["source", "The line of Python"],
+  ["records", "What the extractor writes"],
+  ["graph", "Following calls backwards from the resolver"],
+  ["request", "What Auto Ontology was asked, and the SQL it wrote"],
+  ["answer", "The rows that came back"],
+];
+
+/** The recorded rows, in recorded order, before the steps that explain them. */
+function AnswerPreview({ rows }: { rows: Record<string, unknown>[] }) {
+  return (
+    <figure className="answer-preview">
+      <figcaption className="answer-preview__cap">The {rows.length} rows Auto Ontology returned</figcaption>
+      <ol className="answer-preview__rows">
+        {rows.map((r) => {
+          const id = String(r.symbol_id);
+          const viaCallback = id === SCHEDULER;
+          return (
+            <li key={id} className={viaCallback ? "is-callback" : ""}>
+              <span className="answer-preview__depth">
+                <strong>{String(r.depth)}</strong> {Number(r.depth) === 1 ? "step" : "steps"}
+              </span>
+              <span className="answer-preview__sym">
+                <code translate="no">{qualname(id)}</code>
+                <span className="answer-preview__file" translate="no">{filePart(id)}</span>
+                {viaCallback ? <span className="answer-preview__tag">reached only through a callback</span> : null}
+              </span>
+            </li>
+          );
+        })}
+      </ol>
+      <p className="answer-preview__foot">
+        Steps are counted along recorded calls and hand-overs to <code translate="no">resolve_semantic_fks</code>. These are source
+        relationships, places to inspect; they are not a record of what ran.{" "}
+        <a href={href({ view: "home", step: "graph" })} onClick={(e) => { e.preventDefault(); jump("graph"); }}>The same rows as a graph</a>
+      </p>
+    </figure>
   );
 }
 

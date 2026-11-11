@@ -102,8 +102,8 @@ function Header({ current }: { current: string }) {
           </a>
         </span>
         <nav className="topnav" aria-label="Site">
-          <a href="#/walkthrough/source" onClick={onLinkClick} aria-current={current === "home" ? "page" : undefined}>
-            Caller example
+          <a href="#/walkthrough/example" onClick={onLinkClick} aria-current={current === "home" ? "page" : undefined}>
+            Example
           </a>
           <a href="#/study" onClick={onLinkClick} aria-current={current === "study" ? "page" : undefined}>
             Study

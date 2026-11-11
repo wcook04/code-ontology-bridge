@@ -66,6 +66,9 @@ def allowed(name: str) -> bool:
         if p.parts[1] == 'tests':
             return p.suffix == '.ts'
         if p.parts[1] == 'public':
+            # Stills for the two project videos sit in public/films; everything else is a vector mark.
+            if p.parts[2:3] == ('films',):
+                return len(p.parts) == 4 and p.suffix == '.webp'
             return p.suffix == '.svg'
         return False
     if owner == 'tools':

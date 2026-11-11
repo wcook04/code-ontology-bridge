@@ -9,6 +9,8 @@ import "./styles/tokens.css";
 // The parts every one of Will Cook's websites shares, copied unchanged from lean-exposition; tokens.css maps their names.
 import "./styles/family.css";
 import "./styles/app.css";
+// The first screen, film thumbnails and the example's opening, added in the November 2026 design pass.
+import "./styles/refine.css";
 
 import { App } from "./app/App";
 
