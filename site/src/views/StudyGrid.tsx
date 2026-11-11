@@ -182,7 +182,7 @@ export function QuestionGrid({ data, models }: { data: StudySummary; models: str
                             })}
                           </ul>
                           <p className="sg-detail__note">
-                            The results summary records how many runs were correct, not which ones; each saved answer shows the query that
+                            The results summary records how many runs were correct, not which ones; each saved answer holds the query that
                             run wrote and the rows it returned.{" "}
                             <a href={QUESTIONS_URL} target="_blank" rel="noreferrer">All {all.length} questions with their answer keys, on GitHub</a>
                             {" "}(this one is <span translate="no">{q.id}</span>).
