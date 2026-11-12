@@ -57,13 +57,13 @@ function layout(graph: Graph, vertical: boolean): { boxes: Map<string, Box>; wid
   return { boxes, width, height: 16 + (maxDepth + 1) * h + maxDepth * gapY };
 }
 
-function edgePath(from: Box, to: Box, vertical: boolean): { d: string; mid: [number, number] } {
+function edgePath(from: Box, to: Box, vertical: boolean, shift = 0): { d: string; mid: [number, number] } {
   if (!vertical) {
-    const x1 = from.x + from.w, y1 = from.y + from.h / 2, x2 = to.x - 3, y2 = to.y + to.h / 2;
+    const x1 = from.x + from.w, y1 = from.y + from.h / 2, x2 = to.x - 3, y2 = to.y + to.h / 2 + shift;
     const c = (x2 - x1) / 2;
     return { d: `M${x1},${y1} C${x1 + c},${y1} ${x2 - c},${y2} ${x2},${y2}`, mid: [(x1 + x2) / 2, (y1 + y2) / 2] };
   }
-  const x1 = from.x + from.w / 2, y1 = from.y + from.h, x2 = to.x + to.w / 2, y2 = to.y - 3;
+  const x1 = from.x + from.w / 2, y1 = from.y + from.h, x2 = to.x + to.w / 2 + shift, y2 = to.y - 3;
   const c = (y2 - y1) / 2;
   return { d: `M${x1},${y1} C${x1},${y1 + c} ${x2},${y2 - c} ${x2},${y2}`, mid: [(x1 + x2) / 2, (y1 + y2) / 2] };
 }
@@ -118,7 +118,11 @@ export function CallerGraph({ layoutGraph, shown, selection, onSelect, idPrefix 
           const from = boxes.get(edge.caller_symbol_id);
           const to = edge.callee_symbol_id ? boxes.get(edge.callee_symbol_id) : undefined;
           if (!from || !to) return null;
-          const { d } = edgePath(from, to, vertical);
+          // Edges that arrive at one box land side by side, so their arrowheads do not overlap.
+          const arriving = layoutGraph.edges.filter((e) => e.callee_symbol_id === edge.callee_symbol_id);
+          const place = arriving.findIndex((e) => e.call_id === edge.call_id);
+          const shift = (place - (arriving.length - 1) / 2) * (vertical ? 44 : 22);
+          const { d } = edgePath(from, to, vertical, shift);
           const callback = edge.call_kind === "callback";
           const present = shownEdges.has(edge.call_id);
           const cls = ["edge", callback ? "edge--cb" : "", present ? "" : "edge--ghost", isSelected("edge", edge.call_id) ? "is-selected" : "", isPreview("edge", edge.call_id) ? "is-preview" : ""].join(" ");

@@ -40,7 +40,8 @@ const DIRECT: { id: string; name: string; what: string }[] = [
   { id: "V", name: "+ ready-made queries, without descriptions", what: "Six SQL views (for example “which functions can reach which”), listed by name only." },
   { id: "S", name: "+ table descriptions and ready-made queries", what: "The table descriptions plus the six views, each described." },
 ];
-const INSIDE: { id: string; name: string; what: string }[] = [
+const DIRECT_ON_TWELVE = { id: "A", name: "Asked directly, table names only", what: "The model outside Auto Ontology, given the names of the tables and columns, on the same 12 questions.", repo: "auto_ontology" };
+const INSIDE: { id: string; name: string; what: string; repo?: string }[] = [
   { id: "C-native", name: "The code database, nothing imported", what: "Auto Ontology reads the bridge’s code database and works out what it means by itself." },
   { id: "C-base", name: "+ table descriptions", what: "The table descriptions are imported as well." },
   { id: "C-semantics", name: "+ table descriptions and ready-made queries", what: "The six views are added to the database and described in the import." },
@@ -61,8 +62,20 @@ function mean(v: number[]): number {
   return v.reduce((a, b) => a + b, 0) / v.length;
 }
 
-function Score({ c }: { c?: Cell }) {
+function Score({ c, repo, of }: { c?: Cell; repo?: string; of?: number }) {
   if (!c) return <span className="muted small">not run</span>;
+  // A row for one codebase's questions reads that codebase's mean from the same runs.
+  if (repo) {
+    const m = c.suite_per_repo_mean?.[repo];
+    if (m === undefined || !of) return <span className="muted small">not run</span>;
+    return (
+      <>
+        <strong>{m.toFixed(1)}</strong> <span className="muted">of {of}</span>
+        <span className="cmp-bar" aria-hidden="true"><span style={{ width: `${(100 * m) / of}%` }} /></span>
+        <span className="small muted cmp-range">mean of {c.repetitions} runs</span>
+      </>
+    );
+  }
   const m = mean(c.suite);
   return (
     <>
@@ -75,8 +88,9 @@ function Score({ c }: { c?: Cell }) {
   );
 }
 
-function ResultTable({ rows, models, cell, label }: {
-  rows: { id: string; name: string; what: string }[];
+function ResultTable({ rows, models, cell, label, twelve }: {
+  rows: { id: string; name: string; what: string; repo?: string }[];
+  twelve?: number;
   models: string[];
   cell: (m: string, a: string) => Cell | undefined;
   label: string;
@@ -97,7 +111,7 @@ function ResultTable({ rows, models, cell, label }: {
                 {a.name}
                 <span className="study-table__what">{a.what}</span>
               </th>
-              {models.map((m) => <td key={m} className="num cmp-score"><Score c={cell(m, a.id)} /></td>)}
+              {models.map((m) => <td key={m} className="num cmp-score"><Score c={cell(m, a.id)} repo={a.repo} of={twelve} /></td>)}
             </tr>
           ))}
         </tbody>
@@ -159,9 +173,10 @@ export function Study({ question }: { question?: string }) {
           <h2>The same AI inside NVIDIA Auto Ontology</h2>
           <p className="measure small">
             The 12 questions about Auto Ontology’s own code, answered by Auto Ontology’s question-answering agent, averaged over three
-            runs. Every row starts from the same code database written by the bridge; the last also adds the six ready-made queries to it.
+            runs. The first row is the same model asked directly about the same 12 questions. Every row after it starts from the same
+            code database written by the bridge; the last also adds the six ready-made queries to it.
           </p>
-          <ResultTable rows={inside} models={models} cell={cell} label="Auto Ontology is given" />
+          <ResultTable rows={[DIRECT_ON_TWELVE, ...inside]} models={models} cell={cell} label="The 12 Auto Ontology questions" twelve={data.question_list.filter((q) => q.repo === "auto_ontology").length} />
           <p className="measure small">
             Given only the code database, Auto Ontology with DeepSeek answered 10.3 of 12 correctly (runs of 10, 10 and 11), and 9 of
             the 12 in every run; the same model asked directly answered 3.2. Adding the descriptions and ready-made queries gave 10.7

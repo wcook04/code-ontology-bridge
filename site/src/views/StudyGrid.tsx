@@ -108,6 +108,7 @@ export function QuestionGrid({ data, models, question }: { data: StudySummary; m
         {GRID_ARMS.map((a) => <div key={a.id}><dt>{a.short}</dt><dd>{a.name}</dd></div>)}
       </dl>
       <p className="sg-count small" aria-live="polite">{countLine}</p>
+      <p className="sg-narrow small muted">The table has {arms.length} columns of results and scrolls sideways on a narrow screen.</p>
       <div className="table-wrap sg-wrap" role="region" aria-label="Question-by-question results" tabIndex={0}>
         <table className="rows rows--compact cmp-grid study-grid sg-table">
           <thead>
@@ -143,7 +144,7 @@ export function QuestionGrid({ data, models, question }: { data: StudySummary; m
                     </th>
                     {arms.map((a) => {
                       const r = rates(a.id)?.[q.id];
-                      if (r === undefined) return <td key={a.id} className="num" />;
+                      if (r === undefined) return <td key={a.id} className="num sg-none">not run</td>;
                       const n = reps(a.id);
                       const k = runsCorrect(r, n);
                       const bad = r < 0.5;

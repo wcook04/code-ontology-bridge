@@ -14,7 +14,7 @@ export function RequestBlock({ request, contract }: { request: Request; contract
       <p className="request__label">The question as submitted</p>
       <blockquote className="request__q">{first}</blockquote>
       <details className="fold">
-        <summary>Show the full submitted text ({rest.length} further paragraphs of output instructions)</summary>
+        <summary>Show the full submitted text ({rest.length} further {rest.length === 1 ? "paragraph" : "paragraphs"} of output instructions)</summary>
         <Captured text={request.question} label="Complete submitted question text" />
       </details>
       <div className="request__grid">
