@@ -24,7 +24,7 @@ export function RunConfig() {
         </tr>
         <tr>
           <th scope="row">Questions</th>
-          <td>The 22 development questions, written by the author while building the project; each names its output columns and 18 include a hint. The 16 held-out questions are on the comparison page.</td>
+          <td>The 22 development questions, written by the author while building the project; each names its output columns and 18 include a hint. The 16 held-out questions are on the earlier experiment’s page.</td>
         </tr>
         <tr>
           <th scope="row">Scoring</th>
@@ -36,7 +36,7 @@ export function RunConfig() {
         </tr>
         <tr>
           <th scope="row">Not measured</th>
-          <td>Cost, and which table descriptions each question retrieved. What the table descriptions and Auto Ontology each add is measured on the comparison page.</td>
+          <td>Cost, and which table descriptions each question retrieved. What the table descriptions and Auto Ontology each add is measured on the earlier experiment’s page.</td>
         </tr>
       </tbody>
       <tfoot>

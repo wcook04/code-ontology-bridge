@@ -78,7 +78,7 @@ function OutcomeTable({ o, params }: { o: OutcomeList; params: URLSearchParams }
       <p className="lede-2">
         The author wrote these 22 questions while building the project. Auto Ontology answered each one, using DeepSeek v4.1 Flash, over the
         extracted database of its own code. Each request named the columns to return, and 18 came with a hint on how to answer. The 16
-        held-out questions, asked without hints, are on the <a href="#/comparison" onClick={onLinkClick}>comparison page</a>.
+        held-out questions, asked without hints, are on the <a href="#/comparison" onClick={onLinkClick}>earlier experiment’s page</a>.
       </p>
       <dl className="totals">
         <div>
@@ -110,7 +110,7 @@ function OutcomeTable({ o, params }: { o: OutcomeList; params: URLSearchParams }
       <div className="filters" role="search">
         <label className="field">
           <span>Search</span>
-          <input type="search" value={q} onChange={(e) => setQ(e.target.value)} placeholder="e.g. imports, callers or 14" />
+          <input type="search" value={q} onChange={(e) => setQ(e.target.value)} placeholder="imports, callers or 14" />
         </label>
         <label className="field">
           <span>Rows</span>

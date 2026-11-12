@@ -200,7 +200,7 @@ export function SystemDiagram({ onOpen }: { onOpen: (step: string) => void }) {
       <figcaption id="system-caption" className="system__caption">
         <span className="key key--ours" aria-hidden="true" /> Built in this project: the extractor, and the code database and table descriptions it
         writes. <span className="key key--theirs" aria-hidden="true" /> NVIDIA Auto Ontology, used through the import and DuckDB connector it
-        already has. Select any box to see the recorded material for it.
+        already has. Each box opens the recorded material for it.
       </figcaption>
     </figure>
   );

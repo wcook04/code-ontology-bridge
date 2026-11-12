@@ -4,16 +4,19 @@
 import { onLinkClick } from "../app/router";
 import { MODEL_NAMES, useStudy } from "../views/Study";
 
-const ROWS: { id: string; name: string; ours: boolean }[] = [
+const ROWS: { id: string; name: string; ours: boolean; repo?: string }[] = [
   { id: "A", name: "Table names only", ours: false },
   { id: "B", name: "+ table descriptions", ours: true },
   { id: "V", name: "+ ready-made queries, without descriptions", ours: true },
   { id: "S", name: "+ table descriptions and ready-made queries", ours: true },
 ];
-const INSIDE: { id: string; name: string; ours: boolean }[] = [
-  { id: "C-native", name: "The code database, nothing imported", ours: true },
-  { id: "C-base", name: "+ table descriptions", ours: true },
-  { id: "C-semantics", name: "+ table descriptions and ready-made queries", ours: true },
+// The 12 questions about Auto Ontology's own code: the model asked directly (its mean on those
+// 12, from the same five runs as the row above), then inside Auto Ontology.
+const INSIDE: { id: string; name: string; ours: boolean; repo?: string }[] = [
+  { id: "A", name: "Asked directly, table names only", ours: false, repo: "auto_ontology" },
+  { id: "C-native", name: "Inside Auto Ontology: the code database, nothing imported", ours: true },
+  { id: "C-base", name: "Inside Auto Ontology: + table descriptions", ours: true },
+  { id: "C-semantics", name: "Inside Auto Ontology: + table descriptions and ready-made queries", ours: true },
 ];
 
 export function HeadlineResult() {
@@ -38,12 +41,14 @@ export function HeadlineResult() {
               <th scope="row">{r.name}</th>
               {models.map((m) => {
                 const c = cell(m, r.id);
+                const value = c ? (r.repo ? c.suite_per_repo_mean?.[r.repo] : mean(c.suite)) : undefined;
+                const of = r.repo ? twelve : c?.denominator ?? 0;
                 return (
                   <td key={m} className="num cmp-score">
-                    {c ? (
+                    {c && value !== undefined ? (
                       <>
-                        <strong>{mean(c.suite).toFixed(1)}</strong> of {c.denominator}
-                        <span className="cmp-bar" aria-hidden="true"><span style={{ width: `${(100 * mean(c.suite)) / c.denominator}%` }} /></span>
+                        <strong>{value.toFixed(1)}</strong> of {of}
+                        <span className="cmp-bar" aria-hidden="true"><span style={{ width: `${(100 * value) / of}%` }} /></span>
                       </>
                     ) : <span className="muted small">running</span>}
                   </td>
@@ -56,6 +61,7 @@ export function HeadlineResult() {
     </div>
   );
   const inside = INSIDE.filter((r) => models.some((m) => cell(m, r.id)));
+  const twelve = data.question_list.filter((q) => q.repo === "auto_ontology").length;
   return (
     <figure className="headline-cmp" aria-labelledby="headline-cmp-cap">
       <figcaption id="headline-cmp-cap" className="headline-cmp__lead">
@@ -64,8 +70,8 @@ export function HeadlineResult() {
         repeated runs:
       </figcaption>
       <div className="headline-cmp__tables">
-        {table(ROWS, "The AI asked directly, given")}
-        {inside.length ? table(inside, "Inside NVIDIA Auto Ontology, 12 questions") : null}
+        {table(ROWS, `All ${data.questions} questions: the AI asked directly, given`)}
+        {inside.length > 1 ? table(inside, `The ${twelve} questions about Auto Ontology’s own code`) : null}
       </div>
       <p className="small">
         <a href="#/study" onClick={onLinkClick}>How the test was run, every question and every answer</a>

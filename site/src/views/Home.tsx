@@ -43,10 +43,10 @@ export function Home({ stepTarget }: { stepTarget?: string }) {
   return (
     <>
       <Hero />
+      <ResultsBand />
       <Gate loaded={walkthrough} what="the recorded example">
         {(w) => <Example w={w} stepTarget={stepTarget} />}
       </Gate>
-      <ResultsBand />
       <FitBand />
     </>
   );
@@ -77,7 +77,7 @@ function Hero() {
   );
 }
 
-/** Both models and every setting, after the example. */
+/** Both models and every setting, directly after the first screen. */
 function ResultsBand() {
   return (
     <section className="band" id="step-results" tabIndex={-1} aria-labelledby="results-title">
@@ -190,7 +190,7 @@ function Example({ w, stepTarget }: { w: Walkthrough; stepTarget?: string }) {
         <div className="walk-intro__cols">
           <div>
             <blockquote className="asked">
-              <p className="asked__by">Asked of Auto Ontology, question {w.question_id} of an earlier experiment</p>
+              <p className="asked__by">Asked of Auto Ontology: question {w.question_id} of the 22 in an earlier experiment</p>
               <p className="asked__q">{request.request.question.split("\n\n")[0]}</p>
             </blockquote>
             <p className="measure">
@@ -235,8 +235,8 @@ function Example({ w, stepTarget }: { w: Walkthrough; stepTarget?: string }) {
       <section className="band part" id="step-answer" tabIndex={-1} aria-labelledby="h-answer">
         <PartHead n={5} id="h-answer" title="The rows that came back" />
         <p className="measure">
-          Auto Ontology returned four callers, with <Sym id={SCHEDULER} lower /> at depth 3. These are the recorded rows; switching the graph in
-          step 3 does not change them.
+          Auto Ontology returned four callers, with <Sym id={SCHEDULER} lower /> at depth 3. These are the recorded rows. They are the same under
+          either view of the graph in step 3.
         </p>
         <RowsTable rows={answer.result_tables[0] ?? []} columns={request.output_contract.fields.map((f) => f.name)} caption="Rows Auto Ontology returned, in recorded order" />
         <p className="small">
@@ -608,10 +608,14 @@ function OutcomesTeaser() {
           return (
             <>
               <p className="measure">
-                Question 11 is one of {o.population_total}. For {o.population_counts.table_match.pass ?? 0} of them, the rows Auto Ontology
-                returned were exactly the expected rows. Each response pairs those rows with a short explanation of the query, which Auto
+                Question 11 is one of {o.population_total}.{" "}
+                {(o.population_counts.table_match.pass ?? 0) === o.population_total
+                  ? `Auto Ontology returned exactly the expected rows for all ${o.population_total}.`
+                  : `For ${o.population_counts.table_match.pass ?? 0} of them, the rows Auto Ontology returned were exactly the expected rows.`}{" "}
+                Each response pairs those rows with a short explanation of the query, which Auto
                 Ontology’s agent writes before the query runs. The author wrote these questions while developing the project and most carry a
-                hint, so the held-out questions on the comparison page are the harder test. One explanation fell short:
+                hint, so the 16 held-out questions, asked without hints, are the harder test. They are on{" "}
+                <a href="#/comparison" onClick={onLinkClick}>the earlier experiment’s page</a>. One explanation fell short:
               </p>
               <ul className="cases">
                 {picks.map((q) =>
@@ -622,6 +626,7 @@ function OutcomesTeaser() {
                       </a>
                       <span className="cases__status">
                         <TableStatus value={q.assessment.table_match} />
+                        {q.question_id === 2 ? <span className="cases__note">Its explanation is the single word “Purple”.</span> : null}
                       </span>
                     </li>
                   ) : null,
@@ -653,8 +658,10 @@ function Limits({ model }: { model: ModelStep }) {
     <section className="band band--plain" id="step-limits" tabIndex={-1} aria-labelledby="h-limits">
       <h2 id="h-limits">What the run behind this example establishes, and what it does not</h2>
       <p className="measure small muted">
-        This walkthrough comes from the earlier experiment. The <a href="#/study" onClick={onLinkClick}>study</a> repeats the test with
-        questions written blind, four repositories, repeated runs and counterfactual databases.
+        This example comes from an earlier experiment on Auto Ontology’s code alone: 22 development questions and 16 held-out questions,
+        38 in all, written by the author. The <a href="#/study" onClick={onLinkClick}>study</a> is separate: 48 questions about four
+        codebases, 12 of them about Auto Ontology, written by AI models that had not seen the table descriptions, with repeated runs and
+        altered copies of each database.
       </p>
       <div className="split-cols">
         <div>
@@ -662,7 +669,7 @@ function Limits({ model }: { model: ModelStep }) {
           <ul className="facts">
             <li>Auto Ontology can import the extractor’s table descriptions and query its code database through the existing DuckDB connector.</li>
             <li>In one complete run with DeepSeek v4.1 Flash, the SQL its agent wrote returned exactly the rows of the author’s reference query for all 22 development questions.</li>
-            <li>In that earlier comparison (author-written questions, one run per setting, scored on the real database only), Nemotron 3.5 Lightning answered 6 of 16 held-out questions from table names alone and 13 with the table descriptions; DeepSeek 13 and 16. The study above measures the same question more strictly.</li>
+            <li>In that earlier comparison (author-written questions, one run per setting, scored on the real database only), Nemotron 3.5 Lightning answered 6 of 16 held-out questions from table names alone and 13 with the table descriptions; DeepSeek 13 and 16. The study measures the same question more strictly.</li>
             <li>A relationship only the extractor records, a function handed to asyncio.to_thread, reached the final answer: direct calls alone find three of the four callers.</li>
             <li>Every request, SQL statement, returned row and written response is published unchanged, including the runs that scored worst.</li>
           </ul>
@@ -671,7 +678,7 @@ function Limits({ model }: { model: ModelStep }) {
           <h3>Not established</h3>
           <ul className="facts">
             <li>Accuracy on a benchmark someone else wrote: the author wrote all 38 questions and their reference queries, about one repository.</li>
-            <li>Stable rates: each arm ran each question set once, and 16 held-out questions is a small sample.</li>
+            <li>Stable rates: each setting ran each question set once, and 16 held-out questions are a small sample.</li>
             <li>Speed in general: requests in this run took a median of 175 seconds on a laptop running two Auto Ontology instances at once.</li>
             <li>That every recorded link is right. The extractor follows plain names; the published limits list the patterns, such as a local variable shadowing a module-level name, that can still link the wrong definition. No independent audit of its links has been done yet.</li>
             <li>What happens at run time: the extractor reads source text, so a recorded call is not proof the code runs, and a missing one is not proof it never happens.</li>
