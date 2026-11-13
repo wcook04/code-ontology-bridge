@@ -15,7 +15,7 @@ interface Film {
 export const SHORT_FILM: Film = {
   id: "short",
   title: "Short video",
-  youtube: "https://www.youtube.com/watch?v=3HWzQFvMFFY",
+  youtube: "https://www.youtube.com/watch?v=9-5YJ6SoT4Y",
   seconds: 95,
   still: "films/short-code-ontology-640.webp",
 };
@@ -23,7 +23,7 @@ export const SHORT_FILM: Film = {
 export const LONG_FILM: Film = {
   id: "long",
   title: "Full video",
-  youtube: "https://www.youtube.com/watch?v=2ex1zrskbQ8",
+  youtube: "https://www.youtube.com/watch?v=zrVv-a8rT_s",
   seconds: 278,
   still: "films/long-code-ontology-640.webp",
 };
