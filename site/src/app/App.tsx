@@ -86,8 +86,11 @@ function Header({ current }: { current: string }) {
       </a>
       <div className="topbar__inner">
         <span className="fam-lockup">
-          <a className="fam-lockup__home" href={FAMILY.owner.home} rel="author" title="All of Will Cook’s websites and films">
-            <img src={`${import.meta.env.BASE_URL}plectis.svg`} alt="Will Cook: all websites and films" width={26} height={26} />
+          <a className="fam-lockup__home" href={FAMILY.owner.home} rel="author" title="All of Will Cook’s projects and videos">
+            <img src={`${import.meta.env.BASE_URL}plectis.svg`} alt="" width={26} height={26} />
+            <span className="fam-lockup__owner" translate="no">
+              Will Cook
+            </span>
           </a>
           <span className="fam-lockup__rule" aria-hidden="true" />
           <a className="fam-lockup__site" href="#/" onClick={onLinkClick} aria-current={current === "home" ? "page" : undefined}>
